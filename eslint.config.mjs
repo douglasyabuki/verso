@@ -1,18 +1,34 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import prettier from "eslint-config-prettier/flat";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 
-const eslintConfig = defineConfig([
+export default defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
+  {
+    plugins: { "simple-import-sort": simpleImportSort },
+    rules: {
+      "simple-import-sort/imports": "error",
+      "simple-import-sort/exports": "error",
+    },
+  },
+  prettier,
   globalIgnores([
-    // Default ignores of eslint-config-next:
+    ".agents/skills/**",
+    ".npm-cache/**",
+    ".cache/**",
     ".next/**",
     "out/**",
     "build/**",
+    "coverage/**",
+    "test-results/**",
+    "playwright-report/**",
+    "**/__screenshots__/**",
+    "**/__traces__/**",
+    ".vitest/**",
+    ".vitest-attachments/**",
     "next-env.d.ts",
   ]),
 ]);
-
-export default eslintConfig;

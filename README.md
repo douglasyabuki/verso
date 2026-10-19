@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+﻿# Verso
 
-## Getting Started
+Next.js 16.4.2 / React 19.3 application using TypeScript, Tailwind CSS 4, npm, and the root `app/` directory. This repository currently contains the starter application with adopted development tooling. Product implementation is deferred.
 
-First, run the development server:
+Use Node.js 20.19+ and npm 11.3.0. Install the lockfile with `npm ci`, then run `npm run dev` and open http://localhost:3000.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+| Command                | Purpose                                                        |
+| ---------------------- | -------------------------------------------------------------- |
+| `npm run lint`         | Next.js/TypeScript lint and import sorting                     |
+| `npm run lint:fix`     | Apply available ESLint fixes                                   |
+| `npm run format`       | Format supported files, including Tailwind class ordering      |
+| `npm run format:check` | Check formatting                                               |
+| `npm run typecheck`    | Generate Next.js route types, then run TypeScript              |
+| `npm test`             | Build/start the production app and run Chromium smoke coverage |
+| `npm run build`        | Build the production app                                       |
+| `npm start`            | Serve the built app                                            |
+
+Install Playwright's managed Chromium browser before the first test run, using the same workspace-local path as `playwright.config.ts`:
+
+```powershell
+# PowerShell, from the repository root
+$env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $PWD '.cache/ms-playwright'
+npx --no-install playwright install chromium
+npm test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+```sh
+# POSIX shell, from the repository root
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.cache/ms-playwright" npx --no-install playwright install chromium
+npm test
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Tests build and start a fresh production server on `localhost:3100`; keep that port free. The current app and tests require no credentials. Builds fetch the scaffold's Geist fonts from Google.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Active configurations live at the repository root and reusable skills live under `.agents/skills/`. Existing Next.js agent instructions are preserved in [AGENTS.md](AGENTS.md).

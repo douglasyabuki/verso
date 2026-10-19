@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Adopted tooling
+.npm-cache/
+.cache/
+test-results/
+playwright-report/
+**/__screenshots__/
+**/__traces__/
+.vitest/
+.vitest-attachments/
+!.env.example
+
