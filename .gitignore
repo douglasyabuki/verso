@@ -51,3 +51,6 @@ playwright-report/
 .vitest-attachments/
 !.env.example
 
+temp
+/output/
+/public/compiler/

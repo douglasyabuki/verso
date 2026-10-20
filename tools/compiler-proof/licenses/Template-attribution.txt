@@ -1,0 +1,14 @@
+The owner's supplied source identifies its design as an adaptation of Rover
+Resume - Fancy Template, with further adaptation for the Maths Volunteers
+Foundation audience. The supplied readme is preserved in Template-source-README.txt.
+
+Rover Resume by Subidit:
+https://www.overleaf.com/latex/templates/rover-resume/bpzqtssvfgsn
+https://github.com/subidit/rover-resume
+
+The Overleaf template page identifies its license as Creative Commons CC BY 4.0:
+https://creativecommons.org/licenses/by/4.0/
+
+Verso adapts the owner's source for a browser XeTeX toolchain, structured bilingual
+content, and bounded layout settings. Generated source includes this attribution
+and identifies those changes. Personal career content remains the owner's content.

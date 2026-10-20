@@ -1,0 +1,924 @@
+{
+  "engine": {
+    "version": "SwiftLaTeX v20022022 / XeTeX WASM 0.3.0",
+    "archive": "swiftlatex-release.zip",
+    "files": [
+      "swiftlatexxetex.js",
+      "swiftlatexxetex.wasm",
+      "swiftlatexdvipdfm.js",
+      "swiftlatexdvipdfm.wasm"
+    ]
+  },
+  "format": {
+    "sha256": "6a2ea36e521a282653ea940062776c252e856d4e826e81e07408b5d2b37718ac",
+    "kernel": "LaTeX2e 2021-11-15 patch 1; L3 2022-02-24",
+    "languages": ["english", "portuguese"],
+    "buildLog": "format-build.log"
+  },
+  "archives": [
+    {
+      "name": "amsfonts.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/amsfonts.tar.xz",
+      "sha256": "d146fb2489202f1dd394625c733621b8664a660c87a7d55b2a5b9b4283eaa3ad"
+    },
+    {
+      "name": "amsmath.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/amsmath.tar.xz",
+      "sha256": "a92b0bf878f20214111c62863f48803cc9c57652d8a8d0c3ee979560d532c76d"
+    },
+    {
+      "name": "atbegshi.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/atbegshi.tar.xz",
+      "sha256": "ac947bb1ba592750a8ff5743d74a58e0ae53ce8a226e8c57d77b8525ab61a785"
+    },
+    {
+      "name": "atveryend.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/atveryend.tar.xz",
+      "sha256": "5423bfe7c4b78445434141b6e0c1ac9fcd7d99422da544f032f3d094fc76fac7"
+    },
+    {
+      "name": "auxhook.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/auxhook.tar.xz",
+      "sha256": "cd19817b3db127424c727c9b29a9647daa22b4d8ff56a63c94cdbd2163a09690"
+    },
+    {
+      "name": "bigintcalc.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/bigintcalc.tar.xz",
+      "sha256": "a1007a427877adfa06ab59986f2280da2debd1ed85642d2ad2aae5ba8952ad1f"
+    },
+    {
+      "name": "bitset.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/bitset.tar.xz",
+      "sha256": "06aee473039bccb298d08024e9c850c1110dd13f8f956a43bf4cf125bd7e5acd"
+    },
+    {
+      "name": "dviout.win32.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/dviout.win32.tar.xz",
+      "sha256": "a03a45ca0afcdd3abc4c7a7ce9143909cea814f7312b7135414df66b0519b7b2"
+    },
+    {
+      "name": "dvipdfmx.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/dvipdfmx.tar.xz",
+      "sha256": "f35e61529c4f3322f5cd2486b7469d665af8ca11fdd697d60c929d76dcdd9273"
+    },
+    {
+      "name": "enumitem.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/enumitem.tar.xz",
+      "sha256": "e6a9dd8e8cbaafcda600fab787ee0eb39ababe1588c4ed6a4a021439c424cd6d"
+    },
+    {
+      "name": "etexcmds.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/etexcmds.tar.xz",
+      "sha256": "9202290fffd7d4089d3a34d6324bc02d80efa92ecdb1d07c99fd453836096ae2"
+    },
+    {
+      "name": "fancyhdr.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/fancyhdr.tar.xz",
+      "sha256": "3f43ccdf4e1098f244af8a25c7054def5121d0948ad8f26a7c0ec36069ac3832"
+    },
+    {
+      "name": "fontawesome5.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/fontawesome5.tar.xz",
+      "sha256": "22c2a9a62d330c0e19507a70781a4ccecb779a0d4da3b3ff963e618305f1bc78"
+    },
+    {
+      "name": "fontspec.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/fontspec.tar.xz",
+      "sha256": "c858cf244d2f95f5df6a026b5122e35caa552f30523ee79884f7a655691f3ef1"
+    },
+    {
+      "name": "geometry.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/geometry.tar.xz",
+      "sha256": "e9cc2408de4b067c16e3d20ab8617796b36855e41efaeac041cb850031d265d2"
+    },
+    {
+      "name": "gettitlestring.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/gettitlestring.tar.xz",
+      "sha256": "92f7c97f62c97db84f29a8256ab5e6c646cbed904daf9c6dac1c535776f8cb78"
+    },
+    {
+      "name": "glyphlist.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/glyphlist.tar.xz",
+      "sha256": "93a3f9cda5939cd74f3eab8fc3dbaeee675f80c27730d931600b4622e2a3f041"
+    },
+    {
+      "name": "graphics-def.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/graphics-def.tar.xz",
+      "sha256": "93736f137caea9e75250a8cd9ec15b4cd22d57c1baf45aa1a8ce033992415bd6"
+    },
+    {
+      "name": "graphics.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/graphics.tar.xz",
+      "sha256": "daeb8aa5b7ed0ca0c73186582d796d2bc17b9ff6333f4440bfce08b61331631f"
+    },
+    {
+      "name": "hycolor.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/hycolor.tar.xz",
+      "sha256": "00bd09ebe1cc68e8e4f3b67aa9114e1a14efaddc6eb486a0373cacb426bf6b48"
+    },
+    {
+      "name": "hyperref.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/hyperref.tar.xz",
+      "sha256": "a23a6cbc51eb81d69bed73793123be2f1d91be3be947238fa73ad7c71d2e845d"
+    },
+    {
+      "name": "iftex.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/iftex.tar.xz",
+      "sha256": "392b52ad4fb543011770d21d1689ba16bd7141ceac147ceb4a35d472922d79aa"
+    },
+    {
+      "name": "infwarerr.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/infwarerr.tar.xz",
+      "sha256": "107adb14139d734d6dd4977429fe125469fa2a6241338942c4f3244052e54197"
+    },
+    {
+      "name": "intcalc.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/intcalc.tar.xz",
+      "sha256": "84646bf7330976c7a61b08b788612a6ac12f504beeb988e8ef0e7669fe6657ab"
+    },
+    {
+      "name": "inter-current.tar.xz",
+      "url": "https://mirrors.ctan.org/systems/texlive/tlnet/archive/inter.tar.xz",
+      "sha256": "25a20aebf69dbffeacbb7b129c1d91fa4686c31a208654069ca54b65987245bc"
+    },
+    {
+      "name": "kvdefinekeys.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/kvdefinekeys.tar.xz",
+      "sha256": "a90858af573082c7036978a150bf92dfc44a6310499a8a7109d400a87486b8c5"
+    },
+    {
+      "name": "kvoptions.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/kvoptions.tar.xz",
+      "sha256": "816f5fcdf0d1de66ceb753a8e893b494ee3b187c95c1591f18483831fdfc7d9b"
+    },
+    {
+      "name": "kvsetkeys.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/kvsetkeys.tar.xz",
+      "sha256": "8f1464c26a81ed8166548e7715dab80c7b1e63c3b157cba56818b527c17498af"
+    },
+    {
+      "name": "l3backend.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/l3backend.tar.xz",
+      "sha256": "d327318db08081741d49e58d956bcf6b5075c5596e03131e747bdbc4f3657e1c"
+    },
+    {
+      "name": "l3kernel.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/l3kernel.tar.xz",
+      "sha256": "18b6ee7bd6c47e36eb88923c0aff6a7eeca12b76b389697413512622431b532f"
+    },
+    {
+      "name": "l3packages.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/l3packages.tar.xz",
+      "sha256": "de4d9433ccba3c714ba30c154638ec84faf7320ee9c6be6bd273785639f5fbaf"
+    },
+    {
+      "name": "latex-tools-dev.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/latex-tools-dev.tar.xz",
+      "sha256": "5cd0b857ed66b19472beed20a5e8c33c4fb05f00560e9800685329729362b029"
+    },
+    {
+      "name": "latex.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/latex.tar.xz",
+      "sha256": "8656ac4d00cba477e4bba366ffe48b35f00e123dacdf82d2b51bd511dd6dd426"
+    },
+    {
+      "name": "letltxmacro.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/letltxmacro.tar.xz",
+      "sha256": "044d6ae2c76e56c6848bb0f31771ca43b13a483e12dd4f6d31618064d5490284"
+    },
+    {
+      "name": "lm.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/lm.tar.xz",
+      "sha256": "6ebed6d30e83956392059620c7082ceea3169b3997ca3f8ae3a21b796b7cc835"
+    },
+    {
+      "name": "ltxcmds.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/ltxcmds.tar.xz",
+      "sha256": "a6fefc1096eef929a0c18c7271840fcbc53858dc0d3816458a115357227c6f61"
+    },
+    {
+      "name": "pdfescape.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/pdfescape.tar.xz",
+      "sha256": "2fb9398d868c954950fc4918199faca3f359e7b4c208163cba18846874163dd6"
+    },
+    {
+      "name": "pdftexcmds.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/pdftexcmds.tar.xz",
+      "sha256": "7854d61c149e644e0f7df32ed735646de1ec4440518eeefc90307bf7113fd46f"
+    },
+    {
+      "name": "refcount.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/refcount.tar.xz",
+      "sha256": "7d0eede7744ef60b003f189d55eae42256c3e93f7773a0f6dd5d8d1c470b5449"
+    },
+    {
+      "name": "rerunfilecheck.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/rerunfilecheck.tar.xz",
+      "sha256": "3f6028f045d62710b14687e12ea26d3efb6306e2faf87a54ea38cdb8a1042489"
+    },
+    {
+      "name": "stringenc.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/stringenc.tar.xz",
+      "sha256": "4e80ed310f4c58ad03359be3d23e478eb5e4daa51067c3e0e14b8fa0d876c134"
+    },
+    {
+      "name": "swiftlatex-release.zip",
+      "url": "https://github.com/SwiftLaTeX/SwiftLaTeX/releases/download/v20022022/20-02-2022.zip",
+      "sha256": "cf5535ffe9cdf42f7c4522e96bba4d33db10c418a7ceb24e5d80504be7de7150"
+    },
+    {
+      "name": "titlesec.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/titlesec.tar.xz",
+      "sha256": "d9e8c70db6fcbcbb2a6a40863e035bb96eb8aa0771b0c94020f4487e54798f49"
+    },
+    {
+      "name": "totalcount.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/totalcount.tar.xz",
+      "sha256": "96c1d12292dd7a4501af80286b4c042c306bde11031de9755e64f1deb25af90c"
+    },
+    {
+      "name": "uniquecounter.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/uniquecounter.tar.xz",
+      "sha256": "235aaae79382eb1cc79a88864b1bf5998e273a52ae83008601bed741d9a852d8"
+    },
+    {
+      "name": "url.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/url.tar.xz",
+      "sha256": "3fc24939dd1923a05767d29adf43c786293cfd327d6660966346420438c77c5e"
+    },
+    {
+      "name": "xcolor.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/xcolor.tar.xz",
+      "sha256": "4c915061b21a6edd58892f00db675e8bce6d2f710640bfc928c61443e209559e"
+    },
+    {
+      "name": "xetex.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/xetex.tar.xz",
+      "sha256": "907ee4db93717083315427bce28e271e84ff51748e64f640487174b377157da8"
+    },
+    {
+      "name": "xhfill.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/xhfill.tar.xz",
+      "sha256": "85bd356db72ecc52b6624715e4f119d5cd8f52452e709d1bf585e04355ea8777"
+    },
+    {
+      "name": "xkeyval.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/xkeyval.tar.xz",
+      "sha256": "e665b5e6c77b804d4a9a96de18a1de7baff4ac6152475a7c1c54c44662c8d37b"
+    },
+    {
+      "name": "zapfding.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/zapfding.tar.xz",
+      "sha256": "4271ddebc57d58e7bab81f224b4284a3bf333f8910dc51dbf41e79a44d5c5e51"
+    },
+    {
+      "name": "needspace.tar.xz",
+      "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/needspace.tar.xz",
+      "sha256": "8a8258682ac174fa92509b5f0cc69ea43416c5df35148a59201a5614f39c70b9"
+    }
+  ],
+  "resources": [
+    {
+      "name": "FontAwesome5Brands-Regular-400.otf",
+      "archive": "fontawesome5.tar.xz",
+      "member": "fonts/opentype/public/fontawesome5/FontAwesome5Brands-Regular-400.otf",
+      "sha256": "d7341e9bf58e687a56b7ba4947bd4b7ef6ec572d5f399349f6095ea12a764afd"
+    },
+    {
+      "name": "FontAwesome5Free-Regular-400.otf",
+      "archive": "fontawesome5.tar.xz",
+      "member": "fonts/opentype/public/fontawesome5/FontAwesome5Free-Regular-400.otf",
+      "sha256": "c1491f912dd6f7d15ea80cbf433a7b65a62db50edbfbe359244126da6df7fce3"
+    },
+    {
+      "name": "FontAwesome5Free-Solid-900.otf",
+      "archive": "fontawesome5.tar.xz",
+      "member": "fonts/opentype/public/fontawesome5/FontAwesome5Free-Solid-900.otf",
+      "sha256": "d8268e9499aadf7a0a57802e1587df6b8a1e01d6ef3d3ed09630f0de322d3faf"
+    },
+    {
+      "name": "Inter-Black.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-Black.otf",
+      "sha256": "1dc81aa64047bfb4246ece435105ec85944f575744d6d850ab7a287fe6b640e7"
+    },
+    {
+      "name": "Inter-BlackItalic.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-BlackItalic.otf",
+      "sha256": "c73f44b7d9c1c9661f743042d1eec053ca539c0f667b7174f0fc616ca619321e"
+    },
+    {
+      "name": "Inter-Bold.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-Bold.otf",
+      "sha256": "00fd6f4691ee8884a33b46bf45851b341927c37c30064f558e1befb242971c49"
+    },
+    {
+      "name": "Inter-BoldItalic.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-BoldItalic.otf",
+      "sha256": "0c9f737ae44cc19dd2962733f6e1a00aa4a53768efc7dd98cd29d3609db311dd"
+    },
+    {
+      "name": "Inter-ExtraBold.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-ExtraBold.otf",
+      "sha256": "2012ceaf1470372c415f95c00495a1ad1ebdcd1cd6a6225808f011d459a9b12a"
+    },
+    {
+      "name": "Inter-ExtraBoldItalic.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-ExtraBoldItalic.otf",
+      "sha256": "3587d8a8778fbea2048b988131c3c63ee13ef147f96181dd576c8e294426927d"
+    },
+    {
+      "name": "Inter-ExtraLight.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-ExtraLight.otf",
+      "sha256": "b146e6b5c6f991616fc37b227c0195d708034693b4fc8d7cbd92bc47de2b3424"
+    },
+    {
+      "name": "Inter-ExtraLightItalic.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-ExtraLightItalic.otf",
+      "sha256": "d276c98f37003eaab19dbbc8d9679bc181c651532d49c5b33a382dbb04947f3f"
+    },
+    {
+      "name": "Inter-Italic.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-Italic.otf",
+      "sha256": "f065eb148431a276995ba88b79e9225e4aa05f05b3bfeb857cf0457dcc1064a9"
+    },
+    {
+      "name": "Inter-Light.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-Light.otf",
+      "sha256": "dce4a03976780ed6ddf6e3f7652f27df14f5dbee9238053d54dfb672dd6e67c0"
+    },
+    {
+      "name": "Inter-LightItalic.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-LightItalic.otf",
+      "sha256": "65b7ad3223e557ccf8d2f4fccfc519af5b569ae5ded7d4d0b72ea6352f1bedb8"
+    },
+    {
+      "name": "Inter-Medium.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-Medium.otf",
+      "sha256": "1e65171fccd6f445b7742728454620ec2867356c849af78e71bf2c4f0e3d97ba"
+    },
+    {
+      "name": "Inter-MediumItalic.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-MediumItalic.otf",
+      "sha256": "c8cc004155d275ad9e92edf33d50f5f67f3200d7fe66725e25e3e510d6ac968d"
+    },
+    {
+      "name": "Inter-Regular.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-Regular.otf",
+      "sha256": "be6d709dcb730ddaf050cbdae6fe89bd56d5d14dc66885639bbf6f06bd03521b"
+    },
+    {
+      "name": "Inter-SemiBold.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-SemiBold.otf",
+      "sha256": "bd68706b7bf8b3c580ae57685a2116bb1704b3a9998309ccfec7cd486f8a593e"
+    },
+    {
+      "name": "Inter-SemiBoldItalic.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-SemiBoldItalic.otf",
+      "sha256": "98d8779d2fb0a90cf62125e2ea191b6124ceb971e07a9463d3b397f6e2b87933"
+    },
+    {
+      "name": "Inter-Thin.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-Thin.otf",
+      "sha256": "d83920c4155b5a240c972d52a2fef7ad1a84731156b4585ec284e2859c597502"
+    },
+    {
+      "name": "Inter-ThinItalic.otf",
+      "archive": "inter-current.tar.xz",
+      "member": "fonts/opentype/public/inter/Inter-ThinItalic.otf",
+      "sha256": "528ec358da9db8e9a12d543cc06669d8d86fafe819f326bfc20f3715b91c47ef"
+    },
+    {
+      "name": "amsbsy.sty",
+      "archive": "amsmath.tar.xz",
+      "member": "tex/latex/amsmath/amsbsy.sty",
+      "sha256": "7f25c33d4010066ff2eed0286f62854867698b06d10ebad93b1b1ab96d12f936"
+    },
+    {
+      "name": "amsfonts.sty",
+      "archive": "amsfonts.tar.xz",
+      "member": "tex/latex/amsfonts/amsfonts.sty",
+      "sha256": "dab8b0e621267acfd89736cf97bdcc02647c545c0719c4997be8a7d1bf98f9c3"
+    },
+    {
+      "name": "amsgen.sty",
+      "archive": "amsmath.tar.xz",
+      "member": "tex/latex/amsmath/amsgen.sty",
+      "sha256": "d90cfa74087e9f8678fb81bde57f809f0d4043f2674cb23b73a85958ec4a0fb6"
+    },
+    {
+      "name": "amsmath.sty",
+      "archive": "amsmath.tar.xz",
+      "member": "tex/latex/amsmath/amsmath.sty",
+      "sha256": "027b292408d989f370f160c9b5f5b89641f69cd19027b0342beb022dd74d7c83"
+    },
+    {
+      "name": "amsopn.sty",
+      "archive": "amsmath.tar.xz",
+      "member": "tex/latex/amsmath/amsopn.sty",
+      "sha256": "18c28b99321d0f4576cb42e2793d2654828b273700224cd9ee27047f803e99f5"
+    },
+    {
+      "name": "amstext.sty",
+      "archive": "amsmath.tar.xz",
+      "member": "tex/latex/amsmath/amstext.sty",
+      "sha256": "49426425d82407dc702c77236fdeb4b82568ebb9566b8dd849bcfbf9eb9644de"
+    },
+    {
+      "name": "article.cls",
+      "archive": "latex.tar.xz",
+      "member": "tex/latex/base/article.cls",
+      "sha256": "988fb3e599df7e5b545e4253829dab11f0c7bd7827b79d32c2aaadfb52db6f6c"
+    },
+    {
+      "name": "atbegshi-ltx.sty",
+      "archive": "latex.tar.xz",
+      "member": "tex/latex/base/atbegshi-ltx.sty",
+      "sha256": "815582a920087c3a3c7dbf4d357b22db05e087f87b7fdcadf606d9f1fe750cb4"
+    },
+    {
+      "name": "atbegshi.sty",
+      "archive": "atbegshi.tar.xz",
+      "member": "tex/generic/atbegshi/atbegshi.sty",
+      "sha256": "a73003b4bb2dc8a814533ddbd31600e6626827799c2a465d03ef42e7a33fa71b"
+    },
+    {
+      "name": "atveryend-ltx.sty",
+      "archive": "latex.tar.xz",
+      "member": "tex/latex/base/atveryend-ltx.sty",
+      "sha256": "5cf523f1f8f87a365b9b2d16d79e62e0363a833dfdfa889e99f5251064661e83"
+    },
+    {
+      "name": "atveryend.sty",
+      "archive": "atveryend.tar.xz",
+      "member": "tex/latex/atveryend/atveryend.sty",
+      "sha256": "a62143db8b3bf1e52082c32e3feb7450bc90c000c6c48a38fa51cf96a6075eae"
+    },
+    {
+      "name": "auxhook.sty",
+      "archive": "auxhook.tar.xz",
+      "member": "tex/latex/auxhook/auxhook.sty",
+      "sha256": "1d9f36f4e9674bef594a47cac7d5781e9f7e0c7c8edf9f72769f4dc6f10d1b5f"
+    },
+    {
+      "name": "bigintcalc.sty",
+      "archive": "bigintcalc.tar.xz",
+      "member": "tex/generic/bigintcalc/bigintcalc.sty",
+      "sha256": "050f2ad3a3671a1f4f9bcf97784836301bc751507e7ada546632379406aea103"
+    },
+    {
+      "name": "bitset.sty",
+      "archive": "bitset.tar.xz",
+      "member": "tex/generic/bitset/bitset.sty",
+      "sha256": "af5c7196c69dc9d28225189169b60c9b9039125bc1756c04d54886f0a3e1891e"
+    },
+    {
+      "name": "calc.sty",
+      "archive": "latex-tools-dev.tar.xz",
+      "member": "tex/latex-dev/tools/calc.sty",
+      "sha256": "c2567f70ff6c9af39c938fc92af013fc4416dbc28f7367481a462bd981b916f2"
+    },
+    {
+      "name": "ckx.map",
+      "archive": "dvipdfmx.tar.xz",
+      "member": "texmf-dist/fonts/map/dvipdfmx/ckx.map",
+      "sha256": "52859584f1baa4aea9e5c6318ded82b1b5bfa713dcdc945bda7e26b206c8bdc4"
+    },
+    {
+      "name": "color.cfg",
+      "archive": "dviout.win32.tar.xz",
+      "member": "tlpkg/dviout/GRAPHIC/LATEX2E/color.cfg",
+      "sha256": "dc4832dbb912ad5483c8b36e2eb28f14e6e5500a713881ad98c1c687414b5455"
+    },
+    {
+      "name": "color.sty",
+      "archive": "graphics.tar.xz",
+      "member": "tex/latex/graphics/color.sty",
+      "sha256": "2b4ecc9d1ba83a5179742f31dcdf8513518febd33d6077e41ba6de4263c9e6bd"
+    },
+    {
+      "name": "dvipsnam.def",
+      "archive": "graphics.tar.xz",
+      "member": "tex/latex/graphics/dvipsnam.def",
+      "sha256": "bd735fb2c2e014177723c49b6e7ede5ac65d461a9036375df3df1af5edc1a99c"
+    },
+    {
+      "name": "ec-lmr10",
+      "archive": "lm.tar.xz",
+      "member": "fonts/tfm/public/lm/ec-lmr10.tfm",
+      "sha256": "cd13479f463b9a575d053dd7bf0884daa46bfdeffe4b7f537c193861652ac9e5"
+    },
+    {
+      "name": "enumitem.sty",
+      "archive": "enumitem.tar.xz",
+      "member": "tex/latex/enumitem/enumitem.sty",
+      "sha256": "a217353d233e54e8c0944d87ea2924ec1f20d849a35b749698df03884856e5e3"
+    },
+    {
+      "name": "etexcmds.sty",
+      "archive": "etexcmds.tar.xz",
+      "member": "tex/generic/etexcmds/etexcmds.sty",
+      "sha256": "a7db2834e02bd11be0e62a3be15e3dc293ba1be9196f19b29b9d98bfdbeb7514"
+    },
+    {
+      "name": "expl3.sty",
+      "archive": "l3kernel.tar.xz",
+      "member": "tex/latex/l3kernel/expl3.sty",
+      "sha256": "d25966b6774e1153ada51b5c52eb5084b76708181861fa090844a18c2092a905"
+    },
+    {
+      "name": "fancyhdr.sty",
+      "archive": "fancyhdr.tar.xz",
+      "member": "tex/latex/fancyhdr/fancyhdr.sty",
+      "sha256": "3d2922548e0e5f1a6c5676eda6ebb6dc20d7d305b4d8c2be5f1c833fb1084e6d"
+    },
+    {
+      "name": "fontawesome5-utex-helper.sty",
+      "archive": "fontawesome5.tar.xz",
+      "member": "tex/latex/fontawesome5/fontawesome5-utex-helper.sty",
+      "sha256": "8ec96527e431ce529495734541776dff27810f52664362cc1b3a6423a13e2951"
+    },
+    {
+      "name": "fontawesome5.sty",
+      "archive": "fontawesome5.tar.xz",
+      "member": "tex/latex/fontawesome5/fontawesome5.sty",
+      "sha256": "e683d354a4abe3dcaa8d17e0ff2bb0d0a113b2ac3e0d5a6663dd361aaf550c03"
+    },
+    {
+      "name": "fontenc.sty",
+      "archive": "latex.tar.xz",
+      "member": "tex/latex/base/fontenc.sty",
+      "sha256": "d088c75e16c3c9f6b979a59571b96e5dd9e487a720bc74591580878388b82918"
+    },
+    {
+      "name": "fontspec-xetex.sty",
+      "archive": "fontspec.tar.xz",
+      "member": "tex/latex/fontspec/fontspec-xetex.sty",
+      "sha256": "7d9dbc9c795bcfe13930a88fc0d6066f064eea04fb1006c6ded73d54c863e12b"
+    },
+    {
+      "name": "fontspec.cfg",
+      "archive": "fontspec.tar.xz",
+      "member": "tex/latex/fontspec/fontspec.cfg",
+      "sha256": "f31d038ca5322ef4fc3fbe391f42695bf1305567a04b6ac1005964703dd1232a"
+    },
+    {
+      "name": "fontspec.sty",
+      "archive": "fontspec.tar.xz",
+      "member": "tex/latex/fontspec/fontspec.sty",
+      "sha256": "a13fef368454be939bc947e688700508adbf75b2b3d3dbe9730521808945fe7e"
+    },
+    {
+      "name": "geometry.sty",
+      "archive": "geometry.tar.xz",
+      "member": "tex/latex/geometry/geometry.sty",
+      "sha256": "d5d36ad74051ad36288242b51438e2d9a5db2bd6c063b9b5704d0931fbc9f439"
+    },
+    {
+      "name": "gettitlestring.sty",
+      "archive": "gettitlestring.tar.xz",
+      "member": "tex/generic/gettitlestring/gettitlestring.sty",
+      "sha256": "26ab10fd43fd5a90f98bcbed3a99978808da8878eb73835db4e0346371aee41e"
+    },
+    {
+      "name": "glyphlist.txt",
+      "archive": "glyphlist.tar.xz",
+      "member": "fonts/map/glyphlist/glyphlist.txt",
+      "sha256": "1d090feeb2cef487186d67f42d0b106bf09abf67e2cd94ab99e238d57c561d56"
+    },
+    {
+      "name": "hxetex.def",
+      "archive": "hyperref.tar.xz",
+      "member": "tex/latex/hyperref/hxetex.def",
+      "sha256": "e75c6f3b53051c998018e827df34d74c86ff643f76111bd94efa716ba6ab7ea2"
+    },
+    {
+      "name": "hycolor.sty",
+      "archive": "hycolor.tar.xz",
+      "member": "tex/latex/hycolor/hycolor.sty",
+      "sha256": "8acaa03eda19a8158780356701e905e354e1dc47dc736e6e26fc860c12a15e14"
+    },
+    {
+      "name": "hyperref.sty",
+      "archive": "hyperref.tar.xz",
+      "member": "tex/latex/hyperref/hyperref.sty",
+      "sha256": "deda7321a95e6307e3c6d03975704440ce0ab81b5dbadecf82acce4365091e4e"
+    },
+    {
+      "name": "ifluatex.sty",
+      "archive": "iftex.tar.xz",
+      "member": "tex/generic/iftex/ifluatex.sty",
+      "sha256": "1f1dd9c7cc37bfc574fdf4103a4b8e476e31a5058b0214f14985d2f5f018a221"
+    },
+    {
+      "name": "iftex.sty",
+      "archive": "iftex.tar.xz",
+      "member": "tex/generic/iftex/iftex.sty",
+      "sha256": "2de50639c1f27201f2b4d04e9083e0a51fc5a73b8908eea2e80d6e3205636d4a"
+    },
+    {
+      "name": "ifvtex.sty",
+      "archive": "iftex.tar.xz",
+      "member": "tex/generic/iftex/ifvtex.sty",
+      "sha256": "1138730b9ad7d9f664b4760a4ea0ae0945afd21c006b76b67e623e863bbf3756"
+    },
+    {
+      "name": "ifxetex.sty",
+      "archive": "iftex.tar.xz",
+      "member": "tex/generic/iftex/ifxetex.sty",
+      "sha256": "b4729967ca572a3fbbcdc36f0e0764a53ae0855a0b7c3e29222ca119c054bd6e"
+    },
+    {
+      "name": "infwarerr.sty",
+      "archive": "infwarerr.tar.xz",
+      "member": "tex/generic/infwarerr/infwarerr.sty",
+      "sha256": "8c3e23b8bb7d940ff26cb0cf96e0151f540acf55020dc3c1aa8bcdb2eb66305c"
+    },
+    {
+      "name": "intcalc.sty",
+      "archive": "intcalc.tar.xz",
+      "member": "tex/generic/intcalc/intcalc.sty",
+      "sha256": "1343ba1b10b245bfd199c22947249af1d756808690c7811c90f07fe0a3772080"
+    },
+    {
+      "name": "inter.sty",
+      "archive": "inter-current.tar.xz",
+      "member": "tex/latex/inter/inter.sty",
+      "sha256": "4880f7fc34c9cdda48c845398007bfc48795f645d2b81ecb4ef96af4a70a1fe4"
+    },
+    {
+      "name": "keyval",
+      "archive": "xkeyval.tar.xz",
+      "member": "tex/generic/xkeyval/keyval.tex",
+      "sha256": "9edeba753c9d3b10c87033b108c20887670c1c36ce45ad5dc480e7ab52868a6f"
+    },
+    {
+      "name": "keyval.sty",
+      "archive": "graphics.tar.xz",
+      "member": "tex/latex/graphics/keyval.sty",
+      "sha256": "cdac603619a4c129511ef8a3abfbb4d2068b1bb67626cb30568baa0ceb26aea2"
+    },
+    {
+      "name": "kvdefinekeys.sty",
+      "archive": "kvdefinekeys.tar.xz",
+      "member": "tex/generic/kvdefinekeys/kvdefinekeys.sty",
+      "sha256": "c42f0c2628dc5fbd95b535cf8cd3cc964347653c099d38c0d416f896d84e8240"
+    },
+    {
+      "name": "kvoptions.sty",
+      "archive": "kvoptions.tar.xz",
+      "member": "tex/latex/kvoptions/kvoptions.sty",
+      "sha256": "28be410832fdddeb9c853ceb14d49845de1c62316acfe4406f8b5b60f2e13e62"
+    },
+    {
+      "name": "kvsetkeys.sty",
+      "archive": "kvsetkeys.tar.xz",
+      "member": "tex/generic/kvsetkeys/kvsetkeys.sty",
+      "sha256": "00c8665544687fea57c27a6be454f832c5190e710545102ef0507238bad1365e"
+    },
+    {
+      "name": "l3backend-xetex.def",
+      "archive": "l3backend.tar.xz",
+      "member": "tex/latex/l3backend/l3backend-xetex.def",
+      "sha256": "4df8d38806861e033674c5f78b96abdd7bef3f515fd4edc9f2bec85d29af46aa"
+    },
+    {
+      "name": "l3keys2e.sty",
+      "archive": "l3packages.tar.xz",
+      "member": "tex/latex/l3packages/l3keys2e/l3keys2e.sty",
+      "sha256": "5420457e8d55f6c83eb4c62be750cb6a0302241dafb3f0a82e262b8ac783b0ba"
+    },
+    {
+      "name": "letltxmacro.sty",
+      "archive": "letltxmacro.tar.xz",
+      "member": "tex/latex/letltxmacro/letltxmacro.sty",
+      "sha256": "3a5e77870557530b7bef361a2d5af7346121807e335dcc291cb6fb6a773b569a"
+    },
+    {
+      "name": "lmroman10-bold",
+      "archive": "lm.tar.xz",
+      "member": "fonts/opentype/public/lm/lmroman10-bold.otf",
+      "sha256": "102fe06c430a8b681b2bf6876b7cd967ae4d47b4b6b41d915eb7913b726d9fb1"
+    },
+    {
+      "name": "lmroman10-regular",
+      "archive": "lm.tar.xz",
+      "member": "fonts/opentype/public/lm/lmroman10-regular.otf",
+      "sha256": "1aa18cfefa58132c52ce5de70db1fd1154201c19cd2b2cdaffba4906a33e6852"
+    },
+    {
+      "name": "ltxcmds.sty",
+      "archive": "ltxcmds.tar.xz",
+      "member": "tex/generic/ltxcmds/ltxcmds.sty",
+      "sha256": "72a45b7f07d85a66605bbec6c0f783527995722e15c3bc5963b3048b9831bbc0"
+    },
+    {
+      "name": "nameref.sty",
+      "archive": "hyperref.tar.xz",
+      "member": "tex/latex/hyperref/nameref.sty",
+      "sha256": "4a728ad40dd3708c44cb418f4a19bf0ba4f32fdbfa35ee3a5ad205352d5497b6"
+    },
+    {
+      "name": "pd1enc.def",
+      "archive": "hyperref.tar.xz",
+      "member": "tex/latex/hyperref/pd1enc.def",
+      "sha256": "96bf91e42bc16a4038ed9690ab4f03a7c4c7228232bb7813492a58737de4bb06"
+    },
+    {
+      "name": "pdfescape.sty",
+      "archive": "pdfescape.tar.xz",
+      "member": "tex/generic/pdfescape/pdfescape.sty",
+      "sha256": "b3f0e56366c11b85dae521f9a48a6fd415dec1ce8c83152fde813a9f64445b49"
+    },
+    {
+      "name": "pdfglyphlist.txt",
+      "archive": "glyphlist.tar.xz",
+      "member": "fonts/map/glyphlist/pdfglyphlist.txt",
+      "sha256": "9d7bee92b7cfdaa6e03c7df895003145ed982be0bf6d1e78fdd5eb71bf4945aa"
+    },
+    {
+      "name": "pdftexcmds.sty",
+      "archive": "pdftexcmds.tar.xz",
+      "member": "tex/generic/pdftexcmds/pdftexcmds.sty",
+      "sha256": "2df7e0bd148c99d8097352b8ac9948dccf91d61ba360dcf43f82206933b6045b"
+    },
+    {
+      "name": "puenc.def",
+      "archive": "hyperref.tar.xz",
+      "member": "tex/latex/hyperref/puenc.def",
+      "sha256": "69ac820f22e954a34cc9b1a24b74107366effd89a196516b58b00c89e748a677"
+    },
+    {
+      "name": "pzdr",
+      "archive": "zapfding.tar.xz",
+      "member": "fonts/tfm/adobe/zapfding/pzdr.tfm",
+      "sha256": "6b4254217851e285d1d5c6dfe677284396eeffc59f709ad775404b76dc99d513"
+    },
+    {
+      "name": "refcount.sty",
+      "archive": "refcount.tar.xz",
+      "member": "tex/latex/refcount/refcount.sty",
+      "sha256": "1bd5d42025520bef74f8808af99cf3f3be7d2e3774b9931bf85c11ba81bb6cab"
+    },
+    {
+      "name": "rerunfilecheck.sty",
+      "archive": "rerunfilecheck.tar.xz",
+      "member": "tex/latex/rerunfilecheck/rerunfilecheck.sty",
+      "sha256": "c206a966a49fe47d1c59723d116dac95994468272cda392a56cf7379519c460f"
+    },
+    {
+      "name": "size11.clo",
+      "archive": "latex.tar.xz",
+      "member": "tex/latex/base/size11.clo",
+      "sha256": "efc946da03cfa55c75be27d73012ab866fcc935fd47ac4a674026bbdbdcfa9f1"
+    },
+    {
+      "name": "stringenc.sty",
+      "archive": "stringenc.tar.xz",
+      "member": "tex/generic/stringenc/stringenc.sty",
+      "sha256": "b134a7bba648a6987afc83ddfb6a3fcdad43bcae6b616e533eb484306d56ac45"
+    },
+    {
+      "name": "t1lmr.fd",
+      "archive": "lm.tar.xz",
+      "member": "tex/latex/lm/t1lmr.fd",
+      "sha256": "6b61abc8a6796f1884f819afcfc4c33558564f7e5c1d47b720e50ee15dba829a"
+    },
+    {
+      "name": "tex-text.tec",
+      "archive": "xetex.tar.xz",
+      "member": "texmf-dist/fonts/misc/xetex/fontmapping/base/tex-text.tec",
+      "sha256": "511836c4d363daffa1c789956bdb44b89ac526ef3e4215a846c313b717447d40"
+    },
+    {
+      "name": "texglyphlist.txt",
+      "archive": "glyphlist.tar.xz",
+      "member": "fonts/map/glyphlist/texglyphlist.txt",
+      "sha256": "4b11bf2dcd65b004ee2023c5392339aaf89429bef0d3ace13b7b098d108cd991"
+    },
+    {
+      "name": "textcomp.sty",
+      "archive": "latex.tar.xz",
+      "member": "tex/latex/base/textcomp.sty",
+      "sha256": "8c2797b9debcbc41cc8704713a532180175396f14ea783ea9bbc12c60f21faf5"
+    },
+    {
+      "name": "titlesec.sty",
+      "archive": "titlesec.tar.xz",
+      "member": "tex/latex/titlesec/titlesec.sty",
+      "sha256": "a8948d15987e13761cb2d97d05703051013779963336094044b5f1993057c1fb"
+    },
+    {
+      "name": "totalcount.sty",
+      "archive": "totalcount.tar.xz",
+      "member": "tex/latex/totalcount/totalcount.sty",
+      "sha256": "df7e586047a5e8919f337bb15f454f3a4113c284271f8ace954ae314640f27fb"
+    },
+    {
+      "name": "ts1cmr.fd",
+      "archive": "latex.tar.xz",
+      "member": "tex/latex/base/ts1cmr.fd",
+      "sha256": "c919034d96da20aecccb01a4401a6a52a487aba86db9a354afc4d82b99a8c2b4"
+    },
+    {
+      "name": "tuenc.def",
+      "archive": "latex.tar.xz",
+      "member": "tex/latex/base/tuenc.def",
+      "sha256": "9893474e5e84d8015aebe5094efbc9383ad4adee1a41553f80dfc468c8e483c6"
+    },
+    {
+      "name": "tufontawesomebrands.fd",
+      "archive": "fontawesome5.tar.xz",
+      "member": "tex/latex/fontawesome5/tufontawesomebrands.fd",
+      "sha256": "500754e19a74f55ccb7948032dd4624b703629bac42b2f1a872bc31a3ec6bd11"
+    },
+    {
+      "name": "tufontawesomefree.fd",
+      "archive": "fontawesome5.tar.xz",
+      "member": "tex/latex/fontawesome5/tufontawesomefree.fd",
+      "sha256": "928ce44e6791b3c879245be2314dd1cae8f31cce8b2dccb7e47f1a67b8a524c1"
+    },
+    {
+      "name": "uniquecounter.sty",
+      "archive": "uniquecounter.tar.xz",
+      "member": "tex/generic/uniquecounter/uniquecounter.sty",
+      "sha256": "9d11c81501953d689787ff14c073d2f1eda5874068db9e882b8dbbf9a9d863b0"
+    },
+    {
+      "name": "url.sty",
+      "archive": "url.tar.xz",
+      "member": "tex/latex/url/url.sty",
+      "sha256": "2373f56849ac606473e77053e5c1d14c92aba312b3f684e02a130eaf36f2de47"
+    },
+    {
+      "name": "xcolor.sty",
+      "archive": "xcolor.tar.xz",
+      "member": "tex/latex/xcolor/xcolor.sty",
+      "sha256": "121f45cee5e0a32583909763f95b1aae2c8f0d0a086def03fd958ebdad5e5c02"
+    },
+    {
+      "name": "xetex.def",
+      "archive": "graphics-def.tar.xz",
+      "member": "tex/latex/graphics-def/xetex.def",
+      "sha256": "17273ae47424a5bdb23bdb9ee10b09f7c0ba27d2332830eb770b59e6aab5ab97"
+    },
+    {
+      "name": "xhfill.sty",
+      "archive": "xhfill.tar.xz",
+      "member": "tex/latex/xhfill/xhfill.sty",
+      "sha256": "668a986491e8fb524aaeb458e793b2d3b98d952eade6d6537df4d3c8d7351863"
+    },
+    {
+      "name": "xkeyval",
+      "archive": "xkeyval.tar.xz",
+      "member": "tex/generic/xkeyval/xkeyval.tex",
+      "sha256": "d956774b1d33cbb50e6756a9007533d1ba7435271376251fd2f8139aa9efd623"
+    },
+    {
+      "name": "xkeyval.sty",
+      "archive": "xkeyval.tar.xz",
+      "member": "tex/latex/xkeyval/xkeyval.sty",
+      "sha256": "3e83a817c6fc8ae6a6f1572a7a56292b7185e27c5765431517206e1d808c794c"
+    },
+    {
+      "name": "xkvutils",
+      "archive": "xkeyval.tar.xz",
+      "member": "tex/generic/xkeyval/xkvutils.tex",
+      "sha256": "94b8f49361521f5d814df927422379ce74e11af372d4337df0279543c3e0615d"
+    },
+    {
+      "name": "xparse.sty",
+      "archive": "l3packages.tar.xz",
+      "member": "tex/latex/l3packages/xparse/xparse.sty",
+      "sha256": "c10bc5df2c6dc10c1e796988a4095d3a8a2728e33e0d0e7230e4a5d999d3a5ec"
+    },
+    {
+      "name": "xspace.sty",
+      "archive": "latex-tools-dev.tar.xz",
+      "member": "tex/latex-dev/tools/xspace.sty",
+      "sha256": "ba90f2552ba76aa174825a82060a0209658ef9228086c3d6028dd239ba5f74bf"
+    },
+    {
+      "name": "needspace.sty",
+      "archive": "needspace.tar.xz",
+      "member": "tex/latex/needspace/needspace.sty",
+      "sha256": "5ae673ce2a80fb868c954373252294d9e6469feeb78b445182772fd043eb0914"
+    }
+  ]
+}

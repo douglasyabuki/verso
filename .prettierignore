@@ -18,6 +18,10 @@ bun.lock
 .agents/skills/
 .npm-cache/
 .cache/
+public/compiler/
+temp/
+output/
+tools/compiler-proof/licenses/
 .env*
 # Product requirements are deliberately outside this adoption pass.
 docs/requirements.md

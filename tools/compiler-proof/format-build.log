@@ -1,0 +1,102 @@
+This is XeTeX, Version 3.14159265-2.6-0.999992 (XeTeX WebAssembly 0.3.0) (INITEX)
+entering extended mode
+(/tex/xelatex.ini (/tex/latex.ltx (/tex/texsys.cfg)
+./texsys.aux found
+
+
+\@currdir set to: ./.
+
+
+Assuming \openin and \input 
+have the same search path.
+
+
+Defining UNIX/DOS style filename parser.
+
+catcodes, registers, parameters,
+LaTeX2e <2021-11-15> patch level 1
+(/tex/expl3.ltx (/tex/expl3-code.tex)) hacks, document commands, control, par,
+spacing, files, font encodings, lengths,
+====================================
+
+Local config file fonttext.cfg used
+
+====================================
+(/tex/fonttext.cfg (/tex/fonttext.ltx
+=== Don't modify this file, use a .cfg file instead ===
+
+(/tex/omlenc.def) (/tex/omsenc.def) (/tex/ot1enc.def) (/tex/t1enc.def)
+(/tex/ts1enc.def) (/tex/tuenc.def) (/tex/tulmr.fd) (/tex/tulmss.fd)
+(/tex/tulmtt.fd) (/tex/ts1lmr.fd) (/tex/t1cmr.fd) (/tex/ot1cmr.fd)
+(/tex/ot1cmss.fd) (/tex/ot1cmtt.fd)))
+====================================
+
+Local config file fontmath.cfg used
+
+====================================
+(/tex/fontmath.cfg (/tex/fontmath.ltx
+=== Don't modify this file, use a .cfg file instead ===
+
+(/tex/omlcmm.fd) (/tex/omscmsy.fd) (/tex/omxcmex.fd) (/tex/ucmr.fd)))
+====================================
+
+Local config file preload.cfg used
+
+=====================================
+(/tex/preload.cfg (/tex/preload.ltx)) page nos., x-ref, environments, center,
+verbatim, math definitions, boxes, title, sectioning, contents, floats,
+footnotes, index, bibliography, output,  Unicode character data,
+(/tex/load-unicode-data 
+load-unicode-data.tex v1.15 (2021-09-15)
+Reading Unicode data
+# UnicodeData-14.0.0.txt
+# Modified 2021-09-15 11:00:00 GMT [JAW]
+)
+===========================================
+Local configuration file hyphen.cfg used
+===========================================
+(/tex/hyphen.cfg (/tex/xebabel.def) (/tex/hyphen.tex) (/tex/loadhyph-pt.tex
+UTF-8 Portuguese hyphenation patterns (/tex/hyph-pt.tex)))
+(/tex/latex2e-first-aid-for-external-files.ltx)
+ ) )
+Beginning to dump on file xelatex.fmt
+ (preloaded format=xelatex 2026.10.19)
+87343 strings of total length 391967
+293296 memory locations dumped; current usage is 298&291432
+20720 multiletter control sequences
+\font\nullfont=nullfont
+\font\c__fp_exp_intarray=cmr10 at 0.00002pt
+\font\c__fp_trig_intarray=cmr10 at 0.00003pt
+\font\c_initex_cctab=cmr10 at 0.00005pt
+\font\c_other_cctab=cmr10 at 0.00006pt
+\font\c_str_cctab=cmr10 at 0.00008pt
+\font\g__regex_state_active_intarray=cmr10 at 0.00009pt
+\font\g__regex_thread_info_intarray=cmr10 at 0.0001pt
+\font\g__regex_submatch_prev_intarray=cmr10 at 0.00012pt
+\font\g__regex_submatch_begin_intarray=cmr10 at 0.00014pt
+\font\g__regex_submatch_end_intarray=cmr10 at 0.00015pt
+\font\g__regex_submatch_case_intarray=cmr10 at 0.00017pt
+\font\g__regex_balance_intarray=cmr10 at 0.00018pt
+\font\OMX/cmex/m/n/10=cmex10
+\font\tenln=line10
+\font\tenlnw=linew10
+\font\tencirc=lcircle10
+\font\tencircw=lcirclew10
+\font\OT1/cmr/m/n/5=cmr5
+\font\OT1/cmr/m/n/7=cmr7
+\font\OT1/cmr/m/n/10=cmr10
+\font\OML/cmm/m/it/5=cmmi5
+\font\OML/cmm/m/it/7=cmmi7
+\font\OML/cmm/m/it/10=cmmi10
+\font\OMS/cmsy/m/n/5=cmsy5
+\font\OMS/cmsy/m/n/7=cmsy7
+\font\OMS/cmsy/m/n/10=cmsy10
+\font\c_code_cctab=cmr10 at 0.0002pt
+\font\c_document_cctab=cmr10 at 0.00021pt
+469252 words of font info for 28 preloaded fonts
+16 hyphenation exceptions
+Hyphenation trie of length 6240 has 188 ops out of 35111
+  7 for language 1
+  181 for language 0
+No pages of output.
+Transcript written on xelatex.log.
