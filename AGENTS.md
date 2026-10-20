@@ -38,9 +38,18 @@ Active configurations and agent skills live at the application root. Product req
 
 - Use npm and the existing package-lock.json. The application uses Next.js 16.4.2, React 19.3, Tailwind 4, TypeScript, and root app/ routes; @/* resolves from the repository root.
 - Preserve next.config.ts framework and Turbopack settings. Generate route helpers with next typegen before standalone type checks.
-- No product requirements have been adopted in this pass. Do not incorporate docs/requirements.md until the user explicitly requests it.
+- The user adopted docs/requirements.md with the scope in docs/implementation-notes.md: a session-only bilingual editor, variants, browser compilation, and file backups. Authentication, persistence, publication, public APIs, portfolio/LinkedIn integration, automated tests, and deployment are excluded from this implementation.
 - No auth or persistence integration is selected. Prisma and Better Auth are candidates, not mandated dependencies. Inspect the selected versions, their official documentation, deployment runtime, and provider requirements before implementation.
 - Run npm run format:check, npm run lint, npm run typecheck, and npm test for tooling changes. npm test builds and starts a fresh production server on localhost:3100 and runs Chromium smoke coverage; this is not product acceptance coverage.
 - Vitest Node/browser projects are not configured. Add them when meaningful domain or interactive component behavior exists. Do not add empty suites or passWithNoTests.
 - .agents/skills/ is excluded from automatic formatting/linting. Preserve customizations if updating skills later.
 - See README.md for setup and verification commands. Current tooling requires no external credentials.
+
+## Resume architecture
+
+- Structured ResumeDocument schema 1 is the editable source of truth. Keep domain types, validation, translation rules, and deterministic rendering under lib/resume/, independent of React and storage.
+- Supported output locales are en-US and pt-BR. Shared facts occur once; localized wording and achievement IDs survive reorder/rename operations. Translation review flags warn and do not block valid draft downloads.
+- The exact bundled template identity is exported by lib/resume/model.ts and mirrored in tools/compiler-proof/prepare.py. The design was adapted from private reference documents that are not included in the repository. Load .agents/skills/resume-latex/SKILL.md for template, package, font, or compiler changes.
+- Generated .tex, PDFs, compiler assets under public/compiler/, and .cache/ are artifacts. Change structured content or template code, not generated files. Reference inputs under temp/ remain private and ignored.
+- Only JSON workspace exports affect backup freshness. PDF and LaTeX exports do not preserve the complete editable workspace. Keep the persistent session-only notice and best-effort browser warning.
+- Run format:check, lint, typecheck, and build for this implementation. The user explicitly excluded adding or running automated tests, including npm test. Preserve the preexisting test setup without treating its starter smoke coverage as product acceptance.
