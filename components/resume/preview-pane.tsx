@@ -7,6 +7,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+} from "@/components/ui/code-block";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
@@ -45,6 +51,8 @@ export function PreviewPane({
   busy: boolean;
   locale: Locale;
 }) {
+  const compilerLog = compiler.error?.log || compiler.preview?.log;
+
   return (
     <section
       className="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-auto"
@@ -133,22 +141,31 @@ export function PreviewPane({
         </Alert>
       )}
       <PdfPreview key={compiler.preview?.key} output={compiler.preview} />
-      {(compiler.error?.log || compiler.preview?.log) && (
+      {compilerLog && (
         <details className="min-w-0 shrink-0 border-t bg-background px-3 py-2">
           <summary className="cursor-pointer text-xs font-medium">
             Compiler diagnostics
           </summary>
-          <ScrollArea
-            className="mt-2 max-h-[min(12rem,20dvh)] min-w-0"
-            viewportProps={{
-              role: "region",
-              "aria-label": "Compiler diagnostics log",
-            }}
-          >
-            <pre className="pr-3 text-xs wrap-anywhere whitespace-pre-wrap">
-              {compiler.error?.log || compiler.preview?.log}
-            </pre>
-          </ScrollArea>
+          <CodeBlock size="sm" className="mt-2">
+            <CodeBlockActions>
+              <CodeBlockCopyButton value={compilerLog} />
+            </CodeBlockActions>
+            <ScrollArea
+              className="max-h-[min(12rem,20dvh)] min-w-0"
+              viewportProps={{
+                role: "region",
+                "aria-label": "Compiler diagnostics log",
+              }}
+            >
+              <CodeBlockContent
+                wrap
+                tabIndex={-1}
+                className="overflow-visible pe-10 wrap-anywhere"
+              >
+                {compilerLog}
+              </CodeBlockContent>
+            </ScrollArea>
+          </CodeBlock>
         </details>
       )}
     </section>
