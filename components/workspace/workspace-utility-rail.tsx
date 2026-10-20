@@ -1,17 +1,17 @@
 "use client";
 
 import { BookOpen, Monitor } from "lucide-react";
-import { useState } from "react";
 
 import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -41,37 +41,35 @@ export function WorkspaceUtilityRail({
 }
 
 export function AppearanceControl() {
-  const [open, setOpen] = useState(false);
   return (
-    <>
+    <Popover>
       <Tooltip>
         <TooltipTrigger
           render={
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Appearance"
-              onClick={() => setOpen(true)}
+            <PopoverTrigger
+              render={
+                <Button variant="ghost" size="icon" aria-label="Appearance" />
+              }
             />
           }
         >
           <Monitor />
         </TooltipTrigger>
-        <TooltipContent>Appearance</TooltipContent>
+        <TooltipContent side="right">Appearance</TooltipContent>
       </Tooltip>
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Appearance</SheetTitle>
-            <SheetDescription>
-              Choose a theme for this browser.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="px-6">
-            <ThemeSelector />
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
+      <PopoverContent
+        side="right"
+        align="end"
+        className="w-auto flex-row items-center"
+      >
+        <PopoverHeader>
+          <PopoverTitle>Appearance</PopoverTitle>
+          <PopoverDescription className="sr-only">
+            Choose a theme for this browser.
+          </PopoverDescription>
+        </PopoverHeader>
+        <ThemeSelector />
+      </PopoverContent>
+    </Popover>
   );
 }
