@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronDown, Download, FileText } from "lucide-react";
+import {
+  ChevronDown,
+  Download,
+  FileArchive,
+  FileCode,
+  FileText,
+} from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { EditorPane } from "@/components/resume/editor-pane";
@@ -305,38 +311,34 @@ function WorkspaceView() {
             {dirty ? "Changes since JSON backup" : "Matches JSON backup"} ·
             Draft r{document.revision}
           </span>
-          <Button
-            size="sm"
-            disabled={validation.errors.length > 0 || exports.exporting}
-            onClick={() => void exports.runExport("pdf")}
-          >
-            <Download data-icon="inline-start" />
-            {exports.exporting ? "Exporting…" : "Download PDF"}
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label="More export options"
-                  disabled={exports.exporting}
-                />
-              }
+              render={<Button size="sm" disabled={exports.exporting} />}
             >
-              <ChevronDown />
+              <Download data-icon="inline-start" />
+              {exports.exporting ? "Exporting…" : "Download"}
+              <ChevronDown data-icon="inline-end" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuGroup>
                 <DropdownMenuItem
+                  disabled={validation.errors.length > 0}
+                  onClick={() => void exports.runExport("pdf")}
+                >
+                  <FileText aria-hidden="true" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={() => void exports.runExport("both")}
                 >
+                  <FileArchive aria-hidden="true" />
                   Both languages (ZIP)
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={validation.errors.length > 0}
                   onClick={() => void exports.runExport("latex")}
                 >
+                  <FileCode aria-hidden="true" />
                   LaTeX + assets
                 </DropdownMenuItem>
               </DropdownMenuGroup>
