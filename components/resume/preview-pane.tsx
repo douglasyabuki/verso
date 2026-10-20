@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import { ChevronRight, FileText, RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -104,9 +105,13 @@ export function PreviewPane({
             size="sm"
             onClick={compiler.refresh}
             disabled={busy}
+            aria-busy={compiler.isPending}
           >
-            <RefreshCw data-icon="inline-start" />
-            Refresh
+            <RefreshCw
+              data-icon="inline-start"
+              className={cn(compiler.isPending && "motion-safe:animate-spin")}
+            />
+            {compiler.isPending ? "Refreshing…" : "Refresh"}
           </Button>
         </div>
       </div>

@@ -25,7 +25,7 @@ function snapshotKey(
   return JSON.stringify({ document, variantId, locale });
 }
 
-/** Coordinate browser compilation and latest-only preview updates. @param options Current snapshot, selection, automatic sync toggle (800 ms debounce), and independent timeouts. @returns Preview/status/error, stale indicator, serial snapshot compiler, and manual refresh action, also available when sync is paused. @example useResumeCompiler({document, variantId, locale, autoSync: true, initializationTimeoutMs: 120000, compilationTimeoutMs: 30000}) */
+/** Coordinate browser compilation and latest-only preview updates. @param options Current snapshot, selection, automatic sync toggle (800 ms debounce), and independent timeouts. @returns Preview/status/error, pending state covering queued and active requests, stale indicator, serial snapshot compiler, and manual refresh action that ignores requests while pending and remains available when sync is paused. @example useResumeCompiler({document, variantId, locale, autoSync: true, initializationTimeoutMs: 120000, compilationTimeoutMs: 30000}) */
 export function useResumeCompiler(options: ResumeCompilerOptions) {
   const {
     document,
@@ -37,9 +37,11 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
   } = options;
   const [preview, setPreview] = useState<ResumeOutput>();
   const [status, setStatus] = useState("idle");
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<{ message: string; log: string }>();
   const engine = useRef<BrowserCompiler | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const pendingRequests = useRef(0);
   const cache = useRef(new Map<string, ResumeOutput>());
   const activeKey = useRef("");
   const automaticKey = useRef("");
@@ -76,6 +78,14 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
         selectedVariant,
         selectedLocale,
       );
+      pendingRequests.current += 1;
+      if (mounted.current) {
+        setIsPending(true);
+        if (pendingRequests.current === 1) {
+          setError(undefined);
+          setStatus("queued");
+        }
+      }
       const job = queue.current
         .catch(() => {})
         .then(async () => {
@@ -84,6 +94,8 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
             (automatic && automaticKey.current !== requestedKey)
           )
             throw new Error("Obsolete preview request");
+          setError(undefined);
+          setStatus("queued");
           const rendered = renderLatex(
             snapshot,
             selectedVariant,
@@ -133,6 +145,16 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
             setStatus("successful");
           }
           return output;
+        })
+        .finally(() => {
+          pendingRequests.current -= 1;
+          if (!mounted.current) return;
+
+          const remaining = pendingRequests.current;
+          setIsPending(remaining > 0);
+          setStatus((current) =>
+            remaining > 0 ? "queued" : current === "queued" ? "idle" : current,
+          );
         });
       queue.current = job;
       return job;
@@ -161,8 +183,6 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
     if (!autoSync) return;
 
     const timer = setTimeout(() => {
-      setError(undefined);
-      setStatus("queued");
       void getPdf(document, variantId, locale, true).catch((reason) => {
         if (activeKey.current === key) reportError(reason);
       });
@@ -174,12 +194,15 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
   }, [key, document, variantId, locale, autoSync, getPdf, reportError]);
 
   const refresh = useCallback(() => {
+    if (pendingRequests.current > 0) return;
+
     void getPdf(document, variantId, locale, false, true).catch(reportError);
   }, [document, variantId, locale, getPdf, reportError]);
 
   return {
     preview,
-    status,
+    status: isPending && status === "successful" ? "queued" : status,
+    isPending,
     error,
     stale: preview?.key !== key,
     getPdf,

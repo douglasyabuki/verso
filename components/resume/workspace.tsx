@@ -109,10 +109,7 @@ function WorkspaceView() {
     (field) =>
       field.value[locale].needsReview && plain(field.value, locale).trim(),
   ).length;
-  const busy =
-    exports.exporting ||
-    compiler.status === "initializing" ||
-    compiler.status === "compiling";
+  const busy = exports.exporting || compiler.isPending;
   const navigate = (next: string, section?: string) => {
     setView(next);
     if (section) setSectionId(section);
