@@ -1,12 +1,18 @@
 "use client";
 
-import { FileText } from "lucide-react";
+import { ChevronDown, Download, FileText } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { EditorPane } from "@/components/resume/editor-pane";
 import { PreviewPane } from "@/components/resume/preview-pane";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   NativeSelect,
   NativeSelectOption,
@@ -16,6 +22,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { toast } from "@/components/ui/toast";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { views } from "@/components/workspace/navigation";
@@ -139,11 +146,18 @@ function WorkspaceView() {
         "application/json",
       );
       void controller.markBackup(snapshot);
-      exports.setMessage(
-        "JSON backup download initiated. Browser saving and backup freshness are tracked separately.",
-      );
+      toast.add({
+        type: "success",
+        title: "Download requested",
+        description:
+          "JSON backup download initiated. Browser saving and backup freshness are tracked separately.",
+      });
     } catch (error) {
-      exports.setDownloadError((error as Error).message);
+      toast.add({
+        type: "error",
+        title: "Action could not finish",
+        description: (error as Error).message,
+      });
     }
   };
   const importJson = async (file?: File) => {
@@ -158,7 +172,11 @@ function WorkspaceView() {
         backupFingerprint,
       });
     } catch (error) {
-      exports.setDownloadError((error as Error).message);
+      toast.add({
+        type: "error",
+        title: "Action could not finish",
+        description: (error as Error).message,
+      });
     } finally {
       if (input.current) input.current.value = "";
     }
@@ -244,9 +262,6 @@ function WorkspaceView() {
           title={views.find((item) => item.id === view)?.label ?? "Content"}
           preview={layout.preview}
           togglePreview={() => changeLayout({ preview: !layout.preview })}
-          disabled={validation.errors.length > 0}
-          exporting={exports.exporting}
-          download={(kind) => void exports.runExport(kind)}
         />
       }
       overlays={
@@ -288,37 +303,51 @@ function WorkspaceView() {
             <ToggleGroupItem value="pt-BR">PT</ToggleGroupItem>
           </ToggleGroup>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {dirty ? "Changes since JSON backup" : "Matches JSON backup"} · Draft
-          r{document.revision}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {dirty ? "Changes since JSON backup" : "Matches JSON backup"} ·
+            Draft r{document.revision}
+          </span>
+          <Button
+            size="sm"
+            disabled={validation.errors.length > 0 || exports.exporting}
+            onClick={() => void exports.runExport("pdf")}
+          >
+            <Download data-icon="inline-start" />
+            {exports.exporting ? "Exporting…" : "Download PDF"}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label="More export options"
+                  disabled={exports.exporting}
+                />
+              }
+            >
+              <ChevronDown />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  onClick={() => void exports.runExport("both")}
+                >
+                  Both languages (ZIP)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={validation.errors.length > 0}
+                  onClick={() => void exports.runExport("latex")}
+                >
+                  LaTeX + assets
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         <WorkspaceSaveStatus className="text-xs text-muted-foreground sm:hidden" />
       </div>
-      {(exports.message || exports.downloadError) && (
-        <Alert
-          className="shrink-0 rounded-none border-x-0 border-t-0"
-          variant={exports.downloadError ? "destructive" : "default"}
-        >
-          <AlertTitle>
-            {exports.downloadError
-              ? "Action could not finish"
-              : "Download requested"}
-          </AlertTitle>
-          <AlertDescription>
-            {exports.downloadError || exports.message}
-            <Button
-              variant="link"
-              size="xs"
-              onClick={() => {
-                exports.setMessage("");
-                exports.setDownloadError("");
-              }}
-            >
-              Dismiss
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
       {!desktop && (
         <div className="shrink-0 border-b px-4 py-2">
           <ToggleGroup

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { toast } from "@/components/ui/toast";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import {
   bilingualZip,
@@ -21,7 +22,7 @@ type WorkspaceExportsOptions = {
 
 /** Export frozen browser-compiled snapshots without changing JSON backup freshness.
  * @param options Current document, output selection and compiler.
- * @returns Download action, pending state, feedback and dismissal setters.
+ * @returns Download action and pending state. Success and failure feedback uses toast notifications.
  * @example const exports = useWorkspaceExports({ document, variant, locale, compiler });
  */
 export function useWorkspaceExports({
@@ -31,11 +32,8 @@ export function useWorkspaceExports({
   compiler,
 }: WorkspaceExportsOptions) {
   const [exporting, setExporting] = useState(false);
-  const [message, setMessage] = useState("");
-  const [downloadError, setDownloadError] = useState("");
   const runExport = async (kind: "pdf" | "both" | "latex") => {
     setExporting(true);
-    setDownloadError("");
     const snapshot = structuredClone(document);
     const selected = variant.id;
     const selectedLocale = locale;
@@ -80,21 +78,23 @@ export function useWorkspaceExports({
             "application/pdf",
           );
       }
-      setMessage(
-        `${kind === "both" ? "Bilingual ZIP" : kind === "latex" ? "LaTeX and assets" : "PDF"} download started. JSON backup freshness is unchanged.`,
-      );
+      toast.add({
+        type: "success",
+        title: "Download requested",
+        description: `${kind === "both" ? "Bilingual ZIP" : kind === "latex" ? "LaTeX and assets" : "PDF"} download started. JSON backup freshness is unchanged.`,
+      });
     } catch (error) {
-      setDownloadError((error as Error).message);
+      toast.add({
+        type: "error",
+        title: "Action could not finish",
+        description: (error as Error).message,
+      });
     } finally {
       setExporting(false);
     }
   };
   return {
     exporting,
-    message,
-    setMessage,
-    downloadError,
-    setDownloadError,
     runExport,
   };
 }

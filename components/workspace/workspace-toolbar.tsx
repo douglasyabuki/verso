@@ -1,21 +1,8 @@
 "use client";
 
-import {
-  ChevronDown,
-  ChevronRight,
-  Download,
-  PanelRightClose,
-  PanelRightOpen,
-} from "lucide-react";
+import { ChevronRight, PanelRightClose, PanelRightOpen } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
   Tooltip,
@@ -47,16 +34,10 @@ export function WorkspaceToolbar({
   title,
   preview,
   togglePreview,
-  download,
-  disabled,
-  exporting,
 }: {
   title: string;
   preview: boolean;
   togglePreview: () => void;
-  download: (kind: "pdf" | "both" | "latex") => void;
-  disabled: boolean;
-  exporting: boolean;
 }) {
   const { open, openMobile, isMobile } = useSidebar();
   const expanded = isMobile ? openMobile : open;
@@ -109,41 +90,6 @@ export function WorkspaceToolbar({
             {preview ? "Hide PDF preview" : "Show PDF preview"}
           </TooltipContent>
         </Tooltip>
-        <Button
-          size="sm"
-          disabled={disabled || exporting}
-          onClick={() => download("pdf")}
-        >
-          <Download data-icon="inline-start" />
-          {exporting ? "Exporting…" : "Download PDF"}
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="More export options"
-                disabled={exporting}
-              />
-            }
-          >
-            <ChevronDown />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => download("both")}>
-                Both languages (ZIP)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={disabled}
-                onClick={() => download("latex")}
-              >
-                LaTeX + assets
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </header>
   );
