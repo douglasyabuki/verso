@@ -50,6 +50,17 @@
 
 :root {
   color-scheme: light;
+  --app-scrollbar-size: 6px;
+  --app-scrollbar-thumb: color-mix(
+    in oklab,
+    var(--muted-foreground) 35%,
+    transparent
+  );
+  --app-scrollbar-thumb-hover: color-mix(
+    in oklab,
+    var(--muted-foreground) 60%,
+    transparent
+  );
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -128,5 +139,45 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Prefer exact sizing where supported; Firefox uses its thin native fallback. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--app-scrollbar-thumb) transparent;
+  }
+
+  @supports selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+
+    ::-webkit-scrollbar {
+      width: var(--app-scrollbar-size);
+      height: var(--app-scrollbar-size);
+    }
+
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: var(--app-scrollbar-thumb);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--app-scrollbar-thumb-hover);
+    }
+  }
+
+  [data-slot="scroll-area-viewport"] {
+    scrollbar-width: none;
+  }
+
+  [data-slot="scroll-area-viewport"]::-webkit-scrollbar {
+    display: none;
   }
 }

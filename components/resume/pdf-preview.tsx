@@ -5,7 +5,6 @@ import type { EventBus, PDFViewer } from "pdfjs-dist/web/pdf_viewer.mjs";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -19,15 +18,10 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ResumeOutput } from "@/lib/resume/render";
 
-export default function PdfPreview({
-  output,
-  stale,
-}: {
-  output?: ResumeOutput;
-  stale: boolean;
-}) {
+export default function PdfPreview({ output }: { output?: ResumeOutput }) {
   const container = useRef<HTMLDivElement>(null);
   const pages = useRef<HTMLDivElement>(null);
   const instance = useRef<{ viewer: PDFViewer; bus: EventBus } | null>(null);
@@ -145,7 +139,7 @@ export default function PdfPreview({
 
   if (!output)
     return (
-      <div className="flex h-full min-h-96 items-center p-6">
+      <div className="flex min-w-0 flex-1 items-center p-6">
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -162,113 +156,105 @@ export default function PdfPreview({
     );
 
   return (
-    <section className="flex h-full min-h-0 flex-col" aria-label="PDF preview">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-background px-4 py-3">
-        <div className="flex items-center gap-2">
-          <FileText className="size-4" />
-          <span className="text-sm font-medium">PDF preview</span>
-          <Badge variant={stale ? "outline" : "secondary"}>
-            {stale ? "Out of date" : "Current"}
-          </Badge>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          Revision {output.revision} · {output.locale}
-        </span>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Previous PDF page"
-            disabled={page <= 1}
-            onClick={() => {
+    <>
+      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5">
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Previous PDF page"
+              disabled={page <= 1}
+              onClick={() => {
+                if (instance.current)
+                  instance.current.viewer.currentPageNumber = page - 1;
+              }}
+            >
+              <ArrowLeft />
+            </Button>
+            <span className="min-w-10 text-center text-xs" aria-live="polite">
+              {page} / {count || "…"}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Next PDF page"
+              disabled={page >= count}
+              onClick={() => {
+                if (instance.current)
+                  instance.current.viewer.currentPageNumber = page + 1;
+              }}
+            >
+              <ArrowRight />
+            </Button>
+          </div>
+          <NativeSelect
+            aria-label="PDF zoom"
+            defaultValue="page-width"
+            onChange={(event) => {
               if (instance.current)
-                instance.current.viewer.currentPageNumber = page - 1;
+                instance.current.viewer.currentScaleValue = event.target.value;
             }}
+            size="sm"
           >
-            <ArrowLeft />
-          </Button>
-          <span className="min-w-16 text-center text-xs" aria-live="polite">
-            {page} / {count || "…"}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Next PDF page"
-            disabled={page >= count}
-            onClick={() => {
-              if (instance.current)
-                instance.current.viewer.currentPageNumber = page + 1;
-            }}
-          >
-            <ArrowRight />
-          </Button>
+            <NativeSelectOption value="page-width">
+              Fit width
+            </NativeSelectOption>
+            <NativeSelectOption value="0.75">75%</NativeSelectOption>
+            <NativeSelectOption value="1">100%</NativeSelectOption>
+            <NativeSelectOption value="1.25">125%</NativeSelectOption>
+            <NativeSelectOption value="1.5">150%</NativeSelectOption>
+          </NativeSelect>
         </div>
-        <NativeSelect
-          aria-label="PDF zoom"
-          defaultValue="page-width"
-          onChange={(event) => {
-            if (instance.current)
-              instance.current.viewer.currentScaleValue = event.target.value;
-          }}
-          size="sm"
-        >
-          <NativeSelectOption value="page-width">Fit width</NativeSelectOption>
-          <NativeSelectOption value="0.75">75%</NativeSelectOption>
-          <NativeSelectOption value="1">100%</NativeSelectOption>
-          <NativeSelectOption value="1.25">125%</NativeSelectOption>
-          <NativeSelectOption value="1.5">150%</NativeSelectOption>
-        </NativeSelect>
-      </div>
-      <div className="flex items-center gap-2 border-b px-3 py-2">
-        <Search className="size-4 shrink-0 text-muted-foreground" />
-        <label htmlFor={id} className="sr-only">
-          Search PDF text
-        </label>
-        <Input
-          id={id}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Find in document"
-          onKeyDown={(event) => {
-            if (event.key === "Enter")
+        <div className="flex min-w-0 flex-[1_1_12rem] items-center gap-2">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <label htmlFor={id} className="sr-only">
+            Search PDF text
+          </label>
+          <Input
+            id={id}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Find in document"
+            onKeyDown={(event) => {
+              if (event.key === "Enter")
+                instance.current?.bus.dispatch("find", {
+                  source: instance.current.viewer,
+                  type: "again",
+                  query,
+                  caseSensitive: false,
+                  entireWord: false,
+                  highlightAll: true,
+                  findPrevious: event.shiftKey,
+                  matchDiacritics: false,
+                });
+            }}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
               instance.current?.bus.dispatch("find", {
                 source: instance.current.viewer,
-                type: "again",
+                type: "",
                 query,
                 caseSensitive: false,
                 entireWord: false,
                 highlightAll: true,
-                findPrevious: event.shiftKey,
+                findPrevious: false,
                 matchDiacritics: false,
-              });
-          }}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            instance.current?.bus.dispatch("find", {
-              source: instance.current.viewer,
-              type: "",
-              query,
-              caseSensitive: false,
-              entireWord: false,
-              highlightAll: true,
-              findPrevious: false,
-              matchDiacritics: false,
-            })
-          }
-        >
-          Find
-        </Button>
-        <span className="text-xs" role="status">
-          {searchResult}
-        </span>
+              })
+            }
+          >
+            Find
+          </Button>
+          <span className="shrink-0 text-xs" role="status">
+            {searchResult}
+          </span>
+        </div>
       </div>
       {count > output.rendered.settings.targetPages && (
-        <Alert className="rounded-none">
+        <Alert className="shrink-0 rounded-none">
           <AlertTitle>
             {count} pages · target {output.rendered.settings.targetPages}
           </AlertTitle>
@@ -279,12 +265,12 @@ export default function PdfPreview({
         </Alert>
       )}
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="shrink-0">
           <AlertTitle>PDF viewer error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <div className="relative min-h-96 flex-1 bg-muted/50">
+      <div className="relative isolate min-h-0 min-w-0 flex-1 overflow-hidden bg-muted/50">
         <div
           ref={container}
           className="absolute inset-0 overflow-auto"
@@ -295,14 +281,22 @@ export default function PdfPreview({
           <div ref={pages} className="pdfViewer" />
         </div>
       </div>
-      <details className="border-t bg-background p-3">
+      <details className="min-w-0 shrink-0 border-t bg-background px-3 py-2">
         <summary className="cursor-pointer text-xs font-medium">
           Text extraction & diagnostics
         </summary>
-        <pre className="mt-3 max-h-60 overflow-auto text-xs whitespace-pre-wrap">
-          {diagnostics || "Extracting text…"}
-        </pre>
+        <ScrollArea
+          className="mt-2 max-h-[min(12rem,20dvh)] min-w-0"
+          viewportProps={{
+            role: "region",
+            "aria-label": "Extracted PDF text and diagnostics",
+          }}
+        >
+          <pre className="pr-3 text-xs wrap-anywhere whitespace-pre-wrap">
+            {diagnostics || "Extracting text…"}
+          </pre>
+        </ScrollArea>
       </details>
-    </section>
+    </>
   );
 }
