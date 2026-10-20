@@ -39,14 +39,18 @@ to sync the current draft. This option lasts only for the current tab session.
 
 The utility rail provides workspace data/backups and appearance controls. Collapse
 the sidebar to gain editing space, or hide the PDF preview for a full-width editor.
-On mobile these utilities live in the navigation sheet.
+On mobile these utilities live in the navigation sheet. Sidebar visibility,
+preview visibility, and split proportions are saved separately from resume content
+when browser storage is available; JSON backups do not include these preferences.
 
 The workspace restores from this browser and autosaves 500 ms after edits when
 localStorage and Web Locks are available. Save status reflects confirmed browser
 writes, independently of JSON backup reminders. JSON backup freshness survives
 reloads; PDF and LaTeX downloads do not advance it. Browser storage can be cleared,
 so export JSON for a portable backup. Downloads are reported as initiated, since
-completion of a browser save dialog cannot be confirmed.
+completion of a browser save dialog cannot be confirmed. Saved work is specific
+to this browser profile and origin: changing the hostname or port opens a separate
+workspace. Use a JSON export/import to move drafts between them.
 
 Other-tab changes pause saving. Review the stored version before loading it or
 explicitly replacing it; a changed version invalidates any previous confirmation.
@@ -84,6 +88,11 @@ Playwright scripts remain in the repository but were not added to, updated, or
 run as product acceptance coverage. Follow the manual scenarios in
 [implementation notes](docs/implementation-notes.md) and the observed browser/PDF
 results in [the compilation milestone](docs/compilation-proof.md).
+
+Interactive browser and visual acceptance of the current UI refactor and saving
+flows remains pending. The [UI refactor handoff](docs/ui-refactor-progress.md)
+records the completed static/build checks and the remaining manual scenarios.
+The browser observations below predate that refactor.
 
 Chrome, Edge, and Firefox browser compilation was checked locally; the private
 inputs and generated evidence for those observations are not included. Safari and
