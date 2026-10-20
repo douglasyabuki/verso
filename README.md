@@ -1,6 +1,6 @@
 ﻿# Verso
 
-A session-only bilingual resume workspace built with Next.js 16.4.2, React 19.3,
+A locally saved bilingual resume workspace built with Next.js 16.4.2, React 19.3,
 TypeScript, Tailwind CSS 4, and Base UI shadcn components. Edit structured career
 content, review English/Portuguese wording, choose variants, and generate actual
 LaTeX PDFs entirely in the browser.
@@ -33,17 +33,34 @@ Start empty or explicitly load the fictional example. Use Content for shared
 career records, Translations for side-by-side review, Variants for selections
 and output ordering, and Template for layout overrides and compiler timeouts.
 Desktop has a resizable editor/PDF split; narrow screens switch between panels.
-Auto-sync is enabled by default and updates the PDF preview after 800 ms without
+Auto-update preview is enabled by default and updates the PDF preview after 800 ms without
 input changes. Turn it off beside Refresh to update manually; turn it back on
 to sync the current draft. This option lasts only for the current tab session.
 
-**Nothing autosaves. Export JSON to save the complete editable workspace.**
-PDF and LaTeX downloads do not advance backup freshness. Leaving-page warnings
-are best-effort and cannot protect every tab closure or device shutdown.
+The utility rail provides workspace data/backups and appearance controls. Collapse
+the sidebar to gain editing space, or hide the PDF preview for a full-width editor.
+On mobile these utilities live in the navigation sheet.
 
-JSON imports validate schema, exact template version, settings, IDs, and links
-before asking to replace the workspace. One session-only recovery snapshot is
-kept. Do not refresh to recover a draft: use your exported JSON backup.
+The workspace restores from this browser and autosaves 500 ms after edits when
+localStorage and Web Locks are available. Save status reflects confirmed browser
+writes, independently of JSON backup reminders. JSON backup freshness survives
+reloads; PDF and LaTeX downloads do not advance it. Browser storage can be cleared,
+so export JSON for a portable backup. Downloads are reported as initiated, since
+completion of a browser save dialog cannot be confirmed.
+
+Other-tab changes pause saving. Review the stored version before loading it or
+explicitly replacing it; a changed version invalidates any previous confirmation.
+Import, example loading and recovery use this same conditional replacement path.
+One previous workspace remains recoverable during the current session.
+
+If storage or safe coordination is unavailable, editing, JSON import/export,
+example loading and recovery still work in **session-only mode**. Confirmed
+replacements affect only this tab, remain unsaved, and leave stored data untouched.
+Failed persistent replacements offer retry or an explicit session-only choice.
+Resume browser saving explicitly through workspace controls; it never silently
+restarts over potentially newer data. Leaving-page warnings cover unsaved or
+blocked local saving. Hidden-page flushes and warnings are best effort and cannot
+guarantee protection against closure or device shutdown.
 
 A missing required translation blocks only that language. Translation-review
 flags warn without blocking draft downloads. Bilingual export requires two valid
@@ -73,10 +90,14 @@ inputs and generated evidence for those observations are not included. Safari an
 mobile compilation are unverified. The converter has documented decorative-icon
 text-extraction limitations; no PDF/UA or universal ATS compatibility is claimed.
 
-The workspace sends no resume data to a backend. Authentication, persistence,
+The workspace sends no resume data to a backend. Authentication, account persistence,
 publication, public APIs, portfolio/LinkedIn integration, and hosted deployment
 are outside this implementation. Builds fetch the existing Geist interface
 fonts through Next.js; document fonts are in the local compiler bundle.
 
 Agent guidance is in [AGENTS.md](AGENTS.md). Template/compiler maintenance is
 covered by the repository's `resume-latex` skill.
+
+The implementation checklist and handoff are in
+[UI refactor progress](docs/ui-refactor-progress.md). Future account/storage
+boundaries are documented in [implementation notes](docs/implementation-notes.md).
