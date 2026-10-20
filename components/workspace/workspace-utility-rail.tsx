@@ -1,8 +1,9 @@
 "use client";
 
-import { BookOpen, Monitor } from "lucide-react";
+import { Monitor } from "lucide-react";
 
 import { ThemeSelector } from "@/components/theme-selector";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -28,10 +29,9 @@ export function WorkspaceUtilityRail({
       aria-label="Workspace utilities"
       className="hidden w-14 shrink-0 flex-col items-center gap-4 border-r bg-background py-4 md:flex"
     >
-      <span className="flex h-8 items-center" title="Verso">
-        <BookOpen className="size-5" aria-hidden="true" />
-        <span className="sr-only">Verso</span>
-      </span>
+      <Avatar role="img" aria-label="Guest avatar" title="Guest">
+        <AvatarFallback>G</AvatarFallback>
+      </Avatar>
       {dataMenu}
       <div className="mt-auto">
         <AppearanceControl />
