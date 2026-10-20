@@ -1,11 +1,22 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, FileText, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronRight,
+  FileText,
+  Search,
+} from "lucide-react";
 import type { EventBus, PDFViewer } from "pdfjs-dist/web/pdf_viewer.mjs";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Empty,
   EmptyDescription,
@@ -281,22 +292,31 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
           <div ref={pages} className="pdfViewer" />
         </div>
       </div>
-      <details className="min-w-0 shrink-0 border-t bg-background px-3 py-2">
-        <summary className="cursor-pointer text-xs font-medium">
-          Text extraction & diagnostics
-        </summary>
-        <ScrollArea
-          className="mt-2 max-h-[min(12rem,20dvh)] min-w-0"
-          viewportProps={{
-            role: "region",
-            "aria-label": "Extracted PDF text and diagnostics",
-          }}
+      <Collapsible className="min-w-0 shrink-0 border-t bg-background px-3 py-2">
+        <CollapsibleTrigger
+          render={<Button variant="ghost" size="xs" />}
+          className="group"
         >
-          <pre className="pr-3 text-xs wrap-anywhere whitespace-pre-wrap">
-            {diagnostics || "Extracting text…"}
-          </pre>
-        </ScrollArea>
-      </details>
+          <ChevronRight
+            data-icon="inline-start"
+            className="transition-transform group-data-panel-open:rotate-90"
+          />
+          Text extraction & diagnostics
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <ScrollArea
+            className="mt-2 max-h-[min(12rem,20dvh)] min-w-0"
+            viewportProps={{
+              role: "region",
+              "aria-label": "Extracted PDF text and diagnostics",
+            }}
+          >
+            <pre className="pr-3 text-xs wrap-anywhere whitespace-pre-wrap">
+              {diagnostics || "Extracting text…"}
+            </pre>
+          </ScrollArea>
+        </CollapsibleContent>
+      </Collapsible>
     </>
   );
 }

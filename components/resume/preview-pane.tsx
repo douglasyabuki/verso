@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, RefreshCw } from "lucide-react";
+import { ChevronRight, FileText, RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,6 +13,11 @@ import {
   CodeBlockContent,
   CodeBlockCopyButton,
 } from "@/components/ui/code-block";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
@@ -142,31 +147,40 @@ export function PreviewPane({
       )}
       <PdfPreview key={compiler.preview?.key} output={compiler.preview} />
       {compilerLog && (
-        <details className="min-w-0 shrink-0 border-t bg-background px-3 py-2">
-          <summary className="cursor-pointer text-xs font-medium">
+        <Collapsible className="min-w-0 shrink-0 border-t bg-background px-3 py-2">
+          <CollapsibleTrigger
+            render={<Button variant="ghost" size="xs" />}
+            className="group"
+          >
+            <ChevronRight
+              data-icon="inline-start"
+              className="transition-transform group-data-panel-open:rotate-90"
+            />
             Compiler diagnostics
-          </summary>
-          <CodeBlock size="sm" className="mt-2">
-            <CodeBlockActions>
-              <CodeBlockCopyButton value={compilerLog} />
-            </CodeBlockActions>
-            <ScrollArea
-              className="max-h-[min(12rem,20dvh)] min-w-0"
-              viewportProps={{
-                role: "region",
-                "aria-label": "Compiler diagnostics log",
-              }}
-            >
-              <CodeBlockContent
-                wrap
-                tabIndex={-1}
-                className="overflow-visible pe-10 wrap-anywhere"
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CodeBlock size="sm" className="mt-2">
+              <CodeBlockActions>
+                <CodeBlockCopyButton value={compilerLog} />
+              </CodeBlockActions>
+              <ScrollArea
+                className="max-h-[min(12rem,20dvh)] min-w-0"
+                viewportProps={{
+                  role: "region",
+                  "aria-label": "Compiler diagnostics log",
+                }}
               >
-                {compilerLog}
-              </CodeBlockContent>
-            </ScrollArea>
-          </CodeBlock>
-        </details>
+                <CodeBlockContent
+                  wrap
+                  tabIndex={-1}
+                  className="overflow-visible pe-10 wrap-anywhere"
+                >
+                  {compilerLog}
+                </CodeBlockContent>
+              </ScrollArea>
+            </CodeBlock>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </section>
   );

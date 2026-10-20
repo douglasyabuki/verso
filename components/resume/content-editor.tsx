@@ -1,6 +1,13 @@
 "use client";
 
-import { Archive, ArchiveRestore, FilePlus2, Plus, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronRight,
+  FilePlus2,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 
 import type { EditorProps } from "@/components/resume/editor-types";
@@ -21,6 +28,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Empty,
   EmptyDescription,
@@ -218,22 +230,31 @@ export function ContentEditor({
         </CardHeader>
         <CardContent>
           <FieldGroup>
-            <details>
-              <summary className="cursor-pointer text-sm text-muted-foreground">
-                Edit section heading
-              </summary>
-              <div className="mt-4">
-                <WordingField
-                  document={document}
-                  path={`sections.${section.id}.heading`}
-                  locale={locale}
-                  update={update}
-                  label="Heading"
-                  required
-                  errors={errors}
+            <Collapsible>
+              <CollapsibleTrigger
+                render={<Button variant="ghost" size="sm" />}
+                className="group"
+              >
+                <ChevronRight
+                  data-icon="inline-start"
+                  className="transition-transform group-data-panel-open:rotate-90"
                 />
-              </div>
-            </details>
+                Edit section heading
+              </CollapsibleTrigger>
+              <CollapsibleContent keepMounted>
+                <div className="mt-4">
+                  <WordingField
+                    document={document}
+                    path={`sections.${section.id}.heading`}
+                    locale={locale}
+                    update={update}
+                    label="Heading"
+                    required
+                    errors={errors}
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
             <CheckField
               label={`Show archived (${section.entries.filter((entry) => entry.archived).length})`}
               checked={showArchived}

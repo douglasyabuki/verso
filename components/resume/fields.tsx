@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ChevronRight,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useId, useState } from "react";
 
 import {
@@ -16,6 +23,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Field,
   FieldDescription,
@@ -205,36 +217,45 @@ export function LocalizedField({
               aria-invalid={!!error}
               aria-describedby={error ? id + "-error" : undefined}
             />
-            <details className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-              <summary className="cursor-pointer">
+            <Collapsible className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+              <CollapsibleTrigger
+                render={<Button variant="ghost" size="xs" />}
+                className="group"
+              >
+                <ChevronRight
+                  data-icon="inline-start"
+                  className="transition-transform group-data-panel-open:rotate-90"
+                />
                 Formatting{span.emphasis ? " · emphasis" : ""}
                 {span.href ? " · linked" : ""}
-              </summary>
-              <FieldGroup className="mt-3 gap-3">
-                <CheckField
-                  label="Emphasis"
-                  checked={span.emphasis}
-                  onChange={(emphasis) => update(index, { emphasis })}
-                />
-                <TextField
-                  label={`Link for segment ${index + 1}`}
-                  value={span.href}
-                  maxLength={2_000}
-                  onChange={(href) => update(index, { href })}
-                  error={urlError(span.href)}
-                  placeholder="https://example.com"
-                />
-                {record.spans.length > 1 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRemoveIndex(index)}
-                  >
-                    Remove segment
-                  </Button>
-                )}
-              </FieldGroup>
-            </details>
+              </CollapsibleTrigger>
+              <CollapsibleContent keepMounted>
+                <FieldGroup className="mt-3 gap-3">
+                  <CheckField
+                    label="Emphasis"
+                    checked={span.emphasis}
+                    onChange={(emphasis) => update(index, { emphasis })}
+                  />
+                  <TextField
+                    label={`Link for segment ${index + 1}`}
+                    value={span.href}
+                    maxLength={2_000}
+                    onChange={(href) => update(index, { href })}
+                    error={urlError(span.href)}
+                    placeholder="https://example.com"
+                  />
+                  {record.spans.length > 1 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRemoveIndex(index)}
+                    >
+                      Remove segment
+                    </Button>
+                  )}
+                </FieldGroup>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         ))}
         {error && <FieldError id={id + "-error"}>{error}</FieldError>}
