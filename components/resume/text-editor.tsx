@@ -89,6 +89,7 @@ export function TextEditor({
     editorProps: {
       attributes: {
         id,
+        "data-issue-field": fieldKey,
         role: "textbox",
         "aria-label": label,
         "aria-multiline": "true",

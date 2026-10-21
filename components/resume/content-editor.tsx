@@ -65,8 +65,13 @@ export function ContentEditor({
   confirm,
   sectionId,
   errors,
-}: EditorProps & { sectionId: string; errors: Issue[] }) {
-  const [entryId, setEntryId] = useState("");
+  issueTarget,
+}: EditorProps & {
+  sectionId: string;
+  errors: Issue[];
+  issueTarget?: Issue["target"];
+}) {
+  const [entryId, setEntryId] = useState(issueTarget?.entryId ?? "");
   const [showArchived, setShowArchived] = useState(false);
   if (sectionId === "profile")
     return (
@@ -239,7 +244,12 @@ export function ContentEditor({
         </CardHeader>
         <CardContent>
           <FieldGroup>
-            <Collapsible>
+            <Collapsible
+              defaultOpen={
+                issueTarget?.fieldKey ===
+                `sections.${section.id}.heading.${locale}`
+              }
+            >
               <CollapsibleTrigger
                 render={<Button variant="ghost" size="sm" />}
                 className="group"
@@ -445,6 +455,7 @@ export function ContentEditor({
                 update={update}
                 errors={errors}
                 changeEntry={changeEntry}
+                issueTarget={issueTarget}
               />
               <Separator />
               <FieldSet>

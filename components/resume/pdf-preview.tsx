@@ -264,17 +264,6 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
           </span>
         </div>
       </div>
-      {count > output.rendered.settings.targetPages && (
-        <Alert className="shrink-0 rounded-none">
-          <AlertTitle>
-            {count} pages · target {output.rendered.settings.targetPages}
-          </AlertTitle>
-          <AlertDescription>
-            Adjust the layout or variant selections. All your content is
-            retained.
-          </AlertDescription>
-        </Alert>
-      )}
       {error && (
         <Alert variant="destructive" className="shrink-0">
           <AlertTitle>PDF viewer error</AlertTitle>

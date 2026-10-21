@@ -8,9 +8,14 @@ import { TranslationsEditor } from "@/components/resume/translations-editor";
 import { VariantsEditor } from "@/components/resume/variants-editor";
 import { Button } from "@/components/ui/button";
 import { librarySectionLabel, views } from "@/components/workspace/navigation";
+import { useIssueFocus } from "@/hooks/resume/use-issue-focus";
 import { validateOutput } from "@/lib/resume/validation";
 import type { ConfirmAction } from "@/types-and-constants/editor";
-import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
+import type {
+  IssueNavigation,
+  Locale,
+  ResumeDocument,
+} from "@/types-and-constants/resume";
 import type { WorkspaceEdit } from "@/types-and-constants/workspace";
 
 export function EditorPane({
@@ -25,6 +30,8 @@ export function EditorPane({
   validation,
   setVariantId,
   disabled,
+  issueNavigation,
+  onIssueFocused,
 }: {
   document: ResumeDocument;
   view: string;
@@ -37,7 +44,14 @@ export function EditorPane({
   validation: ReturnType<typeof validateOutput>;
   setVariantId: (id: string) => void;
   disabled: boolean;
+  issueNavigation?: IssueNavigation;
+  onIssueFocused: (id: string) => void;
 }) {
+  useIssueFocus({
+    navigation: issueNavigation,
+    disabled,
+    onFocused: onIssueFocused,
+  });
   const section = document.sections.find((item) => item.id === sectionId);
   return (
     <div className="@container h-full overflow-auto p-4 sm:p-6">
@@ -91,7 +105,12 @@ export function EditorPane({
         </div>
         {view === "content" && (
           <ContentEditor
-            key={sectionId}
+            key={`${sectionId}:${issueNavigation?.id ?? ""}`}
+            issueTarget={
+              issueNavigation?.pending
+                ? issueNavigation.issue.target
+                : undefined
+            }
             document={document}
             locale={locale}
             variant={variant}

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { certificationDateErrors } from "@/lib/resume/certification";
+import { outputIssue } from "@/lib/resume/issues";
 import { plain } from "@/lib/resume/localization";
 import type {
   Entry,
@@ -34,16 +35,36 @@ export function urlError(value: string): string | undefined {
   }
 }
 
-/** Validate language-independent date facts. @param entry Draft entry. @returns An error or undefined. @example dateError(entry) */
-export function dateError(entry: Entry): string | undefined {
+/** Validate each shared date field using the original supported ranges and ordering.
+ * @param entry Draft entry.
+ * @returns Field errors; an end date ordering error is attached to the end field.
+ * @example dateErrors(entry)
+ */
+export function dateErrors(entry: Entry): { start?: string; end?: string } {
   const pattern = /^(19|20|21|22)\d{2}(-(0[1-9]|1[0-2]))?$/;
-  if ([entry.start, entry.end].some((value) => value && !pattern.test(value)))
-    return "Use YYYY or YYYY-MM, between 1900 and 2299.";
-  if (!entry.ongoing && entry.start && entry.end) {
+  const errors: { start?: string; end?: string } = {};
+  for (const field of ["start", "end"] as const)
+    if (entry[field] && !pattern.test(entry[field]))
+      errors[field] = "Use YYYY or YYYY-MM, between 1900 and 2299.";
+  if (
+    !errors.start &&
+    !errors.end &&
+    !entry.ongoing &&
+    entry.start &&
+    entry.end
+  ) {
     const end = entry.end.length === 4 ? entry.end + "-12" : entry.end;
     const start = entry.start.length === 4 ? entry.start + "-01" : entry.start;
-    if (start > end) return "End date must be on or after the start date.";
+    if (start > end)
+      errors.end = "End date must be on or after the start date.";
   }
+  return errors;
+}
+
+/** Validate shared date facts. @param entry Draft entry. @returns The first error or undefined. @example dateError(entry) */
+export function dateError(entry: Entry): string | undefined {
+  const errors = dateErrors(entry);
+  return errors.start ?? errors.end;
 }
 
 /** Validate only the selected output; counterpart translations never block it. @param doc Workspace. @param variant Variant. @param locale Language. @returns Blocking issues and nonblocking review warnings. @example validateOutput(doc, variant, "en-US") */
@@ -51,19 +72,30 @@ export function validateOutput(
   doc: ResumeDocument,
   variant: Variant,
   locale: Locale,
-): { errors: Issue[]; warnings: string[] } {
-  const errors: Issue[] = [];
-  const warnings: string[] = [];
+): { errors: Issue[]; warnings: Issue[] } {
+  const errors: Pick<Issue, "path" | "message">[] = [];
+  const warnings: Pick<Issue, "path" | "message">[] = [];
   const required = (value: LocalizedText, path: string, label: string) => {
     if (!plain(value, locale).trim())
-      errors.push({ path, message: `${label} is missing in ${locale}.` });
+      errors.push({
+        path,
+        message: `${label} is missing in ${locale}. Add wording for this language or remove the unfinished content from this variant.`,
+      });
   };
   const wording = (value: LocalizedText, path: string) => {
     if (value[locale].needsReview && plain(value, locale).trim())
-      warnings.push(`${path} needs translation review.`);
+      warnings.push({
+        path,
+        message:
+          "Review this wording against the other language, then mark it reviewed. Draft downloads remain available.",
+      });
     for (const span of value[locale].spans) {
       const error = urlError(span.href);
-      if (error) errors.push({ path, message: error });
+      if (error)
+        errors.push({
+          path,
+          message: `${error} Select the linked text to edit or remove its link.`,
+        });
     }
   };
   const links = (values: ResumeLink[], path: string) =>
@@ -91,7 +123,8 @@ export function validateOutput(
       path: "profile.country",
       message: "Use a two-letter country code, for example BR.",
     });
-  wording(doc.profile.summary, "profile.summary");
+  if (plain(doc.profile.summary, locale).trim())
+    wording(doc.profile.summary, "profile.summary");
   links(doc.profile.links, "profile.links");
   for (const selected of variant.sections.filter(
     (section) => section.visible,
@@ -125,7 +158,10 @@ export function validateOutput(
         `entries.${entry.id}.title`,
         entryTerminology[section.kind].title,
       );
-      const dates = entry.certification?.dates;
+      const dates =
+        section.kind === "certifications"
+          ? entry.certification?.dates
+          : undefined;
       if (dates) {
         const issues = certificationDateErrors(
           dates.issued,
@@ -139,9 +175,8 @@ export function validateOutput(
           });
       }
       wording(entry.title, `entries.${entry.id}.title`);
-      const date = dateError(entry);
-      if (date)
-        errors.push({ path: `entries.${entry.id}.dates`, message: date });
+      for (const [field, message] of Object.entries(dateErrors(entry)))
+        errors.push({ path: `entries.${entry.id}.${field}`, message });
       links(entry.links, `entries.${entry.id}.links`);
       for (const bulletId of selection.bulletIds) {
         const bullet = entry.bullets.find((bullet) => bullet.id === bulletId);
@@ -155,5 +190,26 @@ export function validateOutput(
       }
     }
   }
-  return { errors, warnings };
+  const describe = (
+    values: Pick<Issue, "path" | "message">[],
+    category: "error" | "translation",
+  ) =>
+    Array.from(
+      new Map(
+        values.map((issue) => {
+          const described = outputIssue(
+            doc,
+            locale,
+            issue.path,
+            issue.message,
+            category,
+          );
+          return [described.id, described];
+        }),
+      ).values(),
+    );
+  return {
+    errors: describe(errors, "error"),
+    warnings: describe(warnings, "translation"),
+  };
 }

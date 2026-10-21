@@ -39,6 +39,7 @@ type WorkspaceHeaderProps = {
   exporting: boolean;
   runExport: ReturnType<typeof useWorkspaceExports>["runExport"];
   hasErrors: boolean;
+  hasBilingualErrors: boolean;
 };
 
 export function WorkspaceHeader({
@@ -51,6 +52,7 @@ export function WorkspaceHeader({
   exporting,
   runExport,
   hasErrors,
+  hasBilingualErrors,
 }: WorkspaceHeaderProps) {
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 md:px-6">
@@ -106,7 +108,10 @@ export function WorkspaceHeader({
                 <FileText aria-hidden="true" />
                 PDF
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void runExport("both")}>
+              <DropdownMenuItem
+                disabled={hasBilingualErrors}
+                onClick={() => void runExport("both")}
+              >
                 <FileArchive aria-hidden="true" />
                 Both languages (ZIP)
               </DropdownMenuItem>

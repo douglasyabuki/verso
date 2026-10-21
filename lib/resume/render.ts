@@ -320,7 +320,7 @@ ${body.join("\n\n")}
 `;
   return {
     source,
-    warnings: validation.warnings,
+    warnings: validation.warnings.map((issue) => issue.message),
     settings,
     assetManifest: {
       ...templateIdentity,

@@ -55,6 +55,7 @@ export function TextField({
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Input
         id={id}
+        data-issue-field={fieldKey}
         type={type}
         value={value}
         maxLength={maxLength}

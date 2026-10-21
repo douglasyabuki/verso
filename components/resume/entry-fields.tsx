@@ -18,7 +18,7 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
-import { dateError } from "@/lib/resume/validation";
+import { dateErrors } from "@/lib/resume/validation";
 import type { EditorProps } from "@/types-and-constants/editor";
 import type { Entry, Issue, Section } from "@/types-and-constants/resume";
 import { entryTerminology } from "@/types-and-constants/resume";
@@ -28,6 +28,7 @@ type EntryFieldsProps = Pick<EditorProps, "document" | "locale" | "update"> & {
   entry: Entry;
   section: Section;
   errors: Issue[];
+  issueTarget?: Issue["target"];
   changeEntry: (change: (entry: Entry) => void, group?: EditGroup) => void;
 };
 
@@ -49,6 +50,7 @@ function TailoredFields({
   update,
   errors,
   changeEntry,
+  issueTarget,
 }: EntryFieldsProps) {
   const terms = entryTerminology[section.kind];
   const skills = section.kind === "skills";
@@ -79,11 +81,24 @@ function TailoredFields({
       )) ||
     (education && entry.technologies.some((value) => value.trim())) ||
     (projects && !!(entry.city || entry.country));
-  const [additionalOpen, setAdditionalOpen] = useState(!!additionalHasContent);
+  const additionalIssue =
+    issueTarget?.entryId === entry.id &&
+    ((!locationInMain &&
+      ["city", "country"].some(
+        (field) => issueTarget.fieldKey === `entries.${entry.id}.${field}`,
+      )) ||
+      ((skills || certification) &&
+        ["start", "end"].some(
+          (field) => issueTarget.fieldKey === `entries.${entry.id}.${field}`,
+        )));
+  const [additionalOpen, setAdditionalOpen] = useState(
+    !!additionalHasContent || !!additionalIssue,
+  );
   const countryError = errors.find(
     (error) => error.path === `entries.${entry.id}.country`,
   )?.message;
-  const dateIssue = dateError(entry);
+  const datesErrors = dateErrors(entry);
+  const dateIssue = datesErrors.start ?? datesErrors.end;
   const additionalHasErrors =
     ((skills || certification) && !!(countryError || dateIssue)) ||
     (projects && !!countryError);
@@ -154,7 +169,7 @@ function TailoredFields({
           value={entry.start}
           maxLength={7}
           placeholder="YYYY or YYYY-MM"
-          error={dateIssue}
+          error={datesErrors.start}
           onChange={(start, group) =>
             changeEntry((target) => {
               target.start = start;
@@ -172,7 +187,7 @@ function TailoredFields({
             value={entry.end}
             maxLength={7}
             placeholder="YYYY or YYYY-MM"
-            error={dateIssue}
+            error={datesErrors.end}
             onChange={(end, group) =>
               changeEntry((target) => {
                 target.end = end;
@@ -244,6 +259,7 @@ function TailoredFields({
           />
           <CertificationDatesEditor
             entry={entry}
+            issueField={issueTarget?.fieldKey}
             onSave={(dates) =>
               changeEntry((target) => {
                 target.certification = {

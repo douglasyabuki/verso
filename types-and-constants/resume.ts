@@ -32,7 +32,30 @@ export type Variant = ResumeDocument["variants"][number];
 
 export type DocumentUpdate = (draft: ResumeDocument) => void;
 
-export type Issue = { path: string; message: string };
+export type Issue = {
+  id: string;
+  path: string;
+  message: string;
+  category: "error" | "translation" | "layout";
+  locale: Locale;
+  section: string;
+  entry: string;
+  field: string;
+  target?: { sectionId: string; entryId?: string; fieldKey: string };
+};
+
+export type IssueNavigation = {
+  id: string;
+  issue: Issue;
+  pending: boolean;
+};
+
+export type OutputLayout = {
+  key: string;
+  locale: Locale;
+  pageCount?: number;
+  error?: string;
+};
 
 export const sectionKinds = [
   "experience",

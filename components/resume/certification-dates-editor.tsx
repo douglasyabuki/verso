@@ -31,8 +31,10 @@ import type { CertificationDates, Entry } from "@/types-and-constants/resume";
 export function CertificationDatesEditor({
   entry,
   onSave,
+  issueField,
 }: {
   entry: Entry;
+  issueField?: string;
   onSave: (dates: CertificationDates | null) => void;
 }) {
   const { state } = useWorkspace();
@@ -40,6 +42,7 @@ export function CertificationDatesEditor({
     <DateSetup
       key={`${entry.id}:${state.textHistoryEpoch}:${JSON.stringify(entry.certification?.dates ?? null)}`}
       entry={entry}
+      issueField={issueField}
       onSave={onSave}
     />
   );
@@ -48,17 +51,24 @@ export function CertificationDatesEditor({
 function DateSetup({
   entry,
   onSave,
+  issueField,
 }: {
   entry: Entry;
+  issueField?: string;
   onSave: (dates: CertificationDates | null) => void;
 }) {
   const committed = entry.certification?.dates ?? null;
-  const [open, setOpen] = useState(false);
-  const [issued, setIssued] = useState("");
-  const [expirationKind, setExpirationKind] =
-    useState<CertificationDates["expiration"]["kind"]>("unspecified");
-  const [expires, setExpires] = useState("");
-  const [attempted, setAttempted] = useState(false);
+  const [open, setOpen] = useState(
+    !!issueField?.startsWith(`entries.${entry.id}.certification.`),
+  );
+  const [issued, setIssued] = useState(committed?.issued ?? "");
+  const [expirationKind, setExpirationKind] = useState<
+    CertificationDates["expiration"]["kind"]
+  >(committed?.expiration.kind ?? "unspecified");
+  const [expires, setExpires] = useState(
+    committed?.expiration.kind === "date" ? committed.expiration.date : "",
+  );
+  const [attempted, setAttempted] = useState(!!issueField);
   const id = useId();
   const errors = attempted
     ? certificationDateErrors(issued, expirationKind, expires)
@@ -117,7 +127,16 @@ function DateSetup({
         <DialogTrigger render={<Button variant="outline" />}>
           {committed ? "Edit certification dates" : "Set certification dates"}
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent
+          initialFocus={
+            issueField
+              ? () =>
+                  document.querySelector<HTMLElement>(
+                    `[data-issue-field="${CSS.escape(issueField)}"]`,
+                  )
+              : undefined
+          }
+        >
           <DialogHeader>
             <DialogTitle>Certification dates</DialogTitle>
             <DialogDescription>
@@ -132,6 +151,7 @@ function DateSetup({
               </FieldLabel>
               <Input
                 id={`${id}-issued`}
+                data-issue-field={`entries.${entry.id}.certification.issued`}
                 value={issued}
                 maxLength={100}
                 placeholder="2024 or 2024-12"
@@ -174,6 +194,7 @@ function DateSetup({
                 </FieldLabel>
                 <Input
                   id={`${id}-expires`}
+                  data-issue-field={`entries.${entry.id}.certification.expiration`}
                   value={expires}
                   maxLength={100}
                   placeholder="2027 or 2027-12"

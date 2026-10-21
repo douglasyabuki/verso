@@ -1,9 +1,10 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { EditorPane } from "@/components/resume/editor-pane";
+import { IssuesPanel } from "@/components/resume/issues-panel";
 import { PreviewPane } from "@/components/resume/preview-pane";
 import {
   ResizableHandle,
@@ -32,6 +33,7 @@ import { createExampleDocument } from "@/lib/resume/example";
 import { localizedFields, plain } from "@/lib/resume/localization";
 import { validateOutput } from "@/lib/resume/validation";
 import type { Confirmation } from "@/types-and-constants/editor";
+import type { Issue, IssueNavigation } from "@/types-and-constants/resume";
 
 export function WorkspaceView() {
   const { state, controller } = useWorkspace();
@@ -40,15 +42,15 @@ export function WorkspaceView() {
   const {
     view,
     activeSectionId,
-    setSectionId,
+    setSectionId: changeSection,
     variant,
-    setVariantId,
+    setVariantId: changeVariant,
     locale,
-    setLocale,
+    setLocale: changeLocale,
     mobilePanel,
     setMobilePanel,
-    navigate,
-    addSection,
+    navigate: changeView,
+    addSection: createSection,
   } = useWorkspaceNavigation({
     document,
     controller,
@@ -62,10 +64,60 @@ export function WorkspaceView() {
   });
   const desktop = useMediaQuery("(min-width: 1024px)");
   const { layout, changeLayout } = useWorkspaceLayout();
-  const validation = useMemo(
-    () => validateOutput(document, variant, locale),
-    [document, variant, locale],
+  const [issuesOpen, setIssuesOpen] = useState(false);
+  const [issueNavigation, setIssueNavigation] = useState<
+    IssueNavigation & { epoch: number; variantId: string }
+  >();
+  const setSectionId = (id: string) => {
+    setIssueNavigation((current) =>
+      current ? { ...current, pending: false } : current,
+    );
+    changeSection(id);
+  };
+  const setVariantId = (id: string) => {
+    setIssueNavigation((current) =>
+      current ? { ...current, pending: false } : current,
+    );
+    changeVariant(id);
+  };
+  const setLocale: typeof changeLocale = (next) => {
+    setIssueNavigation((current) =>
+      current ? { ...current, pending: false } : current,
+    );
+    changeLocale(next);
+  };
+  const navigate: typeof changeView = (next, section) => {
+    setIssueNavigation((current) =>
+      current ? { ...current, pending: false } : current,
+    );
+    changeView(next, section);
+  };
+  const onIssueFocused = useCallback((id: string) => {
+    setIssueNavigation((current) =>
+      current?.id === id ? { ...current, pending: false } : current,
+    );
+  }, []);
+  const onIssue = (issue: Issue) => {
+    if (!issue.target || state.replacing || state.pending) return;
+    changeLocale(issue.locale);
+    changeView("content", issue.target.sectionId);
+    setIssueNavigation({
+      id: crypto.randomUUID(),
+      issue,
+      pending: true,
+      epoch: state.textHistoryEpoch,
+      variantId: variant.id,
+    });
+    if (!desktop) setIssuesOpen(false);
+  };
+  const validations = useMemo(
+    () => ({
+      "en-US": validateOutput(document, variant, "en-US"),
+      "pt-BR": validateOutput(document, variant, "pt-BR"),
+    }),
+    [document, variant],
   );
+  const validation = validations[locale];
   const compiler = useResumeCompiler({
     document,
     variantId: variant.id,
@@ -121,6 +173,13 @@ export function WorkspaceView() {
       validation={validation}
       setVariantId={setVariantId}
       disabled={state.replacing || !!state.pending}
+      issueNavigation={
+        issueNavigation?.epoch === state.textHistoryEpoch &&
+        issueNavigation.variantId === variant.id
+          ? issueNavigation
+          : undefined
+      }
+      onIssueFocused={onIssueFocused}
     />
   );
   const preview = (
@@ -144,7 +203,12 @@ export function WorkspaceView() {
           view={view}
           sectionId={activeSectionId}
           navigate={navigate}
-          addSection={addSection}
+          addSection={() => {
+            setIssueNavigation((current) =>
+              current ? { ...current, pending: false } : current,
+            );
+            createSection();
+          }}
           reviewCount={reviewCount}
           utilities={
             <div className="flex items-center gap-2">
@@ -183,13 +247,22 @@ export function WorkspaceView() {
         exporting={exports.exporting}
         runExport={exports.runExport}
         hasErrors={validation.errors.length > 0}
+        hasBilingualErrors={
+          validations["en-US"].errors.length > 0 ||
+          validations["pt-BR"].errors.length > 0
+        }
       />
       {!desktop && (
         <div className="shrink-0 border-b px-4 py-2">
           <ToggleGroup
             value={[mobilePanel]}
             onValueChange={(values) => {
-              if (values[0]) setMobilePanel(values[0]);
+              if (values[0]) {
+                setIssueNavigation((current) =>
+                  current ? { ...current, pending: false } : current,
+                );
+                setMobilePanel(values[0]);
+              }
             }}
             variant="outline"
             spacing={0}
@@ -227,6 +300,16 @@ export function WorkspaceView() {
           preview
         )}
       </div>
+      <IssuesPanel
+        document={document}
+        variant={variant}
+        validation={validations}
+        compiler={compiler}
+        open={issuesOpen}
+        setOpen={setIssuesOpen}
+        onIssue={onIssue}
+        disabled={state.replacing || !!state.pending}
+      />
       <input
         ref={input}
         type="file"
