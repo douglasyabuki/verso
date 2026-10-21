@@ -141,7 +141,6 @@ export function WorkspaceView() {
       sidebar={
         <WorkspaceSidebar
           document={document}
-          locale={locale}
           view={view}
           sectionId={activeSectionId}
           navigate={navigate}

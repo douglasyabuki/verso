@@ -46,6 +46,7 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
+import { librarySectionLabel } from "@/components/workspace/navigation";
 import { createEntry } from "@/lib/resume/factories";
 import { localized, plain } from "@/lib/resume/localization";
 import { move } from "@/lib/resume/operations";
@@ -224,9 +225,7 @@ export function ContentEditor({
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader>
-          <CardTitle size="section">
-            {plain(section.heading, locale) || "Untitled section"}
-          </CardTitle>
+          <CardTitle size="section">{librarySectionLabel(section)}</CardTitle>
           <CardDescription>
             A shared library. Choose what belongs in each resume under Variants.
           </CardDescription>

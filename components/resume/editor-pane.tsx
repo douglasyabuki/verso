@@ -7,8 +7,7 @@ import { SettingsEditor } from "@/components/resume/template-editor";
 import { TranslationsEditor } from "@/components/resume/translations-editor";
 import { VariantsEditor } from "@/components/resume/variants-editor";
 import { Button } from "@/components/ui/button";
-import { views } from "@/components/workspace/navigation";
-import { localized, plain } from "@/lib/resume/localization";
+import { librarySectionLabel, views } from "@/components/workspace/navigation";
 import { validateOutput } from "@/lib/resume/validation";
 import type { ConfirmAction } from "@/types-and-constants/editor";
 import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
@@ -52,8 +51,9 @@ export function EditorPane({
               {view === "content"
                 ? sectionId === "profile"
                   ? "Profile"
-                  : plain(section?.heading || localized(), locale) ||
-                    "Career library"
+                  : section
+                    ? librarySectionLabel(section)
+                    : "Career library"
                 : views.find((item) => item.id === view)?.label}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">

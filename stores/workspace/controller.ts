@@ -22,6 +22,7 @@ import type {
  */
 export class WorkspaceController {
   private state: WorkspaceState = {
+    textHistoryEpoch: 0,
     document: createEmptyDocument(),
     backupFingerprint: null,
     ready: false,
@@ -45,6 +46,7 @@ export class WorkspaceController {
   private past: ResumeDocument[] = [];
   private future: ResumeDocument[] = [];
   private editGroup: (EditGroup & { at: number }) | null = null;
+  private textHistoryEpoch = 0;
 
   /** Read the stable observable state. @returns Current immutable state. @example controller.getSnapshot() */
   getSnapshot = () => this.state;
@@ -65,6 +67,7 @@ export class WorkspaceController {
     this.state = {
       ...this.state,
       ...patch,
+      textHistoryEpoch: this.textHistoryEpoch,
       ...(changed ? { currentFingerprint: null } : {}),
     };
     this.state.canUndo =
@@ -232,6 +235,7 @@ export class WorkspaceController {
     const document = source.pop();
     if (!document) return;
     destination.push(this.state.document);
+    this.textHistoryEpoch++;
     this.applyDocument(structuredClone(document));
   }
 
@@ -249,6 +253,7 @@ export class WorkspaceController {
    * @example this.resetHistory();
    */
   private resetHistory() {
+    this.textHistoryEpoch++;
     this.past = [];
     this.future = [];
     this.endEditGroup();

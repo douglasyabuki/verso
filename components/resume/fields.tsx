@@ -1,33 +1,12 @@
 "use client";
 
-import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  ChevronRight,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { type ComponentProps, useId, useState } from "react";
+import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from "lucide-react";
+import { useId } from "react";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { TextEditor } from "@/components/resume/text-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Field,
   FieldDescription,
@@ -36,7 +15,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useFieldHistory } from "@/hooks/workspace/use-field-history";
 import { plain } from "@/lib/resume/localization";
 import { urlError } from "@/lib/resume/validation";
@@ -92,18 +70,6 @@ export function TextField({
       ) : null}
     </Field>
   );
-}
-
-function HistoryTextarea({
-  fieldKey,
-  onChange,
-  ...props
-}: Omit<ComponentProps<typeof Textarea>, "onChange"> & {
-  fieldKey: string;
-  onChange: (value: string, group: EditGroup) => void;
-}) {
-  const history = useFieldHistory({ fieldKey, onChange });
-  return <Textarea {...props} {...history} />;
 }
 
 export function CheckField({
@@ -187,16 +153,8 @@ export function LocalizedField({
 }) {
   const id = useId();
   const record = value[locale];
-  const [removeIndex, setRemoveIndex] = useState<number>();
   const missing = !plain(value, locale).trim();
   const other = locale === "en-US" ? "pt-BR" : "en-US";
-  const update = (index: number, patch: Partial<Span>, group?: EditGroup) =>
-    onChange(
-      record.spans.map((span, i) =>
-        i === index ? { ...span, ...patch } : span,
-      ),
-      group,
-    );
   return (
     <FieldGroup className="gap-3">
       <Field data-invalid={!!error}>
@@ -214,82 +172,19 @@ export function LocalizedField({
             <Badge variant="secondary">Needs review</Badge>
           ) : null}
         </div>
-        {record.spans.map((span, index) => (
-          <div key={index} className="flex flex-col gap-2">
-            {index > 0 && (
-              <label
-                htmlFor={id + "-" + index}
-                className="text-xs text-muted-foreground"
-              >
-                Continuation {index + 1}
-              </label>
-            )}
-            <HistoryTextarea
-              fieldKey={`${fieldKey}.spans.${index}.text`}
-              id={index === 0 ? id : id + "-" + index}
-              value={span.text}
-              maxLength={20_000}
-              rows={label === "Summary" || label === "Achievement" ? 3 : 2}
-              onChange={(text, group) => update(index, { text }, group)}
-              aria-invalid={!!error}
-              aria-describedby={error ? id + "-error" : undefined}
-            />
-            <Collapsible className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-              <CollapsibleTrigger
-                render={<Button variant="ghost" size="xs" />}
-                className="group"
-              >
-                <ChevronRight
-                  data-icon="inline-start"
-                  className="transition-transform group-data-panel-open:rotate-90"
-                />
-                Formatting{span.emphasis ? " · emphasis" : ""}
-                {span.href ? " · linked" : ""}
-              </CollapsibleTrigger>
-              <CollapsibleContent keepMounted>
-                <FieldGroup className="mt-3 gap-3">
-                  <CheckField
-                    label="Emphasis"
-                    checked={span.emphasis}
-                    onChange={(emphasis) => update(index, { emphasis })}
-                  />
-                  <TextField
-                    fieldKey={`${fieldKey}.spans.${index}.href`}
-                    label={`Link for segment ${index + 1}`}
-                    value={span.href}
-                    maxLength={2_000}
-                    onChange={(href, group) => update(index, { href }, group)}
-                    error={urlError(span.href)}
-                    placeholder="https://example.com"
-                  />
-                  {record.spans.length > 1 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRemoveIndex(index)}
-                    >
-                      Remove segment
-                    </Button>
-                  )}
-                </FieldGroup>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        ))}
+        <TextEditor
+          key={fieldKey}
+          id={id}
+          fieldKey={fieldKey}
+          label={`${label} (${locale === "en-US" ? "EN" : "PT"})`}
+          spans={record.spans}
+          error={error}
+          multiline={label === "Summary" || label === "Achievement"}
+          onChange={onChange}
+        />
         {error && <FieldError id={id + "-error"}>{error}</FieldError>}
       </Field>
       <div className="flex flex-wrap gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={record.spans.length >= 100}
-          onClick={() =>
-            onChange([...record.spans, { text: "", emphasis: false, href: "" }])
-          }
-        >
-          <Plus data-icon="inline-start" />
-          Text segment
-        </Button>
         {record.needsReview && !missing && (
           <Button variant="outline" size="sm" onClick={onReviewed}>
             <Check data-icon="inline-start" />
@@ -297,35 +192,6 @@ export function LocalizedField({
           </Button>
         )}
       </div>
-      <AlertDialog
-        open={removeIndex !== undefined}
-        onOpenChange={(open) => {
-          if (!open) setRemoveIndex(undefined);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this text segment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the segment and its formatting from this language.
-              Variants using this wording will update.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                onChange(
-                  record.spans.filter((_, index) => index !== removeIndex),
-                );
-                setRemoveIndex(undefined);
-              }}
-            >
-              Remove segment
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </FieldGroup>
   );
 }

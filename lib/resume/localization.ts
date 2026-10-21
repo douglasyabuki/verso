@@ -1,3 +1,4 @@
+import { equivalentSpans, normalizeSpans } from "@/lib/resume/spans";
 import type {
   Locale,
   LocalizedText,
@@ -26,8 +27,8 @@ export function editTranslation(
   locale: Locale,
   spans: Span[],
 ): void {
-  if (JSON.stringify(value[locale].spans) === JSON.stringify(spans)) return;
-  value[locale].spans = spans;
+  if (equivalentSpans(value[locale].spans, spans)) return;
+  value[locale].spans = normalizeSpans(spans);
   value[locale].revision++;
   const counterpart = locale === "en-US" ? "pt-BR" : "en-US";
   if (plain(value, counterpart).trim()) value[counterpart].needsReview = true;

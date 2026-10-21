@@ -29,9 +29,8 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { views } from "@/components/workspace/navigation";
-import { plain } from "@/lib/resume/localization";
-import { type Locale, type ResumeDocument } from "@/types-and-constants/resume";
+import { librarySectionLabel, views } from "@/components/workspace/navigation";
+import { type ResumeDocument } from "@/types-and-constants/resume";
 
 const sectionIcons = {
   experience: BriefcaseBusiness,
@@ -44,7 +43,6 @@ const sectionIcons = {
 
 export function WorkspaceSidebar({
   document,
-  locale,
   view,
   sectionId,
   navigate,
@@ -53,7 +51,6 @@ export function WorkspaceSidebar({
   utilities,
 }: {
   document: ResumeDocument;
-  locale: Locale;
   view: string;
   sectionId: string;
   navigate: (view: string, section?: string) => void;
@@ -134,9 +131,7 @@ export function WorkspaceSidebar({
                     className="pr-9"
                   >
                     <Icon />
-                    <span>
-                      {plain(section.heading, locale) || "Untitled section"}
-                    </span>
+                    <span>{librarySectionLabel(section)}</span>
                   </SidebarMenuButton>
                   <SidebarMenuBadge>
                     {section.entries.filter((entry) => !entry.archived).length}

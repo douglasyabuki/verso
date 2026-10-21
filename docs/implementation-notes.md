@@ -19,11 +19,52 @@ imports; domain logic never imports stores, hooks, or components.
 
 ## Editing and output
 
+Career library navigation and section page titles use fixed English interface
+labels, independent of the resume language switch. Custom sections use their
+English heading or "Custom section". The editable resume heading and output
+wording still use the selected locale.
+
 Content includes profile/contact details, summary, experience, projects,
 education, skills, certifications, and custom sections. Entries/achievements
 have stable IDs, shared dates/technologies/links, and separate localized wording.
-Text segments support plain text, emphasis, and safe-scheme links. Raw LaTeX is
-encoded as text. Optional empty fields disappear from PDFs.
+Summaries, headings, titles, and achievements use one formatted text editor,
+including in translation views. The per-field toolbar supports emphasis and
+links only; raw HTML, Markdown, and LaTeX syntax are treated as text. Paste
+inserts plain text and line breaks with the insertion point's formatting, without
+importing external formatting or automatically creating links. Optional empty
+fields disappear from PDFs.
+
+Select text to apply/remove emphasis or add a link. A caret inside an existing
+link edits/removes its complete contiguous destination, including changes in
+emphasis; a selected range changes only that range. The URL popover supports
+Apply, Cancel/Escape, and Remove, retaining text and emphasis when unlinking.
+The existing URL validator allows only https, http, mailto, and tel and rejects
+credentials, spaces, control characters, and backslashes. Invalid destinations
+from old backups remain editable data but never become clickable editor URLs.
+
+The labeled toolbar has one Tab stop with Left/Right and Home/End navigation.
+Ctrl/Command+I toggles emphasis, Ctrl/Command+K opens link editing, and Enter or
+Shift+Enter inserts a line break. Editor undo/redo shortcuts and native history
+input events use field-local history, including consuming empty history commands.
+The workspace toolbar retains document-wide history. Successful workspace
+undo/redo and replacements clear field histories using a transient epoch that
+is excluded from backups and browser storage. Ordinary typing/composition and
+accepted clipboard/formatting actions retain workspace edit grouping.
+
+Only schema-1 spans are stored. Editor JSON and HTML never enter the document.
+Genuine edits remove empty spans and merge adjacent runs with equal emphasis
+and destinations, splitting at 20,000 UTF-16 units without splitting surrogate
+pairs. Empty wording retains one plain empty span. Semantically unchanged edits
+do not rewrite segmentation, increment revisions, or flag translations; opening
+an old backup never normalizes it or changes its backup-freshness baseline.
+
+A ProseMirror transaction filter checks normalized output before editor state
+and local history are applied. Edits exceeding 100 spans or the destination limit
+are rejected without truncation. Rejection preserves content, selection, stored
+marks, both undo/redo branches, and history grouping; it makes no workspace edit
+or save request. Native DOM changes are reconciled against the untouched editor
+state rather than applying and undoing rejected input. The rejection is announced
+without moving focus.
 
 Library ordering and variant output ordering are independent. Variants select
 and order sections, entries, and achievements. Archiving hides content from every
@@ -119,5 +160,5 @@ source structure and bundling, not browser behavior or persistence correctness.
 
 Use the committed fictional example in `lib/resume/example.ts` for manual editor,
 backup, and both-language PDF/LaTeX export review. The
-[verification handoff](ui-refactor-progress.md) lists the manual scenarios and
-records which checks have actually been performed.
+[editor verification handoff](text-editor-verification.md) lists the manual
+scenarios and records which checks have actually been performed.
