@@ -1,9 +1,13 @@
 "use client";
 
 import { LocalizedField } from "@/components/resume/fields";
-import type { Issue, Locale, ResumeDocument } from "@/lib/resume/model";
-import { editTranslation, findLocalized } from "@/lib/resume/model";
-import type { WorkspaceEdit } from "@/lib/workspace/controller";
+import { editTranslation, findLocalized } from "@/lib/resume/localization";
+import type {
+  Issue,
+  Locale,
+  ResumeDocument,
+} from "@/types-and-constants/resume";
+import type { WorkspaceEdit } from "@/types-and-constants/workspace";
 
 export function WordingField({
   document,

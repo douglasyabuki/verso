@@ -3,7 +3,7 @@
 import { type ChangeEvent, type CompositionEvent, useRef } from "react";
 
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
-import type { EditGroup } from "@/lib/workspace/controller";
+import type { EditGroup } from "@/types-and-constants/workspace";
 
 type FieldHistoryOptions = {
   fieldKey: string;

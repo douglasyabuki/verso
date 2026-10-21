@@ -1,47 +1,20 @@
-import {
-  createEmptyDocument,
-  type DocumentUpdate,
-  type ResumeDocument,
-  serializeBackup,
-} from "@/lib/resume/model";
+import { serializeBackup } from "@/lib/resume/backup";
+import { createEmptyDocument } from "@/lib/resume/factories";
 import {
   canCoordinate,
   commitWorkspace,
   fingerprint,
   loadWorkspace,
-  type StorageReview,
   subscribeWorkspace,
-  type WorkspaceSnapshot,
-} from "@/lib/workspace/storage";
-
-export type EditGroup = {
-  key: string;
-  kind: "typing" | "composition" | "isolated";
-};
-
-export type WorkspaceEdit = (update: DocumentUpdate, group?: EditGroup) => void;
-
-type Replacement = {
-  title: string;
-  snapshot: WorkspaceSnapshot;
-  review: StorageReview | null;
-  sessionOnly: boolean;
-};
-
-export type WorkspaceState = WorkspaceSnapshot & {
-  ready: boolean;
-  sessionOnly: boolean;
-  saving: boolean;
-  replacing: boolean;
-  canUndo: boolean;
-  canRedo: boolean;
-  error: string | null;
-  conflict: StorageReview | null;
-  pending: Replacement | null;
-  recovery: WorkspaceSnapshot | null;
-  currentFingerprint: string | null;
-  savedIdentity: string | null;
-};
+} from "@/stores/workspace/persistence";
+import { type ResumeDocument } from "@/types-and-constants/resume";
+import type {
+  EditGroup,
+  StorageReview,
+  WorkspaceEdit,
+  WorkspaceSnapshot,
+  WorkspaceState,
+} from "@/types-and-constants/workspace";
 
 /** Own the guest workspace lifecycle independently of presentation.
  * State is tab-scoped; all durable mutations pass through commitWorkspace.

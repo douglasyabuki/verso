@@ -22,8 +22,8 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
-import type { Locale } from "@/lib/resume/model";
-import { validateOutput } from "@/lib/resume/model";
+import { validateOutput } from "@/lib/resume/validation";
+import type { Locale } from "@/types-and-constants/resume";
 
 const PdfPreview = dynamic(() => import("@/components/resume/pdf-preview"), {
   ssr: false,

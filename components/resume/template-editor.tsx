@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react";
 
-import type { EditorProps } from "@/components/resume/editor-types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,8 +22,9 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
-import type { TemplateSettings } from "@/lib/resume/model";
-import { resolveSettings } from "@/lib/resume/model";
+import { resolveSettings } from "@/lib/resume/settings";
+import type { EditorProps } from "@/types-and-constants/editor";
+import type { TemplateSettings } from "@/types-and-constants/resume";
 
 export function SettingsEditor({
   document,

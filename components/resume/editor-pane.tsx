@@ -3,15 +3,16 @@
 import { Trash2 } from "lucide-react";
 
 import { ContentEditor } from "@/components/resume/content-editor";
-import type { ConfirmAction } from "@/components/resume/fields";
 import { SettingsEditor } from "@/components/resume/template-editor";
 import { TranslationsEditor } from "@/components/resume/translations-editor";
 import { VariantsEditor } from "@/components/resume/variants-editor";
 import { Button } from "@/components/ui/button";
 import { views } from "@/components/workspace/navigation";
-import type { Locale, ResumeDocument } from "@/lib/resume/model";
-import { localized, plain, validateOutput } from "@/lib/resume/model";
-import type { WorkspaceEdit } from "@/lib/workspace/controller";
+import { localized, plain } from "@/lib/resume/localization";
+import { validateOutput } from "@/lib/resume/validation";
+import type { ConfirmAction } from "@/types-and-constants/editor";
+import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
+import type { WorkspaceEdit } from "@/types-and-constants/workspace";
 
 export function EditorPane({
   document,

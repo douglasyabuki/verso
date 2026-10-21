@@ -1,0 +1,12 @@
+# Application state stores
+
+- Group modules by state owner or domain. `workspace/` owns the tab-scoped resume workspace. Create additional folders only for implemented responsibilities; do not add placeholder adapters or future account stores.
+- Include application state ownership, commands, subscriptions, lifecycle coordination, persistence, and thin React provider/context adapters. Keep pure domain operations in `lib/`, shared contracts in `types-and-constants/`, interaction hooks in `hooks/`, and presentation in `components/`.
+- Separate framework-independent code from React adapters: `workspace/controller.ts` owns observable state and commands, `workspace/persistence.ts` owns browser storage access, and `workspace/provider.tsx` owns React context and lifecycle listeners. Controllers and persistence must not import React, components, or hooks. Apply client boundaries only to modules that need them.
+- Maintain one writable source of truth and one controller per mounted provider. Do not copy store state into hooks or contexts. Preserve stable snapshots, subscriptions, initialization, timer cleanup, and listener cleanup. Never create a module-global workspace shared by requests or tabs.
+- Keep transient state owned by one component local. Persistence alone does not justify a new state library or broader state ownership.
+- Every persistent workspace mutation, including replacements and backup metadata, must hold the shared Web Lock and compare the reviewed stored bytes/token. Preserve recovery, stale-confirmation rejection, and backup freshness independently of local-save status.
+- Session-only replacements stay in memory, retain recovery, and leave stored bytes unchanged. Saving resumes only after explicit review and confirmation. Preserve generation guards so late work cannot overwrite a newer document or backup baseline.
+- Providers expose state and manage lifecycle without rendering loading screens, errors, or other product UI. Compose readiness and loading presentation in workspace components. Do not import presentation to display store feedback.
+- Give exported functions, classes, and public lifecycle/command APIs one useful JSDoc block describing purpose, parameters, meaningful return values or failures, and an example. Keep TypeScript types in signatures and document cleanup contracts.
+- Leave a blank line after imports and between declarations. Follow the repository formatter and import sorting rules.

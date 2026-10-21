@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import type { EditorProps } from "@/components/resume/editor-types";
 import {
   CheckField,
   LinksEditor,
@@ -47,15 +46,13 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
-import type { Entry, Issue } from "@/lib/resume/model";
-import {
-  createEntry,
-  dateError,
-  localized,
-  move,
-  plain,
-} from "@/lib/resume/model";
-import type { EditGroup } from "@/lib/workspace/controller";
+import { createEntry } from "@/lib/resume/factories";
+import { localized, plain } from "@/lib/resume/localization";
+import { move } from "@/lib/resume/operations";
+import { dateError } from "@/lib/resume/validation";
+import type { EditorProps } from "@/types-and-constants/editor";
+import type { Entry, Issue } from "@/types-and-constants/resume";
+import type { EditGroup } from "@/types-and-constants/workspace";
 
 export function ContentEditor({
   document,

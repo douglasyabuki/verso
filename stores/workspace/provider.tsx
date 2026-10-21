@@ -8,10 +8,15 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { WorkspaceController } from "@/lib/workspace/controller";
+import { WorkspaceController } from "@/stores/workspace/controller";
 
 export const WorkspaceContext = createContext<WorkspaceController | null>(null);
 
+/** Own one tab-scoped controller and register its lifecycle listeners.
+ * @param props Children consuming the workspace context.
+ * @returns Context provider; readiness presentation belongs to its children.
+ * @example <WorkspaceProvider><WorkspaceView /></WorkspaceProvider>
+ */
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [controller] = useState(() => new WorkspaceController());
   const state = useSyncExternalStore(
@@ -47,16 +52,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   return (
     <WorkspaceContext.Provider value={controller}>
-      {state.ready ? (
-        children
-      ) : (
-        <div
-          className="flex h-dvh items-center justify-center text-sm text-muted-foreground"
-          role="status"
-        >
-          Opening your workspace…
-        </div>
-      )}
+      {children}
     </WorkspaceContext.Provider>
   );
 }

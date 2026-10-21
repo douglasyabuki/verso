@@ -1,5 +1,6 @@
-import type { Entry, ResumeDocument } from "@/lib/resume/model";
-import { createEmptyDocument, localized } from "@/lib/resume/model";
+import { createEmptyDocument } from "@/lib/resume/factories";
+import { localized } from "@/lib/resume/localization";
+import type { Entry, ResumeDocument } from "@/types-and-constants/resume";
 
 /** Build an explicitly fictional bilingual example. @returns Editable content with stable references. @example createExampleDocument() */
 export function createExampleDocument(): ResumeDocument {

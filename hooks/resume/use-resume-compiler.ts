@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { Locale, ResumeDocument } from "@/lib/resume/model";
-import type { ResumeOutput } from "@/lib/resume/render";
 import { renderLatex } from "@/lib/resume/render";
 import { BrowserCompiler } from "@/tools/compiler-proof/compiler.mjs";
+import type { ResumeOutput } from "@/types-and-constants/resume";
+import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
 
 type ResumeCompilerOptions = {
   document: ResumeDocument;

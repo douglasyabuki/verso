@@ -1,10 +1,12 @@
 import { z } from "zod";
 
-import {
-  parseBackup,
-  type ResumeDocument,
-  serializeBackup,
-} from "@/lib/resume/model";
+import { parseBackup, serializeBackup } from "@/lib/resume/backup";
+import { type ResumeDocument } from "@/types-and-constants/resume";
+import type {
+  CommitResult,
+  StorageReview,
+  WorkspaceSnapshot,
+} from "@/types-and-constants/workspace";
 
 export const workspaceKey = "verso.workspace.v1";
 const lockName = "verso.workspace.v1.commit";
@@ -15,24 +17,6 @@ const recordSchema = z.strictObject({
   document: z.unknown(),
   backupFingerprint: z.string().nullable(),
 });
-
-export type WorkspaceSnapshot = {
-  document: ResumeDocument;
-  backupFingerprint: string | null;
-};
-
-export type StorageReview = {
-  raw: string | null;
-  snapshot: WorkspaceSnapshot | null;
-  savedAt: string | null;
-  error: string | null;
-};
-
-export type CommitResult =
-  | { status: "success"; review: StorageReview }
-  | { status: "conflict"; review: StorageReview }
-  | { status: "failure"; error: string }
-  | { status: "cancelled" };
 
 /** Read stored data without changing it, preserving malformed bytes for conditional replacement.
  * @returns Reviewed bytes and validated content, or a diagnostic; throws if storage cannot be read.

@@ -2,7 +2,6 @@
 
 import { Copy, Plus, Trash2 } from "lucide-react";
 
-import type { EditorProps } from "@/components/resume/editor-types";
 import {
   CheckField,
   OrderButtons,
@@ -18,8 +17,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
-import type { Entry, Variant } from "@/lib/resume/model";
-import { move, plain } from "@/lib/resume/model";
+import { plain } from "@/lib/resume/localization";
+import { move } from "@/lib/resume/operations";
+import type { EditorProps } from "@/types-and-constants/editor";
+import type { Entry, Variant } from "@/types-and-constants/resume";
 
 export function VariantsEditor({
   document,

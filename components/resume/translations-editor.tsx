@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import type { EditorProps } from "@/components/resume/editor-types";
 import { WordingField } from "@/components/resume/wording-field";
 import {
   Card,
@@ -22,8 +21,9 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
-import type { Locale } from "@/lib/resume/model";
-import { localizedFields, plain } from "@/lib/resume/model";
+import { localizedFields, plain } from "@/lib/resume/localization";
+import type { EditorProps } from "@/types-and-constants/editor";
+import type { Locale } from "@/types-and-constants/resume";
 
 export function TranslationsEditor({
   document,

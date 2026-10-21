@@ -30,7 +30,7 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { ResumeOutput } from "@/lib/resume/render";
+import type { ResumeOutput } from "@/types-and-constants/resume";
 
 export default function PdfPreview({ output }: { output?: ResumeOutput }) {
   const container = useRef<HTMLDivElement>(null);

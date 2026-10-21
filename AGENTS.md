@@ -15,7 +15,7 @@ Active configurations and agent skills live at the application root. Product req
 ## Framework and dependencies
 
 - Read the relevant installed Next.js guide in `node_modules/next/dist/docs/` before framework code changes. Resolve Next.js from the application package in a monorepo. If bundled guides are absent, consult official docs for the installed release. Do not assume APIs or conventions from memory. Preserve Next.js-generated agent guidance when merging this file.
-- Inspect the manifest, lockfile, runtime, and installed declarations before adopting examples. Use the existing package manager. Keep dependency changes scoped and do not copy the source application's version set blindly.
+- Inspect the manifest, lockfile, runtime, and installed declarations before adopting examples. Use the existing package manager. Keep dependency changes scoped and preserve the application's selected versions.
 - Load `.agents/skills/nextjs-oauth-persistence/SKILL.md` for auth, protected data, and persistence work. Load `prisma-orm-setup` before Prisma setup or connection repair; the bundled CLI/client references target Prisma 7 and do not define a new app's default version.
 - Load `vitest-testing` when choosing or implementing regression checks, `react-state-performance` for rendering/state investigations, and `shadcn` only if that UI system is used. Read conditional Prisma migration/adapter skills only when their work applies.
 
@@ -25,6 +25,7 @@ Active configurations and agent skills live at the application root. Product req
 - Keep reusable hooks directly in `hooks/` and feature-specific hooks in feature subfolders. Name a hook's options type `<HookWithoutUse>Options`.
 - Leave a blank line after imports and between declarations. Use the formatter and import-sort rules rather than manual formatting conventions that conflict with tooling.
 - Document custom hooks and library functions with one JSDoc block describing purpose, parameters, meaningful return values/alternatives, and a useful example. Keep TypeScript types in signatures. Follow the scoped instructions in `hooks/AGENTS.md` and `lib/AGENTS.md`.
+- Keep observable application state and persistence in `stores/`, shared contracts and declarative defaults in `types-and-constants/`, and external-library declarations in `types/`. Follow `stores/AGENTS.md` and `types-and-constants/AGENTS.md`. Keep private implementation types local and avoid runtime cycles through schema-derived contracts.
 - Preserve existing UI primitives and accessible interactions. Choose client state tools based on coordination and subscription needs; persistence alone does not justify a global store.
 
 ## Validation
@@ -38,7 +39,7 @@ Active configurations and agent skills live at the application root. Product req
 
 - Use npm and the existing package-lock.json. The application uses Next.js 16.4.2, React 19.3, Tailwind 4, TypeScript, and root app/ routes; @/* resolves from the repository root.
 - Preserve next.config.ts framework and Turbopack settings. Generate route helpers with next typegen before standalone type checks.
-- The user adopted docs/requirements.md with the scope in docs/implementation-notes.md: a bilingual editor, variants, browser compilation, file backups, and localStorage guest saving with a session-only fallback. Authentication, account persistence, publication, public APIs, portfolio/LinkedIn integration, automated tests, and deployment are excluded from this implementation.
+- Product scope is defined in docs/requirements.md and docs/implementation-notes.md: a bilingual editor, variants, browser compilation, file backups, and localStorage guest saving with a session-only fallback. Authentication, account persistence, publication, public APIs, portfolio/LinkedIn integration, automated tests, and deployment are excluded from this implementation.
 - Future authenticated storage is Prisma/Postgres with Better Auth GitHub/Google. Keep this preparation conceptual; do not add empty modules or unused account adapters. Inspect the selected versions, their official documentation, deployment runtime, and provider requirements before implementation.
 - Run npm run format:check, npm run lint, npm run typecheck, and npm test for tooling changes. npm test builds and starts a fresh production server on localhost:3100 and runs Chromium smoke coverage; this is not product acceptance coverage.
 - Vitest Node/browser projects are not configured. Add them when meaningful domain or interactive component behavior exists. Do not add empty suites or passWithNoTests.
@@ -47,9 +48,9 @@ Active configurations and agent skills live at the application root. Product req
 
 ## Resume architecture
 
-- Structured ResumeDocument schema 1 is the editable source of truth. Keep domain types, validation, translation rules, and deterministic rendering under lib/resume/, independent of React and storage.
+- Structured ResumeDocument schema 1 is the editable source of truth. Keep shared schema-derived types in types-and-constants/resume.ts and schemas, validation, translation rules, and deterministic rendering under lib/resume/, independent of React and storage.
 - Supported output locales are en-US and pt-BR. Shared facts occur once; localized wording and achievement IDs survive reorder/rename operations. Translation review flags warn and do not block valid draft downloads.
-- The exact bundled template identity is exported by lib/resume/model.ts and mirrored in tools/compiler-proof/prepare.py. The design was adapted from private reference documents that are not included in the repository. Load .agents/skills/resume-latex/SKILL.md for template, package, font, or compiler changes.
-- Generated .tex, PDFs, compiler assets under public/compiler/, and .cache/ are artifacts. Change structured content or template code, not generated files. Reference inputs under temp/ remain private and ignored.
+- The exact bundled template identity is exported by lib/resume/model.ts and mirrored in tools/compiler-proof/prepare.py. Load .agents/skills/resume-latex/SKILL.md for template, package, font, or compiler changes.
+- Generated .tex, PDFs, compiler assets under public/compiler/, and .cache/ are artifacts. Change structured content or template code, not generated files.
 - Validated JSON imports and initiated JSON exports establish backup freshness, persisted separately from local-save status. PDF and LaTeX exports do not preserve the complete editable workspace. Every persistent replacement and metadata write must use the shared Web Lock and reviewed-token check. Session-only replacements stay in memory and retain recovery. Warn on unsaved or blocked local saving; page-hidden flushes and browser warnings are best effort. See docs/ui-refactor-progress.md for handoff context.
 - Run format:check, lint, typecheck, and build for this implementation. The user explicitly excluded adding or running automated tests, including npm test. Preserve the preexisting test setup without treating its starter smoke coverage as product acceptance.

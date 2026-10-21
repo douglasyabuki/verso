@@ -1,7 +1,7 @@
 import { strToU8, zipSync } from "fflate";
 
-import type { ResumeDocument } from "@/lib/resume/model";
-import type { ResumeOutput } from "@/lib/resume/render";
+import type { ResumeOutput } from "@/types-and-constants/resume";
+import type { ResumeDocument } from "@/types-and-constants/resume";
 
 /** Build a safe, readable filename segment. @param value Owner or variant name. @returns ASCII slug, or "resume". @example fileSlug("Alex Morgan") */
 export function fileSlug(value: string): string {

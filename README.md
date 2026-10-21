@@ -21,11 +21,34 @@ archives and creates ignored assets under `public/compiler/` and `.cache/`.
 The first run needs network access; compilation uses only self-hosted assets.
 Keep the verified download cache because changed upstream archives are rejected.
 
-The standalone compiler proof depends on private reference documents that are
-excluded from the repository. Its server is available through
-`npm run compiler:proof` at http://127.0.0.1:3199, but the reference comparison
-cannot be reproduced from a fresh checkout alone. These documents are optional
-for asset preparation and are not required to use the editor or fictional example.
+The bundled fictional workspace in `lib/resume/example.ts` provides reproducible
+content for reviewing the editor and exporting both languages. Load it through
+the workspace data menu after preparing the compiler assets.
+
+## Code organization
+
+| Directory               | Responsibility                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `app/`                  | Routes, layouts, and global styles                                                         |
+| `components/workspace/` | Workspace composition, readiness, navigation UI, shell, and controls                       |
+| `components/resume/`    | Resume editors and PDF preview                                                             |
+| `components/ui/`        | Shared UI primitives                                                                       |
+| `hooks/`                | Reusable hooks and feature interaction coordination                                        |
+| `stores/workspace/`     | Observable controller, persistence, and React lifecycle adapter                            |
+| `types-and-constants/`  | Shared domain contracts and declarative defaults                                           |
+| `lib/resume/`           | Schemas, localization, factories, operations, settings, validation, backups, and rendering |
+| `types/`                | External-library declarations                                                              |
+
+Domain logic does not depend on React or storage. Shared contracts use type-only
+schema imports, and stores keep their React adapter separate from controller and
+persistence code. Hooks connect those layers to presentation. The workspace
+controller is the single writable owner of resume state; navigation selections,
+compiler lifecycle, and local interaction state retain their existing owners.
+
+See [store guidance](stores/AGENTS.md),
+[contract guidance](types-and-constants/AGENTS.md), and
+[implementation notes](docs/implementation-notes.md) for dependency rules and
+persistence invariants.
 
 ## Working with drafts
 
@@ -88,28 +111,21 @@ browser runtime/resources, notices, and a standalone local compilation launcher.
 | Command                    | Purpose                                                   |
 | -------------------------- | --------------------------------------------------------- |
 | `npm run compiler:prepare` | Verify locked downloads and prepare local compiler assets |
-| `npm run compiler:proof`   | Serve the independent browser compilation demonstration   |
 | `npm run format:check`     | Check source formatting                                   |
 | `npm run lint`             | Lint source and import ordering                           |
 | `npm run typecheck`        | Run Next.js route type generation and TypeScript          |
 | `npm run build`            | Produce a production build                                |
 | `npm start`                | Serve the production build                                |
 
-Automated tests were explicitly excluded from this implementation. Existing
-Playwright scripts remain in the repository but were not added to, updated, or
-run as product acceptance coverage. Follow the manual scenarios in
-[implementation notes](docs/implementation-notes.md) and the observed browser/PDF
-results in [the compilation milestone](docs/compilation-proof.md).
+Automated tests are excluded from this implementation. Existing Playwright
+scripts remain available but are not product acceptance coverage. Follow the
+reproducible manual scenarios in [the verification handoff](docs/ui-refactor-progress.md),
+using the bundled fictional example on a disposable localhost origin.
 
-Interactive browser and visual acceptance of the current UI refactor and saving
-flows remains pending. The [UI refactor handoff](docs/ui-refactor-progress.md)
-records the completed static/build checks and the remaining manual scenarios.
-The browser observations below predate that refactor.
-
-Chrome, Edge, and Firefox browser compilation was checked locally; the private
-inputs and generated evidence for those observations are not included. Safari and
-mobile compilation are unverified. The converter has documented decorative-icon
-text-extraction limitations; no PDF/UA or universal ATS compatibility is claimed.
+Static checks and production builds do not establish browser behavior. The handoff
+records the verification status and pending interaction/PDF checks. Safari and
+assistive-technology compatibility remain unverified; no PDF/UA or universal ATS
+compatibility is claimed.
 
 The workspace sends no resume data to a backend. Authentication, account persistence,
 publication, public APIs, portfolio/LinkedIn integration, and hosted deployment

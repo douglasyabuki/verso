@@ -1,12 +1,21 @@
 # Resume workspace behavior
 
-Verso uses a tab-scoped observable workspace controller provided through React
-context, pure domain code in `lib/resume/`, and the independent compiler adapter
-proven in [the compilation milestone](compilation-proof.md). Browser persistence
-is isolated in `lib/workspace/storage.ts`; there is no global application store.
-Next.js serves the shell and prepared compiler assets. It never receives resume
-edits or compilation inputs. Authentication, account storage, publication, public
-resume APIs, and portfolio/LinkedIn integration remain unimplemented.
+Verso uses a tab-scoped observable workspace controller in
+`stores/workspace/controller.ts`, a thin React context/lifecycle adapter in
+`stores/workspace/provider.tsx`, pure domain code in `lib/resume/`, and browser
+persistence in `stores/workspace/persistence.ts`. Shared contracts and defaults
+live in `types-and-constants/`; external-library declarations stay in `types/`.
+
+`components/workspace/workspace.tsx` composes the provider and readiness UI.
+The workspace view composes editors, preview, shell, and controls. Navigation and
+JSON backup hooks coordinate interactions without creating another document
+owner. Compiler lifecycle and PDF/LaTeX exports retain their dedicated hooks.
+
+The resume model contains schemas and the canonical template identity. Domain
+functions are grouped into localization, factories, collection operations,
+settings resolution, validation, backup parsing/serialization, rendering, example
+content, and download utilities. Schema-derived shared types use type-only
+imports; domain logic never imports stores, hooks, or components.
 
 ## Editing and output
 
@@ -28,9 +37,8 @@ exports require both languages to be valid and compile one frozen snapshot.
 
 Settings precedence is workspace, workspace locale, variant, then variant
 locale. Supported settings are A4/Letter, body size, margins, line height, section
-spacing, and page target; Inter and the reference design remain fixed. The
-three-page target follows the supplied references. Overflow is reported rather
-than dropping content.
+spacing, and page target; Inter and the bundled template remain fixed. The default
+page target is three. Overflow is reported rather than dropping content.
 
 The compiler hook serializes jobs, skips superseded queued automatic work,
 keeps four suitable results in memory, and checks snapshot identity before
@@ -105,48 +113,11 @@ the WebAssembly format. Source ZIPs are not editable workspace backups.
 
 ## Verification scope
 
-The user excluded adding/running automated tests. Existing starter smoke tests
-remain available but are not updated or claimed as product coverage. Run
-formatting, lint, generated route types/type checking, and a production build.
-Manually inspect the browser workflows and both generated PDFs. Compiler/browser
-observations and known output limitations are recorded in the milestone report.
+Do not add or run automated tests for this implementation. Run formatting, lint,
+route type generation/type checking, and a production build. These checks validate
+source structure and bundling, not browser behavior or persistence correctness.
 
-### Observed manual checks
-
-These are historical local observations. Private reference inputs, generated
-PDFs, downloaded backups, and browser inspection evidence are not included in
-the repository. They are not acceptance checks reproduced by a fresh checkout.
-Use the bundled fictional example for independent editor and export review;
-comparison against the private reference documents requires access to those inputs.
-
-Production Chrome review covered example loading, edits in both languages,
-translation-review warnings, valid English export with an unfinished Portuguese
-title, blocked bilingual export, and JSON freshness remaining unchanged after
-PDF downloads. Full JSON import restored content; unknown template versions and
-incompatible layout settings were rejected before replacement.
-
-Downloaded backups retained workspace/locale/variant overrides. Variant
-duplication and section reordering preserved shared entry IDs. Archive/restore
-worked, and permanent deletion named the affected variant and removed its
-references. The 375px layout had no horizontal document overflow; mobile
-navigation opened and closed through the accessible sheet.
-
-PDF review covered special-character encoding, case-sensitive URLs with query
-strings/fragments, Letter output, document metadata, zoom, selection/search,
-navigation, extraction, and overflow warnings without content removal. A long
-achievement exposed a detached project heading; the corrected template reserves
-space for section/entry headers. Both language outputs were then recompiled and
-visually inspected. The PDF viewer remounts per output identity so an old canvas
-is not labeled with a newly compiled language while its viewer is loading.
-
-The downloaded source ZIP recompiled from a clean local folder with no external
-requests. Separate initialization and compilation timeouts produced explicit
-timed-out errors, left no worker running, and allowed a successful retry. Invalid
-source returned a diagnostic log. Safari and assistive-technology review remain
-unverified; no automated tests were added or run.
-
-## UI refactor verification
-
-See [the progress/handoff document](ui-refactor-progress.md) for checks actually
-executed in this pass. Earlier observations below are historical and do not verify
-the new shell or persistence behavior. Automated tests remain excluded.
+Use the committed fictional example in `lib/resume/example.ts` for manual editor,
+backup, and both-language PDF/LaTeX export review. The
+[verification handoff](ui-refactor-progress.md) lists the manual scenarios and
+records which checks have actually been performed.

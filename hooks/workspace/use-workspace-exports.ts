@@ -10,8 +10,9 @@ import {
   fileSlug,
   latexZip,
 } from "@/lib/resume/files";
-import type { Locale, ResumeDocument } from "@/lib/resume/model";
-import { locales, validateOutput } from "@/lib/resume/model";
+import { validateOutput } from "@/lib/resume/validation";
+import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
+import { locales } from "@/types-and-constants/resume";
 
 type WorkspaceExportsOptions = {
   document: ResumeDocument;

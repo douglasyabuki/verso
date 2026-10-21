@@ -12,12 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
-
-export type Confirmation = {
-  title: string;
-  description: string;
-  action: () => void;
-};
+import type { Confirmation } from "@/types-and-constants/editor";
 
 export function WorkspaceOverlays({
   confirmation,

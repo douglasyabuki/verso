@@ -1,23 +1,14 @@
+import { plain } from "@/lib/resume/localization";
+import { templateIdentity } from "@/lib/resume/model";
+import { resolveSettings } from "@/lib/resume/settings";
+import { validateOutput } from "@/lib/resume/validation";
 import type {
   Entry,
   Locale,
   LocalizedText,
   ResumeDocument,
   ResumeLink,
-} from "@/lib/resume/model";
-import type { CompileResult } from "@/tools/compiler-proof/compiler.mjs";
-
-export type ResumeOutput = CompileResult & {
-  key: string;
-  rendered: ReturnType<typeof renderLatex>;
-  revision: number;
-};
-import {
-  plain,
-  resolveSettings,
-  templateIdentity,
-  validateOutput,
-} from "@/lib/resume/model";
+} from "@/types-and-constants/resume";
 
 const special: Record<string, string> = {
   "\\": "\\textbackslash{}",

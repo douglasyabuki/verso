@@ -2,7 +2,7 @@
 
 import { useContext, useSyncExternalStore } from "react";
 
-import { WorkspaceContext } from "@/components/workspace/workspace-provider";
+import { WorkspaceContext } from "@/stores/workspace/provider";
 
 /** Access tab-scoped document state and persistence commands.
  * @returns Observable state and its controller; throws outside WorkspaceProvider.

@@ -30,7 +30,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { views } from "@/components/workspace/navigation";
-import { type Locale, plain, type ResumeDocument } from "@/lib/resume/model";
+import { plain } from "@/lib/resume/localization";
+import { type Locale, type ResumeDocument } from "@/types-and-constants/resume";
 
 const sectionIcons = {
   experience: BriefcaseBusiness,

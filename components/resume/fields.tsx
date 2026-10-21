@@ -38,20 +38,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useFieldHistory } from "@/hooks/workspace/use-field-history";
+import { plain } from "@/lib/resume/localization";
+import { urlError } from "@/lib/resume/validation";
+import type { ConfirmAction } from "@/types-and-constants/editor";
 import type {
   Locale,
   LocalizedText,
   ResumeLink,
   Span,
-} from "@/lib/resume/model";
-import { plain, urlError } from "@/lib/resume/model";
-import type { EditGroup } from "@/lib/workspace/controller";
-
-export type ConfirmAction = (
-  title: string,
-  description: string,
-  action: () => void,
-) => void;
+} from "@/types-and-constants/resume";
+import type { EditGroup } from "@/types-and-constants/workspace";
 
 export function TextField({
   fieldKey,
