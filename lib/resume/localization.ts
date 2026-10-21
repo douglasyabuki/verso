@@ -1,3 +1,4 @@
+import { entryLabel } from "@/lib/resume/section-fields";
 import { equivalentSpans, normalizeSpans } from "@/lib/resume/spans";
 import type {
   Locale,
@@ -5,6 +6,7 @@ import type {
   ResumeDocument,
   Span,
 } from "@/types-and-constants/resume";
+import { entryTerminology } from "@/types-and-constants/resume";
 
 /** Create separate language records. @param en English text. @param pt Portuguese text. @returns Localized content. @example localized("Projects", "Projetos") */
 export function localized(en = "", pt = ""): LocalizedText {
@@ -37,12 +39,13 @@ export function editTranslation(
 /** List all localized records for review tools. @param doc Workspace. @returns Labeled records with stable paths. @example localizedFields(doc) */
 export function localizedFields(
   doc: ResumeDocument,
-): { path: string; label: string; value: LocalizedText }[] {
+): { path: string; label: string; value: LocalizedText; multiline: boolean }[] {
   const fields = [
     {
       path: "profile.summary",
       label: "Profile · Summary",
       value: doc.profile.summary,
+      multiline: true,
     },
   ];
   for (const section of doc.sections) {
@@ -51,18 +54,21 @@ export function localizedFields(
       path: `sections.${section.id}.heading`,
       label: `${name} · Heading`,
       value: section.heading,
+      multiline: false,
     });
     for (const entry of section.entries) {
       fields.push({
         path: `entries.${entry.id}.title`,
-        label: `${name} · ${entry.organization || "Untitled entry"}`,
+        label: `${name} · ${entryLabel(entry, section.kind, "en-US")} · ${entryTerminology[section.kind].title}`,
         value: entry.title,
+        multiline: false,
       });
       for (const bullet of entry.bullets)
         fields.push({
           path: `bullets.${bullet.id}.body`,
-          label: `${entry.organization || name} · Achievement`,
+          label: `${name} · ${entryLabel(entry, section.kind, "en-US")} · ${entryTerminology[section.kind].item}`,
           value: bullet.body,
+          multiline: section.kind !== "skills",
         });
     }
   }

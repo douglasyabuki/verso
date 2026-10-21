@@ -19,8 +19,10 @@ import {
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
 import { plain } from "@/lib/resume/localization";
 import { move } from "@/lib/resume/operations";
+import { entryLabel } from "@/lib/resume/section-fields";
 import type { EditorProps } from "@/types-and-constants/editor";
 import type { Entry, Variant } from "@/types-and-constants/resume";
+import { entryTerminology } from "@/types-and-constants/resume";
 
 export function VariantsEditor({
   document,
@@ -179,7 +181,8 @@ export function VariantsEditor({
                 />
                 {!ordered.length && (
                   <p className="text-sm text-muted-foreground">
-                    Add entries to this section in Content.
+                    Add {entryTerminology[section.kind].singular} entries to
+                    this section in Content.
                   </p>
                 )}
                 {ordered.map((entry) => {
@@ -194,7 +197,7 @@ export function VariantsEditor({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <CheckField
-                          label={`${entry.organization || plain(entry.title, locale) || "Untitled entry"}${entry.archived ? " (archived)" : ""}`}
+                          label={`${entryLabel(entry, section.kind, locale)}${entry.archived ? " (archived)" : ""}`}
                           checked={!!selection}
                           disabled={entry.archived && !selection}
                           onChange={(checked) =>
@@ -254,7 +257,7 @@ export function VariantsEditor({
                               <CheckField
                                 label={
                                   plain(bullet.body, locale).slice(0, 100) ||
-                                  "Missing achievement text"
+                                  `Missing ${entryTerminology[section.kind].item.toLowerCase()} text`
                                 }
                                 checked={bulletIndex >= 0}
                                 onChange={(checked) =>
@@ -277,7 +280,7 @@ export function VariantsEditor({
                               />
                               {bulletIndex >= 0 && (
                                 <OrderButtons
-                                  label="selected achievement"
+                                  label={`selected ${entryTerminology[section.kind].item.toLowerCase()}`}
                                   first={bulletIndex === 0}
                                   last={
                                     bulletIndex ===

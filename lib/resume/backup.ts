@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { documentSchema, templateIdentity } from "@/lib/resume/model";
+import {
+  documentSchema,
+  legacyDocumentSchema,
+  templateIdentity,
+} from "@/lib/resume/model";
 import type { ResumeDocument } from "@/types-and-constants/resume";
 
 /** Serialize complete editable state, excluding interface/compiler state. @param doc Workspace. @returns Versioned JSON backup. @example serializeBackup(doc) */
@@ -26,19 +30,25 @@ export function parseBackup(source: string): ResumeDocument {
     .safeParse(data);
   if (!header.success)
     throw new Error("This is not a versioned Verso workspace backup.");
-  if (header.data.schemaVersion !== 1)
+  if (![1, 2].includes(header.data.schemaVersion))
     throw new Error(
-      `Workspace schema ${header.data.schemaVersion} is unsupported. This release imports schema 1; no automatic migration is available.`,
+      `Workspace schema ${header.data.schemaVersion} is unsupported. This release imports schemas 1 and 2.`,
     );
   const template = header.data.template;
   if (
     template.id !== templateIdentity.id ||
-    template.version !== templateIdentity.version
+    template.version !==
+      (header.data.schemaVersion === 1
+        ? "1.0.0-proof.2"
+        : templateIdentity.version)
   )
     throw new Error(
       `Template ${template.id}@${template.version} is unavailable. This app bundles ${templateIdentity.id}@${templateIdentity.version}. The workspace has not changed.`,
     );
-  const result = documentSchema.safeParse(data);
+  const result =
+    header.data.schemaVersion === 1
+      ? legacyDocumentSchema.safeParse(data)
+      : documentSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue.path.join(".");
@@ -47,7 +57,8 @@ export function parseBackup(source: string): ResumeDocument {
       `${incompatible ? "Incompatible template settings" : "Invalid backup"} at ${path}: ${issue.message}`,
     );
   }
-  const doc = result.data;
+  const doc =
+    result.data.schemaVersion === 1 ? migrateSchema1(result.data) : result.data;
   const seen = new Set<string>();
   const unique = (value: string) => {
     if (seen.has(value)) throw new Error(`Duplicate identifier: ${value}`);
@@ -102,4 +113,34 @@ export function parseBackup(source: string): ResumeDocument {
     }
   }
   return doc;
+}
+
+/** Upgrade validated schema-1 content without interpreting legacy facts or changing identifiers.
+ * @param legacy Validated old document with its supported template identity.
+ * @returns A schema-2 document; the input remains untouched.
+ * @example const current = migrateSchema1(legacyDocumentSchema.parse(data));
+ */
+export function migrateSchema1(
+  legacy: z.infer<typeof legacyDocumentSchema>,
+): ResumeDocument {
+  if (
+    legacy.template.id !== templateIdentity.id ||
+    legacy.template.version !== "1.0.0-proof.2"
+  )
+    throw new Error(
+      "Schema-1 migration requires the bundled yabuki-reference@1.0.0-proof.2 template.",
+    );
+  return documentSchema.parse({
+    ...legacy,
+    schemaVersion: 2,
+    template: { ...templateIdentity },
+    sections: legacy.sections.map((section) => ({
+      ...section,
+      entries: section.entries.map((entry) =>
+        section.kind === "certifications"
+          ? { ...entry, certification: { credentialId: "", dates: null } }
+          : entry,
+      ),
+    })),
+  });
 }

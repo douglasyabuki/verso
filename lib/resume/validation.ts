@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { certificationDateErrors } from "@/lib/resume/certification";
 import { plain } from "@/lib/resume/localization";
 import type {
   Entry,
@@ -10,6 +11,7 @@ import type {
   ResumeLink,
   Variant,
 } from "@/types-and-constants/resume";
+import { entryTerminology } from "@/types-and-constants/resume";
 
 /** Validate supported clickable links. @param value URL. @returns An error or undefined, including for an empty optional value. @example urlError("javascript:alert(1)") */
 export function urlError(value: string): string | undefined {
@@ -118,7 +120,24 @@ export function validateOutput(
           path: `entries.${entry.id}.country`,
           message: "Use a two-letter country code, for example BR.",
         });
-      required(entry.title, `entries.${entry.id}.title`, "Entry title");
+      required(
+        entry.title,
+        `entries.${entry.id}.title`,
+        entryTerminology[section.kind].title,
+      );
+      const dates = entry.certification?.dates;
+      if (dates) {
+        const issues = certificationDateErrors(
+          dates.issued,
+          dates.expiration.kind,
+          dates.expiration.kind === "date" ? dates.expiration.date : "",
+        );
+        for (const [field, message] of Object.entries(issues))
+          errors.push({
+            path: `entries.${entry.id}.certification.${field}`,
+            message,
+          });
+      }
       wording(entry.title, `entries.${entry.id}.title`);
       const date = dateError(entry);
       if (date)
@@ -130,7 +149,7 @@ export function validateOutput(
         required(
           bullet.body,
           `bullets.${bullet.id}.body`,
-          "Selected achievement",
+          `Selected ${entryTerminology[section.kind].item.toLowerCase()}`,
         );
         wording(bullet.body, `bullets.${bullet.id}.body`);
       }

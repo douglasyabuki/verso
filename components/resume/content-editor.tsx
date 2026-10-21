@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { EntryFields } from "@/components/resume/entry-fields";
 import {
   CheckField,
   LinksEditor,
@@ -48,11 +49,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { librarySectionLabel } from "@/components/workspace/navigation";
 import { createEntry } from "@/lib/resume/factories";
-import { localized, plain } from "@/lib/resume/localization";
+import { localized } from "@/lib/resume/localization";
 import { move } from "@/lib/resume/operations";
-import { dateError } from "@/lib/resume/validation";
+import { entryLabel } from "@/lib/resume/section-fields";
 import type { EditorProps } from "@/types-and-constants/editor";
 import type { Entry, Issue } from "@/types-and-constants/resume";
+import { entryTerminology } from "@/types-and-constants/resume";
 import type { EditGroup } from "@/types-and-constants/workspace";
 
 export function ContentEditor({
@@ -162,6 +164,7 @@ export function ContentEditor({
               locale={locale}
               update={update}
               label="Summary"
+              multiline
               errors={errors}
             />
             <Separator />
@@ -190,6 +193,7 @@ export function ContentEditor({
 
   const section = document.sections.find((section) => section.id === sectionId);
   if (!section) return null;
+  const terms = entryTerminology[section.kind];
   const displayed = section.entries.filter(
     (entry) => showArchived || !entry.archived,
   );
@@ -203,6 +207,8 @@ export function ContentEditor({
     }, group);
   const addEntry = () => {
     const created = createEntry();
+    if (section.kind === "certifications")
+      created.certification = { credentialId: "", dates: null };
     update((draft) => {
       draft.sections
         .find((section) => section.id === sectionId)!
@@ -227,7 +233,8 @@ export function ContentEditor({
         <CardHeader>
           <CardTitle size="section">{librarySectionLabel(section)}</CardTitle>
           <CardDescription>
-            A shared library. Choose what belongs in each resume under Variants.
+            {terms.description} Choose what belongs in each resume under
+            Variants.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -275,13 +282,11 @@ export function ContentEditor({
                       variant={entry?.id === item.id ? "secondary" : "ghost"}
                       onClick={() => setEntryId(item.id)}
                     >
-                      {item.organization ||
-                        plain(item.title, locale) ||
-                        "Untitled entry"}
+                      {entryLabel(item, section.kind, locale)}
                     </Button>
                     {item.archived && <Badge variant="outline">Archived</Badge>}
                     <OrderButtons
-                      label={item.organization || "entry"}
+                      label={entryLabel(item, section.kind, locale)}
                       first={index === 0}
                       last={index === displayed.length - 1}
                       onMove={(offset) =>
@@ -314,10 +319,16 @@ export function ContentEditor({
                   <EmptyMedia variant="icon">
                     <FilePlus2 />
                   </EmptyMedia>
-                  <EmptyTitle>No entries here yet</EmptyTitle>
+                  <EmptyTitle>
+                    {section.entries.length
+                      ? "All entries are archived"
+                      : `No ${terms.singular} entries yet`}
+                  </EmptyTitle>
                   <EmptyDescription>
-                    Add your first entry. You can write each language at your
-                    own pace.
+                    {section.entries.length
+                      ? "Show archived entries to edit or restore them."
+                      : terms.empty}{" "}
+                    You can write each language at your own pace.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
@@ -327,7 +338,7 @@ export function ContentEditor({
         <CardFooter className="flex flex-wrap justify-between gap-2">
           <Button onClick={addEntry} disabled={section.entries.length >= 300}>
             <Plus data-icon="inline-start" />
-            Add entry
+            Add {terms.singular}
           </Button>
           <span className="text-xs text-muted-foreground">
             Library ordering is separate from variant ordering.
@@ -338,11 +349,7 @@ export function ContentEditor({
         <Card key={entry.id}>
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>
-                {entry.organization ||
-                  plain(entry.title, locale) ||
-                  "New entry"}
-              </CardTitle>
+              <CardTitle>{entryLabel(entry, section.kind, locale)}</CardTitle>
               <div className="flex gap-1">
                 <Button
                   variant="ghost"
@@ -430,115 +437,29 @@ export function ContentEditor({
                   })
                 }
               />
-              <TextField
-                fieldKey={`entries.${entry.id}.organization`}
-                label="Organization / institution"
-                value={entry.organization}
-                onChange={(organization, group) =>
-                  changeEntry((target) => {
-                    target.organization = organization;
-                  }, group)
-                }
-                description="Shared across languages. Optional for standalone projects and custom entries."
-              />
-              <WordingField
+              <EntryFields
+                entry={entry}
+                section={section}
                 document={document}
-                path={`entries.${entry.id}.title`}
                 locale={locale}
                 update={update}
-                label="Title / role"
-                required
                 errors={errors}
-              />
-              <FieldGroup className="grid gap-4 sm:grid-cols-2">
-                <TextField
-                  fieldKey={`entries.${entry.id}.city`}
-                  label="City"
-                  value={entry.city}
-                  maxLength={200}
-                  onChange={(city, group) =>
-                    changeEntry((target) => {
-                      target.city = city;
-                    }, group)
-                  }
-                />
-                <TextField
-                  fieldKey={`entries.${entry.id}.country`}
-                  label="Country code"
-                  value={entry.country}
-                  error={
-                    errors.find(
-                      (error) => error.path === `entries.${entry.id}.country`,
-                    )?.message
-                  }
-                  maxLength={2}
-                  onChange={(country, group) =>
-                    changeEntry((target) => {
-                      target.country = country.toUpperCase();
-                    }, group)
-                  }
-                  placeholder="BR"
-                />
-                <TextField
-                  fieldKey={`entries.${entry.id}.start`}
-                  label="Start date"
-                  value={entry.start}
-                  maxLength={7}
-                  placeholder="YYYY-MM"
-                  onChange={(start, group) =>
-                    changeEntry((target) => {
-                      target.start = start;
-                    }, group)
-                  }
-                  error={dateError(entry)}
-                />
-                {!entry.ongoing && (
-                  <TextField
-                    fieldKey={`entries.${entry.id}.end`}
-                    label="End date"
-                    value={entry.end}
-                    maxLength={7}
-                    placeholder="YYYY-MM"
-                    onChange={(end, group) =>
-                      changeEntry((target) => {
-                        target.end = end;
-                      }, group)
-                    }
-                    error={dateError(entry)}
-                  />
-                )}
-              </FieldGroup>
-              <CheckField
-                label="Ongoing"
-                checked={entry.ongoing}
-                onChange={(ongoing) =>
-                  changeEntry((target) => {
-                    target.ongoing = ongoing;
-                    if (ongoing) target.end = "";
-                  })
-                }
-              />
-              <TextField
-                fieldKey={`entries.${entry.id}.technologies`}
-                label="Technologies"
-                value={entry.technologies.join(", ")}
-                maxLength={2_000}
-                onChange={(value, group) =>
-                  changeEntry((target) => {
-                    target.technologies = value
-                      .split(",")
-                      .map((value) => value.trim())
-                      .slice(0, 100);
-                  }, group)
-                }
-                description="Separate technologies with commas. Shared across languages."
+                changeEntry={changeEntry}
               />
               <Separator />
               <FieldSet>
-                <FieldLegend>Achievements & details</FieldLegend>
+                <FieldLegend>{terms.items}</FieldLegend>
+                {!entry.bullets.length && (
+                  <FieldDescription>
+                    No {terms.items.toLowerCase()} yet. Add a{" "}
+                    {terms.item.toLowerCase()} to describe this {terms.singular}{" "}
+                    in each language.
+                  </FieldDescription>
+                )}
                 <FieldDescription>
-                  Selected achievements need text in the output language.
-                  Uncheck an unfinished achievement to inspect the rest.
+                  Selected {terms.items.toLowerCase()} need text in the output
+                  language. Uncheck an unfinished {terms.item.toLowerCase()} to
+                  inspect the rest.
                 </FieldDescription>
                 {entry.bullets.map((bullet, index) => (
                   <div
@@ -547,11 +468,11 @@ export function ContentEditor({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-medium text-muted-foreground">
-                        ACHIEVEMENT {index + 1}
+                        {terms.item.toUpperCase()} {index + 1}
                       </span>
                       <div className="flex gap-1">
                         <OrderButtons
-                          label={`achievement ${index + 1}`}
+                          label={`${terms.item.toLowerCase()} ${index + 1}`}
                           first={index === 0}
                           last={index === entry.bullets.length - 1}
                           onMove={(offset) =>
@@ -563,10 +484,10 @@ export function ContentEditor({
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          aria-label={`Delete achievement ${index + 1}`}
+                          aria-label={`Delete ${terms.item.toLowerCase()} ${index + 1}`}
                           onClick={() =>
                             confirm(
-                              "Delete this achievement?",
+                              `Delete this ${terms.item.toLowerCase()}?`,
                               "This removes it from every variant that references it.",
                               () =>
                                 update((draft) => {
@@ -622,7 +543,8 @@ export function ContentEditor({
                       path={`bullets.${bullet.id}.body`}
                       locale={locale}
                       update={update}
-                      label="Achievement"
+                      label={terms.item}
+                      multiline={section.kind !== "skills"}
                       required
                       errors={errors}
                     />
@@ -651,12 +573,18 @@ export function ContentEditor({
                   }}
                 >
                   <Plus data-icon="inline-start" />
-                  Add achievement
+                  Add {terms.item.toLowerCase()}
                 </Button>
               </FieldSet>
               <Separator />
               <FieldSet>
-                <FieldLegend>Entry links</FieldLegend>
+                <FieldLegend>
+                  {section.kind === "certifications"
+                    ? "Verification links"
+                    : section.kind === "projects"
+                      ? "Project links"
+                      : "Links"}
+                </FieldLegend>
                 <LinksEditor
                   links={entry.links}
                   onChange={(links, group) =>

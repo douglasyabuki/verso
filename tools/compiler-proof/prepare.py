@@ -112,7 +112,7 @@ def main():
     for license_file in (HERE / 'licenses').iterdir():
         (DEST / ('license-' + license_file.name)).write_bytes(license_file.read_bytes())
     manifest = {
-        'id': 'yabuki-reference', 'version': '1.0.0-proof.2',
+        'id': 'yabuki-reference', 'version': '1.0.0-proof.3',
         'engine': lock['engine']['version'],
         'bundleBytes': len(bundle),
         'bundleSha256': digest(bundle),

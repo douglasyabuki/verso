@@ -1,10 +1,11 @@
 import { z } from "zod";
 
+import { certificationDateErrors } from "@/lib/resume/certification";
 import { sectionKinds } from "@/types-and-constants/resume";
 
 export const templateIdentity = {
   id: "yabuki-reference",
-  version: "1.0.0-proof.2",
+  version: "1.0.0-proof.3",
 } as const;
 
 const id = z.string().min(1).max(100);
@@ -29,7 +30,29 @@ const linkSchema = z.strictObject({
   url: z.string().max(2_000),
 });
 const bulletSchema = z.strictObject({ id, body: localizedSchema });
-const entrySchema = z.strictObject({
+export const certificationDatesSchema = z
+  .strictObject({
+    issued: z.string().max(7),
+    expiration: z.discriminatedUnion("kind", [
+      z.strictObject({ kind: z.literal("unspecified") }),
+      z.strictObject({ kind: z.literal("never") }),
+      z.strictObject({ kind: z.literal("date"), date: z.string().max(7) }),
+    ]),
+  })
+  .superRefine((dates, context) => {
+    const errors = certificationDateErrors(
+      dates.issued,
+      dates.expiration.kind,
+      dates.expiration.kind === "date" ? dates.expiration.date : "",
+    );
+    for (const [field, message] of Object.entries(errors))
+      context.addIssue({ code: "custom", path: [field], message });
+  });
+const certificationSchema = z.strictObject({
+  credentialId: z.string().max(500),
+  dates: certificationDatesSchema.nullable(),
+});
+const legacyEntrySchema = z.strictObject({
   id,
   organization: z.string().max(500),
   title: localizedSchema,
@@ -42,6 +65,9 @@ const entrySchema = z.strictObject({
   links: z.array(linkSchema).max(30),
   bullets: z.array(bulletSchema).max(100),
   archived: z.boolean(),
+});
+const entrySchema = legacyEntrySchema.extend({
+  certification: certificationSchema.optional(),
 });
 const sectionSchema = z.strictObject({
   id,
@@ -84,7 +110,7 @@ const variantSchema = z.strictObject({
   localeSettings: localeOverridesSchema,
 });
 export const documentSchema = z.strictObject({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   revision: z.number().int().nonnegative(),
   template: z.strictObject({ id, version: z.string().min(1).max(100) }),
   profile: z.strictObject({
@@ -104,4 +130,15 @@ export const documentSchema = z.strictObject({
     initializationTimeoutMs: z.number().min(100).max(600_000),
     compilationTimeoutMs: z.number().min(100).max(600_000),
   }),
+});
+
+export const legacyDocumentSchema = documentSchema.extend({
+  schemaVersion: z.literal(1),
+  sections: z
+    .array(
+      sectionSchema.extend({
+        entries: z.array(legacyEntrySchema).max(300),
+      }),
+    )
+    .max(30),
 });

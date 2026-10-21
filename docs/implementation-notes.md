@@ -51,7 +51,7 @@ undo/redo and replacements clear field histories using a transient epoch that
 is excluded from backups and browser storage. Ordinary typing/composition and
 accepted clipboard/formatting actions retain workspace edit grouping.
 
-Only schema-1 spans are stored. Editor JSON and HTML never enter the document.
+Only portable wording spans are stored; their shape remains compatible with schema 1. Editor JSON and HTML never enter the document.
 Genuine edits remove empty spans and merge adjacent runs with equal emphasis
 and destinations, splitting at 20,000 UTF-16 units without splitting surrogate
 pairs. Empty wording retains one plain empty span. Semantically unchanged edits
@@ -87,10 +87,61 @@ updating the preview. Failed jobs retain the previous PDF, labeled out of date.
 PDF.js provides page navigation, zoom, text selection, search, hyperlinks, and
 extraction diagnostics. Heavy viewer/compiler code loads in the browser.
 
+## Section-specific forms and schema compatibility
+
+Experience, education, projects, skills, certifications, and custom sections have
+section-specific labels, descriptions, empty states, and field visibility. Main
+forms omit irrelevant fields; populated Additional details remain editable and
+visible in output. Skill items reuse localized bullets and their stable variant
+references. Tool and technology names remain shared facts.
+
+Output uses company/institution first for experience/education and localized
+names/categories first otherwise. Location accompanies the heading; organization
+or role and generic dates occupy the secondary line. Technologies follow, then
+selected localized items and links. Education retains technologies in Additional
+details; projects retain location; skills retain organization/location/dates; certifications retain
+location/generic dates/technologies. These fields keep the same output positions
+regardless of where they are edited. Empty optional values create no empty lines
+or separators.
+
+Schema 2 adds optional certification metadata: credential ID and nullable
+structured dates. Dates accept YYYY or YYYY-MM (1900 through 2299), never a month
+without a year or a full day. Issue date is optional. Expiration is unspecified,
+never, or a required date. Comparison rejects expiration only when its latest
+possible month precedes the issue date's earliest possible month: issue 2024-12
+and expiration 2024 overlap and are accepted. Precision is preserved in output.
+
+Date setup/editing uses a modal with local draft state. Opening, typing, Cancel,
+Escape, outside dismissal, and navigation do not edit the document or PDF. Save
+validates and commits all dates as one undoable edit; unchanged values do nothing.
+Saving unspecified/no expiration removes any active structured expiration date.
+Workspace replacement or history changes close the modal and discard its draft.
+Use legacy dates only sets structured dates to null without touching the retained
+range or credential ID. Undo restores structured dates; reopening setup starts
+blank. Other entry fields still autosave normally.
+
+Certification output places committed issue/expiration information below the
+issuer, followed by credential ID. When structured dates exist, retained generic
+dates follow as Additional dates / Outras datas; otherwise the retained range
+occupies the primary date position. Unspecified expiration prints nothing. The
+retained start/end/ongoing facts are never inferred from or rewritten by setup.
+They continue using the existing generic validation, independently of the new rules.
+
+The backup boundary first validates schema 1 with template
+`yabuki-reference@1.0.0-proof.2`, migrates deterministically to schema 2 and template
+`1.0.0-proof.3`, and validates references. It never normalizes old wording,
+changes IDs/revisions, or interprets generic dates. Existing certification dates
+start unset. Schema-2 imports require the exact current template; unknown schemas
+or templates remain rejected. Both browser restoration and JSON imports use this
+boundary; exports use schema 2. Loading does not rewrite stored bytes. The next
+ordinary commit still uses the reviewed bytes and shared lock. Existing stored
+backup fingerprints remain conservative; an explicit imported backup establishes
+its migrated document's baseline.
+
 ## Local saving, backups, and replacements
 
 One guest career workspace is stored in `verso.workspace.v1`: a version-1 envelope
-containing an opaque token, save timestamp, unchanged schema-1 ResumeDocument,
+containing an opaque token, save timestamp, schema-2 ResumeDocument,
 and nullable backup fingerprint. `verso.layout.v1` holds only sidebar visibility,
 preview visibility and split proportions. The existing theme key remains separate.
 
@@ -112,7 +163,7 @@ backup freshness survives reloads. In insecure session-only contexts without
 SubtleCrypto, exact serialized JSON provides the in-memory comparison identity.
 Browser autosaves, PDFs, bilingual ZIPs and LaTeX exports do not advance this baseline.
 A failed metadata write leaves persisted freshness conservative; the current tab
-can still track the initiated export. Portable JSON retains its existing schema and
+can still track the initiated export. Portable JSON exports schema 2 and
 never includes storage metadata, UI preferences, workers, or PDF caches.
 
 Import still validates the full 5 MB maximum backup, template identity, settings,
@@ -153,6 +204,9 @@ be served using `python -m http.server`; native TeX is not guaranteed to reprodu
 the WebAssembly format. Source ZIPs are not editable workspace backups.
 
 ## Verification scope
+
+See [section forms verification](section-forms-verification.md) for this change's
+completed checks and remaining manual coverage.
 
 Do not add or run automated tests for this implementation. Run formatting, lint,
 route type generation/type checking, and a production build. These checks validate

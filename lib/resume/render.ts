@@ -52,7 +52,7 @@ function linkLabel(value: string): string {
 
 /** Render a safe shared link. @param link Validated link. @returns Hyperref source, or empty text for an empty optional link. @example renderLink(link) */
 function renderLink(link: ResumeLink): string {
-  if (!link.url) return "";
+  if (!link.url.trim()) return "";
   const icon = /^mailto:/i.test(link.url)
     ? "\\faEnvelope[regular]"
     : /^tel:/i.test(link.url)
@@ -62,7 +62,7 @@ function renderLink(link: ResumeLink): string {
         : /^https?:\/\/(www\.)?linkedin\.com(?:\/|$)/i.test(link.url)
           ? "\\faLinkedinIn"
           : "\\faLink";
-  return `{\\color{icnclr}${icon}}~\\href{${latexUrl(link.url)}}{${linkLabel(link.label || link.url)}}`;
+  return `{\\color{icnclr}${icon}}~\\href{${latexUrl(link.url)}}{${linkLabel(link.label.trim() || link.url)}}`;
 }
 
 /** Render structured wording without interpreting source syntax. @param value Localized content. @param locale Language. @param uppercase Whether to uppercase visible text while preserving link destinations. @returns Escaped text with emphasis and links. @example renderText(title, "en-US") */
@@ -121,7 +121,7 @@ export function displayLocation(
   } catch {
     /* Keep the supplied country code. */
   }
-  return [city, name].filter(Boolean).join(", ");
+  return [city.trim(), name.trim()].filter(Boolean).join(", ");
 }
 
 /** Produce deterministic LaTeX for one frozen language/variant. @param doc Workspace snapshot. @param variantId Selected variant ID. @param locale Output language. @returns Source, warnings, settings, and exact template manifest; throws on invalid selected content. @example renderLatex(doc, "general", "pt-BR") */
@@ -180,26 +180,70 @@ export function renderLatex(
       );
       if (!entry || entry.archived) continue;
       content.push("\\Needspace{6\\baselineskip}");
-      const title = renderText(entry.title, locale);
+      const title = plain(entry.title, locale).trim()
+        ? renderText(entry.title, locale)
+        : "";
       const location = escapeLatex(
         displayLocation(entry.city, entry.country, locale),
       );
-      const heading = entry.organization
-        ? escapeLatex(entry.organization)
-        : title;
-      content.push(
-        `\\subsection{${heading}${location ? " \\hfill " + location : ""}}`,
-      );
-      const subtitle = entry.organization ? title : "";
-      const dates = dateRange(entry, locale);
+      const organization = escapeLatex(entry.organization.trim());
+      const organizationFirst =
+        section.kind === "experience" || section.kind === "education";
+      const heading = organizationFirst ? organization || title : title;
+      if (heading || location)
+        content.push(
+          `\\subsection{${[heading, location].filter(Boolean).join(" \\hfill ")}}`,
+        );
+      const subtitle = organizationFirst
+        ? organization
+          ? title
+          : ""
+        : organization;
+      const legacyDates = dateRange(entry, locale);
+      const certification =
+        section.kind === "certifications" ? entry.certification : undefined;
+      const dates = section.kind === "certifications" ? "" : legacyDates;
       if (subtitle || dates)
         content.push(
-          `\\subsubsection{\\textcolor{roleclr}{${subtitle}${dates ? " \\hfill " + dates : ""}}}`,
+          `\\subsubsection{\\textcolor{roleclr}{${[subtitle, dates].filter(Boolean).join(" \\hfill ")}}}`,
         );
-      if (entry.technologies.some((value) => value.trim()))
-        content.push(
-          `\\noindent ${escapeLatex(entry.technologies.filter(Boolean).join(" · "))}\\par`,
-        );
+      const detail = (value: string) => {
+        if (value) content.push(`\\noindent ${value}\\par`);
+      };
+      if (section.kind === "certifications") {
+        if (certification?.dates) {
+          const { issued, expiration } = certification.dates;
+          detail(
+            [
+              issued
+                ? `${locale === "pt-BR" ? "Emissão" : "Issued"}: ${escapeLatex(displayDate(issued, locale))}`
+                : "",
+              expiration.kind === "never"
+                ? locale === "pt-BR"
+                  ? "Sem expiração"
+                  : "No expiration"
+                : "",
+              expiration.kind === "date"
+                ? `${locale === "pt-BR" ? "Validade" : "Expires"}: ${escapeLatex(displayDate(expiration.date, locale))}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          );
+        } else detail(legacyDates);
+        if (certification?.credentialId.trim())
+          detail(
+            `${locale === "pt-BR" ? "ID da credencial" : "Credential ID"}: ${escapeLatex(certification.credentialId.trim())}`,
+          );
+        if (certification?.dates && legacyDates)
+          detail(
+            `${locale === "pt-BR" ? "Outras datas" : "Additional dates"}: ${legacyDates}`,
+          );
+      }
+      const technologies = entry.technologies
+        .map((value) => value.trim())
+        .filter(Boolean);
+      if (technologies.length) detail(escapeLatex(technologies.join(" · ")));
       const bullets = selection.bulletIds
         .map((id) => entry.bullets.find((bullet) => bullet.id === id))
         .filter((bullet) => bullet && plain(bullet.body, locale).trim());
@@ -211,11 +255,11 @@ export function renderLatex(
               .join("\n") +
             "\n\\end{itemize}",
         );
-      if (entry.links.some((link) => link.url))
+      if (entry.links.some((link) => link.url.trim()))
         content.push(
           "\\begin{itemize}[label={},left=0pt]\n" +
             entry.links
-              .filter((link) => link.url)
+              .filter((link) => link.url.trim())
               .map((link) => "\\item " + renderLink(link))
               .join("\n") +
             "\n\\end{itemize}",

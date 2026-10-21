@@ -115,6 +115,62 @@ export function createExampleDocument(): ResumeDocument {
       [],
     ),
   );
+  doc.sections[2].entries[0].technologies = ["Python", "SQL"];
+  doc.sections[3].entries[0].organization = "Fictional learning community";
+  doc.sections[3].entries[0].bullets.push({
+    id: "example-localized-skill",
+    body: localized(
+      "Accessible interface design",
+      "Design de interfaces acessíveis",
+    ),
+  });
+  const certification = make(
+    "example-certification",
+    "Example Cloud Academy",
+    "Cloud Developer Certification",
+    "Certificação em Desenvolvimento na Nuvem",
+    "2020",
+    "2021",
+    ["Cloud platforms"],
+    [
+      [
+        "Completed a practical architecture assessment.",
+        "Concluí uma avaliação prática de arquitetura.",
+      ],
+    ],
+  );
+  certification.certification = {
+    credentialId: "DEMO-2024-001",
+    dates: { issued: "2024-12", expiration: { kind: "date", date: "2027" } },
+  };
+  certification.links.push({
+    id: "example-credential-link",
+    label: "Verify credential",
+    url: "https://example.com/credential",
+  });
+  doc.sections[4].entries.push(certification);
+  doc.sections.push({
+    id: "example-custom",
+    kind: "custom",
+    heading: localized("Community", "Comunidade"),
+    entries: [
+      make(
+        "example-mentoring",
+        "Example Community",
+        "Volunteer mentor",
+        "Mentoria voluntária",
+        "2022",
+        "",
+        [],
+        [
+          [
+            "Mentor students on accessible web projects.",
+            "Oriento estudantes em projetos web acessíveis.",
+          ],
+        ],
+      ),
+    ],
+  });
   doc.variants[0].sections = doc.sections.map((section) => ({
     sectionId: section.id,
     visible: true,

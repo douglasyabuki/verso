@@ -81,6 +81,7 @@ export function TranslationsEditor({
                   locale={locale}
                   update={update}
                   label={locale === "en-US" ? "English" : "Português"}
+                  multiline={field.multiline}
                 />
               ))}
             </div>

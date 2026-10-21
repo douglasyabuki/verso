@@ -141,6 +141,8 @@ export function LocalizedField({
   onReviewed,
   required = false,
   error,
+  multiline = false,
+  description,
 }: {
   fieldKey: string;
   label: string;
@@ -148,6 +150,8 @@ export function LocalizedField({
   locale: Locale;
   onChange: (spans: Span[], group?: EditGroup) => void;
   onReviewed: () => void;
+  multiline?: boolean;
+  description?: string;
   required?: boolean;
   error?: string;
 }) {
@@ -179,9 +183,10 @@ export function LocalizedField({
           label={`${label} (${locale === "en-US" ? "EN" : "PT"})`}
           spans={record.spans}
           error={error}
-          multiline={label === "Summary" || label === "Achievement"}
+          multiline={multiline}
           onChange={onChange}
         />
+        {description && <FieldDescription>{description}</FieldDescription>}
         {error && <FieldError id={id + "-error"}>{error}</FieldError>}
       </Field>
       <div className="flex flex-wrap gap-2">

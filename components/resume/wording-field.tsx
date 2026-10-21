@@ -16,6 +16,8 @@ export function WordingField({
   update,
   label,
   required,
+  multiline = false,
+  description,
   errors = [],
 }: {
   document: ResumeDocument;
@@ -24,6 +26,8 @@ export function WordingField({
   update: WorkspaceEdit;
   label: string;
   required?: boolean;
+  multiline?: boolean;
+  description?: string;
   errors?: Issue[];
 }) {
   const value = findLocalized(document, path);
@@ -35,6 +39,8 @@ export function WordingField({
       value={value}
       locale={locale}
       required={required}
+      multiline={multiline}
+      description={description}
       error={errors.find((error) => error.path === path)?.message}
       onChange={(spans, group) =>
         update((draft) => {
