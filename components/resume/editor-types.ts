@@ -1,15 +1,11 @@
 import type { ConfirmAction } from "@/components/resume/fields";
-import type {
-  DocumentUpdate,
-  Locale,
-  ResumeDocument,
-  Variant,
-} from "@/lib/resume/model";
+import type { Locale, ResumeDocument, Variant } from "@/lib/resume/model";
+import type { WorkspaceEdit } from "@/lib/workspace/controller";
 
 export type EditorProps = {
   document: ResumeDocument;
   locale: Locale;
   variant: Variant;
-  update: (change: DocumentUpdate) => void;
+  update: WorkspaceEdit;
   confirm: ConfirmAction;
 };

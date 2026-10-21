@@ -7,7 +7,7 @@ import {
   FileCode,
   FileText,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { EditorPane } from "@/components/resume/editor-pane";
 import { PreviewPane } from "@/components/resume/preview-pane";
@@ -50,6 +50,7 @@ import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { useWorkspaceExports } from "@/hooks/workspace/use-workspace-exports";
+import { useWorkspaceHistory } from "@/hooks/workspace/use-workspace-history";
 import { useWorkspaceLayout } from "@/hooks/workspace/use-workspace-layout";
 import { createExampleDocument } from "@/lib/resume/example";
 import { downloadFile, fileSlug } from "@/lib/resume/files";
@@ -77,6 +78,7 @@ export function Workspace() {
 
 function WorkspaceView() {
   const { state, controller } = useWorkspace();
+  const shortcuts = useWorkspaceHistory();
   const { document } = state;
   const [view, setView] = useState("content");
   const [sectionId, setSectionId] = useState("profile");
@@ -85,6 +87,9 @@ function WorkspaceView() {
   const [autoSync, setAutoSync] = useState(true);
   const [mobilePanel, setMobilePanel] = useState("editor");
   const [confirmation, setConfirmation] = useState<Confirmation>();
+  useEffect(() => {
+    controller.endEditGroup();
+  }, [controller, view, sectionId, variantId, locale]);
   const input = useRef<HTMLInputElement>(null);
   const desktop = useMediaQuery("(min-width: 1024px)");
   const { layout, changeLayout } = useWorkspaceLayout();
@@ -117,12 +122,13 @@ function WorkspaceView() {
   ).length;
   const busy = exports.exporting || compiler.isPending;
   const navigate = (next: string, section?: string) => {
+    controller.endEditGroup();
     setView(next);
     if (section) setSectionId(section);
     setMobilePanel("editor");
   };
   const addSection = () => {
-    if (state.saving) return;
+    if (state.replacing || state.pending) return;
     const id = crypto.randomUUID();
     const section: Section = {
       id,
@@ -222,7 +228,7 @@ function WorkspaceView() {
       }
       validation={validation}
       setVariantId={setVariantId}
-      disabled={state.saving}
+      disabled={state.replacing || !!state.pending}
     />
   );
   const preview = (
@@ -262,6 +268,7 @@ function WorkspaceView() {
       }
       toolbar={
         <WorkspaceToolbar
+          shortcuts={shortcuts}
           title={views.find((item) => item.id === view)?.label ?? "Content"}
           preview={layout.preview}
           togglePreview={() => changeLayout({ preview: !layout.preview })}

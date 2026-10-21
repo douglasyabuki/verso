@@ -1,6 +1,7 @@
 import {
   createEmptyDocument,
   type DocumentUpdate,
+  type ResumeDocument,
   serializeBackup,
 } from "@/lib/resume/model";
 import {
@@ -13,6 +14,13 @@ import {
   type WorkspaceSnapshot,
 } from "@/lib/workspace/storage";
 
+export type EditGroup = {
+  key: string;
+  kind: "typing" | "composition" | "isolated";
+};
+
+export type WorkspaceEdit = (update: DocumentUpdate, group?: EditGroup) => void;
+
 type Replacement = {
   title: string;
   snapshot: WorkspaceSnapshot;
@@ -24,6 +32,9 @@ export type WorkspaceState = WorkspaceSnapshot & {
   ready: boolean;
   sessionOnly: boolean;
   saving: boolean;
+  replacing: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
   error: string | null;
   conflict: StorageReview | null;
   pending: Replacement | null;
@@ -43,6 +54,9 @@ export class WorkspaceController {
     ready: false,
     sessionOnly: false,
     saving: false,
+    replacing: false,
+    canUndo: false,
+    canRedo: false,
     error: null,
     conflict: null,
     pending: null,
@@ -55,6 +69,9 @@ export class WorkspaceController {
   private generation = 0;
   private backupGeneration = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  private past: ResumeDocument[] = [];
+  private future: ResumeDocument[] = [];
+  private editGroup: (EditGroup & { at: number }) | null = null;
 
   /** Read the stable observable state. @returns Current immutable state. @example controller.getSnapshot() */
   getSnapshot = () => this.state;
@@ -77,6 +94,10 @@ export class WorkspaceController {
       ...patch,
       ...(changed ? { currentFingerprint: null } : {}),
     };
+    this.state.canUndo =
+      this.past.length > 0 && !this.state.pending && !this.state.replacing;
+    this.state.canRedo =
+      this.future.length > 0 && !this.state.pending && !this.state.replacing;
     this.listeners.forEach((listener) => listener());
     if (changed) void this.identify();
   }
@@ -165,6 +186,7 @@ export class WorkspaceController {
   private schedule() {
     clearTimeout(this.timer);
     if (
+      this.state.saving ||
       this.state.sessionOnly ||
       this.state.error ||
       this.state.conflict ||
@@ -177,17 +199,87 @@ export class WorkspaceController {
   }
 
   /** Apply an isolated domain edit and queue local persistence.
-   * @param update Draft mutation. @example controller.edit(draft => { draft.profile.name = "Alex"; });
+   * @param update Draft mutation. @param group Explicit field input boundary, omitted for discrete actions.
+   * @example controller.edit(draft => { draft.profile.name = "Alex"; });
    */
-  edit = (update: DocumentUpdate) => {
-    if (this.state.saving) return;
+  edit: WorkspaceEdit = (update, group) => {
+    if (!this.state.ready || this.state.pending || this.state.replacing) return;
     const document = structuredClone(this.state.document);
     update(document);
-    document.revision++;
+    if (serializeBackup(document) === serializeBackup(this.state.document))
+      return;
+    const now = performance.now();
+    const grouped =
+      group &&
+      group.kind !== "isolated" &&
+      group.key === this.editGroup?.key &&
+      group.kind === this.editGroup.kind &&
+      (group.kind === "composition" || now - this.editGroup.at < 1000);
+    if (!grouped) {
+      this.past.push(this.state.document);
+      if (this.past.length > 100) this.past.shift();
+    }
+    this.future = [];
+    this.editGroup =
+      group && group.kind !== "isolated" ? { ...group, at: now } : null;
+    this.applyDocument(document);
+  };
+
+  /** End consecutive field input without adding a history step.
+   * @example controller.endEditGroup();
+   */
+  endEditGroup = () => {
+    this.editGroup = null;
+  };
+
+  /** Restore the previous content as a new revision; blocked during replacements.
+   * @example controller.undo();
+   */
+  undo = () => {
+    this.restoreHistory(this.past, this.future);
+  };
+
+  /** Restore undone content as a new revision; blocked during replacements.
+   * @example controller.redo();
+   */
+  redo = () => {
+    this.restoreHistory(this.future, this.past);
+  };
+
+  /** Move one document between history stacks without restoring persistence metadata.
+   * @param source Steps to restore. @param destination Steps for the opposite command.
+   * @example this.restoreHistory(this.past, this.future);
+   */
+  private restoreHistory(
+    source: ResumeDocument[],
+    destination: ResumeDocument[],
+  ) {
+    if (!this.state.ready || this.state.pending || this.state.replacing) return;
+    this.endEditGroup();
+    const document = source.pop();
+    if (!document) return;
+    destination.push(this.state.document);
+    this.applyDocument(structuredClone(document));
+  }
+
+  /** Publish content with a fresh revision through ordinary save controls.
+   * @param document Isolated content to publish. @example this.applyDocument(draft);
+   */
+  private applyDocument(document: ResumeDocument) {
+    document.revision = this.state.document.revision + 1;
     this.generation++;
     this.patch({ document });
     this.schedule();
-  };
+  }
+
+  /** Clear history only after a workspace replacement succeeds.
+   * @example this.resetHistory();
+   */
+  private resetHistory() {
+    this.past = [];
+    this.future = [];
+    this.endEditGroup();
+  }
 
   /** Commit a pending ordinary save. Page-hidden callers get best-effort behavior.
    * @returns Resolves after the attempted write; blocked saves remain untouched.
@@ -228,30 +320,33 @@ export class WorkspaceController {
   ) {
     if (this.state.saving) return;
     const generation = ++this.generation;
-    this.patch({ saving: true });
+    this.patch({ saving: true, replacing: replace });
     const result = await commitWorkspace(
       review?.raw ?? null,
       snapshot,
       () => generation === this.generation,
     );
-    this.patch({ saving: false });
     if (result.status === "success") {
       this.review = result.review;
-      if (replace) this.backupGeneration++;
+      if (replace) {
+        this.backupGeneration++;
+        this.resetHistory();
+      }
       const previous = {
         document: this.state.document,
         backupFingerprint: this.state.backupFingerprint,
       };
       this.patch({
+        saving: false,
+        replacing: false,
         ...(replace ? { ...snapshot, recovery: previous, pending: null } : {}),
         savedIdentity: this.identity(snapshot),
-        sessionOnly: false,
-        error: null,
-        conflict: null,
+        ...(replace ? { sessionOnly: false, error: null, conflict: null } : {}),
       });
-      if (this.isUnsaved()) this.schedule();
     } else if (result.status === "conflict") {
       this.patch({
+        saving: false,
+        replacing: false,
         conflict: result.review,
         error:
           "Stored data changed after it was reviewed. Review it again before replacing anything.",
@@ -261,11 +356,19 @@ export class WorkspaceController {
         snapshot.backupFingerprint !==
         (review?.snapshot?.backupFingerprint ?? null);
       this.patch({
+        saving: false,
+        replacing: false,
         error: backupChanged
           ? `The JSON backup marker could not be saved in this browser. ${result.error}`
           : result.error,
       });
-    }
+    } else this.patch({ saving: false, replacing: false });
+    if (
+      !replace &&
+      (result.status === "success" || result.status === "cancelled") &&
+      this.isUnsaved()
+    )
+      this.schedule();
   }
 
   /** Mark an initiated JSON download as the portable backup baseline.
@@ -286,6 +389,7 @@ export class WorkspaceController {
    */
   requestReplacement = (title: string, snapshot: WorkspaceSnapshot) => {
     if (this.state.saving) return;
+    this.endEditGroup();
     this.generation++;
     clearTimeout(this.timer);
     this.patch({
@@ -315,6 +419,7 @@ export class WorkspaceController {
     if (pending.sessionOnly) {
       this.generation++;
       this.backupGeneration++;
+      this.resetHistory();
       this.patch({
         ...pending.snapshot,
         recovery: {
@@ -337,6 +442,7 @@ export class WorkspaceController {
    */
   useInThisTab = () => {
     if (this.state.saving) return;
+    this.endEditGroup();
     const pending = this.state.pending;
     this.generation++;
     clearTimeout(this.timer);
@@ -359,6 +465,7 @@ export class WorkspaceController {
    */
   reviewOverwrite = () => {
     if (this.state.saving) return;
+    this.endEditGroup();
     try {
       if (!canCoordinate())
         throw new Error(
@@ -397,17 +504,20 @@ export class WorkspaceController {
     if (!review?.snapshot || this.state.saving) return;
     const generation = ++this.generation;
     clearTimeout(this.timer);
-    this.patch({ saving: true });
+    this.endEditGroup();
+    this.patch({ saving: true, replacing: true });
     const result = await commitWorkspace(
       review.raw,
       undefined,
       () => generation === this.generation,
     );
-    this.patch({ saving: false });
     if (result.status === "success") {
       this.review = result.review;
       this.backupGeneration++;
+      this.resetHistory();
       this.patch({
+        saving: false,
+        replacing: false,
         ...review.snapshot,
         recovery: {
           document: this.state.document,
@@ -421,9 +531,16 @@ export class WorkspaceController {
       });
     } else if (result.status === "conflict")
       this.patch({
+        saving: false,
+        replacing: false,
         conflict: result.review,
         error: "Stored data changed again. Review the newer version.",
       });
-    else if (result.status === "failure") this.patch({ error: result.error });
+    else
+      this.patch({
+        saving: false,
+        replacing: false,
+        ...(result.status === "failure" ? { error: result.error } : {}),
+      });
   };
 }

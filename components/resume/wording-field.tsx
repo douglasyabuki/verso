@@ -1,14 +1,9 @@
 "use client";
 
 import { LocalizedField } from "@/components/resume/fields";
-import type {
-  DocumentUpdate,
-  Issue,
-  Locale,
-  ResumeDocument,
-  Span,
-} from "@/lib/resume/model";
+import type { Issue, Locale, ResumeDocument } from "@/lib/resume/model";
 import { editTranslation, findLocalized } from "@/lib/resume/model";
+import type { WorkspaceEdit } from "@/lib/workspace/controller";
 
 export function WordingField({
   document,
@@ -22,7 +17,7 @@ export function WordingField({
   document: ResumeDocument;
   path: string;
   locale: Locale;
-  update: (change: DocumentUpdate) => void;
+  update: WorkspaceEdit;
   label: string;
   required?: boolean;
   errors?: Issue[];
@@ -31,16 +26,17 @@ export function WordingField({
   if (!value) return null;
   return (
     <LocalizedField
+      fieldKey={`${path}.${locale}`}
       label={label}
       value={value}
       locale={locale}
       required={required}
       error={errors.find((error) => error.path === path)?.message}
-      onChange={(spans: Span[]) =>
+      onChange={(spans, group) =>
         update((draft) => {
           const field = findLocalized(draft, path);
           if (field) editTranslation(field, locale, spans);
-        })
+        }, group)
       }
       onReviewed={() =>
         update((draft) => {

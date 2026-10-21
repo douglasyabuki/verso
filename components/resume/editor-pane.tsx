@@ -9,12 +9,9 @@ import { TranslationsEditor } from "@/components/resume/translations-editor";
 import { VariantsEditor } from "@/components/resume/variants-editor";
 import { Button } from "@/components/ui/button";
 import { views } from "@/components/workspace/navigation";
-import type {
-  DocumentUpdate,
-  Locale,
-  ResumeDocument,
-} from "@/lib/resume/model";
+import type { Locale, ResumeDocument } from "@/lib/resume/model";
 import { localized, plain, validateOutput } from "@/lib/resume/model";
+import type { WorkspaceEdit } from "@/lib/workspace/controller";
 
 export function EditorPane({
   document,
@@ -35,7 +32,7 @@ export function EditorPane({
   setSectionId: (id: string) => void;
   locale: Locale;
   variant: ResumeDocument["variants"][number];
-  update: (change: DocumentUpdate) => void;
+  update: WorkspaceEdit;
   confirm: ConfirmAction;
   validation: ReturnType<typeof validateOutput>;
   setVariantId: (id: string) => void;

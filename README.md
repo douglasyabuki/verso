@@ -43,6 +43,18 @@ On mobile these utilities live in the navigation sheet. Sidebar visibility,
 preview visibility, and split proportions are saved separately from resume content
 when browser storage is available; JSON backups do not include these preferences.
 
+Toolbar Undo and Redo cover document edits, translations, entries, achievements,
+archiving, ordering, variants, and template settings. Typing in one field groups
+until a one-second pause or leaving the field; paste and cut are separate steps,
+and each IME composition is one step regardless of duration. Use Command+Z and
+Shift+Command+Z on Apple platforms, or Ctrl+Z and Ctrl+Y / Ctrl+Shift+Z elsewhere.
+While a text field is focused, these shortcuts retain the browser's native text
+undo/redo. Workspace history stays available during autosaving and pauses during
+workspace replacement confirmation. It retains up to 100 steps in memory, clears
+on reload or successful workspace replacement, and never restores backup markers.
+Undo and redo create new document revisions and follow the current preview sync
+and local-saving settings.
+
 The workspace restores from this browser and autosaves 500 ms after edits when
 localStorage and Web Locks are available. Save status reflects confirmed browser
 writes, independently of JSON backup reminders. JSON backup freshness survives

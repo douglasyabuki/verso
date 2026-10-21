@@ -55,6 +55,7 @@ import {
   move,
   plain,
 } from "@/lib/resume/model";
+import type { EditGroup } from "@/lib/workspace/controller";
 
 export function ContentEditor({
   document,
@@ -79,13 +80,14 @@ export function ContentEditor({
         <CardContent>
           <FieldGroup>
             <TextField
+              fieldKey="profile.name"
               label="Full name"
               value={document.profile.name}
               maxLength={200}
-              onChange={(name) =>
+              onChange={(name, group) =>
                 update((draft) => {
                   draft.profile.name = name;
-                })
+                }, group)
               }
               error={
                 errors.find((error) => error.path === "profile.name")?.message
@@ -94,14 +96,15 @@ export function ContentEditor({
             />
             <FieldGroup className="grid gap-4 sm:grid-cols-2">
               <TextField
+                fieldKey="profile.email"
                 label="Email"
                 type="email"
                 value={document.profile.email}
                 maxLength={300}
-                onChange={(email) =>
+                onChange={(email, group) =>
                   update((draft) => {
                     draft.profile.email = email;
-                  })
+                  }, group)
                 }
                 error={
                   errors.find((error) => error.path === "profile.email")
@@ -110,6 +113,7 @@ export function ContentEditor({
                 placeholder="you@example.com"
               />
               <TextField
+                fieldKey="profile.phone"
                 label="Phone"
                 type="tel"
                 value={document.profile.phone}
@@ -118,23 +122,25 @@ export function ContentEditor({
                     ?.message
                 }
                 maxLength={100}
-                onChange={(phone) =>
+                onChange={(phone, group) =>
                   update((draft) => {
                     draft.profile.phone = phone;
-                  })
+                  }, group)
                 }
               />
               <TextField
+                fieldKey="profile.city"
                 label="City"
                 value={document.profile.city}
                 maxLength={200}
-                onChange={(city) =>
+                onChange={(city, group) =>
                   update((draft) => {
                     draft.profile.city = city;
-                  })
+                  }, group)
                 }
               />
               <TextField
+                fieldKey="profile.country"
                 label="Country code"
                 value={document.profile.country}
                 error={
@@ -142,10 +148,10 @@ export function ContentEditor({
                     ?.message
                 }
                 maxLength={2}
-                onChange={(country) =>
+                onChange={(country, group) =>
                   update((draft) => {
                     draft.profile.country = country.toUpperCase();
-                  })
+                  }, group)
                 }
                 placeholder="BR"
                 description="Two letters, for example BR or US. The PDF localizes the country name."
@@ -165,10 +171,10 @@ export function ContentEditor({
               <FieldLegend>Social & website links</FieldLegend>
               <LinksEditor
                 links={document.profile.links}
-                onChange={(links) =>
+                onChange={(links, group) =>
                   update((draft) => {
                     draft.profile.links = links;
-                  })
+                  }, group)
                 }
                 confirm={confirm}
               />
@@ -190,13 +196,13 @@ export function ContentEditor({
     (entry) => showArchived || !entry.archived,
   );
   const entry = displayed.find((entry) => entry.id === entryId) || displayed[0];
-  const changeEntry = (change: (entry: Entry) => void) =>
+  const changeEntry = (change: (entry: Entry) => void, group?: EditGroup) =>
     update((draft) => {
       const target = draft.sections
         .find((item) => item.id === sectionId)
         ?.entries.find((item) => item.id === entry?.id);
       if (target) change(target);
-    });
+    }, group);
   const addEntry = () => {
     const created = createEntry();
     update((draft) => {
@@ -429,12 +435,13 @@ export function ContentEditor({
                 }
               />
               <TextField
+                fieldKey={`entries.${entry.id}.organization`}
                 label="Organization / institution"
                 value={entry.organization}
-                onChange={(organization) =>
+                onChange={(organization, group) =>
                   changeEntry((target) => {
                     target.organization = organization;
-                  })
+                  }, group)
                 }
                 description="Shared across languages. Optional for standalone projects and custom entries."
               />
@@ -449,16 +456,18 @@ export function ContentEditor({
               />
               <FieldGroup className="grid gap-4 sm:grid-cols-2">
                 <TextField
+                  fieldKey={`entries.${entry.id}.city`}
                   label="City"
                   value={entry.city}
                   maxLength={200}
-                  onChange={(city) =>
+                  onChange={(city, group) =>
                     changeEntry((target) => {
                       target.city = city;
-                    })
+                    }, group)
                   }
                 />
                 <TextField
+                  fieldKey={`entries.${entry.id}.country`}
                   label="Country code"
                   value={entry.country}
                   error={
@@ -467,35 +476,37 @@ export function ContentEditor({
                     )?.message
                   }
                   maxLength={2}
-                  onChange={(country) =>
+                  onChange={(country, group) =>
                     changeEntry((target) => {
                       target.country = country.toUpperCase();
-                    })
+                    }, group)
                   }
                   placeholder="BR"
                 />
                 <TextField
+                  fieldKey={`entries.${entry.id}.start`}
                   label="Start date"
                   value={entry.start}
                   maxLength={7}
                   placeholder="YYYY-MM"
-                  onChange={(start) =>
+                  onChange={(start, group) =>
                     changeEntry((target) => {
                       target.start = start;
-                    })
+                    }, group)
                   }
                   error={dateError(entry)}
                 />
                 {!entry.ongoing && (
                   <TextField
+                    fieldKey={`entries.${entry.id}.end`}
                     label="End date"
                     value={entry.end}
                     maxLength={7}
                     placeholder="YYYY-MM"
-                    onChange={(end) =>
+                    onChange={(end, group) =>
                       changeEntry((target) => {
                         target.end = end;
-                      })
+                      }, group)
                     }
                     error={dateError(entry)}
                   />
@@ -512,16 +523,17 @@ export function ContentEditor({
                 }
               />
               <TextField
+                fieldKey={`entries.${entry.id}.technologies`}
                 label="Technologies"
                 value={entry.technologies.join(", ")}
                 maxLength={2_000}
-                onChange={(value) =>
+                onChange={(value, group) =>
                   changeEntry((target) => {
                     target.technologies = value
                       .split(",")
                       .map((value) => value.trim())
                       .slice(0, 100);
-                  })
+                  }, group)
                 }
                 description="Separate technologies with commas. Shared across languages."
               />
@@ -651,10 +663,10 @@ export function ContentEditor({
                 <FieldLegend>Entry links</FieldLegend>
                 <LinksEditor
                   links={entry.links}
-                  onChange={(links) =>
+                  onChange={(links, group) =>
                     changeEntry((target) => {
                       target.links = links;
-                    })
+                    }, group)
                   }
                   confirm={confirm}
                 />

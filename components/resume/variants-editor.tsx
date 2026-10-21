@@ -66,14 +66,15 @@ export function VariantsEditor({
         <CardContent>
           <FieldGroup>
             <TextField
+              fieldKey={`variants.${variant.id}.name`}
               label="Variant name"
               value={variant.name}
               maxLength={100}
-              onChange={(name) =>
+              onChange={(name, group) =>
                 update((draft) => {
                   draft.variants.find((item) => item.id === variant.id)!.name =
                     name;
-                })
+                }, group)
               }
               error={
                 !variant.name.trim() ? "Give this variant a name." : undefined

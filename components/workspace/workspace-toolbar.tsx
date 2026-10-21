@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronRight, PanelRightClose, PanelRightOpen } from "lucide-react";
+import {
+  ChevronRight,
+  PanelRightClose,
+  PanelRightOpen,
+  Redo2,
+  Undo2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
@@ -31,14 +37,17 @@ export function WorkspaceSaveStatus({ className }: { className?: string }) {
 }
 
 export function WorkspaceToolbar({
+  shortcuts,
   title,
   preview,
   togglePreview,
 }: {
+  shortcuts: { undo: string; redo: string };
   title: string;
   preview: boolean;
   togglePreview: () => void;
 }) {
+  const { state, controller } = useWorkspace();
   const { open, openMobile, isMobile } = useSidebar();
   const expanded = isMobile ? openMobile : open;
   const PreviewIcon = preview ? PanelRightClose : PanelRightOpen;
@@ -71,6 +80,41 @@ export function WorkspaceToolbar({
       </div>
       <div className="flex items-center gap-2">
         <WorkspaceSaveStatus className="hidden text-xs text-muted-foreground sm:inline" />
+        {[
+          {
+            label: "Undo",
+            shortcut: shortcuts.undo,
+            available: state.canUndo,
+            action: controller.undo,
+            Icon: Undo2,
+          },
+          {
+            label: "Redo",
+            shortcut: shortcuts.redo,
+            available: state.canRedo,
+            action: controller.redo,
+            Icon: Redo2,
+          },
+        ].map(({ label, shortcut, available, action, Icon }) => (
+          <Tooltip key={label}>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={label}
+                  disabled={!available}
+                  onClick={action}
+                />
+              }
+            >
+              <Icon aria-hidden="true" />
+            </TooltipTrigger>
+            <TooltipContent>
+              {label} ({shortcut})
+            </TooltipContent>
+          </Tooltip>
+        ))}
         <Tooltip>
           <TooltipTrigger
             render={

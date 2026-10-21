@@ -8,7 +8,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { type ComponentProps, useId, useState } from "react";
 
 import {
   AlertDialog,
@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useFieldHistory } from "@/hooks/workspace/use-field-history";
 import type {
   Locale,
   LocalizedText,
@@ -44,6 +45,7 @@ import type {
   Span,
 } from "@/lib/resume/model";
 import { plain, urlError } from "@/lib/resume/model";
+import type { EditGroup } from "@/lib/workspace/controller";
 
 export type ConfirmAction = (
   title: string,
@@ -52,6 +54,7 @@ export type ConfirmAction = (
 ) => void;
 
 export function TextField({
+  fieldKey,
   label,
   value,
   onChange,
@@ -61,9 +64,10 @@ export function TextField({
   type = "text",
   maxLength = 500,
 }: {
+  fieldKey: string;
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, group?: EditGroup) => void;
   error?: string;
   description?: string;
   placeholder?: string;
@@ -71,6 +75,7 @@ export function TextField({
   maxLength?: number;
 }) {
   const id = useId();
+  const history = useFieldHistory({ fieldKey, onChange });
   return (
     <Field data-invalid={!!error}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
@@ -80,7 +85,7 @@ export function TextField({
         value={value}
         maxLength={maxLength}
         placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
+        {...history}
         aria-invalid={!!error}
         aria-describedby={error || description ? id + "-help" : undefined}
       />
@@ -91,6 +96,18 @@ export function TextField({
       ) : null}
     </Field>
   );
+}
+
+function HistoryTextarea({
+  fieldKey,
+  onChange,
+  ...props
+}: Omit<ComponentProps<typeof Textarea>, "onChange"> & {
+  fieldKey: string;
+  onChange: (value: string, group: EditGroup) => void;
+}) {
+  const history = useFieldHistory({ fieldKey, onChange });
+  return <Textarea {...props} {...history} />;
 }
 
 export function CheckField({
@@ -154,6 +171,7 @@ export function OrderButtons({
 }
 
 export function LocalizedField({
+  fieldKey,
   label,
   value,
   locale,
@@ -162,10 +180,11 @@ export function LocalizedField({
   required = false,
   error,
 }: {
+  fieldKey: string;
   label: string;
   value: LocalizedText;
   locale: Locale;
-  onChange: (spans: Span[]) => void;
+  onChange: (spans: Span[], group?: EditGroup) => void;
   onReviewed: () => void;
   required?: boolean;
   error?: string;
@@ -175,11 +194,12 @@ export function LocalizedField({
   const [removeIndex, setRemoveIndex] = useState<number>();
   const missing = !plain(value, locale).trim();
   const other = locale === "en-US" ? "pt-BR" : "en-US";
-  const update = (index: number, patch: Partial<Span>) =>
+  const update = (index: number, patch: Partial<Span>, group?: EditGroup) =>
     onChange(
       record.spans.map((span, i) =>
         i === index ? { ...span, ...patch } : span,
       ),
+      group,
     );
   return (
     <FieldGroup className="gap-3">
@@ -208,12 +228,13 @@ export function LocalizedField({
                 Continuation {index + 1}
               </label>
             )}
-            <Textarea
+            <HistoryTextarea
+              fieldKey={`${fieldKey}.spans.${index}.text`}
               id={index === 0 ? id : id + "-" + index}
               value={span.text}
               maxLength={20_000}
               rows={label === "Summary" || label === "Achievement" ? 3 : 2}
-              onChange={(event) => update(index, { text: event.target.value })}
+              onChange={(text, group) => update(index, { text }, group)}
               aria-invalid={!!error}
               aria-describedby={error ? id + "-error" : undefined}
             />
@@ -237,10 +258,11 @@ export function LocalizedField({
                     onChange={(emphasis) => update(index, { emphasis })}
                   />
                   <TextField
+                    fieldKey={`${fieldKey}.spans.${index}.href`}
                     label={`Link for segment ${index + 1}`}
                     value={span.href}
                     maxLength={2_000}
-                    onChange={(href) => update(index, { href })}
+                    onChange={(href, group) => update(index, { href }, group)}
                     error={urlError(span.href)}
                     placeholder="https://example.com"
                   />
@@ -318,7 +340,7 @@ export function LinksEditor({
   confirm,
 }: {
   links: ResumeLink[];
-  onChange: (links: ResumeLink[]) => void;
+  onChange: (links: ResumeLink[], group?: EditGroup) => void;
   confirm: ConfirmAction;
 }) {
   return (
@@ -345,27 +367,31 @@ export function LinksEditor({
             </Button>
           </div>
           <TextField
+            fieldKey={`links.${link.id}.label`}
             label="Link label"
             value={link.label}
             maxLength={200}
-            onChange={(label) =>
+            onChange={(label, group) =>
               onChange(
                 links.map((item) =>
                   item.id === link.id ? { ...item, label } : item,
                 ),
+                group,
               )
             }
             placeholder="My website"
           />
           <TextField
+            fieldKey={`links.${link.id}.url`}
             label="URL"
             value={link.url}
             maxLength={2_000}
-            onChange={(url) =>
+            onChange={(url, group) =>
               onChange(
                 links.map((item) =>
                   item.id === link.id ? { ...item, url } : item,
                 ),
+                group,
               )
             }
             error={urlError(link.url)}
