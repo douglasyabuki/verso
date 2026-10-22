@@ -56,9 +56,32 @@ Start empty or explicitly load the fictional example. Use Content for shared
 career records, Translations for side-by-side review, Variants for selections
 and output ordering, and Template for layout overrides and compiler timeouts.
 Desktop has a resizable editor/PDF split; narrow screens switch between panels.
-Auto-update preview is enabled by default and updates the PDF preview after 800 ms without
-input changes. Turn it off beside Refresh to update manually; turn it back on
-to sync the current draft. This option lasts only for the current tab session.
+Career library navigation stays in English while resume wording follows the
+selected language. Section-specific forms show relevant fields, with retained
+extra fields available under Additional details. Certifications support a
+credential ID and optional issue/expiration dates; date setup saves as one edit
+only after confirmation.
+
+Summaries, headings, titles, and achievements share a formatted editor with
+emphasis and links. Select text to format it, or place the caret in a link to
+edit its destination. Ctrl/Command+I toggles emphasis and Ctrl/Command+K opens
+link editing. Paste inserts plain text; HTML, Markdown, and LaTeX syntax remain
+literal text. Links accept only validated http, https, mailto, and tel destinations.
+
+Search Content within the current section or Variants across sections, matching
+shared facts and wording in both languages without case or accent differences.
+Archived entries are hidden until Include archived entries is enabled. Duplicate
+an entry to create an independent copy outside every variant. Use drag handles,
+keyboard sorting, or move buttons to reorder content; Escape cancels a drag.
+Library order and each variant's output order remain independent. In Variants,
+Select all appends missing achievements to the existing selection order; Clear
+all removes achievement selections while keeping the entry included.
+
+Auto-update preview is enabled by default and updates the PDF preview after
+800 ms without output-affecting changes. Edits to hidden sections, unselected
+entries/achievements, or other variants do not trigger automatic compilation.
+Turn it off beside Refresh to update manually; turn it back on to sync the
+current draft. This option lasts only for the current tab session.
 
 The utility rail provides workspace data/backups and appearance controls. Collapse
 the sidebar to gain editing space, or hide the PDF preview for a full-width editor.
@@ -71,9 +94,11 @@ archiving, ordering, variants, and template settings. Typing in one field groups
 until a one-second pause or leaving the field; paste and cut are separate steps,
 and each IME composition is one step regardless of duration. Use Command+Z and
 Shift+Command+Z on Apple platforms, or Ctrl+Z and Ctrl+Y / Ctrl+Shift+Z elsewhere.
-While a text field is focused, these shortcuts retain the browser's native text
-undo/redo. Workspace history stays available during autosaving and pauses during
-workspace replacement confirmation. It retains up to 100 steps in memory, clears
+While a formatted field is focused, these shortcuts use its field-local history;
+ordinary text inputs retain native browser undo/redo. Workspace toolbar undo/redo
+and workspace replacements clear formatted fields' local histories. Workspace
+history stays available during autosaving and pauses during workspace replacement
+confirmation. It retains up to 100 steps in memory, clears
 on reload or successful workspace replacement, and never restores backup markers.
 Undo and redo create new document revisions and follow the current preview sync
 and local-saving settings.
@@ -86,6 +111,10 @@ so export JSON for a portable backup. Downloads are reported as initiated, since
 completion of a browser save dialog cannot be confirmed. Saved work is specific
 to this browser profile and origin: changing the hostname or port opens a separate
 workspace. Use a JSON export/import to move drafts between them.
+
+JSON exports use resume schema 2. Compatible schema-1 backups migrate on import
+or browser restoration, preserving existing wording, IDs, and legacy date ranges;
+new certification metadata starts unset. Unsupported schemas/templates are rejected.
 
 Other-tab changes pause saving. Review the stored version before loading it or
 explicitly replacing it; a changed version invalidates any previous confirmation.
@@ -103,8 +132,15 @@ guarantee protection against closure or device shutdown.
 
 A missing required translation blocks only that language. Translation-review
 flags warn without blocking draft downloads. Bilingual export requires two valid
-outputs from the same snapshot. Source ZIPs include generated LaTeX, the exact
-browser runtime/resources, notices, and a standalone local compilation launcher.
+outputs from the same snapshot. Open Issues to inspect the active variant's
+English and Portuguese blocking errors, translation-review warnings, and layout
+status separately. Field links navigate to the affected editor. Check layout
+compiles that language and compares its PDF page count with the template target;
+it does not detect clipping or overlap. Exceeding the page target warns without
+blocking downloads.
+
+Source ZIPs include generated LaTeX, the exact browser runtime/resources, notices,
+and a standalone local compilation launcher.
 
 ## Verification
 
@@ -118,12 +154,15 @@ browser runtime/resources, notices, and a standalone local compilation launcher.
 | `npm start`                | Serve the production build                                |
 
 Automated tests are excluded from this implementation. Existing Playwright
-scripts remain available but are not product acceptance coverage. Follow the
-reproducible manual scenarios in [the verification handoff](docs/ui-refactor-progress.md),
-using the bundled fictional example on a disposable localhost origin.
+scripts remain available but are not product acceptance coverage. Use the bundled
+fictional example on a disposable localhost origin for manual verification.
+Scenarios, completed checks, and remaining manual coverage are recorded in the
+[formatted editor](docs/text-editor-verification.md),
+[section forms and schema migration](docs/section-forms-verification.md), and
+[library and variant editing](docs/library-editing-verification.md) handoffs.
 
-Static checks and production builds do not establish browser behavior. The handoff
-records the verification status and pending interaction/PDF checks. Safari and
+Static checks and production builds do not establish browser behavior. The handoffs
+record the verification status and pending interaction/PDF checks. Safari and
 assistive-technology compatibility remain unverified; no PDF/UA or universal ATS
 compatibility is claimed.
 
@@ -135,6 +174,5 @@ fonts through Next.js; document fonts are in the local compiler bundle.
 Agent guidance is in [AGENTS.md](AGENTS.md). Template/compiler maintenance is
 covered by the repository's `resume-latex` skill.
 
-The implementation checklist and handoff are in
-[UI refactor progress](docs/ui-refactor-progress.md). Future account/storage
-boundaries are documented in [implementation notes](docs/implementation-notes.md).
+Architecture, backup compatibility, and future account/storage boundaries are
+documented in [implementation notes](docs/implementation-notes.md).
