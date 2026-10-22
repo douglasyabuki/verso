@@ -51,6 +51,10 @@ export function WordingField({
   const populated = !!plain(value, locale).trim();
   return (
     <div className="flex flex-col gap-3">
+      <p className="text-sm text-muted-foreground">
+        Shared wording · Editing updates every variant that inherits this
+        language.
+      </p>
       <LocalizedField
         fieldKey={`${path}.${locale}`}
         label={label}

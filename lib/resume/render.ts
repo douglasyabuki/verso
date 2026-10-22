@@ -2,6 +2,7 @@ import { plain } from "@/lib/resume/localization";
 import { templateIdentity } from "@/lib/resume/model";
 import { resolveSettings } from "@/lib/resume/settings";
 import { validateOutput } from "@/lib/resume/validation";
+import { effectiveWording } from "@/lib/resume/wording";
 import type {
   Entry,
   Locale,
@@ -162,9 +163,14 @@ export function renderLatex(
     ...doc.profile.links.map(renderLink),
   ].filter(Boolean);
   const body: string[] = [];
-  if (plain(doc.profile.summary, locale).trim())
+  const summary = effectiveWording(
+    doc.profile.summary,
+    variant,
+    "profile.summary",
+  );
+  if (plain(summary, locale).trim())
     body.push(
-      `\\Needspace{6\\baselineskip}\n\\section{${locale === "pt-BR" ? "SOBRE MIM" : "ABOUT ME"}}\n${renderText(doc.profile.summary, locale)}`,
+      `\\Needspace{6\\baselineskip}\n\\section{${locale === "pt-BR" ? "SOBRE MIM" : "ABOUT ME"}}\n${renderText(summary, locale)}`,
     );
   for (const selected of variant.sections.filter(
     (section) => section.visible,
@@ -246,12 +252,23 @@ export function renderLatex(
       if (technologies.length) detail(escapeLatex(technologies.join(" · ")));
       const bullets = selection.bulletIds
         .map((id) => entry.bullets.find((bullet) => bullet.id === id))
-        .filter((bullet) => bullet && plain(bullet.body, locale).trim());
+        .flatMap((bullet) =>
+          bullet
+            ? [
+                effectiveWording(
+                  bullet.body,
+                  variant,
+                  `bullets.${bullet.id}.body`,
+                ),
+              ]
+            : [],
+        )
+        .filter((body) => plain(body, locale).trim());
       if (bullets.length)
         content.push(
           "\\begin{itemize}\n" +
             bullets
-              .map((bullet) => "\\item " + renderText(bullet!.body, locale))
+              .map((bullet) => "\\item " + renderText(bullet, locale))
               .join("\n") +
             "\n\\end{itemize}",
         );

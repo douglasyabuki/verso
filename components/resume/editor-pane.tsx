@@ -12,6 +12,7 @@ import { useIssueFocus } from "@/hooks/resume/use-issue-focus";
 import { validateOutput } from "@/lib/resume/validation";
 import type { ConfirmAction } from "@/types-and-constants/editor";
 import type {
+  Issue,
   IssueNavigation,
   Locale,
   ResumeDocument,
@@ -32,6 +33,7 @@ export function EditorPane({
   disabled,
   issueNavigation,
   onIssueFocused,
+  onOpen,
 }: {
   document: ResumeDocument;
   view: string;
@@ -46,6 +48,7 @@ export function EditorPane({
   disabled: boolean;
   issueNavigation?: IssueNavigation;
   onIssueFocused: (id: string) => void;
+  onOpen: (issue: Issue) => void;
 }) {
   useIssueFocus({
     navigation: issueNavigation,
@@ -127,10 +130,15 @@ export function EditorPane({
             update={update}
             locale={locale}
             variant={variant}
+            confirm={confirm}
           />
         )}
         {view === "variants" && (
           <VariantsEditor
+            key={`${variant.id}:${issueNavigation?.id ?? ""}`}
+            onOpen={onOpen}
+            issueNavigation={issueNavigation}
+            errors={validation.errors}
             document={document}
             locale={locale}
             variant={variant}
@@ -141,6 +149,12 @@ export function EditorPane({
         )}
         {view === "template" && (
           <SettingsEditor
+            key={`${variant.id}:${issueNavigation?.id ?? ""}`}
+            initialScope={
+              issueNavigation?.issue.target?.variantId
+                ? "variant-locale"
+                : "base"
+            }
             document={document}
             locale={locale}
             variant={variant}

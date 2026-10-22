@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { renderLatex } from "@/lib/resume/render";
 import { resolveSettings } from "@/lib/resume/settings";
+import { effectiveWording, sharedWordingChanged } from "@/lib/resume/wording";
 import { BrowserCompiler } from "@/tools/compiler-proof/compiler.mjs";
 import type { OutputLayout, ResumeOutput } from "@/types-and-constants/resume";
 import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
@@ -30,7 +31,20 @@ function snapshotKey(
   const variant = document.variants.find((item) => item.id === variantId);
   return JSON.stringify({
     template: document.template,
-    profile: document.profile,
+    profile: {
+      ...document.profile,
+      summary: variant
+        ? effectiveWording(document.profile.summary, variant, "profile.summary")
+        : document.profile.summary,
+    },
+    summarySharedReview:
+      variant &&
+      sharedWordingChanged(
+        document.profile.summary,
+        variant,
+        "profile.summary",
+        locale,
+      ),
     variantId,
     name: variant?.name,
     locale,
@@ -53,9 +67,27 @@ function snapshotKey(
               ? [
                   {
                     ...entry,
-                    bullets: selection.bulletIds.map((id) =>
-                      entry.bullets.find((bullet) => bullet.id === id),
-                    ),
+                    bullets: selection.bulletIds.map((id) => {
+                      const bullet = entry.bullets.find(
+                        (bullet) => bullet.id === id,
+                      );
+                      return (
+                        bullet && {
+                          id,
+                          body: effectiveWording(
+                            bullet.body,
+                            variant!,
+                            `bullets.${id}.body`,
+                          ),
+                          sharedReview: sharedWordingChanged(
+                            bullet.body,
+                            variant!,
+                            `bullets.${id}.body`,
+                            locale,
+                          ),
+                        }
+                      );
+                    }),
                   },
                 ]
               : [];

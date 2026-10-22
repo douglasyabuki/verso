@@ -31,8 +31,11 @@ export function SettingsEditor({
   variant,
   locale,
   update,
-}: Pick<EditorProps, "document" | "variant" | "locale" | "update">) {
-  const [scope, setScope] = useState("base");
+  initialScope = "base",
+}: Pick<EditorProps, "document" | "variant" | "locale" | "update"> & {
+  initialScope?: string;
+}) {
+  const [scope, setScope] = useState(initialScope);
   const selectId = useId();
   const values = resolveSettings(document, variant, locale);
   const target =
@@ -165,6 +168,7 @@ export function SettingsEditor({
                     <FieldLabel htmlFor={id}>{control.label}</FieldLabel>
                     <NativeSelect
                       id={id}
+                      data-issue-field={`settings.${control.key}`}
                       value={current ?? "inherit"}
                       onChange={(event) =>
                         change(

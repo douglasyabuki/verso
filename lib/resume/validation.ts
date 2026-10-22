@@ -3,6 +3,12 @@ import { z } from "zod";
 import { certificationDateErrors } from "@/lib/resume/certification";
 import { outputIssue } from "@/lib/resume/issues";
 import { plain } from "@/lib/resume/localization";
+import {
+  effectiveWording,
+  sharedWording,
+  sharedWordingChanged,
+  variantWording,
+} from "@/lib/resume/wording";
 import type {
   Entry,
   Issue,
@@ -75,6 +81,7 @@ export function validateOutput(
 ): { errors: Issue[]; warnings: Issue[] } {
   const errors: Pick<Issue, "path" | "message">[] = [];
   const warnings: Pick<Issue, "path" | "message">[] = [];
+  const sharedWarnings: Pick<Issue, "path" | "message">[] = [];
   const required = (value: LocalizedText, path: string, label: string) => {
     if (!plain(value, locale).trim())
       errors.push({
@@ -83,6 +90,13 @@ export function validateOutput(
       });
   };
   const wording = (value: LocalizedText, path: string) => {
+    const shared = sharedWording(doc, path);
+    if (shared && sharedWordingChanged(shared, variant, path, locale))
+      sharedWarnings.push({
+        path,
+        message:
+          "Shared wording changed beneath this override. Review the library wording separately from its translation. Draft downloads remain available.",
+      });
     if (value[locale].needsReview && plain(value, locale).trim())
       warnings.push({
         path,
@@ -123,8 +137,12 @@ export function validateOutput(
       path: "profile.country",
       message: "Use a two-letter country code, for example BR.",
     });
-  if (plain(doc.profile.summary, locale).trim())
-    wording(doc.profile.summary, "profile.summary");
+  const summary = effectiveWording(
+    doc.profile.summary,
+    variant,
+    "profile.summary",
+  );
+  if (plain(summary, locale).trim()) wording(summary, "profile.summary");
   links(doc.profile.links, "profile.links");
   for (const selected of variant.sections.filter(
     (section) => section.visible,
@@ -181,18 +199,23 @@ export function validateOutput(
       for (const bulletId of selection.bulletIds) {
         const bullet = entry.bullets.find((bullet) => bullet.id === bulletId);
         if (!bullet) continue;
-        required(
+        const body = effectiveWording(
           bullet.body,
+          variant,
+          `bullets.${bullet.id}.body`,
+        );
+        required(
+          body,
           `bullets.${bullet.id}.body`,
           `Selected ${entryTerminology[section.kind].item.toLowerCase()}`,
         );
-        wording(bullet.body, `bullets.${bullet.id}.body`);
+        wording(body, `bullets.${bullet.id}.body`);
       }
     }
   }
   const describe = (
     values: Pick<Issue, "path" | "message">[],
-    category: "error" | "translation",
+    category: "error" | "translation" | "shared-wording",
   ) =>
     Array.from(
       new Map(
@@ -204,12 +227,28 @@ export function validateOutput(
             issue.message,
             category,
           );
+          if (
+            variantWording(variant, issue.path) &&
+            sharedWording(doc, issue.path)
+          ) {
+            described.target = {
+              ...described.target!,
+              variantId: variant.id,
+              scope: "variant",
+              wordingPath: issue.path,
+              fieldKey: `variants.${variant.id}.${issue.path}.${locale}`,
+            };
+            described.id = `${variant.id}:${described.id}`;
+          }
           return [described.id, described];
         }),
       ).values(),
     );
   return {
     errors: describe(errors, "error"),
-    warnings: describe(warnings, "translation"),
+    warnings: [
+      ...describe(warnings, "translation"),
+      ...describe(sharedWarnings, "shared-wording"),
+    ],
   };
 }

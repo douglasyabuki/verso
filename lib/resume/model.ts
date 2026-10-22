@@ -172,7 +172,7 @@ const reviewedEntrySchema = entrySchema.extend({
     .array(bulletSchema.extend({ body: reviewedLocalizedSchema }))
     .max(100),
 });
-export const documentSchema = schema2DocumentSchema.extend({
+export const schema3DocumentSchema = schema2DocumentSchema.extend({
   schemaVersion: z.literal(3),
   profile: schema2DocumentSchema.shape.profile.extend({
     summary: reviewedLocalizedSchema,
@@ -184,5 +184,68 @@ export const documentSchema = schema2DocumentSchema.extend({
         entries: z.array(reviewedEntrySchema).max(300),
       }),
     )
+    .max(30),
+});
+
+const effectiveSnapshotSchema = referenceSnapshotSchema.extend({
+  source: z.enum(["shared", "override"]),
+});
+const wordingOverrideSchema = z.strictObject({
+  spans: translationSchema.shape.spans,
+  revision: translationSchema.shape.revision,
+  sharedBaseline: referenceSnapshotSchema,
+});
+const variantReviewSchema = z.strictObject({
+  needsReview: z.boolean(),
+  reviewedCounterpart: effectiveSnapshotSchema.nullable(),
+});
+const variantWordingSchema = z
+  .strictObject({
+    overrides: z.strictObject({
+      "en-US": wordingOverrideSchema.optional(),
+      "pt-BR": wordingOverrideSchema.optional(),
+    }),
+    review: z.strictObject({
+      "en-US": variantReviewSchema,
+      "pt-BR": variantReviewSchema,
+    }),
+  })
+  .superRefine((value, context) => {
+    if (!locales.some((locale) => value.overrides[locale]))
+      context.addIssue({
+        code: "custom",
+        path: ["overrides"],
+        message: "Wording must contain an explicit override.",
+      });
+    for (const locale of locales) {
+      if (
+        value.overrides[locale] &&
+        value.overrides[locale].sharedBaseline.locale !== locale
+      )
+        context.addIssue({
+          code: "custom",
+          path: ["overrides", locale, "sharedBaseline"],
+          message: "Shared baseline must use the override language.",
+        });
+      if (value.review[locale].reviewedCounterpart?.locale === locale)
+        context.addIssue({
+          code: "custom",
+          path: ["review", locale],
+          message: "Review reference must use the other language.",
+        });
+    }
+  });
+export const documentSchema = schema3DocumentSchema.extend({
+  schemaVersion: z.literal(4),
+  variants: z
+    .array(
+      variantSchema.extend({
+        wording: z.strictObject({
+          summary: variantWordingSchema.optional(),
+          achievements: z.record(id, variantWordingSchema),
+        }),
+      }),
+    )
+    .min(1)
     .max(30),
 });

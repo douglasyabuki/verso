@@ -133,7 +133,7 @@ export function PreviewPane({
       {validation.warnings.length > 0 && (
         <Alert className="shrink-0 rounded-none border-x-0">
           <AlertTitle>
-            {validation.warnings.length} translation review flag
+            {validation.warnings.length} wording review flag
             {validation.warnings.length === 1 ? "" : "s"}
           </AlertTitle>
           <AlertDescription>

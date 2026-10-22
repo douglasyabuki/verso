@@ -162,7 +162,7 @@ The backup boundary first validates schema 1 with template
 changes IDs/revisions, or interprets generic dates. Existing certification dates
 start unset. Schema-2 imports require the exact current template; unknown schemas
 or templates remain rejected. Both browser restoration and JSON imports use this
-boundary; exports use schema 3. Loading does not rewrite stored bytes. The next
+boundary; exports use schema 4. Loading does not rewrite stored bytes. The next
 ordinary commit still uses the reviewed bytes and shared lock. Existing stored
 backup fingerprints remain conservative; an explicit imported backup establishes
 its migrated document's baseline.
@@ -170,7 +170,7 @@ its migrated document's baseline.
 ## Local saving, backups, and replacements
 
 One guest career workspace is stored in `verso.workspace.v1`: a version-1 envelope
-containing an opaque token, save timestamp, schema-3 ResumeDocument,
+containing an opaque token, save timestamp, schema-4 ResumeDocument,
 and nullable backup fingerprint. `verso.layout.v1` holds only sidebar visibility,
 preview visibility and split proportions. The existing theme key remains separate.
 
@@ -192,7 +192,7 @@ backup freshness survives reloads. In insecure session-only contexts without
 SubtleCrypto, exact serialized JSON provides the in-memory comparison identity.
 Browser autosaves, PDFs, bilingual ZIPs and LaTeX exports do not advance this baseline.
 A failed metadata write leaves persisted freshness conservative; the current tab
-can still track the initiated export. Portable JSON exports schema 3 and
+can still track the initiated export. Portable JSON exports schema 4 and
 never includes storage metadata, UI preferences, workers, or PDF caches.
 
 Import still validates the full 5 MB maximum backup, template identity, settings,
@@ -273,8 +273,7 @@ available". Editing retains review snapshots and flags populated counterparts;
 editing a target never silently acknowledges its reference. Review warnings
 remain nonblocking for otherwise valid draft previews and exports.
 
-Schema 3 adds these snapshots without changing the bundled template. The parser
-strictly accepts schemas 1, 2, and 3. Schema 1 first receives the existing
+Schema 3 adds these snapshots without changing the bundled template. The parser now strictly accepts schemas 1, 2, 3, and 4. Schema 1 first receives the existing
 certification/template upgrade; schema 2 then gains null snapshots in every locale
 record. Migration preserves all IDs, wording segmentation, revisions, and flags;
 missing history never creates a new review flag. Schema-3 snapshots require a
@@ -284,3 +283,58 @@ locks, reviewed-token checks, recovery, and backup freshness remain in force.
 
 See [translation review verification](translation-review-verification.md) for
 executed checks and outstanding manual scenarios.
+
+## Variant wording and schema 4
+
+The current schema extends variants with `wording.summary` and
+`wording.achievements[achievementId]`. Each retained field has optional locale
+`overrides` (structured spans, revision, same-language `sharedBaseline`) and separate
+bilingual `review` records. A field exists only while it has an explicit override.
+Shared facts and achievement IDs are never copied. Schema 1/2/3 imports migrate
+through their existing steps and then add empty variant wording, without changing
+wording, IDs, revisions, flags, or the bundled template identity. Imports validate
+all override references, including unselected and archived achievements.
+
+`lib/resume/wording.ts` owns creation, editing, reset, effective resolution, independent
+reviews, and edit reconciliation. The workspace controller reconciles the previous
+and edited documents before history/save processing. Reconciliation removes orphaned
+achievement metadata after deletion and flags the populated effective counterpart
+when effective text changes. This runs for every retained field in every variant,
+regardless of selection, visibility, or archive status. Undo/redo restore the complete
+wording and review state through ordinary document history.
+
+In particular, with an English override and inherited Portuguese, editing shared
+Portuguese changes effective Portuguese and flags the English override for variant
+translation review. The symmetric case works identically. Changing shared English
+beneath its English override leaves effective English unchanged and only makes the
+English shared baseline stale. Semantic no-ops do not flag review. Explicit creation
+preserves effective review status without inventing acknowledgment. Reset changes
+provenance and recomputes counterpart review while another override remains; removing
+the last override restores library review behavior. Variant review actions never
+modify shared library review metadata.
+
+Shared-review acknowledgment verifies the displayed shared revision/spans and only
+updates that baseline. Translation review verifies target and counterpart revisions,
+spans, languages, and shared/override provenance before clearing only the target flag.
+Both review states survive backups independently. Output validation emits separate
+translation and shared-wording warning categories, restricted to selected output;
+optional empty summaries are omitted and empty selected achievement overrides block
+only their language. Rendering and compiler snapshot keys use effective wording, so
+an override cannot reuse a PDF compiled for older text.
+
+Variants exposes summary and expandable achievement wording controls. Disclosure
+mounts achievement editors only when opened, and keeps the complete achievement
+inside its measured sortable row. Active-variant Translations resolves effective
+wording with explicit source labels and creation/shared-edit actions. Library editing
+remains shared. Filters distinguish translation review from shared-wording changes.
+
+Compare mode is transient UI state. It aligns library identities across two distinct
+variants, includes excluded/archived content and retained overrides, displays stored
+ordering and output suppression, and resolves template settings through the existing
+precedence chain. The view is read-only, supports language selection and differences
+only, and uses paired cards below the wide-screen breakpoint. Edit links carry variant,
+locale, field, and scope to the corresponding editor; template links open variant-language
+settings. Comparison selections never enter JSON backups or browser persistence.
+
+See [variant wording verification](variant-wording-verification.md) for executed
+checks and the outstanding browser/PDF handoff.

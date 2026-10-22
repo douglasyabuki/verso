@@ -11,6 +11,11 @@ import {
   SectionVisibilityHint,
 } from "@/components/resume/library-controls";
 import { SortableList, SortableRow } from "@/components/resume/sortable-list";
+import { VariantComparison } from "@/components/resume/variant-comparison";
+import {
+  VariantWordingDetails,
+  VariantWordingField,
+} from "@/components/resume/variant-wording-field";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,7 +37,9 @@ import { matchesEntry, selectAllAchievements } from "@/lib/resume/library";
 import { plain } from "@/lib/resume/localization";
 import { reorderVisible } from "@/lib/resume/operations";
 import { entryLabel } from "@/lib/resume/section-fields";
+import { effectiveWording } from "@/lib/resume/wording";
 import type { EditorProps } from "@/types-and-constants/editor";
+import type { Issue, IssueNavigation } from "@/types-and-constants/resume";
 import type { Variant } from "@/types-and-constants/resume";
 import { entryTerminology } from "@/types-and-constants/resume";
 
@@ -43,9 +50,20 @@ export function VariantsEditor({
   update,
   confirm,
   onVariant,
-}: EditorProps & { onVariant: (id: string) => void }) {
+  onOpen,
+  issueNavigation,
+  errors = [],
+}: EditorProps & {
+  onVariant: (id: string) => void;
+  onOpen: (issue: Issue) => void;
+  issueNavigation?: IssueNavigation;
+  errors?: Issue[];
+}) {
+  const [comparing, setComparing] = useState(false);
   const [query, setQuery] = useState("");
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useState(
+    !!issueNavigation?.issue.target?.entryId,
+  );
   const matches = document.sections
     .flatMap((section) => section.entries)
     .filter(
@@ -75,6 +93,7 @@ export function VariantsEditor({
             visible: true,
             entries: [],
           })),
+          wording: { achievements: {} },
           settings: {},
           localeSettings: {},
         };
@@ -135,7 +154,7 @@ export function VariantsEditor({
             onClick={() =>
               confirm(
                 "Delete this variant?",
-                "Your shared career content will remain available. Its selections and layout overrides will be removed.",
+                "Your shared career content will remain available. Its selections, wording overrides, review state, and layout overrides will be removed.",
                 () =>
                   update((draft) => {
                     draft.variants = draft.variants.filter(
@@ -150,84 +169,131 @@ export function VariantsEditor({
           </Button>
         </CardFooter>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle size="section">Find variant content</CardTitle>
-          <CardDescription>
-            Selections and output order belong to{" "}
-            {variant.name || "this variant"}. Library ordering stays separate.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LibrarySearch
-            query={query}
-            onQuery={setQuery}
-            showArchived={showArchived}
-            onArchived={setShowArchived}
-            count={matches.length}
-            total={document.sections.reduce(
-              (count, section) => count + section.entries.length,
-              0,
-            )}
-          />
-          <p className="mt-4 text-xs text-muted-foreground">
-            Selected content appears first, in output order. Archived entries
-            are omitted from output until restored.
-          </p>
-        </CardContent>
-      </Card>
-      {!matches.length && (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>No matching entries</EmptyTitle>
-            <EmptyDescription>
-              Clear search, include archived entries, or add content in the
-              library.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      )}
-      <SortableList
-        scope={`variant:${variant.id}:sections`}
-        revision={document}
-        contextKey={JSON.stringify([query, showArchived, locale])}
-        items={visibleSections.map((selected) => ({
-          id: selected.sectionId,
-          label:
-            plain(
-              document.sections.find(
-                (section) => section.id === selected.sectionId,
-              )!.heading,
-              locale,
-            ) || "Untitled section",
-        }))}
-        onReorder={(source, target) =>
-          update((draft) => {
-            reorderVisible(
-              draft.variants.find((item) => item.id === variant.id)!.sections,
-              visibleSections.map((item) => item.sectionId),
-              source,
-              target,
-              (item) => item.sectionId,
-            );
-          })
-        }
+      <Button
+        variant="outline"
+        className="self-start"
+        onClick={() => setComparing(!comparing)}
       >
-        <div className="flex flex-col gap-5">
-          {visibleSections.map((selected) => (
-            <VariantSection
-              key={selected.sectionId}
-              document={document}
-              variant={variant}
-              locale={locale}
-              update={update}
-              sectionId={selected.sectionId}
-              query={query}
-              showArchived={showArchived}
-            />
-          ))}
-        </div>
-      </SortableList>
+        {comparing ? "Back to variant editing" : "Compare variants"}
+      </Button>
+      {comparing ? (
+        <VariantComparison
+          document={document}
+          variant={variant}
+          locale={locale}
+          onOpen={(issue) => {
+            setComparing(false);
+            onOpen(issue);
+          }}
+        />
+      ) : (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle size="section">Profile summary wording</CardTitle>
+              <CardDescription>
+                Shared by default. Overrides belong to this variant and
+                language.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <VariantWordingField
+                document={document}
+                variant={variant}
+                path="profile.summary"
+                locale={locale}
+                update={update}
+                confirm={confirm}
+                errors={errors}
+                label="Summary"
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle size="section">Find variant content</CardTitle>
+              <CardDescription>
+                Selections and output order belong to{" "}
+                {variant.name || "this variant"}. Library ordering stays
+                separate.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LibrarySearch
+                query={query}
+                onQuery={setQuery}
+                showArchived={showArchived}
+                onArchived={setShowArchived}
+                count={matches.length}
+                total={document.sections.reduce(
+                  (count, section) => count + section.entries.length,
+                  0,
+                )}
+              />
+              <p className="mt-4 text-xs text-muted-foreground">
+                Selected content appears first, in output order. Archived
+                entries are omitted from output until restored.
+              </p>
+            </CardContent>
+          </Card>
+          {!matches.length && (
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>No matching entries</EmptyTitle>
+                <EmptyDescription>
+                  Clear search, include archived entries, or add content in the
+                  library.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )}
+          <SortableList
+            scope={`variant:${variant.id}:sections`}
+            revision={document}
+            contextKey={JSON.stringify([query, showArchived, locale])}
+            items={visibleSections.map((selected) => ({
+              id: selected.sectionId,
+              label:
+                plain(
+                  document.sections.find(
+                    (section) => section.id === selected.sectionId,
+                  )!.heading,
+                  locale,
+                ) || "Untitled section",
+            }))}
+            onReorder={(source, target) =>
+              update((draft) => {
+                reorderVisible(
+                  draft.variants.find((item) => item.id === variant.id)!
+                    .sections,
+                  visibleSections.map((item) => item.sectionId),
+                  source,
+                  target,
+                  (item) => item.sectionId,
+                );
+              })
+            }
+          >
+            <div className="flex flex-col gap-5">
+              {visibleSections.map((selected) => (
+                <VariantSection
+                  key={selected.sectionId}
+                  document={document}
+                  variant={variant}
+                  locale={locale}
+                  update={update}
+                  sectionId={selected.sectionId}
+                  query={query}
+                  showArchived={showArchived}
+                  confirm={confirm}
+                  issueNavigation={issueNavigation}
+                  errors={errors}
+                />
+              ))}
+            </div>
+          </SortableList>
+        </>
+      )}
     </div>
   );
 }
@@ -240,10 +306,18 @@ function VariantSection({
   sectionId,
   query,
   showArchived,
-}: Pick<EditorProps, "document" | "variant" | "locale" | "update"> & {
+  confirm,
+  issueNavigation,
+  errors,
+}: Pick<
+  EditorProps,
+  "document" | "variant" | "locale" | "update" | "confirm"
+> & {
   sectionId: string;
   query: string;
   showArchived: boolean;
+  issueNavigation?: IssueNavigation;
+  errors: Issue[];
 }) {
   const section = document.sections.find((item) => item.id === sectionId)!;
   const selected = variant.sections.find(
@@ -271,7 +345,10 @@ function VariantSection({
   return (
     <SortableRow id={sectionId} label={heading}>
       {({ dragHandle, orderButtons }) => (
-        <Card>
+        <Card
+          tabIndex={-1}
+          data-issue-field={`variants.${variant.id}.sections.${sectionId}`}
+        >
           <CardHeader>
             <div className="flex items-center gap-2">
               {dragHandle}
@@ -361,7 +438,11 @@ function VariantSection({
                             <>
                               <div className="flex items-start gap-2">
                                 {dragHandle}
-                                <span className="min-w-0 flex-1 py-1 text-sm leading-snug font-medium">
+                                <span
+                                  tabIndex={-1}
+                                  data-issue-field={`variants.${variant.id}.entries.${entry.id}`}
+                                  className="min-w-0 flex-1 py-1 text-sm leading-snug font-medium"
+                                >
                                   {label}
                                 </span>
                                 <VisibilityToggle
@@ -450,46 +531,71 @@ function VariantSection({
                                 <div className="flex flex-col gap-3">
                                   {bullets.map((bullet, index) => {
                                     const label =
-                                      plain(bullet.body, locale).slice(
-                                        0,
-                                        100,
-                                      ) ||
+                                      plain(
+                                        effectiveWording(
+                                          bullet.body,
+                                          variant,
+                                          `bullets.${bullet.id}.body`,
+                                        ),
+                                        locale,
+                                      ).slice(0, 100) ||
                                       `Missing ${terms.item.toLowerCase()} text`;
                                     return (
                                       <SortableRow
                                         key={bullet.id}
                                         id={bullet.id}
                                         label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
-                                        className="flex items-start gap-2 pl-6"
+                                        className="flex flex-col gap-3 pl-6"
                                       >
                                         {({ dragHandle, orderButtons }) => (
                                           <>
-                                            {dragHandle}
-                                            <span className="min-w-0 flex-1 py-1 text-sm leading-snug">
-                                              {label}
-                                            </span>
-                                            <VisibilityToggle
-                                              label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
-                                              visible={bulletIds.includes(
-                                                bullet.id,
-                                              )}
-                                              disabled={
-                                                !selection || entry.archived
+                                            <div className="flex items-start gap-2">
+                                              {dragHandle}
+                                              <span className="min-w-0 flex-1 py-1 text-sm leading-snug">
+                                                {label}
+                                              </span>
+                                              <VisibilityToggle
+                                                label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
+                                                visible={bulletIds.includes(
+                                                  bullet.id,
+                                                )}
+                                                disabled={
+                                                  !selection || entry.archived
+                                                }
+                                                onChange={(visible) =>
+                                                  changeBullets((ids) =>
+                                                    visible
+                                                      ? ids.includes(bullet.id)
+                                                        ? ids
+                                                        : [...ids, bullet.id]
+                                                      : ids.filter(
+                                                          (id) =>
+                                                            id !== bullet.id,
+                                                        ),
+                                                  )
+                                                }
+                                              />
+                                              {orderButtons}
+                                            </div>
+                                            <VariantWordingDetails
+                                              document={document}
+                                              variant={variant}
+                                              path={`bullets.${bullet.id}.body`}
+                                              locale={locale}
+                                              update={update}
+                                              confirm={confirm}
+                                              errors={errors}
+                                              label={terms.item}
+                                              required
+                                              multiline={
+                                                section.kind !== "skills"
                                               }
-                                              onChange={(visible) =>
-                                                changeBullets((ids) =>
-                                                  visible
-                                                    ? ids.includes(bullet.id)
-                                                      ? ids
-                                                      : [...ids, bullet.id]
-                                                    : ids.filter(
-                                                        (id) =>
-                                                          id !== bullet.id,
-                                                      ),
-                                                )
+                                              initiallyOpen={
+                                                issueNavigation?.issue.target
+                                                  ?.wordingPath ===
+                                                `bullets.${bullet.id}.body`
                                               }
                                             />
-                                            {orderButtons}
                                           </>
                                         )}
                                       </SortableRow>

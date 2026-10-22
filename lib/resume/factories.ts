@@ -22,7 +22,7 @@ export function createEmptyDocument(): ResumeDocument {
     entries: [],
   }));
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     revision: 0,
     template: { ...templateIdentity },
     profile: {
@@ -50,6 +50,7 @@ export function createEmptyDocument(): ResumeDocument {
           visible: true,
           entries: [],
         })),
+        wording: { achievements: {} },
         settings: {},
         localeSettings: {},
       },

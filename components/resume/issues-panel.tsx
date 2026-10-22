@@ -97,7 +97,17 @@ export function IssuesPanel({
     0,
   );
   const reviews = languages.reduce(
-    (count, language) => count + language.warnings.length,
+    (count, language) =>
+      count +
+      language.warnings.filter((issue) => issue.category === "translation")
+        .length,
+    0,
+  );
+  const sharedReviews = languages.reduce(
+    (count, language) =>
+      count +
+      language.warnings.filter((issue) => issue.category === "shared-wording")
+        .length,
     0,
   );
   const layouts = languages.reduce(
@@ -128,7 +138,7 @@ export function IssuesPanel({
           onClick={() => setOpen(!open)}
         >
           <ListChecks data-icon="inline-start" />
-          Issues ({errors + reviews + layouts})
+          Issues ({errors + reviews + sharedReviews + layouts})
           <ChevronDown data-icon="inline-end" />
         </Button>
         <div
@@ -141,6 +151,9 @@ export function IssuesPanel({
             {errors} blocking
           </Badge>
           <Badge variant="secondary">{reviews} translation review</Badge>
+          <Badge variant="outline">
+            {sharedReviews} shared wording changed
+          </Badge>
           <Badge variant="outline">{layouts} layout</Badge>
         </div>
       </div>
@@ -190,9 +203,21 @@ export function IssuesPanel({
                   />
                   <IssueGroup
                     title="Translation-review warnings"
-                    issues={language.warnings}
+                    issues={language.warnings.filter(
+                      (issue) => issue.category === "translation",
+                    )}
                     emptyTitle="No translation reviews"
                     emptyDescription="No included wording is flagged for review in this language."
+                    onIssue={onIssue}
+                    disabled={disabled}
+                  />
+                  <IssueGroup
+                    title="Shared wording changed"
+                    issues={language.warnings.filter(
+                      (issue) => issue.category === "shared-wording",
+                    )}
+                    emptyTitle="No shared wording changes"
+                    emptyDescription="No included override needs review against its shared wording."
                     onIssue={onIssue}
                     disabled={disabled}
                   />

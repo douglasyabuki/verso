@@ -100,13 +100,21 @@ export function WorkspaceView() {
   const onIssue = (issue: Issue) => {
     if (!issue.target || state.replacing || state.pending) return;
     changeLocale(issue.locale);
-    changeView("content", issue.target.sectionId);
+    if (issue.target.variantId) changeVariant(issue.target.variantId);
+    changeView(
+      issue.target.sectionId === "template"
+        ? "template"
+        : issue.target.scope === "variant"
+          ? "variants"
+          : "content",
+      issue.target.sectionId,
+    );
     setIssueNavigation({
       id: crypto.randomUUID(),
       issue,
       pending: true,
       epoch: state.textHistoryEpoch,
-      variantId: variant.id,
+      variantId: issue.target.variantId ?? variant.id,
     });
     if (!desktop) setIssuesOpen(false);
   };
@@ -129,9 +137,10 @@ export function WorkspaceView() {
   const dirty =
     !state.backupFingerprint ||
     state.currentFingerprint !== state.backupFingerprint;
-  const reviewCount = localizedFields(document).filter(
+  const reviewCount = localizedFields(document, variant).filter(
     (field) =>
-      field.value[locale].needsReview && plain(field.value, locale).trim(),
+      (field.value[locale].needsReview && plain(field.value, locale).trim()) ||
+      field.sharedReview?.[locale],
   ).length;
   const busy = exports.exporting || compiler.isPending;
   const dataMenu = (
@@ -180,6 +189,7 @@ export function WorkspaceView() {
           : undefined
       }
       onIssueFocused={onIssueFocused}
+      onOpen={onIssue}
     />
   );
   const preview = (

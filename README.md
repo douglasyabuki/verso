@@ -112,7 +112,7 @@ completion of a browser save dialog cannot be confirmed. Saved work is specific
 to this browser profile and origin: changing the hostname or port opens a separate
 workspace. Use a JSON export/import to move drafts between them.
 
-JSON exports use resume schema 3. Compatible schema-1 and schema-2 backups migrate
+JSON exports use resume schema 4. Compatible schema-1, schema-2, and schema-3 backups migrate
 on import or browser restoration, preserving wording, IDs, revisions, and review
 flags. Missing historical review snapshots stay unknown until explicitly reviewed;
 schema-1 certification metadata starts unset. Unsupported schemas/templates are rejected.
@@ -177,3 +177,24 @@ covered by the repository's `resume-latex` skill.
 
 Architecture, backup compatibility, and future account/storage boundaries are
 documented in [implementation notes](docs/implementation-notes.md).
+
+### Variant wording and comparison
+
+Variants inherit shared library wording until you explicitly choose **Create override**
+for a summary or achievement in a particular language. The other language keeps
+inheriting. The editor labels each source and explains its scope before editing.
+**Reset to shared** removes that language's override, with confirmation and workspace
+undo. Facts and achievement IDs stay shared. Hidden, unselected, and archived content
+retains overrides; permanent library deletion removes them.
+
+Translation review compares each variant's effective bilingual pair. If English has
+an override and Portuguese inherits, editing shared Portuguese flags the English
+override for translation review (and vice versa). **Shared wording changed** is a
+separate review of same-language shared text beneath an override. Its acknowledgment
+never clears translation review. Draft downloads remain available when valid.
+
+Open **Compare variants** in Variants for a read-only, language-specific comparison
+of visibility, selections, ordering, effective wording and its source/review state,
+and effective template settings. **Differences only** hides equal rows; edit links
+open the corresponding variant and field. JSON backups preserve all overrides and
+review metadata. See [verification and remaining manual checks](docs/variant-wording-verification.md).

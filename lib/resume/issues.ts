@@ -21,7 +21,7 @@ export function outputIssue(
   locale: Locale,
   path: string,
   message: string,
-  category: "error" | "translation",
+  category: "error" | "translation" | "shared-wording",
 ): Issue {
   const parts = path.split(".");
   let sectionName = "Profile";

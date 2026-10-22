@@ -4,6 +4,7 @@ import {
   documentSchema,
   legacyDocumentSchema,
   schema2DocumentSchema,
+  schema3DocumentSchema,
   templateIdentity,
 } from "@/lib/resume/model";
 import type { ResumeDocument } from "@/types-and-constants/resume";
@@ -31,9 +32,9 @@ export function parseBackup(source: string): ResumeDocument {
     .safeParse(data);
   if (!header.success)
     throw new Error("This is not a versioned Verso workspace backup.");
-  if (![1, 2, 3].includes(header.data.schemaVersion))
+  if (![1, 2, 3, 4].includes(header.data.schemaVersion))
     throw new Error(
-      `Workspace schema ${header.data.schemaVersion} is unsupported. This release imports schemas 1, 2, and 3.`,
+      `Workspace schema ${header.data.schemaVersion} is unsupported. This release imports schemas 1, 2, 3, and 4.`,
     );
   const template = header.data.template;
   if (
@@ -51,7 +52,9 @@ export function parseBackup(source: string): ResumeDocument {
       ? legacyDocumentSchema.safeParse(data)
       : header.data.schemaVersion === 2
         ? schema2DocumentSchema.safeParse(data)
-        : documentSchema.safeParse(data);
+        : header.data.schemaVersion === 3
+          ? schema3DocumentSchema.safeParse(data)
+          : documentSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue.path.join(".");
@@ -62,10 +65,12 @@ export function parseBackup(source: string): ResumeDocument {
   }
   const doc =
     result.data.schemaVersion === 1
-      ? migrateSchema2(migrateSchema1(result.data))
+      ? migrateSchema3(migrateSchema2(migrateSchema1(result.data)))
       : result.data.schemaVersion === 2
-        ? migrateSchema2(result.data)
-        : result.data;
+        ? migrateSchema3(migrateSchema2(result.data))
+        : result.data.schemaVersion === 3
+          ? migrateSchema3(result.data)
+          : result.data;
   const seen = new Set<string>();
   const unique = (value: string) => {
     if (seen.has(value)) throw new Error(`Duplicate identifier: ${value}`);
@@ -82,6 +87,18 @@ export function parseBackup(source: string): ResumeDocument {
   }
   for (const variant of doc.variants) {
     unique(variant.id);
+    const bulletIds = new Set(
+      doc.sections.flatMap((section) =>
+        section.entries.flatMap((entry) =>
+          entry.bullets.map((bullet) => bullet.id),
+        ),
+      ),
+    );
+    for (const bulletId of Object.keys(variant.wording.achievements))
+      if (!bulletIds.has(bulletId))
+        throw new Error(
+          `Variant ${variant.name} has an unavailable wording override achievement reference.`,
+        );
     const sectionIds = new Set<string>();
     if (variant.sections.length !== doc.sections.length)
       throw new Error(
@@ -159,14 +176,14 @@ export function migrateSchema1(
  */
 export function migrateSchema2(
   legacy: z.infer<typeof schema2DocumentSchema>,
-): ResumeDocument {
+): z.infer<typeof schema3DocumentSchema> {
   const upgrade = (
     value: z.infer<typeof schema2DocumentSchema>["profile"]["summary"],
   ) => ({
     "en-US": { ...value["en-US"], reviewedCounterpart: null },
     "pt-BR": { ...value["pt-BR"], reviewedCounterpart: null },
   });
-  return documentSchema.parse({
+  return schema3DocumentSchema.parse({
     ...legacy,
     schemaVersion: 3,
     profile: { ...legacy.profile, summary: upgrade(legacy.profile.summary) },
@@ -181,6 +198,24 @@ export function migrateSchema2(
           body: upgrade(bullet.body),
         })),
       })),
+    })),
+  });
+}
+
+/** Add empty variant wording without copying library content or inventing review history.
+ * @param legacy Validated schema-3 workspace.
+ * @returns A schema-4 workspace with unchanged facts, wording, IDs, and revisions.
+ * @example migrateSchema3(schema3DocumentSchema.parse(data))
+ */
+export function migrateSchema3(
+  legacy: z.infer<typeof schema3DocumentSchema>,
+): ResumeDocument {
+  return documentSchema.parse({
+    ...legacy,
+    schemaVersion: 4,
+    variants: legacy.variants.map((variant) => ({
+      ...variant,
+      wording: { achievements: {} },
     })),
   });
 }

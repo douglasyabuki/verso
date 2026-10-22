@@ -1,5 +1,6 @@
 import { serializeBackup } from "@/lib/resume/backup";
 import { createEmptyDocument } from "@/lib/resume/factories";
+import { reconcileVariantWording } from "@/lib/resume/wording";
 import {
   canCoordinate,
   commitWorkspace,
@@ -182,6 +183,7 @@ export class WorkspaceController {
     if (!this.state.ready || this.state.pending || this.state.replacing) return;
     const document = structuredClone(this.state.document);
     update(document);
+    reconcileVariantWording(this.state.document, document);
     if (serializeBackup(document) === serializeBackup(this.state.document))
       return;
     const now = performance.now();

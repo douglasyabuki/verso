@@ -8,13 +8,20 @@ function ReferenceWording({
   version,
 }: {
   title: string;
-  version: ReviewSnapshot;
+  version: ReviewSnapshot & { source?: "shared" | "override" };
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <p className="text-sm font-medium">
         {title} · {version.locale === "en-US" ? "English" : "Português"}
       </p>
+      {version.source && (
+        <p className="text-xs text-muted-foreground">
+          {version.source === "override"
+            ? "Variant override"
+            : "Shared wording"}
+        </p>
+      )}
       <p
         lang={version.locale}
         className="text-sm wrap-anywhere whitespace-pre-wrap"
@@ -44,12 +51,15 @@ export function TranslationReference({
   snapshot,
   current,
 }: {
-  snapshot: ReviewSnapshot | null;
-  current: ReviewSnapshot;
+  snapshot: (ReviewSnapshot & { source?: "shared" | "override" }) | null;
+  current: ReviewSnapshot & { source?: "shared" | "override" };
 }) {
   const changed =
     snapshot &&
     (snapshot.locale !== current.locale ||
+      (!!snapshot.source &&
+        !!current.source &&
+        snapshot.source !== current.source) ||
       !equivalentSpans(snapshot.spans, current.spans));
   return (
     <div className="flex flex-col gap-3">

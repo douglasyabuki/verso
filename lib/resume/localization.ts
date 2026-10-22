@@ -1,5 +1,6 @@
 import { entryLabel } from "@/lib/resume/section-fields";
 import { equivalentSpans, normalizeSpans } from "@/lib/resume/spans";
+import { effectiveWording, sharedWordingChanged } from "@/lib/resume/wording";
 import type {
   Locale,
   LocalizedFieldDescriptor,
@@ -51,11 +52,29 @@ export function localizedFields(
 ): LocalizedFieldDescriptor[] {
   const fields: LocalizedFieldDescriptor[] = [
     {
+      sharedReview: variant
+        ? {
+            "en-US": sharedWordingChanged(
+              doc.profile.summary,
+              variant,
+              "profile.summary",
+              "en-US",
+            ),
+            "pt-BR": sharedWordingChanged(
+              doc.profile.summary,
+              variant,
+              "profile.summary",
+              "pt-BR",
+            ),
+          }
+        : undefined,
       path: "profile.summary",
       label: "Summary",
       source: "Profile",
       sectionId: "profile",
-      value: doc.profile.summary,
+      value: variant
+        ? effectiveWording(doc.profile.summary, variant, "profile.summary")
+        : doc.profile.summary,
       multiline: true,
       required: false,
     },
@@ -120,11 +139,33 @@ export function localizedFields(
         : entry.bullets;
       for (const bullet of bullets)
         fields.push({
+          sharedReview: variant
+            ? {
+                "en-US": sharedWordingChanged(
+                  bullet.body,
+                  variant,
+                  `bullets.${bullet.id}.body`,
+                  "en-US",
+                ),
+                "pt-BR": sharedWordingChanged(
+                  bullet.body,
+                  variant,
+                  `bullets.${bullet.id}.body`,
+                  "pt-BR",
+                ),
+              }
+            : undefined,
           path: `bullets.${bullet.id}.body`,
           label: entryTerminology[section.kind].item,
           source,
           sectionId: section.id,
-          value: bullet.body,
+          value: variant
+            ? effectiveWording(
+                bullet.body,
+                variant,
+                `bullets.${bullet.id}.body`,
+              )
+            : bullet.body,
           multiline: section.kind !== "skills",
           required: true,
         });
@@ -135,7 +176,7 @@ export function localizedFields(
 
 /** Classify target wording for filtering and navigation without turning optional omissions into errors.
  * @param field Localized field descriptor. @param locale Target language.
- * @returns Independent missing/review flags and their unresolved union.
+ * @returns Independent missing/translation/shared-wording review flags and their unresolved union.
  * @example translationStatus(field, "pt-BR").unresolved
  */
 export function translationStatus(
@@ -145,7 +186,13 @@ export function translationStatus(
   const populated = !!plain(field.value, locale).trim();
   const missing = field.required && !populated;
   const review = populated && field.value[locale].needsReview;
-  return { missing, review, unresolved: missing || review };
+  const sharedReview = !!field.sharedReview?.[locale];
+  return {
+    missing,
+    review,
+    sharedReview,
+    unresolved: missing || review || sharedReview,
+  };
 }
 
 /** Capture the explicitly selected language as an immutable review version.

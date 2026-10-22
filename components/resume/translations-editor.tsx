@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 
+import { VariantWordingField } from "@/components/resume/variant-wording-field";
 import { WordingField } from "@/components/resume/wording-field";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,7 @@ import {
   plain,
   translationStatus,
 } from "@/lib/resume/localization";
+import { sharedWording } from "@/lib/resume/wording";
 import type { EditorProps } from "@/types-and-constants/editor";
 import type { Locale } from "@/types-and-constants/resume";
 
@@ -41,7 +43,11 @@ export function TranslationsEditor({
   update,
   locale,
   variant,
-}: Pick<EditorProps, "document" | "update" | "locale" | "variant">) {
+  confirm,
+}: Pick<
+  EditorProps,
+  "document" | "update" | "locale" | "variant" | "confirm"
+>) {
   const [scope, setScope] = useState("active");
   const [sectionId, setSectionId] = useState("all");
   const [target, setTarget] = useState<Locale>(locale);
@@ -68,7 +74,9 @@ export function TranslationsEditor({
         ? state.missing
         : status === "review"
           ? state.review
-          : state.unresolved)
+          : status === "shared"
+            ? state.sharedReview
+            : state.unresolved)
     );
   };
   const visible = fields.filter(
@@ -88,7 +96,10 @@ export function TranslationsEditor({
     setActivePath(path);
     const card = cards.current.get(path);
     card?.scrollIntoView({ block: "nearest" });
-    card?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus();
+    const key = `${scope === "active" && sharedWording(document, path) ? `variants.${variant.id}.` : ""}${path}.${target}`;
+    card
+      ?.querySelector<HTMLElement>(`[data-issue-field="${CSS.escape(key)}"]`)
+      ?.focus();
   }
 
   return (
@@ -166,7 +177,12 @@ export function TranslationsEditor({
             <NativeSelectOption value="missing">
               Missing required wording
             </NativeSelectOption>
-            <NativeSelectOption value="review">Needs review</NativeSelectOption>
+            <NativeSelectOption value="review">
+              Translation review
+            </NativeSelectOption>
+            <NativeSelectOption value="shared">
+              Shared wording changed
+            </NativeSelectOption>
             <NativeSelectOption value="unresolved">
               Unresolved
             </NativeSelectOption>
@@ -229,20 +245,35 @@ export function TranslationsEditor({
             <CardDescription>Source: {field.source}</CardDescription>
           </CardHeader>
           <CardContent>
-            <WordingField
-              document={document}
-              path={field.path}
-              locale={target}
-              update={update}
-              label={target === "en-US" ? "English" : "Português"}
-              required={field.required}
-              multiline={field.multiline}
-              showReference
-            />
+            {scope === "active" && sharedWording(document, field.path) ? (
+              <VariantWordingField
+                document={document}
+                variant={variant}
+                path={field.path}
+                locale={target}
+                update={update}
+                confirm={confirm}
+                label={field.label}
+                required={field.required}
+                multiline={field.multiline}
+              />
+            ) : (
+              <WordingField
+                document={document}
+                path={field.path}
+                locale={target}
+                update={update}
+                label={target === "en-US" ? "English" : "Português"}
+                required={field.required}
+                multiline={field.multiline}
+                showReference
+              />
+            )}
           </CardContent>
           <CardFooter>
             <p className="text-xs text-muted-foreground">
-              Editing one language flags its existing counterpart for review.
+              Editing effective wording flags its existing effective counterpart
+              for review. Variant review stays separate from library review.
             </p>
           </CardFooter>
         </Card>

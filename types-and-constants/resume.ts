@@ -32,6 +32,14 @@ export type ReviewSnapshot = NonNullable<
 
 export type Span = LocalizedText[Locale]["spans"][number];
 
+export type VariantWording = NonNullable<
+  ResumeDocument["variants"][number]["wording"]["summary"]
+>;
+
+export type EffectiveSnapshot = NonNullable<
+  VariantWording["review"][Locale]["reviewedCounterpart"]
+>;
+
 export type Variant = ResumeDocument["variants"][number];
 
 export type DocumentUpdate = (draft: ResumeDocument) => void;
@@ -40,12 +48,19 @@ export type Issue = {
   id: string;
   path: string;
   message: string;
-  category: "error" | "translation" | "layout";
+  category: "error" | "translation" | "shared-wording" | "layout";
   locale: Locale;
   section: string;
   entry: string;
   field: string;
-  target?: { sectionId: string; entryId?: string; fieldKey: string };
+  target?: {
+    sectionId: string;
+    entryId?: string;
+    fieldKey: string;
+    variantId?: string;
+    scope?: "variant" | "shared";
+    wordingPath?: string;
+  };
 };
 
 export type IssueNavigation = {
@@ -160,6 +175,7 @@ export const entryTerminology = {
 } as const;
 
 export type LocalizedFieldDescriptor = {
+  sharedReview?: Record<Locale, boolean>;
   path: string;
   label: string;
   source: string;
@@ -167,4 +183,15 @@ export type LocalizedFieldDescriptor = {
   value: LocalizedText;
   multiline: boolean;
   required: boolean;
+};
+
+export const templateSettingLabels: Record<keyof TemplateSettings, string> = {
+  pageSize: "Page size",
+  fontSize: "Body size (pt)",
+  marginTop: "Top margin (mm)",
+  marginBottom: "Bottom margin (mm)",
+  marginSide: "Side margins (mm)",
+  lineHeight: "Line height",
+  sectionGap: "Section spacing (mm)",
+  targetPages: "Page-count target",
 };
