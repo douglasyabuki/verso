@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { certificationDateErrors } from "@/lib/resume/certification";
-import { sectionKinds } from "@/types-and-constants/resume";
+import { locales, sectionKinds } from "@/types-and-constants/resume";
 
 export const templateIdentity = {
   id: "yabuki-reference",
@@ -109,7 +109,7 @@ const variantSchema = z.strictObject({
   settings: overridesSchema,
   localeSettings: localeOverridesSchema,
 });
-export const documentSchema = z.strictObject({
+export const schema2DocumentSchema = z.strictObject({
   schemaVersion: z.literal(2),
   revision: z.number().int().nonnegative(),
   template: z.strictObject({ id, version: z.string().min(1).max(100) }),
@@ -132,12 +132,56 @@ export const documentSchema = z.strictObject({
   }),
 });
 
-export const legacyDocumentSchema = documentSchema.extend({
+export const legacyDocumentSchema = schema2DocumentSchema.extend({
   schemaVersion: z.literal(1),
   sections: z
     .array(
       sectionSchema.extend({
         entries: z.array(legacyEntrySchema).max(300),
+      }),
+    )
+    .max(30),
+});
+
+const referenceSnapshotSchema = z.strictObject({
+  locale: z.enum(locales),
+  revision: translationSchema.shape.revision,
+  spans: translationSchema.shape.spans,
+});
+const reviewedTranslationSchema = translationSchema.extend({
+  reviewedCounterpart: referenceSnapshotSchema.nullable(),
+});
+const reviewedLocalizedSchema = z
+  .strictObject({
+    "en-US": reviewedTranslationSchema,
+    "pt-BR": reviewedTranslationSchema,
+  })
+  .superRefine((value, context) => {
+    for (const locale of locales) {
+      if (value[locale].reviewedCounterpart?.locale === locale)
+        context.addIssue({
+          code: "custom",
+          path: [locale, "reviewedCounterpart", "locale"],
+          message: "The review reference must differ from the target language.",
+        });
+    }
+  });
+const reviewedEntrySchema = entrySchema.extend({
+  title: reviewedLocalizedSchema,
+  bullets: z
+    .array(bulletSchema.extend({ body: reviewedLocalizedSchema }))
+    .max(100),
+});
+export const documentSchema = schema2DocumentSchema.extend({
+  schemaVersion: z.literal(3),
+  profile: schema2DocumentSchema.shape.profile.extend({
+    summary: reviewedLocalizedSchema,
+  }),
+  sections: z
+    .array(
+      sectionSchema.extend({
+        heading: reviewedLocalizedSchema,
+        entries: z.array(reviewedEntrySchema).max(300),
       }),
     )
     .max(30),

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   documentSchema,
   legacyDocumentSchema,
+  schema2DocumentSchema,
   templateIdentity,
 } from "@/lib/resume/model";
 import type { ResumeDocument } from "@/types-and-constants/resume";
@@ -30,9 +31,9 @@ export function parseBackup(source: string): ResumeDocument {
     .safeParse(data);
   if (!header.success)
     throw new Error("This is not a versioned Verso workspace backup.");
-  if (![1, 2].includes(header.data.schemaVersion))
+  if (![1, 2, 3].includes(header.data.schemaVersion))
     throw new Error(
-      `Workspace schema ${header.data.schemaVersion} is unsupported. This release imports schemas 1 and 2.`,
+      `Workspace schema ${header.data.schemaVersion} is unsupported. This release imports schemas 1, 2, and 3.`,
     );
   const template = header.data.template;
   if (
@@ -48,7 +49,9 @@ export function parseBackup(source: string): ResumeDocument {
   const result =
     header.data.schemaVersion === 1
       ? legacyDocumentSchema.safeParse(data)
-      : documentSchema.safeParse(data);
+      : header.data.schemaVersion === 2
+        ? schema2DocumentSchema.safeParse(data)
+        : documentSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue.path.join(".");
@@ -58,7 +61,11 @@ export function parseBackup(source: string): ResumeDocument {
     );
   }
   const doc =
-    result.data.schemaVersion === 1 ? migrateSchema1(result.data) : result.data;
+    result.data.schemaVersion === 1
+      ? migrateSchema2(migrateSchema1(result.data))
+      : result.data.schemaVersion === 2
+        ? migrateSchema2(result.data)
+        : result.data;
   const seen = new Set<string>();
   const unique = (value: string) => {
     if (seen.has(value)) throw new Error(`Duplicate identifier: ${value}`);
@@ -122,7 +129,7 @@ export function parseBackup(source: string): ResumeDocument {
  */
 export function migrateSchema1(
   legacy: z.infer<typeof legacyDocumentSchema>,
-): ResumeDocument {
+): z.infer<typeof schema2DocumentSchema> {
   if (
     legacy.template.id !== templateIdentity.id ||
     legacy.template.version !== "1.0.0-proof.2"
@@ -130,7 +137,7 @@ export function migrateSchema1(
     throw new Error(
       "Schema-1 migration requires the bundled yabuki-reference@1.0.0-proof.2 template.",
     );
-  return documentSchema.parse({
+  return schema2DocumentSchema.parse({
     ...legacy,
     schemaVersion: 2,
     template: { ...templateIdentity },
@@ -141,6 +148,39 @@ export function migrateSchema1(
           ? { ...entry, certification: { credentialId: "", dates: null } }
           : entry,
       ),
+    })),
+  });
+}
+
+/** Add unknown review baselines without inventing history or changing existing flags.
+ * @param legacy Validated schema-2 document.
+ * @returns A fresh schema-3 document with unchanged wording, identifiers, and revisions.
+ * @example const current = migrateSchema2(schema2DocumentSchema.parse(data));
+ */
+export function migrateSchema2(
+  legacy: z.infer<typeof schema2DocumentSchema>,
+): ResumeDocument {
+  const upgrade = (
+    value: z.infer<typeof schema2DocumentSchema>["profile"]["summary"],
+  ) => ({
+    "en-US": { ...value["en-US"], reviewedCounterpart: null },
+    "pt-BR": { ...value["pt-BR"], reviewedCounterpart: null },
+  });
+  return documentSchema.parse({
+    ...legacy,
+    schemaVersion: 3,
+    profile: { ...legacy.profile, summary: upgrade(legacy.profile.summary) },
+    sections: legacy.sections.map((section) => ({
+      ...section,
+      heading: upgrade(section.heading),
+      entries: section.entries.map((entry) => ({
+        ...entry,
+        title: upgrade(entry.title),
+        bullets: entry.bullets.map((bullet) => ({
+          ...bullet,
+          body: upgrade(bullet.body),
+        })),
+      })),
     })),
   });
 }

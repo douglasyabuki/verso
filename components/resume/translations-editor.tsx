@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { WordingField } from "@/components/resume/wording-field";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -16,75 +18,227 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
-import { localizedFields, plain } from "@/lib/resume/localization";
+import {
+  localizedFields,
+  plain,
+  translationStatus,
+} from "@/lib/resume/localization";
 import type { EditorProps } from "@/types-and-constants/editor";
 import type { Locale } from "@/types-and-constants/resume";
 
 export function TranslationsEditor({
   document,
   update,
-}: Pick<EditorProps, "document" | "update">) {
-  const [filter, setFilter] = useState("all");
-  const fields = localizedFields(document).filter(
-    (field) =>
-      filter === "all" ||
-      (filter === "review"
-        ? Object.values(field.value).some((value) => value.needsReview)
-        : !plain(field.value, "en-US").trim() ||
-          !plain(field.value, "pt-BR").trim()),
+  locale,
+  variant,
+}: Pick<EditorProps, "document" | "update" | "locale" | "variant">) {
+  const [scope, setScope] = useState("active");
+  const [sectionId, setSectionId] = useState("all");
+  const [target, setTarget] = useState<Locale>(locale);
+  const [status, setStatus] = useState("all");
+  const [activePath, setActivePath] = useState<string | null>(null);
+  const cards = useRef(new Map<string, HTMLDivElement>());
+  const selectedSection =
+    sectionId === "all" ||
+    sectionId === "profile" ||
+    document.sections.some((section) => section.id === sectionId)
+      ? sectionId
+      : "all";
+  const fields = localizedFields(
+    document,
+    scope === "active" ? variant : undefined,
+  ).filter(
+    (field) => selectedSection === "all" || field.sectionId === selectedSection,
   );
+  const matches = (field: (typeof fields)[number]) => {
+    const state = translationStatus(field, target);
+    return (
+      status === "all" ||
+      (status === "missing"
+        ? state.missing
+        : status === "review"
+          ? state.review
+          : state.unresolved)
+    );
+  };
+  const visible = fields.filter(
+    (field) => matches(field) || field.path === activePath,
+  );
+  const unresolved = fields.filter(
+    (field) => matches(field) && translationStatus(field, target).unresolved,
+  );
+  const activeIndex = fields.findIndex((field) => field.path === activePath);
+  const previous = unresolved.findLast(
+    (field) => fields.indexOf(field) < activeIndex,
+  );
+  const next = unresolved.find((field) => fields.indexOf(field) > activeIndex);
+  const position = unresolved.findIndex((field) => field.path === activePath);
+
+  function navigate(path: string) {
+    setActivePath(path);
+    const card = cards.current.get(path);
+    card?.scrollIntoView({ block: "nearest" });
+    card?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus();
+  }
+
   return (
     <div className="flex flex-col gap-5">
-      <Field>
-        <FieldLabel htmlFor="translation-filter">Show translations</FieldLabel>
-        <NativeSelect
-          id="translation-filter"
-          value={filter}
-          onChange={(event) => setFilter(event.target.value)}
+      <FieldGroup className="grid gap-4 @2xl:grid-cols-2">
+        <Field>
+          <FieldLabel htmlFor="translation-scope">Variant scope</FieldLabel>
+          <NativeSelect
+            id="translation-scope"
+            value={scope}
+            onChange={(event) => {
+              setScope(event.target.value);
+              setActivePath(null);
+            }}
+          >
+            <NativeSelectOption value="active">
+              Active variant · {variant.name || "Untitled"}
+            </NativeSelectOption>
+            <NativeSelectOption value="library">All library</NativeSelectOption>
+          </NativeSelect>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="translation-section">Section</FieldLabel>
+          <NativeSelect
+            id="translation-section"
+            value={selectedSection}
+            onChange={(event) => {
+              setSectionId(event.target.value);
+              setActivePath(null);
+            }}
+          >
+            <NativeSelectOption value="all">All sections</NativeSelectOption>
+            <NativeSelectOption value="profile">Profile</NativeSelectOption>
+            {document.sections.map((section) => (
+              <NativeSelectOption key={section.id} value={section.id}>
+                {plain(section.heading, target) ||
+                  plain(
+                    section.heading,
+                    target === "en-US" ? "pt-BR" : "en-US",
+                  ) ||
+                  "Untitled section"}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="translation-language">
+            Target language
+          </FieldLabel>
+          <NativeSelect
+            id="translation-language"
+            value={target}
+            onChange={(event) => {
+              setTarget(event.target.value as Locale);
+              setActivePath(null);
+            }}
+          >
+            <NativeSelectOption value="en-US">English</NativeSelectOption>
+            <NativeSelectOption value="pt-BR">Português</NativeSelectOption>
+          </NativeSelect>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="translation-status">
+            Show translations
+          </FieldLabel>
+          <NativeSelect
+            id="translation-status"
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value);
+              setActivePath(null);
+            }}
+          >
+            <NativeSelectOption value="all">All wording</NativeSelectOption>
+            <NativeSelectOption value="missing">
+              Missing required wording
+            </NativeSelectOption>
+            <NativeSelectOption value="review">Needs review</NativeSelectOption>
+            <NativeSelectOption value="unresolved">
+              Unresolved
+            </NativeSelectOption>
+          </NativeSelect>
+        </Field>
+      </FieldGroup>
+      <FieldDescription>
+        Optional empty wording can stay empty. Review flags warn without
+        blocking valid draft downloads. All library includes archived and
+        unselected content; only selected output wording can block that output.
+      </FieldDescription>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!previous}
+          onClick={() => previous && navigate(previous.path)}
         >
-          <NativeSelectOption value="all">All wording</NativeSelectOption>
-          <NativeSelectOption value="review">Needs review</NativeSelectOption>
-          <NativeSelectOption value="missing">
-            Missing wording
-          </NativeSelectOption>
-        </NativeSelect>
-        <FieldDescription>
-          Missing optional wording can stay empty. Review flags warn without
-          blocking valid downloads.
-        </FieldDescription>
-      </Field>
-      {!fields.length && (
+          Previous unresolved
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!next}
+          onClick={() => next && navigate(next.path)}
+        >
+          Next unresolved
+        </Button>
+        <p
+          role="status"
+          aria-live="polite"
+          className="text-sm text-muted-foreground"
+        >
+          {position >= 0
+            ? `${position + 1} of ${unresolved.length} unresolved`
+            : `${unresolved.length} unresolved remaining`}
+        </p>
+      </div>
+      {!visible.length && (
         <Empty>
           <EmptyHeader>
             <EmptyTitle>All clear</EmptyTitle>
-            <EmptyDescription>No wording matches this filter.</EmptyDescription>
+            <EmptyDescription>
+              No wording matches these filters.
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}
-      {fields.map((field) => (
-        <Card key={field.path}>
+      {visible.map((field) => (
+        <Card
+          key={`${field.path}:${target}`}
+          ref={(node) => {
+            if (node) cards.current.set(field.path, node);
+            else cards.current.delete(field.path);
+          }}
+          onFocusCapture={() => setActivePath(field.path)}
+        >
           <CardHeader>
             <CardTitle>{field.label}</CardTitle>
+            <CardDescription>Source: {field.source}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 @2xl:grid-cols-2">
-              {(["en-US", "pt-BR"] as Locale[]).map((locale) => (
-                <WordingField
-                  key={locale}
-                  document={document}
-                  path={field.path}
-                  locale={locale}
-                  update={update}
-                  label={locale === "en-US" ? "English" : "Português"}
-                  multiline={field.multiline}
-                />
-              ))}
-            </div>
+            <WordingField
+              document={document}
+              path={field.path}
+              locale={target}
+              update={update}
+              label={target === "en-US" ? "English" : "Português"}
+              required={field.required}
+              multiline={field.multiline}
+              showReference
+            />
           </CardContent>
           <CardFooter>
             <p className="text-xs text-muted-foreground">

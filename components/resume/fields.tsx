@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useId } from "react";
 
 import { TextEditor } from "@/components/resume/text-editor";
@@ -139,7 +139,6 @@ export function LocalizedField({
   value,
   locale,
   onChange,
-  onReviewed,
   required = false,
   error,
   multiline = false,
@@ -150,7 +149,6 @@ export function LocalizedField({
   value: LocalizedText;
   locale: Locale;
   onChange: (spans: Span[], group?: EditGroup) => void;
-  onReviewed: () => void;
   multiline?: boolean;
   description?: string;
   required?: boolean;
@@ -159,7 +157,6 @@ export function LocalizedField({
   const id = useId();
   const record = value[locale];
   const missing = !plain(value, locale).trim();
-  const other = locale === "en-US" ? "pt-BR" : "en-US";
   return (
     <FieldGroup className="gap-3">
       <Field data-invalid={!!error}>
@@ -171,9 +168,11 @@ export function LocalizedField({
               {required ? " *" : ""}
             </span>
           </FieldLabel>
-          {missing && (required || plain(value, other).trim()) ? (
+          {missing && required ? (
             <Badge variant="outline">Missing text</Badge>
-          ) : record.needsReview && !missing ? (
+          ) : missing ? (
+            <Badge variant="outline">Optional empty</Badge>
+          ) : record.needsReview ? (
             <Badge variant="secondary">Needs review</Badge>
           ) : null}
         </div>
@@ -190,14 +189,6 @@ export function LocalizedField({
         {description && <FieldDescription>{description}</FieldDescription>}
         {error && <FieldError id={id + "-error"}>{error}</FieldError>}
       </Field>
-      <div className="flex flex-wrap gap-2">
-        {record.needsReview && !missing && (
-          <Button variant="outline" size="sm" onClick={onReviewed}>
-            <Check data-icon="inline-start" />
-            Mark reviewed
-          </Button>
-        )}
-      </div>
     </FieldGroup>
   );
 }

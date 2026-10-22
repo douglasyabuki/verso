@@ -112,9 +112,10 @@ completion of a browser save dialog cannot be confirmed. Saved work is specific
 to this browser profile and origin: changing the hostname or port opens a separate
 workspace. Use a JSON export/import to move drafts between them.
 
-JSON exports use resume schema 2. Compatible schema-1 backups migrate on import
-or browser restoration, preserving existing wording, IDs, and legacy date ranges;
-new certification metadata starts unset. Unsupported schemas/templates are rejected.
+JSON exports use resume schema 3. Compatible schema-1 and schema-2 backups migrate
+on import or browser restoration, preserving wording, IDs, revisions, and review
+flags. Missing historical review snapshots stay unknown until explicitly reviewed;
+schema-1 certification metadata starts unset. Unsupported schemas/templates are rejected.
 
 Other-tab changes pause saving. Review the stored version before loading it or
 explicitly replacing it; a changed version invalidates any previous confirmation.

@@ -26,6 +26,10 @@ export type ResumeLink = ResumeDocument["profile"]["links"][number];
 
 export type LocalizedText = ResumeDocument["profile"]["summary"];
 
+export type ReviewSnapshot = NonNullable<
+  LocalizedText[Locale]["reviewedCounterpart"]
+>;
+
 export type Span = LocalizedText[Locale]["spans"][number];
 
 export type Variant = ResumeDocument["variants"][number];
@@ -154,3 +158,13 @@ export const entryTerminology = {
     empty: "Add an entry for volunteering, awards, or another topic.",
   },
 } as const;
+
+export type LocalizedFieldDescriptor = {
+  path: string;
+  label: string;
+  source: string;
+  sectionId: string;
+  value: LocalizedText;
+  multiline: boolean;
+  required: boolean;
+};

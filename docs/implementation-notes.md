@@ -162,7 +162,7 @@ The backup boundary first validates schema 1 with template
 changes IDs/revisions, or interprets generic dates. Existing certification dates
 start unset. Schema-2 imports require the exact current template; unknown schemas
 or templates remain rejected. Both browser restoration and JSON imports use this
-boundary; exports use schema 2. Loading does not rewrite stored bytes. The next
+boundary; exports use schema 3. Loading does not rewrite stored bytes. The next
 ordinary commit still uses the reviewed bytes and shared lock. Existing stored
 backup fingerprints remain conservative; an explicit imported backup establishes
 its migrated document's baseline.
@@ -170,7 +170,7 @@ its migrated document's baseline.
 ## Local saving, backups, and replacements
 
 One guest career workspace is stored in `verso.workspace.v1`: a version-1 envelope
-containing an opaque token, save timestamp, schema-2 ResumeDocument,
+containing an opaque token, save timestamp, schema-3 ResumeDocument,
 and nullable backup fingerprint. `verso.layout.v1` holds only sidebar visibility,
 preview visibility and split proportions. The existing theme key remains separate.
 
@@ -192,7 +192,7 @@ backup freshness survives reloads. In insecure session-only contexts without
 SubtleCrypto, exact serialized JSON provides the in-memory comparison identity.
 Browser autosaves, PDFs, bilingual ZIPs and LaTeX exports do not advance this baseline.
 A failed metadata write leaves persisted freshness conservative; the current tab
-can still track the initiated export. Portable JSON exports schema 2 and
+can still track the initiated export. Portable JSON exports schema 3 and
 never includes storage metadata, UI preferences, workers, or PDF caches.
 
 Import still validates the full 5 MB maximum backup, template identity, settings,
@@ -245,3 +245,42 @@ Use the committed fictional example in `lib/resume/example.ts` for manual editor
 backup, and both-language PDF/LaTeX export review. The
 [editor verification handoff](text-editor-verification.md) lists the manual
 scenarios and records which checks have actually been performed.
+
+## Translation review and schema 3
+
+The translation editor starts with actual active-variant output wording, all
+sections, the workspace language as target, and all wording. All library also
+includes archived/unselected content in library order. Section, target language,
+and status filters combine. Required empty headings, titles, and selected items
+are missing; the optional summary can remain empty. Unresolved navigation follows
+the filtered order without wrapping, retaining the focused field while its edit
+resolves the current status filter. Source context uses stable field IDs, entry
+wording, and shared organization; renaming and reordering do not change identity.
+
+Each target locale stores nullable `reviewedCounterpart: { locale, revision,
+spans }`. Reference languages are explicit in domain snapshots and review actions;
+the current UI selects the other of English/Portuguese. Review rejects stale
+reference/target revisions or wording, a changed selected reference locale, and
+deleted fields. Successful review copies the displayed reference and clears only
+the target flag through one ordinary undoable workspace edit. Populated clear
+wording can also be explicitly reviewed to establish a baseline.
+
+Read-only references preserve emphasis, line breaks, and visible link destinations
+without activating imported links. Before/after panels appear only if snapshot
+locale or semantic spans differ; revision-only changes display current wording
+once. Null snapshots display current wording and "No historical comparison
+available". Editing retains review snapshots and flags populated counterparts;
+editing a target never silently acknowledges its reference. Review warnings
+remain nonblocking for otherwise valid draft previews and exports.
+
+Schema 3 adds these snapshots without changing the bundled template. The parser
+strictly accepts schemas 1, 2, and 3. Schema 1 first receives the existing
+certification/template upgrade; schema 2 then gains null snapshots in every locale
+record. Migration preserves all IDs, wording segmentation, revisions, and flags;
+missing history never creates a new review flag. Schema-3 snapshots require a
+supported reference locale distinct from the target. Browser restoration shares
+the parser and leaves raw stored bytes unchanged. Existing storage envelopes,
+locks, reviewed-token checks, recovery, and backup freshness remain in force.
+
+See [translation review verification](translation-review-verification.md) for
+executed checks and outstanding manual scenarios.

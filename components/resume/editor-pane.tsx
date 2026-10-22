@@ -121,7 +121,13 @@ export function EditorPane({
           />
         )}
         {view === "translations" && (
-          <TranslationsEditor document={document} update={update} />
+          <TranslationsEditor
+            key={variant.id}
+            document={document}
+            update={update}
+            locale={locale}
+            variant={variant}
+          />
         )}
         {view === "variants" && (
           <VariantsEditor
