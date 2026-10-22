@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { renderLatex } from "@/lib/resume/render";
+import { resolveSettings } from "@/lib/resume/settings";
 import { BrowserCompiler } from "@/tools/compiler-proof/compiler.mjs";
 import type { OutputLayout, ResumeOutput } from "@/types-and-constants/resume";
 import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
@@ -16,13 +17,52 @@ type ResumeCompilerOptions = {
   compilationTimeoutMs: number;
 };
 
-/** Serialize a compiler cache identity without transmitting it. @param document Frozen workspace. @param variantId Variant. @param locale Language. @returns A deterministic local key. @example snapshotKey(doc, "general", "en-US") */
+/** Identify selected output independently of workspace revision and hidden content.
+ * @param document Frozen workspace. @param variantId Variant. @param locale Language.
+ * @returns A deterministic local key, including selected wording and effective settings.
+ * @example snapshotKey(doc, "general", "en-US")
+ */
 function snapshotKey(
   document: ResumeDocument,
   variantId: string,
   locale: Locale,
 ): string {
-  return JSON.stringify({ document, variantId, locale });
+  const variant = document.variants.find((item) => item.id === variantId);
+  return JSON.stringify({
+    template: document.template,
+    profile: document.profile,
+    variantId,
+    name: variant?.name,
+    locale,
+    settings: variant && resolveSettings(document, variant, locale),
+    sections: variant?.sections
+      .filter((selected) => selected.visible)
+      .map((selected) => {
+        const section = document.sections.find(
+          (item) => item.id === selected.sectionId,
+        );
+        return {
+          id: selected.sectionId,
+          heading: section?.heading,
+          kind: section?.kind,
+          entries: selected.entries.flatMap((selection) => {
+            const entry = section?.entries.find(
+              (item) => item.id === selection.entryId,
+            );
+            return entry && !entry.archived
+              ? [
+                  {
+                    ...entry,
+                    bullets: selection.bulletIds.map((id) =>
+                      entry.bullets.find((bullet) => bullet.id === id),
+                    ),
+                  },
+                ]
+              : [];
+          }),
+        };
+      }),
+  });
 }
 
 /** Read the actual page count without letting PDF inspection hold downloads indefinitely.
@@ -136,6 +176,10 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
             selectedLocale,
           );
           let output = force ? undefined : cache.current.get(requestedKey);
+          // Downloads retain exact revision metadata; automatic previews can reuse
+          // the last PDF when an edit only changes content omitted from output.
+          if (!automatic && output?.revision !== snapshot.revision)
+            output = undefined;
           if (!output) {
             engine.current ||= new BrowserCompiler({
               assetBase: "/compiler/",
@@ -268,7 +312,7 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
   useEffect(() => {
     activeKey.current = key;
     automaticKey.current = autoSync ? key : "";
-    if (!autoSync) return;
+    if (!autoSync || preview?.key === key) return;
 
     const timer = setTimeout(() => {
       void getPdf(document, variantId, locale, true).catch((reason) => {
@@ -279,7 +323,16 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
       clearTimeout(timer);
       automaticKey.current = "";
     };
-  }, [key, document, variantId, locale, autoSync, getPdf, reportError]);
+  }, [
+    key,
+    document,
+    variantId,
+    locale,
+    autoSync,
+    getPdf,
+    reportError,
+    preview?.key,
+  ]);
 
   const refresh = useCallback(() => {
     if (pendingRequests.current > 0) return;

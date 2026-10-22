@@ -71,6 +71,35 @@ and order sections, entries, and achievements. Archiving hides content from ever
 output while preserving its references for restoration. Permanent deletion
 confirms its effect on variants before removing references.
 
+Content searches its current library section; Variants searches across sections.
+Search matches every whitespace-separated term against shared organizations and
+technologies plus titles and achievement wording in both languages, ignoring case
+and accents. Include archived entries is explicit and off initially. Filtering
+does not change selections. An opened Content entry stays editable when its
+wording no longer matches the query; issue navigation reveals archived targets.
+
+Duplicate entry creates an unarchived library copy immediately after its source,
+opens it, and clears search. Entry, achievement, and link IDs are regenerated;
+wording, formatting, translation metadata, and shared facts are copied exactly.
+The copy starts outside every variant. The existing 300-entry limit applies.
+
+Selection indicators and achievement counts refer to the active variant and
+explain archived/hidden-section output suppression. Select all preserves the
+existing achievement output order, appending missing IDs in library order.
+Clear all removes achievement selections while leaving the entry included.
+These actions require an included, unarchived entry.
+
+Content achievements always display in library order. Only Variants displays
+selected entries and achievements first, in output order, followed by unselected
+items in library order. Drag handles and labeled move buttons share the same
+ordering operation. Filtered entry moves use visible slots without moving hidden
+entries. Variants can also reorder sections, while selected entry/achievement
+moves affect only the active variant. Drag previews are transient; valid drops
+commit one workspace edit, and Escape cancels. Keyboard handles support
+Space/Enter, arrow movement, and Escape. Scrolling remains available outside the
+handles. See [library editing verification](library-editing-verification.md) for
+completed checks and remaining device coverage.
+
 Editing a localized field flags an existing counterpart for review. Missing
 required selected wording blocks only that output language. Review flags warn
 without blocking previews/downloads or requiring acknowledgment. Bilingual
