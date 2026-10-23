@@ -6,13 +6,14 @@ import { useCallback, useMemo, useState } from "react";
 import { EditorPane } from "@/components/resume/editor-pane";
 import { IssuesPanel } from "@/components/resume/issues-panel";
 import { PreviewPane } from "@/components/resume/preview-pane";
+import { ResumeIdentityDialog } from "@/components/resume/resume-identity-dialog";
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { views } from "@/components/workspace/navigation";
 import { WorkspaceDataMenu } from "@/components/workspace/workspace-data-menu";
 import { WorkspaceFeedback } from "@/components/workspace/workspace-feedback";
 import { WorkspaceHeader } from "@/components/workspace/workspace-header";
@@ -23,22 +24,35 @@ import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
 import { AppearanceControl } from "@/components/workspace/workspace-utility-rail";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useResumeActions } from "@/hooks/workspace/use-resume-actions";
+import { WorkflowLinksContext } from "@/hooks/workspace/use-workflow-links";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { useWorkspaceBackups } from "@/hooks/workspace/use-workspace-backups";
 import { useWorkspaceExports } from "@/hooks/workspace/use-workspace-exports";
 import { useWorkspaceHistory } from "@/hooks/workspace/use-workspace-history";
 import { useWorkspaceLayout } from "@/hooks/workspace/use-workspace-layout";
 import { useWorkspaceNavigation } from "@/hooks/workspace/use-workspace-navigation";
+import {
+  resolveIssueDestination,
+  resolveOwnerDestination,
+} from "@/lib/resume/destinations";
 import { createExampleDocument } from "@/lib/resume/example";
-import { localizedFields, plain } from "@/lib/resume/localization";
+import { localizedFields } from "@/lib/resume/localization";
+import { reviewItems } from "@/lib/resume/review-queue";
 import { validateOutput } from "@/lib/resume/validation";
 import type { Confirmation } from "@/types-and-constants/editor";
+import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
 import type { Issue, IssueNavigation } from "@/types-and-constants/resume";
 
 export function WorkspaceView() {
   const { state, controller } = useWorkspace();
   const shortcuts = useWorkspaceHistory();
   const { document } = state;
+  const navigation = useWorkspaceNavigation({
+    document,
+    controller,
+    blocked: state.replacing || !!state.pending,
+  });
   const {
     view,
     activeSectionId,
@@ -49,15 +63,16 @@ export function WorkspaceView() {
     setLocale: changeLocale,
     mobilePanel,
     setMobilePanel,
-    navigate: changeView,
     addSection: createSection,
-  } = useWorkspaceNavigation({
-    document,
-    controller,
-    blocked: state.replacing || !!state.pending,
-  });
+  } = navigation;
   const [autoSync, setAutoSync] = useState(true);
   const [confirmation, setConfirmation] = useState<Confirmation>();
+  const resumeActions = useResumeActions({
+    controller,
+    navigation,
+    confirm: (title, description, action) =>
+      setConfirmation({ title, description, action }),
+  });
   const { input, exportJson, importJson, requestImport } = useWorkspaceBackups({
     document,
     controller,
@@ -66,7 +81,11 @@ export function WorkspaceView() {
   const { layout, changeLayout } = useWorkspaceLayout();
   const [issuesOpen, setIssuesOpen] = useState(false);
   const [issueNavigation, setIssueNavigation] = useState<
-    IssueNavigation & { epoch: number; variantId: string }
+    IssueNavigation & {
+      epoch: number;
+      variantId: string;
+      navigationToken: string;
+    }
   >();
   const setSectionId = (id: string) => {
     setIssueNavigation((current) =>
@@ -86,12 +105,6 @@ export function WorkspaceView() {
     );
     changeLocale(next);
   };
-  const navigate: typeof changeView = (next, section) => {
-    setIssueNavigation((current) =>
-      current ? { ...current, pending: false } : current,
-    );
-    changeView(next, section);
-  };
   const onIssueFocused = useCallback((id: string) => {
     setIssueNavigation((current) =>
       current?.id === id ? { ...current, pending: false } : current,
@@ -99,22 +112,29 @@ export function WorkspaceView() {
   }, []);
   const onIssue = (issue: Issue) => {
     if (!issue.target || state.replacing || state.pending) return;
-    changeLocale(issue.locale);
-    if (issue.target.variantId) changeVariant(issue.target.variantId);
-    changeView(
-      issue.target.sectionId === "template"
-        ? "template"
-        : issue.target.scope === "variant"
-          ? "variants"
-          : "content",
-      issue.target.sectionId,
-    );
+    const destination = resolveIssueDestination(document, issue, variant.id);
+    if (!destination) return;
+    if (destination.kind === "library-section")
+      navigation.setLibraryLocale(issue.locale);
+    else changeLocale(issue.locale);
+    const navigationToken = navigation.open(destination);
+    if (destination.kind === "library-section") {
+      navigation.setLibraryContexts((current) => ({
+        ...current,
+        [destination.sectionId]: {
+          entryId: issue.target?.entryId ?? "",
+          query: "",
+          showArchived: !!issue.target?.entryId,
+        },
+      }));
+    }
     setIssueNavigation({
       id: crypto.randomUUID(),
       issue,
       pending: true,
       epoch: state.textHistoryEpoch,
       variantId: issue.target.variantId ?? variant.id,
+      navigationToken,
     });
     if (!desktop) setIssuesOpen(false);
   };
@@ -137,14 +157,67 @@ export function WorkspaceView() {
   const dirty =
     !state.backupFingerprint ||
     state.currentFingerprint !== state.backupFingerprint;
-  const reviewCount = localizedFields(document, variant).filter(
-    (field) =>
-      (field.value[locale].needsReview && plain(field.value, locale).trim()) ||
-      field.sharedReview?.[locale],
-  ).length;
+  const reviewCount = reviewItems(document).length;
+  const fullWidth = ["library-overview", "resumes", "review", "data"].includes(
+    view,
+  );
+  const resumeWorkspace = navigation.destination.kind === "resume";
+  const onOwner = (target: WorkspaceFocusTarget) => {
+    const field = localizedFields(document).find(
+      (field) => field.path === target.path,
+    );
+    const destination = resolveOwnerDestination(document, target);
+    if (!field || !destination) {
+      navigation.open({ kind: "review" }, true);
+      return;
+    }
+    const currentDestination = navigation.destination;
+    if (!target.resumeId) navigation.setLibraryLocale(target.locale);
+    const entry = document.sections
+      .flatMap((section) => section.entries)
+      .find(
+        (entry) =>
+          target.path === `entries.${entry.id}.title` ||
+          entry.bullets.some(
+            (bullet) => target.path === `bullets.${bullet.id}.body`,
+          ),
+      );
+    if (!target.resumeId)
+      navigation.setLibraryContexts((current) => ({
+        ...current,
+        [field.sectionId]: {
+          entryId: entry?.id ?? "",
+          query: "",
+          showArchived: !!entry?.archived,
+        },
+      }));
+    navigation.open(destination, true);
+    if (!navigation.reviewContext)
+      navigation.setScopedReviews((current) => ({
+        ...current,
+        [target.resumeId ?? field.sectionId]: {
+          current: {
+            path: target.path,
+            locale: target.locale,
+            resumeId: target.resumeId,
+          },
+          filters: {
+            owner: "all",
+            language: target.locale,
+            section: "all",
+            reason: "all",
+            output: "all",
+          },
+          scroll: 0,
+        },
+      }));
+    if (!navigation.reviewContext)
+      navigation.setReturnDestination(currentDestination);
+  };
   const busy = exports.exporting || compiler.isPending;
-  const dataMenu = (
+  const dataActions = (inline = false) => (
     <WorkspaceDataMenu
+      inline={inline}
       dirty={dirty}
       disabled={state.saving}
       importJson={requestImport}
@@ -167,40 +240,135 @@ export function WorkspaceView() {
       resume={controller.reviewOverwrite}
     />
   );
+  const dataMenu = dataActions();
   const editor = (
-    <EditorPane
-      document={document}
-      view={view}
-      sectionId={activeSectionId}
-      setSectionId={setSectionId}
-      locale={locale}
-      variant={variant}
-      update={controller.edit}
-      confirm={(title, description, action) =>
-        setConfirmation({ title, description, action })
-      }
-      validation={validation}
-      setVariantId={setVariantId}
-      disabled={state.replacing || !!state.pending}
-      issueNavigation={
-        issueNavigation?.epoch === state.textHistoryEpoch &&
-        issueNavigation.variantId === variant.id
-          ? issueNavigation
-          : undefined
-      }
-      onIssueFocused={onIssueFocused}
-      onOpen={onIssue}
-    />
+    <WorkflowLinksContext.Provider
+      value={{
+        editLibrary: (path, targetLocale) => {
+          const field = localizedFields(document).find(
+            (field) => field.path === path,
+          );
+          if (!field) return;
+          const entry = document.sections
+            .flatMap((section) => section.entries)
+            .find((entry) =>
+              entry.bullets.some(
+                (bullet) => path === `bullets.${bullet.id}.body`,
+              ),
+            );
+          const back = navigation.destination;
+          navigation.setLibraryContexts((current) => ({
+            ...current,
+            [field.sectionId]: {
+              entryId: entry?.id ?? "",
+              query: "",
+              showArchived: !!entry?.archived,
+            },
+          }));
+          navigation.setLibraryLocale(targetLocale);
+          const destination = resolveOwnerDestination(
+            document,
+            { path, locale: targetLocale },
+            true,
+          );
+          if (destination) {
+            const navigationToken = navigation.open(destination, true);
+            setIssueNavigation({
+              id: crypto.randomUUID(),
+              pending: true,
+              epoch: state.textHistoryEpoch,
+              variantId: variant.id,
+              navigationToken,
+              issue: {
+                id: path,
+                path,
+                message: "Edit shared career wording",
+                category: "translation",
+                locale: targetLocale,
+                section: field.source,
+                entry: "",
+                field: field.label,
+                target: {
+                  sectionId: field.sectionId,
+                  entryId: entry?.id,
+                  fieldKey: `${path}.${targetLocale}`,
+                  scope: "shared",
+                },
+              },
+            });
+          }
+          navigation.setReturnDestination(back);
+        },
+      }}
+    >
+      <EditorPane
+        resumeActions={resumeActions}
+        document={document}
+        view={view}
+        sectionId={activeSectionId}
+        setSectionId={setSectionId}
+        locale={
+          navigation.destination.kind === "library-section"
+            ? navigation.libraryLocale
+            : locale
+        }
+        variant={variant}
+        update={controller.edit}
+        confirm={(title, description, action) =>
+          setConfirmation({ title, description, action })
+        }
+        validation={
+          navigation.destination.kind === "library-section"
+            ? validations[navigation.libraryLocale]
+            : validation
+        }
+        disabled={state.replacing || !!state.pending}
+        issueNavigation={
+          issueNavigation?.epoch === state.textHistoryEpoch &&
+          issueNavigation.navigationToken === navigation.focusToken &&
+          issueNavigation.variantId === variant.id
+            ? issueNavigation
+            : undefined
+        }
+        onIssueFocused={onIssueFocused}
+        onOpen={onIssue}
+        navigation={navigation}
+        dataMenu={dataActions(true)}
+        onOwner={onOwner}
+      />
+    </WorkflowLinksContext.Provider>
   );
   const preview = (
-    <PreviewPane
-      compiler={compiler}
-      validation={validation}
-      autoSync={autoSync}
-      setAutoSync={setAutoSync}
-      busy={busy}
-      locale={locale}
-    />
+    <div className="flex h-full min-h-0 flex-col">
+      {!resumeWorkspace && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b p-2">
+          <span className="text-xs text-muted-foreground">
+            Previewing {variant.name || "Untitled resume"} · {locale}
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() =>
+              navigation.open({
+                kind: "resume",
+                resumeId: variant.id,
+                page: "content",
+              })
+            }
+          >
+            Open resume
+          </Button>
+        </div>
+      )}
+      <PreviewPane
+        compiler={compiler}
+        validation={validation}
+        autoSync={autoSync}
+        setAutoSync={setAutoSync}
+        busy={busy}
+        locale={locale}
+      />
+    </div>
   );
   return (
     <WorkspaceShell
@@ -209,10 +377,16 @@ export function WorkspaceView() {
       dataMenu={dataMenu}
       sidebar={
         <WorkspaceSidebar
+          actions={resumeActions}
+          blocked={state.replacing || !!state.pending}
           document={document}
-          view={view}
-          sectionId={activeSectionId}
-          navigate={navigate}
+          destination={navigation.destination}
+          open={(destination) => {
+            setIssueNavigation(undefined);
+            navigation.open(destination);
+          }}
+          resumeId={variant.id}
+          createResume={navigation.createResume}
           addSection={() => {
             setIssueNavigation((current) =>
               current ? { ...current, pending: false } : current,
@@ -234,35 +408,92 @@ export function WorkspaceView() {
       toolbar={
         <WorkspaceToolbar
           shortcuts={shortcuts}
-          title={views.find((item) => item.id === view)?.label ?? "Content"}
+          previewAvailable={!fullWidth}
+          title={
+            navigation.destination.kind === "resume"
+              ? variant.name || "Untitled resume"
+              : navigation.destination.kind === "library-section"
+                ? "Career library"
+                : (
+                    {
+                      "library-overview": "Career library",
+                      resumes: "All resumes",
+                      review: "Translation review",
+                      data: "Data & backups",
+                      "shared-defaults": "Shared defaults",
+                    } as Record<string, string>
+                  )[view]
+          }
           preview={layout.preview}
           togglePreview={() => changeLayout({ preview: !layout.preview })}
         />
       }
       overlays={
-        <WorkspaceOverlays
-          confirmation={confirmation}
-          dismiss={() => setConfirmation(undefined)}
-        />
+        <>
+          {resumeActions.editing && (
+            <ResumeIdentityDialog
+              key={resumeActions.editing.id}
+              resume={resumeActions.editing}
+              close={resumeActions.close}
+              returnFocus={resumeActions.returnFocus}
+              save={resumeActions.save}
+            />
+          )}
+          <WorkspaceOverlays
+            confirmation={confirmation}
+            dismiss={() => setConfirmation(undefined)}
+          />
+        </>
       }
     >
       <WorkspaceFeedback />
-      <WorkspaceHeader
-        document={document}
-        variant={variant}
-        setVariantId={setVariantId}
-        locale={locale}
-        setLocale={setLocale}
-        dirty={dirty}
-        exporting={exports.exporting}
-        runExport={exports.runExport}
-        hasErrors={validation.errors.length > 0}
-        hasBilingualErrors={
-          validations["en-US"].errors.length > 0 ||
-          validations["pt-BR"].errors.length > 0
-        }
-      />
-      {!desktop && (
+      {resumeWorkspace ? (
+        <WorkspaceHeader
+          document={document}
+          variant={variant}
+          setVariantId={setVariantId}
+          locale={locale}
+          setLocale={setLocale}
+          dirty={dirty}
+          exporting={exports.exporting}
+          runExport={exports.runExport}
+          hasErrors={validation.errors.length > 0}
+          hasBilingualErrors={
+            validations["en-US"].errors.length > 0 ||
+            validations["pt-BR"].errors.length > 0
+          }
+        />
+      ) : (
+        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-2">
+          <span className="text-xs text-muted-foreground">
+            {dirty ? "Changes since JSON backup" : "Matches JSON backup"}
+          </span>
+          {!fullWidth && (
+            <label className="flex items-center gap-2 text-sm">
+              {view === "shared-defaults"
+                ? "Defaults language"
+                : "Library editing language"}
+              <select
+                className="rounded border p-1"
+                value={
+                  view === "shared-defaults" ? locale : navigation.libraryLocale
+                }
+                onChange={(event) =>
+                  view === "shared-defaults"
+                    ? setLocale(event.target.value as typeof locale)
+                    : navigation.setLibraryLocale(
+                        event.target.value as typeof locale,
+                      )
+                }
+              >
+                <option value="en-US">English</option>
+                <option value="pt-BR">Português</option>
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+      {!desktop && !fullWidth && (
         <div className="shrink-0 border-b px-4 py-2">
           <ToggleGroup
             value={[mobilePanel]}
@@ -287,7 +518,9 @@ export function WorkspaceView() {
         </div>
       )}
       <div className="min-h-0 flex-1">
-        {desktop && layout.preview ? (
+        {fullWidth ? (
+          editor
+        ) : desktop && layout.preview ? (
           <ResizablePanelGroup
             orientation="horizontal"
             defaultLayout={{
@@ -310,16 +543,18 @@ export function WorkspaceView() {
           preview
         )}
       </div>
-      <IssuesPanel
-        document={document}
-        variant={variant}
-        validation={validations}
-        compiler={compiler}
-        open={issuesOpen}
-        setOpen={setIssuesOpen}
-        onIssue={onIssue}
-        disabled={state.replacing || !!state.pending}
-      />
+      {!fullWidth && (
+        <IssuesPanel
+          document={document}
+          variant={variant}
+          validation={validations}
+          compiler={compiler}
+          open={issuesOpen}
+          setOpen={setIssuesOpen}
+          onIssue={onIssue}
+          disabled={state.replacing || !!state.pending}
+        />
+      )}
       <input
         ref={input}
         type="file"

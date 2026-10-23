@@ -5,6 +5,7 @@ import {
   legacyDocumentSchema,
   schema2DocumentSchema,
   schema3DocumentSchema,
+  schema4DocumentSchema,
   templateIdentity,
 } from "@/lib/resume/model";
 import type { ResumeDocument } from "@/types-and-constants/resume";
@@ -32,9 +33,9 @@ export function parseBackup(source: string): ResumeDocument {
     .safeParse(data);
   if (!header.success)
     throw new Error("This is not a versioned Verso workspace backup.");
-  if (![1, 2, 3, 4].includes(header.data.schemaVersion))
+  if (![1, 2, 3, 4, 5].includes(header.data.schemaVersion))
     throw new Error(
-      `Workspace schema ${header.data.schemaVersion} is unsupported. This release imports schemas 1, 2, 3, and 4.`,
+      `Workspace schema ${header.data.schemaVersion} is unsupported. This release imports schemas 1, 2, 3, 4, and 5.`,
     );
   const template = header.data.template;
   if (
@@ -54,7 +55,9 @@ export function parseBackup(source: string): ResumeDocument {
         ? schema2DocumentSchema.safeParse(data)
         : header.data.schemaVersion === 3
           ? schema3DocumentSchema.safeParse(data)
-          : documentSchema.safeParse(data);
+          : header.data.schemaVersion === 4
+            ? schema4DocumentSchema.safeParse(data)
+            : documentSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue.path.join(".");
@@ -65,12 +68,16 @@ export function parseBackup(source: string): ResumeDocument {
   }
   const doc =
     result.data.schemaVersion === 1
-      ? migrateSchema3(migrateSchema2(migrateSchema1(result.data)))
+      ? migrateSchema4(
+          migrateSchema3(migrateSchema2(migrateSchema1(result.data))),
+        )
       : result.data.schemaVersion === 2
-        ? migrateSchema3(migrateSchema2(result.data))
+        ? migrateSchema4(migrateSchema3(migrateSchema2(result.data)))
         : result.data.schemaVersion === 3
-          ? migrateSchema3(result.data)
-          : result.data;
+          ? migrateSchema4(migrateSchema3(result.data))
+          : result.data.schemaVersion === 4
+            ? migrateSchema4(result.data)
+            : result.data;
   const seen = new Set<string>();
   const unique = (value: string) => {
     if (seen.has(value)) throw new Error(`Duplicate identifier: ${value}`);
@@ -97,28 +104,28 @@ export function parseBackup(source: string): ResumeDocument {
     for (const bulletId of Object.keys(variant.wording.achievements))
       if (!bulletIds.has(bulletId))
         throw new Error(
-          `Variant ${variant.name} has an unavailable wording override achievement reference.`,
+          `Resume ${variant.name} has an unavailable wording override achievement reference.`,
         );
     const sectionIds = new Set<string>();
     if (variant.sections.length !== doc.sections.length)
       throw new Error(
-        `Variant ${variant.name || "Untitled"} must contain a selection for every library section, including hidden sections.`,
+        `Resume ${variant.name || "Untitled"} must contain a selection for every library section, including hidden sections.`,
       );
     for (const selected of variant.sections) {
       if (sectionIds.has(selected.sectionId))
-        throw new Error("A variant contains a duplicate section reference.");
+        throw new Error("A resume contains a duplicate section reference.");
       sectionIds.add(selected.sectionId);
       const section = doc.sections.find(
         (section) => section.id === selected.sectionId,
       );
       if (!section)
         throw new Error(
-          `Variant ${variant.name} references an unavailable section.`,
+          `Resume ${variant.name} references an unavailable section.`,
         );
       const entryIds = new Set<string>();
       for (const selection of selected.entries) {
         if (entryIds.has(selection.entryId))
-          throw new Error("A variant contains a duplicate entry reference.");
+          throw new Error("A resume contains a duplicate entry reference.");
         entryIds.add(selection.entryId);
         const entry = section.entries.find(
           (entry) => entry.id === selection.entryId,
@@ -131,7 +138,7 @@ export function parseBackup(source: string): ResumeDocument {
           )
         )
           throw new Error(
-            `Variant ${variant.name} has an invalid entry or achievement reference.`,
+            `Resume ${variant.name} has an invalid entry or achievement reference.`,
           );
       }
     }
@@ -209,13 +216,31 @@ export function migrateSchema2(
  */
 export function migrateSchema3(
   legacy: z.infer<typeof schema3DocumentSchema>,
-): ResumeDocument {
-  return documentSchema.parse({
+): z.infer<typeof schema4DocumentSchema> {
+  return schema4DocumentSchema.parse({
     ...legacy,
     schemaVersion: 4,
     variants: legacy.variants.map((variant) => ({
       ...variant,
       wording: { achievements: {} },
+    })),
+  });
+}
+
+/** Add a default navigation color without changing content or review history.
+ * @param legacy Validated schema-4 workspace.
+ * @returns A schema-5 workspace with indigo resume identities.
+ * @example migrateSchema4(schema4DocumentSchema.parse(data))
+ */
+export function migrateSchema4(
+  legacy: z.infer<typeof schema4DocumentSchema>,
+): ResumeDocument {
+  return documentSchema.parse({
+    ...legacy,
+    schemaVersion: 5,
+    variants: legacy.variants.map((variant) => ({
+      ...variant,
+      color: "indigo",
     })),
   });
 }

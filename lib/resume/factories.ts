@@ -22,7 +22,7 @@ export function createEmptyDocument(): ResumeDocument {
     entries: [],
   }));
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     revision: 0,
     template: { ...templateIdentity },
     profile: {
@@ -45,6 +45,7 @@ export function createEmptyDocument(): ResumeDocument {
       {
         id: "general",
         name: "General",
+        color: "indigo",
         sections: sections.map((section) => ({
           sectionId: section.id,
           visible: true,

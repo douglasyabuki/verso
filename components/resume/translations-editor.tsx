@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { VariantWordingField } from "@/components/resume/variant-wording-field";
 import { WordingField } from "@/components/resume/wording-field";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,271 +14,373 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
-import {
-  localizedFields,
-  plain,
-  translationStatus,
-} from "@/lib/resume/localization";
-import { sharedWording } from "@/lib/resume/wording";
+import { localizedFields, plain } from "@/lib/resume/localization";
+import { reviewItems } from "@/lib/resume/review-queue";
+import { sharedWording, variantWording } from "@/lib/resume/wording";
 import type { EditorProps } from "@/types-and-constants/editor";
-import type { Locale } from "@/types-and-constants/resume";
+import type {
+  ReviewFilters,
+  ReviewItem,
+  ReviewReturnContext,
+  WorkspaceFocusTarget,
+} from "@/types-and-constants/navigation";
 
 export function TranslationsEditor({
   document,
   update,
-  locale,
   variant,
   confirm,
-}: Pick<
-  EditorProps,
-  "document" | "update" | "locale" | "variant" | "confirm"
->) {
-  const [scope, setScope] = useState("active");
-  const [sectionId, setSectionId] = useState("all");
-  const [target, setTarget] = useState<Locale>(locale);
-  const [status, setStatus] = useState("all");
-  const [activePath, setActivePath] = useState<string | null>(null);
-  const cards = useRef(new Map<string, HTMLDivElement>());
-  const selectedSection =
-    sectionId === "all" ||
-    sectionId === "profile" ||
-    document.sections.some((section) => section.id === sectionId)
-      ? sectionId
-      : "all";
-  const fields = localizedFields(
-    document,
-    scope === "active" ? variant : undefined,
-  ).filter(
-    (field) => selectedSection === "all" || field.sectionId === selectedSection,
+  scope,
+  sectionId,
+  context,
+  onContext,
+  onOwner,
+  queueContext,
+}: Pick<EditorProps, "document" | "update" | "variant" | "confirm"> & {
+  scope: "queue" | "library" | "resume";
+  sectionId?: string;
+  context: ReviewReturnContext;
+  onContext: (context: ReviewReturnContext) => void;
+  onOwner: (target: WorkspaceFocusTarget) => void;
+  queueContext?: ReviewReturnContext;
+}) {
+  const all = reviewItems(document, false, context.current ?? undefined);
+  const output = localizedFields(document, variant);
+  const fields = all.filter(
+    (item) =>
+      scope === "queue" ||
+      (scope === "library"
+        ? !item.resumeId && item.field.sectionId === sectionId
+        : output.some(
+            (field) =>
+              field.path === item.path &&
+              (field.required || plain(field.value, item.locale).trim()),
+          ) &&
+          item.resumeId ===
+            (variantWording(variant, item.path) ? variant.id : undefined)),
   );
-  const matches = (field: (typeof fields)[number]) => {
-    const state = translationStatus(field, target);
-    return (
-      status === "all" ||
-      (status === "missing"
-        ? state.missing
-        : status === "review"
-          ? state.review
-          : status === "shared"
-            ? state.sharedReview
-            : state.unresolved)
+  const { filters, current } = context;
+  const matchesFilters = (item: ReviewItem, filters: ReviewFilters) =>
+    (filters.owner === "all" ||
+      (item.resumeId ? `resume:${item.resumeId}` : "library") ===
+        filters.owner) &&
+    (filters.language === "all" || item.locale === filters.language) &&
+    (filters.section === "all" || item.field.sectionId === filters.section) &&
+    (filters.reason === "all" || item.reasons.includes(filters.reason)) &&
+    (filters.output === "all" || item.output === (filters.output === "used"));
+  const matches = (item: ReviewItem) => matchesFilters(item, filters);
+  const candidates = (queueContext ? all : fields).filter(
+    (item) =>
+      matchesFilters(item, queueContext?.filters ?? filters) &&
+      item.reasons.length > 0,
+  );
+  const currentItem =
+    current &&
+    all.find(
+      (item) =>
+        item.path === current.path &&
+        item.locale === current.locale &&
+        item.resumeId === current.resumeId,
     );
+  const index = currentItem
+    ? all.findIndex((item) => item.id === currentItem.id)
+    : -1;
+  const previous = candidates.findLast((item) => all.indexOf(item) < index);
+  const next = candidates.find((item) => all.indexOf(item) > index);
+  const visible = scope === "queue" ? candidates : fields.filter(matches);
+  const detail = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const restoredPage = useRef<string | null>(null);
+  const pageKey =
+    scope === "resume"
+      ? `resume:${variant.id}`
+      : scope === "library"
+        ? `library:${sectionId}`
+        : "queue";
+  const pageScroll = useRef(context.pageScroll);
+  useEffect(() => {
+    pageScroll.current = context.pageScroll;
+  }, [context.pageScroll]);
+  useEffect(() => {
+    if (!current) return;
+    if (pageScroll.current === undefined)
+      detail.current?.scrollIntoView({ block: "nearest" });
+    detail.current
+      ?.querySelector<HTMLElement>("[data-issue-field]")
+      ?.focus({ preventScroll: true });
+  }, [current, scope, sectionId]);
+  useLayoutEffect(() => {
+    // Restore once on entry. Replaying saved offsets during wheel or thumb
+    // movement can overwrite a newer browser position with an older render.
+    if (restoredPage.current === pageKey) return;
+    const scroller = list.current?.closest<HTMLElement>(
+      "[data-workspace-scroll]",
+    );
+    if (!scroller) return;
+    restoredPage.current = pageKey;
+    scroller.scrollTop = context.pageScroll ?? 0;
+  }, [pageKey, context.pageScroll]);
+  const select = (item: ReviewItem) => {
+    onContext({
+      ...context,
+      pageScroll: scope === "queue" ? context.pageScroll : undefined,
+      current: {
+        path: item.path,
+        locale: item.locale,
+        resumeId: item.resumeId,
+      },
+    });
+    if (scope === "queue" || queueContext) onOwner(item);
   };
-  const visible = fields.filter(
-    (field) => matches(field) || field.path === activePath,
-  );
-  const unresolved = fields.filter(
-    (field) => matches(field) && translationStatus(field, target).unresolved,
-  );
-  const activeIndex = fields.findIndex((field) => field.path === activePath);
-  const previous = unresolved.findLast(
-    (field) => fields.indexOf(field) < activeIndex,
-  );
-  const next = unresolved.find((field) => fields.indexOf(field) > activeIndex);
-  const position = unresolved.findIndex((field) => field.path === activePath);
-
-  function navigate(path: string) {
-    setActivePath(path);
-    const card = cards.current.get(path);
-    card?.scrollIntoView({ block: "nearest" });
-    const key = `${scope === "active" && sharedWording(document, path) ? `variants.${variant.id}.` : ""}${path}.${target}`;
-    card
-      ?.querySelector<HTMLElement>(`[data-issue-field="${CSS.escape(key)}"]`)
-      ?.focus();
-  }
-
+  const filter = (key: keyof ReviewFilters, value: string) =>
+    onContext({ ...context, filters: { ...filters, [key]: value } });
   return (
     <div className="flex flex-col gap-5">
-      <FieldGroup className="grid gap-4 @2xl:grid-cols-2">
-        <Field>
-          <FieldLabel htmlFor="translation-scope">Variant scope</FieldLabel>
-          <NativeSelect
-            id="translation-scope"
-            value={scope}
-            onChange={(event) => {
-              setScope(event.target.value);
-              setActivePath(null);
-            }}
-          >
-            <NativeSelectOption value="active">
-              Active variant · {variant.name || "Untitled"}
-            </NativeSelectOption>
-            <NativeSelectOption value="library">All library</NativeSelectOption>
-          </NativeSelect>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="translation-section">Section</FieldLabel>
-          <NativeSelect
-            id="translation-section"
-            value={selectedSection}
-            onChange={(event) => {
-              setSectionId(event.target.value);
-              setActivePath(null);
-            }}
-          >
-            <NativeSelectOption value="all">All sections</NativeSelectOption>
-            <NativeSelectOption value="profile">Profile</NativeSelectOption>
-            {document.sections.map((section) => (
-              <NativeSelectOption key={section.id} value={section.id}>
-                {plain(section.heading, target) ||
-                  plain(
-                    section.heading,
-                    target === "en-US" ? "pt-BR" : "en-US",
-                  ) ||
-                  "Untitled section"}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="translation-language">
-            Target language
-          </FieldLabel>
-          <NativeSelect
-            id="translation-language"
-            value={target}
-            onChange={(event) => {
-              setTarget(event.target.value as Locale);
-              setActivePath(null);
-            }}
-          >
-            <NativeSelectOption value="en-US">English</NativeSelectOption>
-            <NativeSelectOption value="pt-BR">Português</NativeSelectOption>
-          </NativeSelect>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="translation-status">
-            Show translations
-          </FieldLabel>
-          <NativeSelect
-            id="translation-status"
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value);
-              setActivePath(null);
-            }}
-          >
-            <NativeSelectOption value="all">All wording</NativeSelectOption>
-            <NativeSelectOption value="missing">
-              Missing required wording
-            </NativeSelectOption>
-            <NativeSelectOption value="review">
-              Translation review
-            </NativeSelectOption>
-            <NativeSelectOption value="shared">
-              Shared wording changed
-            </NativeSelectOption>
-            <NativeSelectOption value="unresolved">
-              Unresolved
-            </NativeSelectOption>
-          </NativeSelect>
-        </Field>
+      <FieldGroup className="grid gap-3 sm:grid-cols-2">
+        {(scope === "queue"
+          ? [
+              {
+                key: "owner" as keyof ReviewFilters,
+                label: "Owner / resume",
+                options: [
+                  ["all", "All owners"],
+                  ["library", "Career library"],
+                  ...document.variants.map((resume) => [
+                    `resume:${resume.id}`,
+                    resume.name || "Untitled resume",
+                  ]),
+                ],
+              },
+              {
+                key: "section" as keyof ReviewFilters,
+                label: "Section",
+                options: [
+                  ["all", "All sections"],
+                  ["profile", "Profile & summary"],
+                  ...document.sections.map((section) => [
+                    section.id,
+                    section.heading["en-US"].spans
+                      .map((span) => span.text)
+                      .join("") || "Untitled section",
+                  ]),
+                ],
+              },
+            ]
+          : []
+        )
+          .concat([
+            {
+              key: "language",
+              label: "Target language",
+              options: [
+                ["all", "Both languages"],
+                ["en-US", "English"],
+                ["pt-BR", "Português"],
+              ],
+            },
+            {
+              key: "reason",
+              label: "Reason",
+              options: [
+                [
+                  "all",
+                  scope === "queue" ? "All unresolved reasons" : "All wording",
+                ],
+                ...[
+                  "Missing required wording",
+                  "Translation needs review",
+                  "Library wording changed beneath customization",
+                ].map((reason) => [reason, reason]),
+              ],
+            },
+            {
+              key: "output",
+              label: "Output use",
+              options: [
+                ["all", "All output use"],
+                ["used", "Used in output"],
+                ["excluded", "Excluded from output"],
+              ],
+            },
+          ] as {
+            key: keyof ReviewFilters;
+            label: string;
+            options: string[][];
+          }[])
+          .map(({ key, label, options }) => (
+            <Field key={key}>
+              <FieldLabel htmlFor={`review-${key}`}>{label}</FieldLabel>
+              <NativeSelect
+                id={`review-${key}`}
+                value={filters[key]}
+                onChange={(event) => filter(key, event.target.value)}
+              >
+                {options.map(([value, text]) => (
+                  <NativeSelectOption key={value} value={value}>
+                    {text}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
+          ))}
       </FieldGroup>
-      <FieldDescription>
-        Optional empty wording can stay empty. Review flags warn without
-        blocking valid draft downloads. All library includes archived and
-        unselected content; only selected output wording can block that output.
-      </FieldDescription>
-      <div className="flex flex-wrap items-center gap-3">
+      <p className="text-sm text-muted-foreground">
+        {candidates.length} unresolved in{" "}
+        {queueContext
+          ? "your global queue filters. Previous/Next follow that queue"
+          : "these filters"}
+        . Optional empty summaries remain valid. Reviews warn without blocking
+        valid downloads.
+      </p>
+      <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"
-          size="sm"
           disabled={!previous}
-          onClick={() => previous && navigate(previous.path)}
+          onClick={() => previous && select(previous)}
         >
           Previous unresolved
         </Button>
         <Button
           variant="outline"
-          size="sm"
           disabled={!next}
-          onClick={() => next && navigate(next.path)}
+          onClick={() => next && select(next)}
         >
           Next unresolved
         </Button>
-        <p
-          role="status"
-          aria-live="polite"
-          className="text-sm text-muted-foreground"
-        >
-          {position >= 0
-            ? `${position + 1} of ${unresolved.length} unresolved`
-            : `${unresolved.length} unresolved remaining`}
-        </p>
       </div>
-      {!visible.length && (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>All clear</EmptyTitle>
-            <EmptyDescription>
-              No wording matches these filters.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      )}
-      {visible.map((field) => (
-        <Card
-          key={`${field.path}:${target}`}
-          ref={(node) => {
-            if (node) cards.current.set(field.path, node);
-            else cards.current.delete(field.path);
-          }}
-          onFocusCapture={() => setActivePath(field.path)}
-        >
+      {current && (
+        <Card ref={detail}>
           <CardHeader>
-            <CardTitle>{field.label}</CardTitle>
-            <CardDescription>Source: {field.source}</CardDescription>
+            <CardTitle>
+              Current item{" "}
+              {currentItem && !currentItem.reasons.length && (
+                <Badge variant="secondary">Resolved</Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              {currentItem
+                ? `${currentItem.owner} · ${currentItem.field.source} · ${currentItem.field.label} · ${currentItem.locale}`
+                : "This item is unavailable. Its content or resume was removed."}
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            {scope === "active" && sharedWording(document, field.path) ? (
-              <VariantWordingField
-                document={document}
-                variant={variant}
-                path={field.path}
-                locale={target}
-                update={update}
-                confirm={confirm}
-                label={field.label}
-                required={field.required}
-                multiline={field.multiline}
-              />
-            ) : (
-              <WordingField
-                document={document}
-                path={field.path}
-                locale={target}
-                update={update}
-                label={target === "en-US" ? "English" : "Português"}
-                required={field.required}
-                multiline={field.multiline}
-                showReference
-              />
-            )}
-          </CardContent>
-          <CardFooter>
-            <p className="text-xs text-muted-foreground">
-              Editing effective wording flags its existing effective counterpart
-              for review. Variant review stays separate from library review.
-            </p>
-          </CardFooter>
+          {currentItem && (
+            <>
+              <CardContent className="flex flex-col gap-4">
+                {!matches(currentItem) && (
+                  <p className="text-sm text-muted-foreground">
+                    Current item is outside these filters. It stays open until
+                    you open another item or leave this review context.
+                  </p>
+                )}
+                <p className="text-sm">
+                  {currentItem.provenance} ·{" "}
+                  {currentItem.output
+                    ? "Used in output"
+                    : "Excluded from output"}{" "}
+                  · Reference:{" "}
+                  {currentItem.locale === "en-US" ? "pt-BR" : "en-US"}
+                </p>
+                <p className="text-sm">
+                  {currentItem.reasons.join(" · ") || "Resolved"}
+                </p>
+                {currentItem.resumeId ||
+                (scope === "resume" &&
+                  sharedWording(document, currentItem.path)) ? (
+                  <VariantWordingField
+                    key={currentItem.id}
+                    document={document}
+                    variant={
+                      document.variants.find(
+                        (resume) => resume.id === currentItem.resumeId,
+                      ) ?? variant
+                    }
+                    path={currentItem.path}
+                    locale={currentItem.locale}
+                    update={update}
+                    confirm={confirm}
+                    label={currentItem.field.label}
+                    required={currentItem.field.required}
+                    multiline={currentItem.field.multiline}
+                  />
+                ) : scope === "resume" ? (
+                  <div className="flex flex-col gap-3">
+                    <p
+                      lang={currentItem.locale}
+                      className="text-sm whitespace-pre-wrap"
+                    >
+                      {plain(currentItem.field.value, currentItem.locale) ||
+                        "Empty library wording"}
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        onOwner({
+                          path: currentItem.path,
+                          locale: currentItem.locale,
+                        })
+                      }
+                    >
+                      Review in career library
+                    </Button>
+                  </div>
+                ) : (
+                  <WordingField
+                    key={currentItem.id}
+                    document={document}
+                    path={currentItem.path}
+                    locale={currentItem.locale}
+                    update={update}
+                    label={currentItem.field.label}
+                    required={currentItem.field.required}
+                    multiline={currentItem.field.multiline}
+                    showReference
+                  />
+                )}
+              </CardContent>
+              {scope === "queue" && (
+                <CardFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => onOwner(currentItem)}
+                  >
+                    Open owning editor
+                  </Button>
+                </CardFooter>
+              )}
+            </>
+          )}
+          {!currentItem && (
+            <CardFooter>
+              <Button variant="outline" onClick={() => onOwner(current)}>
+                Return safely to review
+              </Button>
+            </CardFooter>
+          )}
         </Card>
-      ))}
+      )}
+      <div ref={list} className="flex flex-col gap-2">
+        {!visible.length && (
+          <p role="status">No unresolved work matches these filters.</p>
+        )}
+        {visible
+          .filter((item) => item.id !== currentItem?.id)
+          .map((item) => (
+            <Button
+              key={item.id}
+              variant="outline"
+              className="h-auto min-h-8 justify-start py-2 text-left whitespace-normal"
+              onClick={() => select(item)}
+            >
+              {item.owner} · {item.field.source} · {item.field.label} ·{" "}
+              {item.locale} · {item.reasons.join(" · ") || "Resolved"}
+            </Button>
+          ))}
+      </div>
     </div>
   );
 }

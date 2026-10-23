@@ -49,7 +49,7 @@ Active configurations and agent skills live at the application root. Product req
 
 ## Resume architecture
 
-- Structured ResumeDocument schema 4 is the editable source of truth; schema-1/schema-2/schema-3 backups migrate explicitly on import or load. Keep shared schema-derived types in types-and-constants/resume.ts and schemas, validation, translation rules, and deterministic rendering under lib/resume/, independent of React and storage.
+- Structured ResumeDocument schema 5 is the editable source of truth; schema-1/schema-2/schema-3/schema-4 backups migrate explicitly on import or load. Keep shared schema-derived types in types-and-constants/resume.ts and schemas, validation, translation rules, and deterministic rendering under lib/resume/, independent of React and storage.
 - Supported output locales are en-US and pt-BR. Shared facts occur once; localized wording and achievement IDs survive reorder/rename operations. Translation review flags warn and do not block valid draft downloads.
 - The exact bundled template identity is exported by lib/resume/model.ts and mirrored in tools/compiler-proof/prepare.py. Load .agents/skills/resume-latex/SKILL.md for template, package, font, or compiler changes.
 - Generated .tex, PDFs, compiler assets under public/compiler/, and .cache/ are artifacts. Change structured content or template code, not generated files.

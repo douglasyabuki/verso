@@ -33,6 +33,7 @@ export function WorkspaceDataMenu({
   recover,
   resume,
   disabled,
+  inline = false,
 }: {
   dirty: boolean;
   importJson: () => void;
@@ -41,7 +42,35 @@ export function WorkspaceDataMenu({
   recover?: () => void;
   resume: () => void;
   disabled: boolean;
+  inline?: boolean;
 }) {
+  if (inline)
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">
+          {dirty ? "Changes since the last JSON backup" : "Matches JSON backup"}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={disabled} onClick={importJson}>
+            Import JSON
+          </Button>
+          <Button disabled={disabled} onClick={exportJson}>
+            Export JSON backup
+          </Button>
+          <Button variant="outline" disabled={disabled} onClick={example}>
+            Load fictional example
+          </Button>
+          {recover && (
+            <Button variant="outline" disabled={disabled} onClick={recover}>
+              Recover previous workspace
+            </Button>
+          )}
+          <Button variant="outline" disabled={disabled} onClick={resume}>
+            Review browser saving
+          </Button>
+        </div>
+      </div>
+    );
   return (
     <DropdownMenu>
       <Tooltip>

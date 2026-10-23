@@ -60,7 +60,7 @@ export function IssuesPanel({
               section: "Whole output",
               entry: "Whole output",
               field: "Template page target",
-              message: `${pages} pages exceeds the target of ${target}. Shorten wording, change variant selections, or adjust layout settings. Downloads remain available.`,
+              message: `${pages} pages exceeds the target of ${target}. Shorten wording, change resume selections, or adjust layout settings. Downloads remain available.`,
             },
           ]
         : [];
@@ -127,7 +127,7 @@ export function IssuesPanel({
   return (
     <section
       className="flex shrink-0 flex-col border-t"
-      aria-label="Active variant issues"
+      aria-label="Active resume issues"
     >
       <div className="flex flex-wrap items-center gap-2 px-4 py-2">
         <Button
@@ -165,8 +165,8 @@ export function IssuesPanel({
         {open && (
           <>
             <p className="mb-3 text-xs text-muted-foreground">
-              {variant.name || "Untitled variant"} / Only content used by this
-              variant is checked. Shared-field issues affect both languages.
+              {variant.name || "Untitled resume"} / Only content used by this
+              resume is checked. Shared-field issues affect both languages.
               Warnings never block downloads.
             </p>
             <div className="grid gap-6 lg:grid-cols-2">

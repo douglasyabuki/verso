@@ -102,9 +102,9 @@ export function SectionVisibilityHint({
         onPointerEnter={() => clearTimeout(leaveTimer.current)}
         onPointerLeave={close}
       >
-        This section is hidden in this variant and omitted from output. Turn on
-        its eye toggle in Variants to include it. You can still edit and sort
-        its content.
+        This section is hidden in this resume and omitted from output. Turn on
+        its eye toggle in Content & order to include it. You can still edit and
+        sort its content.
       </TooltipContent>
     </Tooltip>
   );

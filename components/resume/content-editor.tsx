@@ -9,18 +9,13 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
 
 import { EntryFields } from "@/components/resume/entry-fields";
-import { CheckField, LinksEditor, TextField } from "@/components/resume/fields";
-import {
-  AchievementSelectionActions,
-  InclusionStatus,
-  LibrarySearch,
-  SectionVisibilityHint,
-} from "@/components/resume/library-controls";
+import { LinksEditor, TextField } from "@/components/resume/fields";
+import { LibrarySearch } from "@/components/resume/library-controls";
 import { SortableList, SortableRow } from "@/components/resume/sortable-list";
 import { WordingField } from "@/components/resume/wording-field";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -51,15 +46,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { librarySectionLabel } from "@/components/workspace/navigation";
 import { createEntry } from "@/lib/resume/factories";
-import {
-  duplicateEntry,
-  matchesEntry,
-  selectAllAchievements,
-} from "@/lib/resume/library";
+import { duplicateEntry, matchesEntry } from "@/lib/resume/library";
 import { localized } from "@/lib/resume/localization";
 import { reorderVisible } from "@/lib/resume/operations";
 import { entryLabel } from "@/lib/resume/section-fields";
 import type { EditorProps } from "@/types-and-constants/editor";
+import type { LibraryEditorContext } from "@/types-and-constants/navigation";
 import type { Entry, Issue } from "@/types-and-constants/resume";
 import { entryTerminology } from "@/types-and-constants/resume";
 import type { EditGroup } from "@/types-and-constants/workspace";
@@ -67,33 +59,25 @@ import type { EditGroup } from "@/types-and-constants/workspace";
 export function ContentEditor({
   document,
   locale,
-  variant,
   update,
   confirm,
   sectionId,
   errors,
   issueTarget,
-}: EditorProps & {
+  context,
+  onContext,
+}: Pick<EditorProps, "document" | "locale" | "update" | "confirm"> & {
   sectionId: string;
   errors: Issue[];
   issueTarget?: Issue["target"];
+  context: LibraryEditorContext;
+  onContext: (context: LibraryEditorContext) => void;
 }) {
-  const [entryId, setEntryId] = useState(
-    issueTarget?.entryId ??
-      document.sections
-        .find((section) => section.id === sectionId)
-        ?.entries.find((entry) => !entry.archived)?.id ??
-      "",
-  );
-  const [showArchived, setShowArchived] = useState(
-    !!issueTarget?.entryId &&
-      document.sections.some((section) =>
-        section.entries.some(
-          (entry) => entry.id === issueTarget.entryId && entry.archived,
-        ),
-      ),
-  );
-  const [query, setQuery] = useState("");
+  const { entryId, showArchived, query } = context;
+  const setEntryId = (entryId: string) => onContext({ ...context, entryId });
+  const setQuery = (query: string) => onContext({ ...context, query });
+  const setShowArchived = (showArchived: boolean) =>
+    onContext({ ...context, showArchived });
   if (sectionId === "profile")
     return (
       <Card>
@@ -242,29 +226,17 @@ export function ContentEditor({
       draft.sections
         .find((section) => section.id === sectionId)!
         .entries.push(created);
-      draft.variants
-        .find((item) => item.id === variant.id)!
-        .sections.find((item) => item.sectionId === sectionId)!
-        .entries.push({ entryId: created.id, bulletIds: [] });
     });
-    setQuery("");
-    setEntryId(created.id);
+    onContext({ ...context, query: "", entryId: created.id });
   };
-  const selectedSection = variant.sections.find(
-    (item) => item.sectionId === sectionId,
-  );
-  const selection = selectedSection?.entries.find(
-    (item) => item.entryId === entry?.id,
-  );
-  const included = !!selection;
   return (
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader>
           <CardTitle size="section">{librarySectionLabel(section)}</CardTitle>
           <CardDescription>
-            {terms.description} Choose what belongs in each resume under
-            Variants.
+            {terms.description} Choose what belongs in each resume under Resumes
+            → Content &amp; order.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -314,7 +286,6 @@ export function ContentEditor({
                 contextKey={JSON.stringify([
                   query,
                   showArchived,
-                  variant.id,
                   locale,
                   entry?.id,
                 ])}
@@ -335,59 +306,44 @@ export function ContentEditor({
                   })
                 }
               >
-                <SectionVisibilityHint hidden={!selectedSection?.visible}>
-                  <ul
-                    className="flex flex-col gap-2 transition-opacity data-[section-hidden]:opacity-60"
-                    data-section-hidden={!selectedSection?.visible || undefined}
-                    aria-label="Library entries"
-                  >
-                    {displayed.map((item) => {
-                      const selected = selectedSection?.entries.find(
-                        (selection) => selection.entryId === item.id,
-                      );
-                      return (
-                        <SortableRow
-                          key={item.id}
-                          id={item.id}
-                          label={entryLabel(item, section.kind, locale)}
-                          as="li"
-                          className="flex flex-col gap-2 rounded-lg border p-3"
-                        >
-                          {({ dragHandle, orderButtons }) => (
-                            <>
-                              <div className="flex items-center gap-2">
-                                {dragHandle}
-                                <Button
-                                  className="min-w-0 flex-1 justify-start truncate"
-                                  variant={
-                                    entry?.id === item.id
-                                      ? "secondary"
-                                      : "ghost"
-                                  }
-                                  onClick={() => setEntryId(item.id)}
-                                  aria-pressed={entry?.id === item.id}
-                                >
-                                  {entryLabel(item, section.kind, locale)}
-                                </Button>
-                                {orderButtons}
-                              </div>
-                              <InclusionStatus
-                                selected={!!selected}
-                                archived={item.archived}
-                                sectionVisible={
-                                  selectedSection?.visible ?? false
+                <ul
+                  className="flex flex-col gap-2"
+                  aria-label="Library entries"
+                >
+                  {displayed.map((item) => {
+                    return (
+                      <SortableRow
+                        key={item.id}
+                        id={item.id}
+                        label={entryLabel(item, section.kind, locale)}
+                        as="li"
+                        className="flex flex-col gap-2 rounded-lg border p-3"
+                      >
+                        {({ dragHandle, orderButtons }) => (
+                          <>
+                            <div className="flex items-center gap-2">
+                              {dragHandle}
+                              <Button
+                                className="min-w-0 flex-1 justify-start truncate"
+                                variant={
+                                  entry?.id === item.id ? "secondary" : "ghost"
                                 }
-                                count={selected?.bulletIds.length ?? 0}
-                                total={item.bullets.length}
-                                variantName={variant.name || "this variant"}
-                              />
-                            </>
-                          )}
-                        </SortableRow>
-                      );
-                    })}
-                  </ul>
-                </SectionVisibilityHint>
+                                onClick={() => setEntryId(item.id)}
+                                aria-pressed={entry?.id === item.id}
+                              >
+                                {entryLabel(item, section.kind, locale)}
+                                {item.archived && (
+                                  <Badge variant="outline">Archived</Badge>
+                                )}
+                              </Button>
+                              {orderButtons}
+                            </div>
+                          </>
+                        )}
+                      </SortableRow>
+                    );
+                  })}
+                </ul>
               </SortableList>
             ) : (
               <Empty>
@@ -417,7 +373,7 @@ export function ContentEditor({
             Add {terms.singular}
           </Button>
           <span className="text-xs text-muted-foreground">
-            Library ordering is separate from variant ordering.
+            Library ordering is separate from resume output ordering.
           </span>
         </CardFooter>
       </Card>
@@ -443,8 +399,7 @@ export function ContentEditor({
                       );
                       if (index >= 0) entries.splice(index + 1, 0, copy);
                     });
-                    setQuery("");
-                    setEntryId(copy.id);
+                    onContext({ ...context, query: "", entryId: copy.id });
                   }}
                 >
                   <Copy data-icon="inline-start" />
@@ -482,7 +437,7 @@ export function ContentEditor({
                       .map((variant) => variant.name || "Untitled");
                     confirm(
                       "Permanently delete this entry?",
-                      `Its achievements and links will also be removed. Affected variants: ${affected.join(", ") || "none"}. Export a JSON backup first if you need a copy.`,
+                      `Its achievements and links will also be removed. Affected resumes: ${affected.join(", ") || "none"}. Export a JSON backup first if you need a copy.`,
                       () =>
                         update((draft) => {
                           draft.sections.find(
@@ -508,277 +463,175 @@ export function ContentEditor({
             <CardDescription>
               {entry.archived
                 ? "Archived entries stay editable and are hidden from all generated outputs."
-                : "Changes update every variant referencing this entry."}
+                : "Changes update every resume referencing this entry."}
             </CardDescription>
           </CardHeader>
 
-          <SectionVisibilityHint hidden={!selectedSection?.visible}>
-            <CardContent
-              data-section-hidden={!selectedSection?.visible || undefined}
-              className="transition-opacity data-[section-hidden]:opacity-60"
-            >
-              <FieldGroup>
-                <InclusionStatus
-                  selected={included}
-                  archived={entry.archived}
-                  sectionVisible={selectedSection?.visible ?? false}
-                  count={selection?.bulletIds.length ?? 0}
-                  total={entry.bullets.length}
-                  variantName={variant.name || "this variant"}
-                />
-                <CheckField
-                  label={`Include in ${variant.name || "this variant"}`}
-                  checked={included}
-                  disabled={entry.archived}
-                  onChange={(checked) =>
-                    update((draft) => {
-                      const selection = draft.variants
-                        .find((item) => item.id === variant.id)!
-                        .sections.find((item) => item.sectionId === sectionId)!;
-                      selection.entries = checked
-                        ? [
-                            ...selection.entries,
-                            {
-                              entryId: entry.id,
-                              bulletIds: entry.bullets.map(
-                                (bullet) => bullet.id,
-                              ),
-                            },
-                          ]
-                        : selection.entries.filter(
-                            (item) => item.entryId !== entry.id,
-                          );
-                    })
-                  }
-                />
-                <EntryFields
-                  entry={entry}
-                  section={section}
-                  document={document}
-                  locale={locale}
-                  update={update}
-                  errors={errors}
-                  changeEntry={changeEntry}
-                  issueTarget={issueTarget}
-                />
-                <Separator />
-                <FieldSet>
-                  <FieldLegend>{terms.items}</FieldLegend>
-                  {!entry.bullets.length && (
-                    <FieldDescription>
-                      No {terms.items.toLowerCase()} yet. Add a{" "}
-                      {terms.item.toLowerCase()} to describe this{" "}
-                      {terms.singular} in each language.
-                    </FieldDescription>
-                  )}
+          <CardContent>
+            <FieldGroup>
+              <EntryFields
+                entry={entry}
+                section={section}
+                document={document}
+                locale={locale}
+                update={update}
+                errors={errors}
+                changeEntry={changeEntry}
+                issueTarget={issueTarget}
+              />
+              <Separator />
+              <FieldSet>
+                <FieldLegend>{terms.items}</FieldLegend>
+                {!entry.bullets.length && (
                   <FieldDescription>
-                    Selected {terms.items.toLowerCase()} need text in the output
-                    language. Uncheck an unfinished {terms.item.toLowerCase()}{" "}
-                    to inspect the rest.
+                    No {terms.items.toLowerCase()} yet. Add a{" "}
+                    {terms.item.toLowerCase()} to describe this {terms.singular}{" "}
+                    in each language.
                   </FieldDescription>
-                  <AchievementSelectionActions
-                    label={terms.items}
-                    selected={selection?.bulletIds.length ?? 0}
-                    total={entry.bullets.length}
-                    disabled={!included || entry.archived}
-                    onSelectAll={() =>
-                      update((draft) => {
-                        const selected = draft.variants
-                          .find((item) => item.id === variant.id)!
-                          .sections.find(
-                            (item) => item.sectionId === sectionId,
-                          )!
-                          .entries.find((item) => item.entryId === entry.id);
-                        if (selected)
-                          selected.bulletIds = selectAllAchievements(
-                            selected.bulletIds,
-                            entry,
-                          );
-                      })
-                    }
-                    onClearAll={() =>
-                      update((draft) => {
-                        const selected = draft.variants
-                          .find((item) => item.id === variant.id)!
-                          .sections.find(
-                            (item) => item.sectionId === sectionId,
-                          )!
-                          .entries.find((item) => item.entryId === entry.id);
-                        if (selected) selected.bulletIds = [];
-                      })
-                    }
-                  />
-                  <SortableList
-                    scope={`library:${section.id}:${entry.id}:bullets`}
-                    revision={document}
-                    contextKey={JSON.stringify([variant.id, locale])}
-                    items={entry.bullets.map((bullet, index) => ({
-                      id: bullet.id,
-                      label: `${terms.item.toLowerCase()} ${index + 1}`,
-                    }))}
-                    onReorder={(source, target) =>
-                      changeEntry((entry) =>
-                        reorderVisible(
-                          entry.bullets,
-                          entry.bullets.map((bullet) => bullet.id),
-                          source,
-                          target,
-                          (bullet) => bullet.id,
-                        ),
-                      )
-                    }
-                  >
-                    <div className="flex flex-col gap-3">
-                      {entry.bullets.map((bullet, index) => (
-                        <SortableRow
-                          key={bullet.id}
-                          id={bullet.id}
-                          label={`${terms.item.toLowerCase()} ${index + 1}`}
-                          className="flex flex-col gap-3 rounded-lg border p-3"
-                        >
-                          {({ dragHandle, orderButtons }) => (
-                            <>
-                              <div className="flex items-center gap-2">
-                                {dragHandle}
-                                <span className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">
-                                  {terms.item.toUpperCase()} {index + 1}
-                                </span>
-                                <div className="flex gap-1">
-                                  {orderButtons}
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    aria-label={`Delete ${terms.item.toLowerCase()} ${index + 1}`}
-                                    onClick={() =>
-                                      confirm(
-                                        `Delete this ${terms.item.toLowerCase()}?`,
-                                        "This removes it from every variant that references it.",
-                                        () =>
-                                          update((draft) => {
-                                            const target = draft.sections
-                                              .find(
-                                                (section) =>
-                                                  section.id === sectionId,
-                                              )!
-                                              .entries.find(
-                                                (item) => item.id === entry.id,
-                                              )!;
-                                            target.bullets =
-                                              target.bullets.filter(
-                                                (item) => item.id !== bullet.id,
-                                              );
-                                            draft.variants.forEach((variant) =>
-                                              variant.sections.forEach(
-                                                (section) =>
-                                                  section.entries.forEach(
-                                                    (item) => {
-                                                      item.bulletIds =
-                                                        item.bulletIds.filter(
-                                                          (id) =>
-                                                            id !== bullet.id,
-                                                        );
-                                                    },
-                                                  ),
-                                              ),
+                )}
+                <FieldDescription>
+                  Include achievements explicitly in a resume?s Content &amp;
+                  order page.
+                </FieldDescription>
+                <SortableList
+                  scope={`library:${section.id}:${entry.id}:bullets`}
+                  revision={document}
+                  contextKey={JSON.stringify([locale])}
+                  items={entry.bullets.map((bullet, index) => ({
+                    id: bullet.id,
+                    label: `${terms.item.toLowerCase()} ${index + 1}`,
+                  }))}
+                  onReorder={(source, target) =>
+                    changeEntry((entry) =>
+                      reorderVisible(
+                        entry.bullets,
+                        entry.bullets.map((bullet) => bullet.id),
+                        source,
+                        target,
+                        (bullet) => bullet.id,
+                      ),
+                    )
+                  }
+                >
+                  <div className="flex flex-col gap-3">
+                    {entry.bullets.map((bullet, index) => (
+                      <SortableRow
+                        key={bullet.id}
+                        id={bullet.id}
+                        label={`${terms.item.toLowerCase()} ${index + 1}`}
+                        className="flex flex-col gap-3 rounded-lg border p-3"
+                      >
+                        {({ dragHandle, orderButtons }) => (
+                          <>
+                            <div className="flex items-center gap-2">
+                              {dragHandle}
+                              <span className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">
+                                {terms.item.toUpperCase()} {index + 1}
+                              </span>
+                              <div className="flex gap-1">
+                                {orderButtons}
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={`Delete ${terms.item.toLowerCase()} ${index + 1}`}
+                                  onClick={() =>
+                                    confirm(
+                                      `Delete this ${terms.item.toLowerCase()}?`,
+                                      "This removes it from every resume that references it.",
+                                      () =>
+                                        update((draft) => {
+                                          const target = draft.sections
+                                            .find(
+                                              (section) =>
+                                                section.id === sectionId,
+                                            )!
+                                            .entries.find(
+                                              (item) => item.id === entry.id,
+                                            )!;
+                                          target.bullets =
+                                            target.bullets.filter(
+                                              (item) => item.id !== bullet.id,
                                             );
-                                          }),
-                                      )
-                                    }
-                                  >
-                                    <Trash2 />
-                                  </Button>
-                                </div>
+                                          draft.variants.forEach((variant) =>
+                                            variant.sections.forEach(
+                                              (section) =>
+                                                section.entries.forEach(
+                                                  (item) => {
+                                                    item.bulletIds =
+                                                      item.bulletIds.filter(
+                                                        (id) =>
+                                                          id !== bullet.id,
+                                                      );
+                                                  },
+                                                ),
+                                            ),
+                                          );
+                                        }),
+                                    )
+                                  }
+                                >
+                                  <Trash2 />
+                                </Button>
                               </div>
-                              <CheckField
-                                label={`Use in ${variant.name || "this variant"}`}
-                                checked={
-                                  !!selection?.bulletIds.includes(bullet.id)
-                                }
-                                disabled={!included || entry.archived}
-                                onChange={(checked) =>
-                                  update((draft) => {
-                                    const selected = draft.variants
-                                      .find((item) => item.id === variant.id)!
-                                      .sections.find(
-                                        (item) => item.sectionId === sectionId,
-                                      )!
-                                      .entries.find(
-                                        (item) => item.entryId === entry.id,
-                                      )!;
-                                    selected.bulletIds = checked
-                                      ? [...selected.bulletIds, bullet.id]
-                                      : selected.bulletIds.filter(
-                                          (id) => id !== bullet.id,
-                                        );
-                                  })
-                                }
-                              />
-                              <WordingField
-                                document={document}
-                                path={`bullets.${bullet.id}.body`}
-                                locale={locale}
-                                update={update}
-                                label={terms.item}
-                                multiline={section.kind !== "skills"}
-                                required
-                                errors={errors}
-                              />
-                            </>
-                          )}
-                        </SortableRow>
-                      ))}
-                    </div>
-                  </SortableList>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={entry.bullets.length >= 100}
-                    onClick={() => {
-                      const bullet = {
-                        id: crypto.randomUUID(),
-                        body: localized(),
-                      };
-                      update((draft) => {
-                        draft.sections
-                          .find((section) => section.id === sectionId)!
-                          .entries.find((item) => item.id === entry.id)!
-                          .bullets.push(bullet);
-                        const selected = draft.variants
-                          .find((item) => item.id === variant.id)!
-                          .sections.find(
-                            (item) => item.sectionId === sectionId,
-                          )!
-                          .entries.find((item) => item.entryId === entry.id);
-                        selected?.bulletIds.push(bullet.id);
-                      });
-                    }}
-                  >
-                    <Plus data-icon="inline-start" />
-                    Add {terms.item.toLowerCase()}
-                  </Button>
-                </FieldSet>
-                <Separator />
-                <FieldSet>
-                  <FieldLegend>
-                    {section.kind === "certifications"
-                      ? "Verification links"
-                      : section.kind === "projects"
-                        ? "Project links"
-                        : "Links"}
-                  </FieldLegend>
-                  <LinksEditor
-                    links={entry.links}
-                    onChange={(links, group) =>
-                      changeEntry((target) => {
-                        target.links = links;
-                      }, group)
-                    }
-                    confirm={confirm}
-                  />
-                </FieldSet>
-              </FieldGroup>
-            </CardContent>
-          </SectionVisibilityHint>
+                            </div>
+                            <WordingField
+                              document={document}
+                              path={`bullets.${bullet.id}.body`}
+                              locale={locale}
+                              update={update}
+                              label={terms.item}
+                              multiline={section.kind !== "skills"}
+                              required
+                              errors={errors}
+                            />
+                          </>
+                        )}
+                      </SortableRow>
+                    ))}
+                  </div>
+                </SortableList>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={entry.bullets.length >= 100}
+                  onClick={() => {
+                    const bullet = {
+                      id: crypto.randomUUID(),
+                      body: localized(),
+                    };
+                    update((draft) => {
+                      draft.sections
+                        .find((section) => section.id === sectionId)!
+                        .entries.find((item) => item.id === entry.id)!
+                        .bullets.push(bullet);
+                    });
+                  }}
+                >
+                  <Plus data-icon="inline-start" />
+                  Add {terms.item.toLowerCase()}
+                </Button>
+              </FieldSet>
+              <Separator />
+              <FieldSet>
+                <FieldLegend>
+                  {section.kind === "certifications"
+                    ? "Verification links"
+                    : section.kind === "projects"
+                      ? "Project links"
+                      : "Links"}
+                </FieldLegend>
+                <LinksEditor
+                  links={entry.links}
+                  onChange={(links, group) =>
+                    changeEntry((target) => {
+                      target.links = links;
+                    }, group)
+                  }
+                  confirm={confirm}
+                />
+              </FieldSet>
+            </FieldGroup>
+          </CardContent>
 
           <CardFooter>
             <p className="text-xs text-muted-foreground">

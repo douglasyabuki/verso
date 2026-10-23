@@ -77,7 +77,7 @@ export function VariantComparison({
   if (!right)
     return (
       <p className="text-sm text-muted-foreground">
-        Create or duplicate a second variant to compare selections, wording, and
+        Create or duplicate a second resume to compare selections, wording, and
         settings.
       </p>
     );
@@ -93,7 +93,7 @@ export function VariantComparison({
       status,
       spans: value[locale].spans,
       source: variantWording(selected, path)?.overrides[locale]
-        ? "Variant override"
+        ? "Customized for this resume"
         : "Shared wording",
       translation: value[locale].needsReview,
       shared: sharedWordingChanged(shared, selected, path, locale),
@@ -209,7 +209,7 @@ export function VariantComparison({
         {variants.map((item, index) => (
           <Field key={index}>
             <FieldLabel htmlFor={`compare-${index}`}>
-              {index ? "Right variant" : "Left variant"}
+              {index ? "Right resume" : "Left resume"}
             </FieldLabel>
             <NativeSelect
               id={`compare-${index}`}
@@ -224,7 +224,7 @@ export function VariantComparison({
                 .filter((candidate) => candidate.id !== variants[1 - index].id)
                 .map((candidate) => (
                   <NativeSelectOption key={candidate.id} value={candidate.id}>
-                    {candidate.name || "Untitled variant"}
+                    {candidate.name || "Untitled resume"}
                   </NativeSelectOption>
                 ))}
             </NativeSelect>
@@ -252,7 +252,7 @@ export function VariantComparison({
       <p className="text-sm text-muted-foreground">
         Read-only comparison. Excluded content and its retained overrides are
         included below. Settings show the final value after workspace, language,
-        variant, and variant-language overrides.
+        resume, and resume-language overrides.
       </p>
       {!visible.length && <p role="status">No differences in this language.</p>}
       {visible.map((row) => {
@@ -263,23 +263,21 @@ export function VariantComparison({
             <CardHeader>
               <CardTitle>{row.label}</CardTitle>
               <CardDescription>
-                {changed
-                  ? "Different between variants"
-                  : "Same in both variants"}
+                {changed ? "Different between resumes" : "Same in both resumes"}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 @2xl:grid-cols-2">
               {row.cells.map((cell, index) => (
                 <div key={index} className="flex min-w-0 flex-col gap-2">
                   <p className="text-sm font-medium">
-                    {variants[index].name || "Untitled variant"}
+                    {variants[index].name || "Untitled resume"}
                   </p>
                   <p className="text-sm">{cell.status}</p>
                   <div className="flex flex-wrap gap-2">
                     {cell.source && (
                       <Badge
                         variant={
-                          cell.source === "Variant override"
+                          cell.source === "Customized for this resume"
                             ? "secondary"
                             : "outline"
                         }
@@ -350,7 +348,7 @@ export function VariantComparison({
                     })
                   }
                 >
-                  Edit {item.name || "Untitled variant"}
+                  Edit {item.name || "Untitled resume"}
                 </Button>
               ))}
             </CardFooter>

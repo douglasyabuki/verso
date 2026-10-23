@@ -58,7 +58,7 @@ export function WorkspaceHeader({
     <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 md:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <label htmlFor="variant-picker" className="sr-only">
-          Active resume variant
+          Active resume
         </label>
         <NativeSelect
           id="variant-picker"
@@ -68,7 +68,7 @@ export function WorkspaceHeader({
         >
           {document.variants.map((item) => (
             <NativeSelectOption key={item.id} value={item.id}>
-              {item.name || "Untitled variant"}
+              {item.name || "Untitled resume"}
             </NativeSelectOption>
           ))}
         </NativeSelect>

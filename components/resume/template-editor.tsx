@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -31,13 +30,25 @@ export function SettingsEditor({
   variant,
   locale,
   update,
-  initialScope = "base",
+  initialScope = "variant",
+  sharedDefaults = false,
 }: Pick<EditorProps, "document" | "variant" | "locale" | "update"> & {
   initialScope?: string;
+  sharedDefaults?: boolean;
 }) {
   const [scope, setScope] = useState(initialScope);
   const selectId = useId();
-  const values = resolveSettings(document, variant, locale);
+  const scopeVariant = sharedDefaults
+    ? { ...variant, settings: {}, localeSettings: {} }
+    : scope === "variant"
+      ? { ...variant, localeSettings: {} }
+      : variant;
+  const values = resolveSettings(
+    scope === "base" ? { ...document, localeSettings: {} } : document,
+    scopeVariant,
+    locale,
+  );
+  const output = resolveSettings(document, variant, locale);
   const target =
     scope === "base"
       ? document.settings
@@ -136,21 +147,29 @@ export function SettingsEditor({
                 value={scope}
                 onChange={(event) => setScope(event.target.value)}
               >
-                <NativeSelectOption value="base">
-                  Workspace defaults
-                </NativeSelectOption>
-                <NativeSelectOption value="locale">
-                  {locale} defaults
-                </NativeSelectOption>
-                <NativeSelectOption value="variant">
-                  {variant.name || "Current variant"}
-                </NativeSelectOption>
-                <NativeSelectOption value="variant-locale">
-                  {variant.name || "Current variant"} · {locale}
-                </NativeSelectOption>
+                {sharedDefaults ? (
+                  <>
+                    <NativeSelectOption value="base">
+                      Workspace defaults
+                    </NativeSelectOption>
+                    <NativeSelectOption value="locale">
+                      Language defaults · {locale}
+                    </NativeSelectOption>
+                  </>
+                ) : (
+                  <>
+                    <NativeSelectOption value="variant">
+                      Resume · {variant.name || "Untitled resume"}
+                    </NativeSelectOption>
+                    <NativeSelectOption value="variant-locale">
+                      Resume language · {locale}
+                    </NativeSelectOption>
+                  </>
+                )}
               </NativeSelect>
               <FieldDescription>
-                Precedence: workspace → language → variant → variant language.
+                Precedence: Workspace defaults → Language defaults → Resume →
+                Resume language.
               </FieldDescription>
             </Field>
             <FieldGroup className="grid gap-4 sm:grid-cols-2">
@@ -196,13 +215,38 @@ export function SettingsEditor({
                         </NativeSelectOption>
                       ))}
                     </NativeSelect>
+                    <FieldDescription>
+                      Effective: {values[control.key]}
+                      {control.unit ? " " + control.unit : ""}. Source:{" "}
+                      {current !== undefined
+                        ? sharedDefaults
+                          ? scope === "base"
+                            ? "Workspace defaults"
+                            : "Language defaults"
+                          : scope === "variant"
+                            ? "Resume"
+                            : "Resume language"
+                        : !sharedDefaults &&
+                            scope === "variant-locale" &&
+                            variant.settings[control.key] !== undefined
+                          ? "Resume"
+                          : scope !== "base" &&
+                              scope !== "locale" &&
+                              document.localeSettings[locale]?.[control.key] !==
+                                undefined
+                            ? "Language defaults"
+                            : "Workspace defaults"}
+                      .{" "}
+                      {scope !== "base" &&
+                        "Choose Inherit to reset this setting."}
+                    </FieldDescription>
                   </Field>
                 );
               })}
             </FieldGroup>
             <p className="text-xs text-muted-foreground">
-              Current output: {values.pageSize.toUpperCase()}, {values.fontSize}{" "}
-              pt, target {values.targetPages} pages. Content is never removed to
+              Current output: {output.pageSize.toUpperCase()}, {output.fontSize}{" "}
+              pt, target {output.targetPages} pages. Content is never removed to
               meet the target.
             </p>
           </FieldGroup>
@@ -213,70 +257,70 @@ export function SettingsEditor({
           </p>
         </CardFooter>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle size="section">Browser compiler</CardTitle>
-          <CardDescription>
-            Initialization and compilation have independent timeouts. Changing
-            these settings restarts the engine.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FieldGroup>
-            {(["initializationTimeoutMs", "compilationTimeoutMs"] as const).map(
-              (key) => (
-                <Field key={key}>
-                  <FieldLabel htmlFor={selectId + key}>
-                    {key === "initializationTimeoutMs"
-                      ? "Initialization timeout"
-                      : "Compilation timeout"}
-                  </FieldLabel>
-                  <NativeSelect
-                    id={selectId + key}
-                    value={document.compiler[key]}
-                    onChange={(event) =>
-                      update((draft) => {
-                        draft.compiler[key] = Number(event.target.value);
-                      })
-                    }
-                  >
-                    {Array.from(
-                      new Set([
-                        5_000,
-                        10_000,
-                        30_000,
-                        60_000,
-                        120_000,
-                        300_000,
-                        600_000,
-                        document.compiler[key],
-                      ]),
-                    ).map((value) => (
-                      <NativeSelectOption key={value} value={value}>
-                        {value / 1000} seconds
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
-                </Field>
-              ),
-            )}
-          </FieldGroup>
-        </CardContent>
-        <CardFooter>
-          <p className="text-xs text-muted-foreground">
-            Locally verified in desktop Chrome, Edge, and Firefox. Safari is
-            unverified.
-          </p>
-        </CardFooter>
-      </Card>
-      <Alert>
-        <AlertTitle>Session-only workspace</AlertTitle>
-        <AlertDescription>
-          There is no cloud or browser storage. Export JSON to preserve your
-          editable content and settings. PDF and LaTeX downloads do not save the
-          workspace.
-        </AlertDescription>
-      </Alert>
     </div>
+  );
+}
+
+export function CompilerSettings({
+  document,
+  update,
+}: Pick<EditorProps, "document" | "update">) {
+  const selectId = useId();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle size="section">Browser compiler</CardTitle>
+        <CardDescription>
+          Initialization and compilation have independent timeouts. Changing
+          these settings restarts the engine.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <FieldGroup>
+          {(["initializationTimeoutMs", "compilationTimeoutMs"] as const).map(
+            (key) => (
+              <Field key={key}>
+                <FieldLabel htmlFor={selectId + key}>
+                  {key === "initializationTimeoutMs"
+                    ? "Initialization timeout"
+                    : "Compilation timeout"}
+                </FieldLabel>
+                <NativeSelect
+                  id={selectId + key}
+                  value={document.compiler[key]}
+                  onChange={(event) =>
+                    update((draft) => {
+                      draft.compiler[key] = Number(event.target.value);
+                    })
+                  }
+                >
+                  {Array.from(
+                    new Set([
+                      5_000,
+                      10_000,
+                      30_000,
+                      60_000,
+                      120_000,
+                      300_000,
+                      600_000,
+                      document.compiler[key],
+                    ]),
+                  ).map((value) => (
+                    <NativeSelectOption key={value} value={value}>
+                      {value / 1000} seconds
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Field>
+            ),
+          )}
+        </FieldGroup>
+      </CardContent>
+      <CardFooter>
+        <p className="text-xs text-muted-foreground">
+          Timeouts apply across the workspace and are included in JSON backups.
+        </p>
+      </CardFooter>
+    </Card>
   );
 }

@@ -2,7 +2,7 @@
 
 A locally saved bilingual resume workspace built with Next.js 16.4.2, React 19.3,
 TypeScript, Tailwind CSS 4, and Base UI shadcn components. Edit structured career
-content, review English/Portuguese wording, choose variants, and generate actual
+content, review English/Portuguese wording, tailor resumes, and generate actual
 LaTeX PDFs entirely in the browser.
 
 ## Local setup
@@ -52,9 +52,14 @@ persistence invariants.
 
 ## Working with drafts
 
-Start empty or explicitly load the fictional example. Use Content for shared
-career records, Translations for side-by-side review, Variants for selections
-and output ordering, and Template for layout overrides and compiler timeouts.
+Start empty or explicitly load the fictional example in **Data & backups**.
+**Career library** opens Overview; each section has **Edit content** and
+**Review translations** tabs. Shared edits affect every resume using that content.
+New entries and achievements stay outside all resumes until explicitly included.
+**Resumes** opens All resumes for creation, duplication, opening, and deletion.
+Each resume owns **Content & order**, **Translations**, and **Layout**.
+Layout starts with Resume and Resume-language scopes; **Edit shared defaults**
+opens workspace/language defaults separately. Compiler timeouts live in Data & backups.
 Desktop has a resizable editor/PDF split; narrow screens switch between panels.
 Career library navigation stays in English while resume wording follows the
 selected language. Section-specific forms show relevant fields, with retained
@@ -68,12 +73,12 @@ edit its destination. Ctrl/Command+I toggles emphasis and Ctrl/Command+K opens
 link editing. Paste inserts plain text; HTML, Markdown, and LaTeX syntax remain
 literal text. Links accept only validated http, https, mailto, and tel destinations.
 
-Search Content within the current section or Variants across sections, matching
+Search the library within the current section or Content & order across sections, matching
 shared facts and wording in both languages without case or accent differences.
 Archived entries are hidden until Include archived entries is enabled. Duplicate
-an entry to create an independent copy outside every variant. Use drag handles,
+an entry to create an independent copy outside every resume. Use drag handles,
 keyboard sorting, or move buttons to reorder content; Escape cancels a drag.
-Library order and each variant's output order remain independent. In Variants,
+Library order and each resume's output order remain independent. In Content & order,
 Select all appends missing achievements to the existing selection order; Clear
 all removes achievement selections while keeping the entry included.
 
@@ -112,10 +117,10 @@ completion of a browser save dialog cannot be confirmed. Saved work is specific
 to this browser profile and origin: changing the hostname or port opens a separate
 workspace. Use a JSON export/import to move drafts between them.
 
-JSON exports use resume schema 4. Compatible schema-1, schema-2, and schema-3 backups migrate
+JSON exports use resume schema 5. Compatible schema-1, schema-2, schema-3, and schema-4 backups migrate
 on import or browser restoration, preserving wording, IDs, revisions, and review
 flags. Missing historical review snapshots stay unknown until explicitly reviewed;
-schema-1 certification metadata starts unset. Unsupported schemas/templates are rejected.
+schema-1 certification metadata starts unset. Older resumes receive an indigo navigation color. Unsupported schemas/templates are rejected.
 
 Other-tab changes pause saving. Review the stored version before loading it or
 explicitly replacing it; a changed version invalidates any previous confirmation.
@@ -178,23 +183,35 @@ covered by the repository's `resume-latex` skill.
 Architecture, backup compatibility, and future account/storage boundaries are
 documented in [implementation notes](docs/implementation-notes.md).
 
-### Variant wording and comparison
+### Resume wording and comparison
 
-Variants inherit shared library wording until you explicitly choose **Create override**
+Resumes inherit shared library wording until you explicitly choose **Customize for this resume**
 for a summary or achievement in a particular language. The other language keeps
 inheriting. The editor labels each source and explains its scope before editing.
 **Reset to shared** removes that language's override, with confirmation and workspace
 undo. Facts and achievement IDs stay shared. Hidden, unselected, and archived content
 retains overrides; permanent library deletion removes them.
 
-Translation review compares each variant's effective bilingual pair. If English has
+Resume translation review compares its effective bilingual pair. If English has
 an override and Portuguese inherits, editing shared Portuguese flags the English
 override for translation review (and vice versa). **Shared wording changed** is a
 separate review of same-language shared text beneath an override. Its acknowledgment
 never clears translation review. Draft downloads remain available when valid.
 
-Open **Compare variants** in Variants for a read-only, language-specific comparison
+Open **Compare resumes** in Content & order for a read-only, language-specific comparison
 of visibility, selections, ordering, effective wording and its source/review state,
 and effective template settings. **Differences only** hides equal rows; edit links
-open the corresponding variant and field. JSON backups preserve all overrides and
+open the corresponding resume and field. JSON backups preserve all overrides and
 review metadata. See [verification and remaining manual checks](docs/variant-wording-verification.md).
+
+**Translation review** is the global unresolved queue. Its badge counts distinct
+owner/field/language items across both languages, including archived library content
+and excluded resume customizations. Resolving an opened item keeps it in a labeled
+current-item area until another item is opened or its review context is left.
+Filters and focus changes do not dismiss it. Owner-editor return links preserve
+queue filters, list scroll, and the current item. Translation target language is
+independent of the resume output language.
+
+Navigation currently uses typed, tab-local destinations. URL history is deferred
+until the mounted-lifecycle browser compatibility gate can be verified. See the
+[redesign handoff](docs/navigation-workflow-verification.md) for scope and manual checks.

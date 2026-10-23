@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 import { certificationDateErrors } from "@/lib/resume/certification";
-import { locales, sectionKinds } from "@/types-and-constants/resume";
+import {
+  locales,
+  resumeColors,
+  sectionKinds,
+} from "@/types-and-constants/resume";
 
 export const templateIdentity = {
   id: "yabuki-reference",
@@ -235,7 +239,7 @@ const variantWordingSchema = z
         });
     }
   });
-export const documentSchema = schema3DocumentSchema.extend({
+export const schema4DocumentSchema = schema3DocumentSchema.extend({
   schemaVersion: z.literal(4),
   variants: z
     .array(
@@ -244,6 +248,18 @@ export const documentSchema = schema3DocumentSchema.extend({
           summary: variantWordingSchema.optional(),
           achievements: z.record(id, variantWordingSchema),
         }),
+      }),
+    )
+    .min(1)
+    .max(30),
+});
+
+export const documentSchema = schema4DocumentSchema.extend({
+  schemaVersion: z.literal(5),
+  variants: z
+    .array(
+      schema4DocumentSchema.shape.variants.element.extend({
+        color: z.enum(resumeColors),
       }),
     )
     .min(1)

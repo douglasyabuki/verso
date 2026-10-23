@@ -52,7 +52,7 @@ export function WordingField({
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        Shared wording · Editing updates every variant that inherits this
+        Shared wording · Editing updates every resume that inherits this
         language.
       </p>
       <LocalizedField

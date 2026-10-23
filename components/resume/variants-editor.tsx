@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
 import { TextField } from "@/components/resume/fields";
@@ -21,7 +21,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -49,12 +48,10 @@ export function VariantsEditor({
   locale,
   update,
   confirm,
-  onVariant,
   onOpen,
   issueNavigation,
   errors = [],
 }: EditorProps & {
-  onVariant: (id: string) => void;
   onOpen: (issue: Issue) => void;
   issueNavigation?: IssueNavigation;
   errors?: Issue[];
@@ -77,38 +74,13 @@ export function VariantsEditor({
         .find((section) => section.id === selected.sectionId)
         ?.entries.some((entry) => matches.some((item) => item.id === entry.id)),
   );
-  const create = (duplicate: boolean) => {
-    const id = crypto.randomUUID();
-    const created: Variant = duplicate
-      ? {
-          ...structuredClone(variant),
-          id,
-          name: `${variant.name || "Untitled"} copy`.slice(0, 100),
-        }
-      : {
-          id,
-          name: "New variant",
-          sections: document.sections.map((section) => ({
-            sectionId: section.id,
-            visible: true,
-            entries: [],
-          })),
-          wording: { achievements: {} },
-          settings: {},
-          localeSettings: {},
-        };
-    update((draft) => {
-      draft.variants.push(created);
-    });
-    onVariant(id);
-  };
   return (
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader>
           <CardTitle size="section">Your resume, with focus</CardTitle>
           <CardDescription>
-            Variants reference the same content. Select sections, entries, and
+            Resumes reference the same content. Select sections, entries, and
             achievements, then set their output order.
           </CardDescription>
         </CardHeader>
@@ -116,7 +88,7 @@ export function VariantsEditor({
           <FieldGroup>
             <TextField
               fieldKey={`variants.${variant.id}.name`}
-              label="Variant name"
+              label="Resume name"
               value={variant.name}
               maxLength={100}
               onChange={(name, group) =>
@@ -126,55 +98,18 @@ export function VariantsEditor({
                 }, group)
               }
               error={
-                !variant.name.trim() ? "Give this variant a name." : undefined
+                !variant.name.trim() ? "Give this resume a name." : undefined
               }
             />
           </FieldGroup>
         </CardContent>
-        <CardFooter className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            disabled={document.variants.length >= 30}
-            onClick={() => create(false)}
-          >
-            <Plus data-icon="inline-start" />
-            New variant
-          </Button>
-          <Button
-            variant="outline"
-            disabled={document.variants.length >= 30}
-            onClick={() => create(true)}
-          >
-            <Copy data-icon="inline-start" />
-            Duplicate
-          </Button>
-          <Button
-            variant="destructive"
-            disabled={document.variants.length === 1}
-            onClick={() =>
-              confirm(
-                "Delete this variant?",
-                "Your shared career content will remain available. Its selections, wording overrides, review state, and layout overrides will be removed.",
-                () =>
-                  update((draft) => {
-                    draft.variants = draft.variants.filter(
-                      (item) => item.id !== variant.id,
-                    );
-                  }),
-              )
-            }
-          >
-            <Trash2 data-icon="inline-start" />
-            Delete
-          </Button>
-        </CardFooter>
       </Card>
       <Button
         variant="outline"
         className="self-start"
         onClick={() => setComparing(!comparing)}
       >
-        {comparing ? "Back to variant editing" : "Compare variants"}
+        {comparing ? "Back to resume editing" : "Compare resumes"}
       </Button>
       {comparing ? (
         <VariantComparison
@@ -192,8 +127,7 @@ export function VariantsEditor({
             <CardHeader>
               <CardTitle size="section">Profile summary wording</CardTitle>
               <CardDescription>
-                Shared by default. Overrides belong to this variant and
-                language.
+                Shared by default. Overrides belong to this resume and language.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -211,10 +145,10 @@ export function VariantsEditor({
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle size="section">Find variant content</CardTitle>
+              <CardTitle size="section">Find resume content</CardTitle>
               <CardDescription>
                 Selections and output order belong to{" "}
-                {variant.name || "this variant"}. Library ordering stays
+                {variant.name || "this resume"}. Library ordering stays
                 separate.
               </CardDescription>
             </CardHeader>
@@ -379,7 +313,7 @@ function VariantSection({
                   <p className="text-sm text-muted-foreground">
                     {section.entries.length
                       ? "No matching entries in this section."
-                      : `Add ${terms.singular} entries to this section in Content.`}
+                      : `Add ${terms.singular} entries to this section in the career library.`}
                   </p>
                 )}
                 <SortableList
@@ -480,7 +414,7 @@ function VariantSection({
                                   sectionVisible={selected.visible}
                                   count={bulletIds.length}
                                   total={entry.bullets.length}
-                                  variantName={variant.name || "this variant"}
+                                  variantName={variant.name || "this resume"}
                                 />
                                 {entry.bullets.length > 1 && (
                                   <AchievementSelectionActions
@@ -635,7 +569,7 @@ function VisibilityToggle({
       size="sm"
       className="size-7 shrink-0 p-0"
       aria-label={`Show ${label}`}
-      title={visible ? "Hide from variant" : "Show in variant"}
+      title={visible ? "Hide from resume" : "Show in resume"}
       pressed={visible}
       onPressedChange={onChange}
       disabled={disabled}

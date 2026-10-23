@@ -41,11 +41,13 @@ export function WorkspaceToolbar({
   title,
   preview,
   togglePreview,
+  previewAvailable = true,
 }: {
   shortcuts: { undo: string; redo: string };
   title: string;
   preview: boolean;
   togglePreview: () => void;
+  previewAvailable?: boolean;
 }) {
   const { state, controller } = useWorkspace();
   const { open, openMobile, isMobile } = useSidebar();
@@ -79,7 +81,7 @@ export function WorkspaceToolbar({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <WorkspaceSaveStatus className="hidden text-xs text-muted-foreground sm:inline" />
+        <WorkspaceSaveStatus className="text-xs text-muted-foreground" />
         {[
           {
             label: "Undo",
@@ -115,25 +117,27 @@ export function WorkspaceToolbar({
             </TooltipContent>
           </Tooltip>
         ))}
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="hidden lg:inline-flex"
-                aria-label={preview ? "Hide PDF preview" : "Show PDF preview"}
-                aria-pressed={preview}
-                onClick={togglePreview}
-              />
-            }
-          >
-            <PreviewIcon />
-          </TooltipTrigger>
-          <TooltipContent>
-            {preview ? "Hide PDF preview" : "Show PDF preview"}
-          </TooltipContent>
-        </Tooltip>
+        {previewAvailable && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="hidden lg:inline-flex"
+                  aria-label={preview ? "Hide PDF preview" : "Show PDF preview"}
+                  aria-pressed={preview}
+                  onClick={togglePreview}
+                />
+              }
+            >
+              <PreviewIcon />
+            </TooltipTrigger>
+            <TooltipContent>
+              {preview ? "Hide PDF preview" : "Show PDF preview"}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </header>
   );

@@ -6,6 +6,15 @@ import type { CompileResult } from "@/tools/compiler-proof/compiler.mjs";
 
 export const locales = ["en-US", "pt-BR"] as const;
 
+export const resumeColors = [
+  "indigo",
+  "emerald",
+  "amber",
+  "rose",
+  "sky",
+  "violet",
+] as const;
+
 export type Locale = (typeof locales)[number];
 
 export type ResumeDocument = z.infer<typeof documentSchema>;
@@ -41,6 +50,8 @@ export type EffectiveSnapshot = NonNullable<
 >;
 
 export type Variant = ResumeDocument["variants"][number];
+
+export type ResumeColor = Variant["color"];
 
 export type DocumentUpdate = (draft: ResumeDocument) => void;
 

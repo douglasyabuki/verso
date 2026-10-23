@@ -86,7 +86,7 @@ export function validateOutput(
     if (!plain(value, locale).trim())
       errors.push({
         path,
-        message: `${label} is missing in ${locale}. Add wording for this language or remove the unfinished content from this variant.`,
+        message: `${label} is missing in ${locale}. Add wording for this language or remove the unfinished content from this resume.`,
       });
   };
   const wording = (value: LocalizedText, path: string) => {
