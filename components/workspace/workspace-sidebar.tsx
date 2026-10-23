@@ -9,6 +9,7 @@ import {
   Copy,
   FileText,
   FolderKanban,
+  GlobeCheck,
   GraduationCap,
   Languages,
   LayoutTemplate,
@@ -399,6 +400,7 @@ export function WorkspaceSidebar({
               aria-current={destination.kind === "review" ? "page" : undefined}
               onClick={() => go({ kind: "review" })}
             >
+              <GlobeCheck aria-hidden="true" />
               <span>Translation review</span>
             </SidebarMenuButton>
             <SidebarMenuBadge>{reviewCount}</SidebarMenuBadge>
