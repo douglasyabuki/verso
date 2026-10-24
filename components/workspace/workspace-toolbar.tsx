@@ -7,8 +7,10 @@ import {
   Redo2,
   Undo2,
 } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
   Tooltip,
@@ -42,12 +44,14 @@ export function WorkspaceToolbar({
   preview,
   togglePreview,
   previewAvailable = true,
+  mobilePreviewControls,
 }: {
   shortcuts: { undo: string; redo: string };
   title: string;
   preview: boolean;
   togglePreview: () => void;
   previewAvailable?: boolean;
+  mobilePreviewControls?: ReactNode;
 }) {
   const { state, controller } = useWorkspace();
   const { open, openMobile, isMobile } = useSidebar();
@@ -55,7 +59,7 @@ export function WorkspaceToolbar({
   const PreviewIcon = preview ? PanelRightClose : PanelRightOpen;
   return (
     <header className="flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-2 md:px-6">
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <Tooltip>
           <TooltipTrigger
             render={
@@ -69,7 +73,8 @@ export function WorkspaceToolbar({
             {expanded ? "Collapse sidebar" : "Expand sidebar"}
           </TooltipContent>
         </Tooltip>
-        <div className="flex min-w-0 items-center gap-2 text-sm">
+        <Separator orientation="vertical" />
+        <div className="flex w-40 min-w-0 items-center gap-2 text-sm sm:w-64">
           <span className="hidden text-muted-foreground sm:inline">
             Workspace
           </span>
@@ -79,64 +84,80 @@ export function WorkspaceToolbar({
           />
           <span className="truncate font-medium">{title}</span>
         </div>
+        <Separator orientation="vertical" />
+        <div
+          role="group"
+          aria-label="Editing history"
+          className="flex shrink-0 items-center gap-1"
+        >
+          {[
+            {
+              label: "Undo",
+              shortcut: shortcuts.undo,
+              available: state.canUndo,
+              action: controller.undo,
+              Icon: Undo2,
+            },
+            {
+              label: "Redo",
+              shortcut: shortcuts.redo,
+              available: state.canRedo,
+              action: controller.redo,
+              Icon: Redo2,
+            },
+          ].map(({ label, shortcut, available, action, Icon }) => (
+            <Tooltip key={label}>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={label}
+                    disabled={!available}
+                    onClick={action}
+                  />
+                }
+              >
+                <Icon aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent>
+                {label} ({shortcut})
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-3">
         <WorkspaceSaveStatus className="text-xs text-muted-foreground" />
-        {[
-          {
-            label: "Undo",
-            shortcut: shortcuts.undo,
-            available: state.canUndo,
-            action: controller.undo,
-            Icon: Undo2,
-          },
-          {
-            label: "Redo",
-            shortcut: shortcuts.redo,
-            available: state.canRedo,
-            action: controller.redo,
-            Icon: Redo2,
-          },
-        ].map(({ label, shortcut, available, action, Icon }) => (
-          <Tooltip key={label}>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={label}
-                  disabled={!available}
-                  onClick={action}
-                />
-              }
-            >
-              <Icon aria-hidden="true" />
-            </TooltipTrigger>
-            <TooltipContent>
-              {label} ({shortcut})
-            </TooltipContent>
-          </Tooltip>
-        ))}
         {previewAvailable && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="hidden lg:inline-flex"
-                  aria-label={preview ? "Hide PDF preview" : "Show PDF preview"}
-                  aria-pressed={preview}
-                  onClick={togglePreview}
-                />
-              }
-            >
-              <PreviewIcon />
-            </TooltipTrigger>
-            <TooltipContent>
-              {preview ? "Hide PDF preview" : "Show PDF preview"}
-            </TooltipContent>
-          </Tooltip>
+          <div
+            role="group"
+            aria-label="PDF preview controls"
+            className="flex items-center gap-2"
+          >
+            {mobilePreviewControls}
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="hidden lg:inline-flex"
+                    aria-label={
+                      preview ? "Hide PDF preview" : "Show PDF preview"
+                    }
+                    aria-pressed={preview}
+                    onClick={togglePreview}
+                  />
+                }
+              >
+                <PreviewIcon />
+              </TooltipTrigger>
+              <TooltipContent>
+                {preview ? "Hide PDF preview" : "Show PDF preview"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         )}
       </div>
     </header>

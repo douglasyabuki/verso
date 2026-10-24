@@ -423,6 +423,30 @@ export function WorkspaceView() {
         <WorkspaceToolbar
           shortcuts={shortcuts}
           previewAvailable={!fullWidth}
+          mobilePreviewControls={
+            !desktop && (
+              <ToggleGroup
+                value={[mobilePanel]}
+                onValueChange={(values) => {
+                  if (values[0]) {
+                    setIssueNavigation((current) =>
+                      current ? { ...current, pending: false } : current,
+                    );
+                    setMobilePanel(values[0]);
+                  }
+                }}
+                variant="outline"
+                spacing={0}
+                aria-label="Workspace panel"
+              >
+                <ToggleGroupItem value="editor">
+                  <FileText data-icon="inline-start" />
+                  Editor
+                </ToggleGroupItem>
+                <ToggleGroupItem value="preview">PDF preview</ToggleGroupItem>
+              </ToggleGroup>
+            )
+          }
           title={
             navigation.destination.kind === "resume"
               ? variant.name || "Untitled resume"
@@ -518,30 +542,6 @@ export function WorkspaceView() {
               </Select>
             </div>
           )}
-        </div>
-      )}
-      {!desktop && !fullWidth && (
-        <div className="shrink-0 border-b px-4 py-2">
-          <ToggleGroup
-            value={[mobilePanel]}
-            onValueChange={(values) => {
-              if (values[0]) {
-                setIssueNavigation((current) =>
-                  current ? { ...current, pending: false } : current,
-                );
-                setMobilePanel(values[0]);
-              }
-            }}
-            variant="outline"
-            spacing={0}
-            aria-label="Workspace panel"
-          >
-            <ToggleGroupItem value="editor">
-              <FileText data-icon="inline-start" />
-              Editor
-            </ToggleGroupItem>
-            <ToggleGroupItem value="preview">PDF preview</ToggleGroupItem>
-          </ToggleGroup>
         </div>
       )}
       <div className="min-h-0 flex-1">
