@@ -45,9 +45,8 @@ persistence code. Hooks connect those layers to presentation. The workspace
 controller is the single writable owner of resume state; navigation selections,
 compiler lifecycle, and local interaction state retain their existing owners.
 
-See [store guidance](stores/AGENTS.md),
-[contract guidance](types-and-constants/AGENTS.md), and
-[implementation notes](docs/implementation-notes.md) for dependency rules and
+See [store guidance](stores/AGENTS.md) and
+[contract guidance](types-and-constants/AGENTS.md) for dependency rules and
 persistence invariants.
 
 ## Working with drafts
@@ -148,41 +147,6 @@ blocking downloads.
 Source ZIPs include generated LaTeX, the exact browser runtime/resources, notices,
 and a standalone local compilation launcher.
 
-## Verification
-
-| Command                    | Purpose                                                   |
-| -------------------------- | --------------------------------------------------------- |
-| `npm run compiler:prepare` | Verify locked downloads and prepare local compiler assets |
-| `npm run format:check`     | Check source formatting                                   |
-| `npm run lint`             | Lint source and import ordering                           |
-| `npm run typecheck`        | Run Next.js route type generation and TypeScript          |
-| `npm run build`            | Produce a production build                                |
-| `npm start`                | Serve the production build                                |
-
-Automated tests are excluded from this implementation. Existing Playwright
-scripts remain available but are not product acceptance coverage. Use the bundled
-fictional example on a disposable localhost origin for manual verification.
-Scenarios, completed checks, and remaining manual coverage are recorded in the
-[formatted editor](docs/text-editor-verification.md),
-[section forms and schema migration](docs/section-forms-verification.md), and
-[library and variant editing](docs/library-editing-verification.md) handoffs.
-
-Static checks and production builds do not establish browser behavior. The handoffs
-record the verification status and pending interaction/PDF checks. Safari and
-assistive-technology compatibility remain unverified; no PDF/UA or universal ATS
-compatibility is claimed.
-
-The workspace sends no resume data to a backend. Authentication, account persistence,
-publication, public APIs, portfolio/LinkedIn integration, and hosted deployment
-are outside this implementation. Builds fetch the existing Geist interface
-fonts through Next.js; document fonts are in the local compiler bundle.
-
-Agent guidance is in [AGENTS.md](AGENTS.md). Template/compiler maintenance is
-covered by the repository's `resume-latex` skill.
-
-Architecture, backup compatibility, and future account/storage boundaries are
-documented in [implementation notes](docs/implementation-notes.md).
-
 ### Resume wording and comparison
 
 Resumes inherit shared library wording until you explicitly choose **Customize for this resume**
@@ -202,7 +166,7 @@ Open **Compare resumes** in Content & order for a read-only, language-specific c
 of visibility, selections, ordering, effective wording and its source/review state,
 and effective template settings. **Differences only** hides equal rows; edit links
 open the corresponding resume and field. JSON backups preserve all overrides and
-review metadata. See [verification and remaining manual checks](docs/variant-wording-verification.md).
+review metadata.
 
 **Translation review** is the global unresolved queue. Its badge counts distinct
 owner/field/language items across both languages, including archived library content
@@ -212,6 +176,37 @@ Filters and focus changes do not dismiss it. Owner-editor return links preserve
 queue filters, list scroll, and the current item. Translation target language is
 independent of the resume output language.
 
-Navigation currently uses typed, tab-local destinations. URL history is deferred
-until the mounted-lifecycle browser compatibility gate can be verified. See the
-[redesign handoff](docs/navigation-workflow-verification.md) for scope and manual checks.
+Navigation uses typed, tab-local destinations; editor navigation does not create
+URL history entries or shareable links to individual views yet.
+
+## Verification
+
+| Command                    | Purpose                                                   |
+| -------------------------- | --------------------------------------------------------- |
+| `npm run compiler:prepare` | Verify locked downloads and prepare local compiler assets |
+| `npm run format:check`     | Check source formatting                                   |
+| `npm run lint`             | Lint source and import ordering                           |
+| `npm run typecheck`        | Run Next.js route type generation and TypeScript          |
+| `npm run build`            | Produce a production build                                |
+| `npm start`                | Serve the production build                                |
+
+Automated tests are excluded from this implementation. Existing Playwright
+scripts remain available but are not product acceptance coverage. Use the bundled
+fictional example on a disposable localhost origin for manual verification.
+Static checks and production builds do not establish browser behavior. Safari and
+assistive-technology compatibility remain unverified; no PDF/UA or universal ATS
+compatibility is claimed.
+
+The workspace sends no resume data to a backend. Authentication, account persistence,
+publication, public APIs, portfolio/LinkedIn integration, and hosted deployment
+are outside this implementation. Builds fetch the existing Geist interface
+fonts through Next.js; document fonts are in the local compiler bundle.
+
+Agent guidance is in [AGENTS.md](AGENTS.md). Template/compiler maintenance is
+covered by the repository's `resume-latex` skill. The
+[browser compilation milestone](docs/compilation-proof.md) documents the pinned
+bundle, standalone demonstration, and recorded compiler verification.
+
+[Product requirements](docs/requirements.md) describe a broader cloud-backed
+release roadmap; the current implementation is the local-only workspace described
+above.
