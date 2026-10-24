@@ -220,15 +220,16 @@ export function sharedWordingChanged(
 }
 
 /** Acknowledge the exact displayed shared wording without clearing translation review.
- * @param doc Mutable draft. @param variantId Variant identity. @param path Stable field path. @param displayed Displayed shared snapshot.
+ * @param doc Mutable draft. @param variantId Variant identity. @param path Stable field path. @param displayed Displayed shared snapshot. @param customization Displayed customization to retain.
  * @returns Whether the unchanged displayed version was accepted.
- * @example acknowledgeSharedWording(doc, "general", path, snapshot)
+ * @example acknowledgeSharedWording(doc, "general", path, snapshot, customization)
  */
 export function acknowledgeSharedWording(
   doc: ResumeDocument,
   variantId: string,
   path: string,
   displayed: ReviewSnapshot,
+  customization: EffectiveSnapshot,
 ): boolean {
   const variant = doc.variants.find((item) => item.id === variantId);
   const shared = sharedWording(doc, path);
@@ -237,6 +238,10 @@ export function acknowledgeSharedWording(
   if (
     !shared ||
     !override ||
+    customization.locale !== displayed.locale ||
+    customization.source !== "override" ||
+    override.revision !== customization.revision ||
+    !equivalentSpans(override.spans, customization.spans) ||
     shared[displayed.locale].revision !== displayed.revision ||
     !equivalentSpans(shared[displayed.locale].spans, displayed.spans)
   )
@@ -281,6 +286,42 @@ export function markVariantTranslationReviewed(
     needsReview: false,
     reviewedCounterpart: structuredClone(reference),
   };
+  return true;
+}
+
+/** Confirm the displayed effective pair in both directions for one resume only.
+ * @param doc Mutable workspace. @param variantId Resume owner. @param path Field identity. @param target Displayed target. @param reference Displayed counterpart.
+ * @returns False without mutation if either language is empty or either version/provenance is stale.
+ * @example confirmVariantTranslationPair(doc, variant.id, path, target, reference)
+ */
+export function confirmVariantTranslationPair(
+  doc: ResumeDocument,
+  variantId: string,
+  path: string,
+  target: EffectiveSnapshot,
+  reference: EffectiveSnapshot,
+): boolean {
+  const candidate = structuredClone(doc);
+  if (
+    !markVariantTranslationReviewed(
+      candidate,
+      variantId,
+      path,
+      target,
+      reference,
+    ) ||
+    !markVariantTranslationReviewed(
+      candidate,
+      variantId,
+      path,
+      reference,
+      target,
+    )
+  )
+    return false;
+  const variant = doc.variants.find((item) => item.id === variantId)!;
+  const checked = candidate.variants.find((item) => item.id === variantId)!;
+  variantWording(variant, path)!.review = variantWording(checked, path)!.review;
   return true;
 }
 

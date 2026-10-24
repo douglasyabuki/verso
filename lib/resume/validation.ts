@@ -18,7 +18,7 @@ import type {
   ResumeLink,
   Variant,
 } from "@/types-and-constants/resume";
-import { entryTerminology } from "@/types-and-constants/resume";
+import { entryTerminology, languageNames } from "@/types-and-constants/resume";
 
 /** Validate supported clickable links. @param value URL. @returns An error or undefined, including for an empty optional value. @example urlError("javascript:alert(1)") */
 export function urlError(value: string): string | undefined {
@@ -95,13 +95,12 @@ export function validateOutput(
       sharedWarnings.push({
         path,
         message:
-          "Shared wording changed beneath this override. Review the library wording separately from its translation. Draft downloads remain available.",
+          "Library wording changed beneath this customization. Compare it, then explicitly keep the customization or reset to library wording. Editing alone does not clear this reminder. Draft downloads remain available.",
       });
     if (value[locale].needsReview && plain(value, locale).trim())
       warnings.push({
         path,
-        message:
-          "Review this wording against the other language, then mark it reviewed. Draft downloads remain available.",
+        message: `Check whether ${languageNames[locale]} still conveys the same information as ${languageNames[locale === "en-US" ? "pt-BR" : "en-US"]}, then confirm that comparison or explicitly confirm both languages. Draft downloads remain available.`,
       });
     for (const span of value[locale].spans) {
       const error = urlError(span.href);

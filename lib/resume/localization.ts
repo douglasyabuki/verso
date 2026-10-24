@@ -249,6 +249,38 @@ export function markTranslationReviewed(
   return true;
 }
 
+/** Confirm both directions of exactly the displayed bilingual library pair atomically.
+ * @param doc Mutable workspace. @param path Stable field path. @param target Displayed target. @param reference Displayed counterpart.
+ * @returns False without mutation if either version is stale or either language is empty.
+ * @example confirmTranslationPair(doc, "profile.summary", target, reference)
+ */
+export function confirmTranslationPair(
+  doc: ResumeDocument,
+  path: string,
+  target: ReviewSnapshot,
+  reference: ReviewSnapshot,
+): boolean {
+  const candidate = structuredClone(doc);
+  if (
+    !markTranslationReviewed(
+      candidate,
+      path,
+      target,
+      reference,
+      reference.locale,
+    ) ||
+    !markTranslationReviewed(candidate, path, reference, target, target.locale)
+  )
+    return false;
+  const value = findLocalized(doc, path)!;
+  const checked = findLocalized(candidate, path)!;
+  for (const locale of [target.locale, reference.locale]) {
+    value[locale].needsReview = false;
+    value[locale].reviewedCounterpart = checked[locale].reviewedCounterpart;
+  }
+  return true;
+}
+
 /** Find a localized record inside a draft by its stable path. @param doc Workspace. @param path Field path. @returns Matching record, or undefined after deletion. @example findLocalized(doc, "profile.summary") */
 export function findLocalized(
   doc: ResumeDocument,

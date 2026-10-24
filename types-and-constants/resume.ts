@@ -6,6 +6,11 @@ import type { CompileResult } from "@/tools/compiler-proof/compiler.mjs";
 
 export const locales = ["en-US", "pt-BR"] as const;
 
+export const languageNames = {
+  "en-US": "English",
+  "pt-BR": "Portuguese",
+} as const;
+
 export const resumeColors = [
   "indigo",
   "emerald",

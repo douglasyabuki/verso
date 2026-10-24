@@ -80,13 +80,15 @@ export function useWorkspaceNavigation({
       setReviewContext(
         next.kind === "review"
           ? (reviewContext ?? {
+              outputResumeId: variant.id,
               current: null,
               filters: {
                 owner: "all",
                 language: "all",
                 section: "all",
                 reason: "all",
-                output: "all",
+                output: "selected",
+                archive: "active",
               },
               scroll: 0,
             })

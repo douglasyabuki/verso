@@ -29,6 +29,10 @@ export function LibraryOverview({
   const queue = reviewItems(document).filter((item) => !item.resumeId);
   return (
     <div className="flex flex-col gap-5">
+      <p className="text-sm text-muted-foreground">
+        Counts include active and archived career-library wording. Use archive
+        and output filters in Wording tasks to choose what to work on.
+      </p>
       {[
         { id: "profile", label: "Profile & summary", entries: [] },
         ...document.sections.map((section) => ({
@@ -58,18 +62,15 @@ export function LibraryOverview({
                   className="justify-start"
                   onClick={() => onReview(section.id, locale)}
                 >
-                  {locale}:{" "}
+                  {locale === "en-US" ? "English" : "Portuguese"}:{" "}
                   {
-                    items.filter((item) =>
-                      item.reasons.includes("Missing required wording"),
-                    ).length
+                    items.filter((item) => item.categories.includes("missing"))
+                      .length
                   }{" "}
                   missing ·{" "}
                   {
                     items.filter((item) =>
-                      item.reasons.some(
-                        (reason) => reason !== "Missing required wording",
-                      ),
+                      item.categories.some((reason) => reason !== "missing"),
                     ).length
                   }{" "}
                   need review

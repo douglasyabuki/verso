@@ -358,7 +358,7 @@ export function WorkspaceSidebar({
                         {(
                           [
                             ["content", "Content & Order", ListOrdered],
-                            ["translations", "Translations", Languages],
+                            ["translations", "Wording tasks", Languages],
                             ["layout", "Layout", LayoutTemplate],
                           ] as const
                         ).map(([page, label, Icon]) => (
@@ -404,9 +404,14 @@ export function WorkspaceSidebar({
               onClick={() => go({ kind: "review" })}
             >
               <GlobeCheck aria-hidden="true" />
-              <span>Translation review</span>
+              <span>Wording tasks</span>
             </SidebarMenuButton>
-            <SidebarMenuBadge>{reviewCount}</SidebarMenuBadge>
+            <SidebarMenuBadge
+              aria-label={`${reviewCount} unresolved wording items across the workspace`}
+              title="Workspace-wide unresolved wording items"
+            >
+              {reviewCount}
+            </SidebarMenuBadge>
           </SidebarMenuItem>
         </SidebarMenu>
         {isMobile && utilities}

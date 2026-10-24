@@ -76,13 +76,15 @@ export function EditorPane({
   });
   const reviewKey = view === "library-translations" ? sectionId : variant.id;
   const defaultContext: ReviewReturnContext = {
+    outputResumeId: variant.id,
     current: null,
     filters: {
       owner: "all",
       language: locale,
       section: "all",
       reason: "all",
-      output: "all",
+      output: view === "resume-translations" ? "selected" : "all",
+      archive: "active",
     },
     scroll: 0,
   };
@@ -172,12 +174,12 @@ export function EditorPane({
                 : view === "variants"
                   ? `${variant.name || "Untitled resume"} · Content & order`
                   : view === "resume-translations"
-                    ? `${variant.name || "Untitled resume"} · Translations`
+                    ? `${variant.name || "Untitled resume"} · Wording tasks`
                     : (
                         {
                           "library-overview": "Career library · Overview",
                           resumes: "All resumes",
-                          review: "Translation review",
+                          review: "Wording tasks",
                           data: "Data & backups",
                           template: "Layout",
                           "shared-defaults": "Shared defaults",
@@ -192,7 +194,7 @@ export function EditorPane({
                 : navigation.destination.kind === "resume"
                   ? `${variant.name || "Untitled resume"} · ${locale}`
                   : view === "review"
-                    ? "Unresolved library and resume wording across both languages, including archived and excluded content."
+                    ? "Missing text, translation comparisons, and library changes. Start with selected-resume output; broaden output and archive filters to include other content."
                     : view === "shared-defaults"
                       ? "These defaults affect multiple resumes. Resume overrides keep their precedence."
                       : "Your editable workspace stays in this browser. JSON preserves its complete content and settings."}
@@ -244,7 +246,7 @@ export function EditorPane({
           >
             Return to{" "}
             {navigation.reviewContext
-              ? "translation review"
+              ? "wording tasks"
               : navigation.returnDestination?.kind === "resume"
                 ? "resume"
                 : "previous page"}
@@ -257,8 +259,8 @@ export function EditorPane({
           ) && (
             <p role="status" className="text-sm text-muted-foreground">
               The current review item is unavailable because its content or
-              resume was removed. Return to translation review to continue with
-              the remaining work.
+              resume was removed. Return to wording tasks to continue with the
+              remaining work.
             </p>
           )}
         {navigation.destination.kind === "library-section" && (
@@ -309,9 +311,7 @@ export function EditorPane({
             aria-label="Library section tab"
           >
             <ToggleGroupItem value="edit">Edit content</ToggleGroupItem>
-            <ToggleGroupItem value="review">
-              Review translations
-            </ToggleGroupItem>
+            <ToggleGroupItem value="review">Wording tasks</ToggleGroupItem>
           </ToggleGroup>
         )}
         {view === "library-overview" && (

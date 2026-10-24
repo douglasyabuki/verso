@@ -25,6 +25,7 @@ import type {
   ResumeLink,
   Span,
 } from "@/types-and-constants/resume";
+import { languageNames } from "@/types-and-constants/resume";
 import type { EditGroup } from "@/types-and-constants/workspace";
 
 export function TextField({
@@ -164,7 +165,7 @@ export function LocalizedField({
           <FieldLabel htmlFor={id}>
             {label}{" "}
             <span className="text-muted-foreground">
-              {locale === "en-US" ? "EN" : "PT"}
+              {languageNames[locale]}
               {required ? " *" : ""}
             </span>
           </FieldLabel>
@@ -173,19 +174,25 @@ export function LocalizedField({
           ) : missing ? (
             <Badge variant="outline">Optional empty</Badge>
           ) : record.needsReview ? (
-            <Badge variant="secondary">Needs review</Badge>
+            <Badge variant="secondary">Compare translations</Badge>
           ) : null}
         </div>
         <TextEditor
           key={fieldKey}
           id={id}
           fieldKey={fieldKey}
-          label={`${label} (${locale === "en-US" ? "EN" : "PT"})`}
+          label={`${label} (${languageNames[locale]})`}
           spans={record.spans}
           error={error}
           multiline={multiline}
           onChange={onChange}
         />
+        {missing && required && (
+          <FieldDescription>
+            Enter the required {languageNames[locale]} wording to resolve this
+            task. Translation confirmation does not supply missing text.
+          </FieldDescription>
+        )}
         {description && <FieldDescription>{description}</FieldDescription>}
         {error && <FieldError id={id + "-error"}>{error}</FieldError>}
       </Field>

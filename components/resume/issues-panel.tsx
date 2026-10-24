@@ -150,10 +150,8 @@ export function IssuesPanel({
           <Badge variant={errors ? "destructive" : "outline"}>
             {errors} blocking
           </Badge>
-          <Badge variant="secondary">{reviews} translation review</Badge>
-          <Badge variant="outline">
-            {sharedReviews} shared wording changed
-          </Badge>
+          <Badge variant="secondary">{reviews} translation comparisons</Badge>
+          <Badge variant="outline">{sharedReviews} library changes</Badge>
           <Badge variant="outline">{layouts} layout</Badge>
         </div>
       </div>
@@ -202,22 +200,22 @@ export function IssuesPanel({
                     disabled={disabled}
                   />
                   <IssueGroup
-                    title="Translation-review warnings"
+                    title="Compare translations"
                     issues={language.warnings.filter(
                       (issue) => issue.category === "translation",
                     )}
-                    emptyTitle="No translation reviews"
+                    emptyTitle="No translation changes flagged"
                     emptyDescription="No included wording is flagged for review in this language."
                     onIssue={onIssue}
                     disabled={disabled}
                   />
                   <IssueGroup
-                    title="Shared wording changed"
+                    title="Review library changes"
                     issues={language.warnings.filter(
                       (issue) => issue.category === "shared-wording",
                     )}
-                    emptyTitle="No shared wording changes"
-                    emptyDescription="No included override needs review against its shared wording."
+                    emptyTitle="No library changes flagged"
+                    emptyDescription="No included customization differs from its library baseline. This does not mean it has been explicitly checked."
                     onIssue={onIssue}
                     disabled={disabled}
                   />

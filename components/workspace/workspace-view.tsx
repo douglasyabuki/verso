@@ -217,6 +217,7 @@ export function WorkspaceView() {
             section: "all",
             reason: "all",
             output: "all",
+            archive: "active",
           },
           scroll: 0,
         },
@@ -456,7 +457,7 @@ export function WorkspaceView() {
                     {
                       "library-overview": "Career library",
                       resumes: "All resumes",
-                      review: "Translation review",
+                      review: "Wording tasks",
                       data: "Data & backups",
                       "shared-defaults": "Shared defaults",
                     } as Record<string, string>

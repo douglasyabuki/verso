@@ -3,7 +3,7 @@
 import { type ComponentProps, useState } from "react";
 
 import { LocalizedField } from "@/components/resume/fields";
-import { TranslationReference } from "@/components/resume/translation-reference";
+import { TranslationComparison } from "@/components/resume/translation-comparison";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import { useWorkflowLinks } from "@/hooks/workspace/use-workflow-links";
 import { plain, translationSnapshot } from "@/lib/resume/localization";
 import {
   acknowledgeSharedWording,
+  confirmVariantTranslationPair,
   createWordingOverride,
   editWordingOverride,
   effectiveSnapshot,
@@ -32,6 +33,7 @@ import type {
   ResumeDocument,
   Variant,
 } from "@/types-and-constants/resume";
+import { languageNames } from "@/types-and-constants/resume";
 import type { WorkspaceEdit } from "@/types-and-constants/workspace";
 
 export function VariantWordingField({
@@ -58,7 +60,7 @@ export function VariantWordingField({
   errors?: Issue[];
 }) {
   const { editLibrary } = useWorkflowLinks();
-  const [message, setMessage] = useState("");
+  const [feedback, setFeedback] = useState({ identity: "", message: "" });
   const shared = sharedWording(document, path);
   if (!shared) return null;
   const field = variantWording(variant, path);
@@ -68,6 +70,12 @@ export function VariantWordingField({
   const target = effectiveSnapshot(shared, variant, path, locale);
   const reference = effectiveSnapshot(shared, variant, path, other);
   const baselineChanged = sharedWordingChanged(shared, variant, path, locale);
+  const displayedLibrary = translationSnapshot(shared, locale);
+  const feedbackIdentity = JSON.stringify([
+    target,
+    displayedLibrary,
+    override?.sharedBaseline,
+  ]);
   const fieldKey = `variants.${variant.id}.${path}.${locale}`;
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -76,19 +84,19 @@ export function VariantWordingField({
           {override ? "Customized for this resume" : "Uses library text"}
         </Badge>
         <span className="text-sm">
-          {variant.name || "Untitled resume"} · {locale}
+          {variant.name || "Untitled resume"} · {languageNames[locale]}
         </span>
         {value[locale].needsReview && (
-          <Badge variant="outline">Translation review</Badge>
+          <Badge variant="outline">Compare translations</Badge>
         )}
         {baselineChanged && (
-          <Badge variant="outline">Shared wording changed</Badge>
+          <Badge variant="outline">Review library changes</Badge>
         )}
       </div>
       <p className="text-sm text-muted-foreground">
         {override
-          ? `Editing this override changes only ${variant.name || "this resume"} in ${locale}. Shared wording and facts stay in the library.`
-          : `This language uses shared library wording. Create an override explicitly to change only ${variant.name || "this resume"} in ${locale}.`}
+          ? `Editing this override changes only ${variant.name || "this resume"} in ${languageNames[locale]}. Shared wording and facts stay in the library.`
+          : `This language uses shared library wording. Create an override explicitly to change only ${variant.name || "this resume"} in ${languageNames[locale]}.`}
       </p>
       {override ? (
         <LocalizedField
@@ -142,8 +150,8 @@ export function VariantWordingField({
           className="self-start"
           onClick={() =>
             confirm(
-              "Reset to shared wording?",
-              `Remove only the ${locale} override for ${variant.name || "this resume"}. Current shared wording: ${plain(shared, locale) || "(empty)"}. Workspace undo can restore the override.`,
+              "Reset to library wording?",
+              `Remove only the ${languageNames[locale]} customization for ${variant.name || "this resume"}. Current library wording: ${plain(shared, locale) || "(empty)"}. Workspace undo can restore the override.`,
               () =>
                 update((draft) =>
                   resetWordingOverride(draft, variant.id, path, locale),
@@ -151,61 +159,60 @@ export function VariantWordingField({
             )
           }
         >
-          Reset to shared
+          Reset to library wording
         </Button>
       )}
-      {field && (
-        <>
-          <p className="text-sm text-muted-foreground">
-            Effective counterpart:{" "}
-            {reference.source === "override"
-              ? "Customized for this resume"
-              : "Uses library text"}{" "}
-            ? {other}
-          </p>
-          <TranslationReference
-            snapshot={field.review[locale].reviewedCounterpart}
-            current={reference}
-          />
-          {plain(value, locale).trim() && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start"
-              onClick={() => {
-                let accepted = false;
-                update((draft) => {
-                  accepted = markVariantTranslationReviewed(
+      {field ? (
+        <TranslationComparison
+          review={field.review}
+          target={target}
+          reference={reference}
+          snapshot={field.review[locale].reviewedCounterpart}
+          needsReview={field.review[locale].needsReview}
+          owner={variant.name || "this resume"}
+          onConfirm={(both) => {
+            let accepted = false;
+            update((draft) => {
+              accepted = both
+                ? confirmVariantTranslationPair(
+                    draft,
+                    variant.id,
+                    path,
+                    target,
+                    reference,
+                  )
+                : markVariantTranslationReviewed(
                     draft,
                     variant.id,
                     path,
                     target,
                     reference,
                   );
-                });
-                setMessage(
-                  accepted
-                    ? "Resume translation review saved."
-                    : "Wording or its source changed. Review the current pair again.",
-                );
-              }}
-            >
-              Mark resume translation reviewed
-            </Button>
-          )}
-        </>
+            });
+            return accepted;
+          }}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Both languages inherit library wording. Compare and confirm in the
+          career library; no independent resume comparison is recorded here.
+        </p>
       )}
       {baselineChanged && override && (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            Shared wording changed beneath this override. This review is
-            separate from translation review.
+            Library wording changed beneath this customization. Compare the
+            previous library wording, current library wording, and your
+            customization above. Edit it, keep it after checking, or reset to
+            library wording. Editing alone never clears this reminder, even when
+            the text matches the library. This decision applies only to this
+            resume and is separate from translation comparison.
           </p>
           <p
             lang={locale}
             className="text-sm wrap-anywhere whitespace-pre-wrap"
           >
-            Previously reviewed shared wording:{" "}
+            Previous library baseline:{" "}
             {override.sharedBaseline.spans.map((span) => span.text).join("") ||
               "(empty)"}
           </p>
@@ -213,31 +220,34 @@ export function VariantWordingField({
             lang={locale}
             className="text-sm wrap-anywhere whitespace-pre-wrap"
           >
-            Current shared wording: {plain(shared, locale) || "(empty)"}
+            Current library wording: {plain(shared, locale) || "(empty)"}
           </p>
           <Button
             variant="outline"
             size="sm"
-            className="self-start"
+            className="h-auto self-start whitespace-normal"
             onClick={() => {
-              const displayed = translationSnapshot(shared, locale);
               let accepted = false;
               update((draft) => {
                 accepted = acknowledgeSharedWording(
                   draft,
                   variant.id,
                   path,
-                  displayed,
+                  displayedLibrary,
+                  target,
                 );
               });
-              setMessage(
-                accepted
-                  ? "Shared wording review saved. Translation review is unchanged."
-                  : "Shared wording changed. Review it again.",
-              );
+              setFeedback({
+                identity: accepted
+                  ? JSON.stringify([target, displayedLibrary, displayedLibrary])
+                  : feedbackIdentity,
+                message: accepted
+                  ? `Customization retained for ${variant.name || "this resume"}. Library-change reminder cleared; translation reminders are unchanged.`
+                  : "Library wording or customization changed. Compare the current versions and try again.",
+              });
             }}
           >
-            Acknowledge shared wording
+            Keep this customization after checking library changes
           </Button>
         </div>
       )}
@@ -255,7 +265,7 @@ export function VariantWordingField({
         aria-live="polite"
         className="text-sm text-muted-foreground"
       >
-        {message}
+        {feedback.identity === feedbackIdentity ? feedback.message : ""}
       </p>
     </div>
   );
@@ -279,12 +289,12 @@ export function VariantWordingDetails({
             : "Uses library text"}
         </Badge>{" "}
         {value[locale].needsReview && (
-          <Badge variant="outline">Translation review</Badge>
+          <Badge variant="outline">Compare translations</Badge>
         )}{" "}
         {sharedWordingChanged(shared, variant, path, locale) && (
-          <Badge variant="outline">Shared wording changed</Badge>
+          <Badge variant="outline">Review library changes</Badge>
         )}{" "}
-        Wording: {variant.name || "Untitled resume"} ({locale})
+        Wording: {variant.name || "Untitled resume"} ({languageNames[locale]})
       </CollapsibleTrigger>
       <CollapsibleContent>
         {open && (

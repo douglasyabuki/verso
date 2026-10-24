@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
-
 import { LocalizedField } from "@/components/resume/fields";
-import { TranslationReference } from "@/components/resume/translation-reference";
-import { Button } from "@/components/ui/button";
+import { TranslationComparison } from "@/components/resume/translation-comparison";
 import {
+  confirmTranslationPair,
   editTranslation,
   findLocalized,
   markTranslationReviewed,
@@ -42,7 +40,6 @@ export function WordingField({
   errors?: Issue[];
   showReference?: boolean;
 }) {
-  const [reviewMessage, setReviewMessage] = useState("");
   const value = findLocalized(document, path);
   if (!value) return null;
   const referenceLocale = locale === "en-US" ? "pt-BR" : "en-US";
@@ -71,45 +68,31 @@ export function WordingField({
           }, group)
         }
       />
-      {(showReference || populated) && (
-        <TranslationReference
+      {(showReference || populated || required) && (
+        <TranslationComparison
+          review={value}
+          target={target}
+          reference={reference}
           snapshot={value[locale].reviewedCounterpart}
-          current={reference}
-        />
-      )}
-      {populated && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="self-start"
-          onClick={() => {
+          needsReview={value[locale].needsReview}
+          owner="the career library"
+          onConfirm={(both) => {
             let accepted = false;
             update((draft) => {
-              accepted = markTranslationReviewed(
-                draft,
-                path,
-                target,
-                reference,
-                referenceLocale,
-              );
+              accepted = both
+                ? confirmTranslationPair(draft, path, target, reference)
+                : markTranslationReviewed(
+                    draft,
+                    path,
+                    target,
+                    reference,
+                    referenceLocale,
+                  );
             });
-            setReviewMessage(
-              accepted
-                ? "Review saved."
-                : "Wording changed or is unavailable. Check the current wording and review again.",
-            );
+            return accepted;
           }}
-        >
-          Mark reviewed
-        </Button>
+        />
       )}
-      <p
-        role="status"
-        aria-live="polite"
-        className="text-sm text-muted-foreground"
-      >
-        {reviewMessage}
-      </p>
     </div>
   );
 }

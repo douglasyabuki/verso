@@ -14,6 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Select,
@@ -24,8 +30,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
-import { localizedFields, plain } from "@/lib/resume/localization";
-import { reviewItems } from "@/lib/resume/review-queue";
+import { plain } from "@/lib/resume/localization";
+import {
+  matchesReviewFilters,
+  reviewItems,
+  reviewOutputLabel,
+} from "@/lib/resume/review-queue";
 import { sharedWording, variantWording } from "@/lib/resume/wording";
 import type { EditorProps } from "@/types-and-constants/editor";
 import type {
@@ -34,6 +44,8 @@ import type {
   ReviewReturnContext,
   WorkspaceFocusTarget,
 } from "@/types-and-constants/navigation";
+import { reviewCategoryLabels } from "@/types-and-constants/navigation";
+import { languageNames } from "@/types-and-constants/resume";
 
 export function TranslationsEditor({
   document,
@@ -55,30 +67,28 @@ export function TranslationsEditor({
   queueContext?: ReviewReturnContext;
 }) {
   const { state } = useWorkspace();
-  const all = reviewItems(document, false, context.current ?? undefined);
-  const output = localizedFields(document, variant);
+  const outputResumeId =
+    queueContext?.outputResumeId ?? context.outputResumeId ?? variant.id;
+  const outputResume = document.variants.find(
+    (resume) => resume.id === outputResumeId,
+  );
+  const all = reviewItems(document, false, context.current ?? undefined).sort(
+    (a, b) =>
+      Number(b.usedBy.includes(outputResumeId)) -
+      Number(a.usedBy.includes(outputResumeId)),
+  );
   const fields = all.filter(
     (item) =>
       scope === "queue" ||
       (scope === "library"
         ? !item.resumeId && item.field.sectionId === sectionId
-        : output.some(
-            (field) =>
-              field.path === item.path &&
-              (field.required || plain(field.value, item.locale).trim()),
-          ) &&
-          item.resumeId ===
-            (variantWording(variant, item.path) ? variant.id : undefined)),
+        : item.resumeId === variant.id ||
+          (!item.resumeId &&
+            !variantWording(variant, item.path)?.overrides[item.locale])),
   );
   const { filters, current } = context;
   const matchesFilters = (item: ReviewItem, filters: ReviewFilters) =>
-    (filters.owner === "all" ||
-      (item.resumeId ? `resume:${item.resumeId}` : "library") ===
-        filters.owner) &&
-    (filters.language === "all" || item.locale === filters.language) &&
-    (filters.section === "all" || item.field.sectionId === filters.section) &&
-    (filters.reason === "all" || item.reasons.includes(filters.reason)) &&
-    (filters.output === "all" || item.output === (filters.output === "used"));
+    matchesReviewFilters(item, filters, outputResumeId);
   const matches = (item: ReviewItem) => matchesFilters(item, filters);
   const candidates = (queueContext ? all : fields).filter(
     (item) =>
@@ -152,7 +162,7 @@ export function TranslationsEditor({
           ? [
               {
                 key: "owner" as keyof ReviewFilters,
-                label: "Owner / resume",
+                label: "Owner",
                 options: [
                   ["all", "All owners"],
                   ["library", "Career library"],
@@ -186,31 +196,40 @@ export function TranslationsEditor({
               options: [
                 ["all", "Both languages"],
                 ["en-US", "English"],
-                ["pt-BR", "Português"],
+                ["pt-BR", "Portuguese"],
               ],
             },
             {
               key: "reason",
-              label: "Reason",
+              label: "Task category",
               options: [
                 [
                   "all",
                   scope === "queue" ? "All unresolved reasons" : "All wording",
                 ],
-                ...[
-                  "Missing required wording",
-                  "Translation needs review",
-                  "Library wording changed beneath customization",
-                ].map((reason) => [reason, reason]),
+                ...Object.entries(reviewCategoryLabels),
+              ],
+            },
+            {
+              key: "archive",
+              label: "Archive status",
+              options: [
+                ["active", "Active content"],
+                ["archived", "Archived content"],
+                ["all", "Active and archived"],
               ],
             },
             {
               key: "output",
-              label: "Output use",
+              label: "Output scope",
               options: [
-                ["all", "All output use"],
-                ["used", "Used in output"],
-                ["excluded", "Excluded from output"],
+                [
+                  "selected",
+                  `Selected resume: ${outputResume?.name || "Unavailable resume"}`,
+                ],
+                ["any", "Any resume"],
+                ["all", "All content (includes excluded)"],
+                ["unused", "Unused by any resume"],
               ],
             },
           ] as {
@@ -253,13 +272,43 @@ export function TranslationsEditor({
             );
           })}
       </FieldGroup>
-      <p className="text-sm text-muted-foreground">
-        {candidates.length} unresolved in{" "}
+      <p
+        role="status"
+        aria-live="polite"
+        className="text-sm text-muted-foreground"
+      >
+        {candidates.length} unresolved wording items match{" "}
         {queueContext
-          ? "your global queue filters. Previous/Next follow that queue"
+          ? "your global queue filters; Previous/Next follow that queue"
           : "these filters"}
-        . Optional empty summaries remain valid. Reviews warn without blocking
-        valid downloads.
+        . Each item is one field, target language, and owner, counted once even
+        with multiple tasks.
+        {queueContext &&
+          ` ${visible.filter((item) => item.reasons.length).length} unresolved items match this editor's filters.`}
+      </p>
+      <div className="flex flex-wrap gap-2" aria-label="Task category totals">
+        {Object.entries(reviewCategoryLabels).map(([category, label]) => (
+          <Badge key={category} variant="outline">
+            {label}:{" "}
+            {
+              candidates.filter((item) =>
+                item.categories.some((value) => value === category),
+              ).length
+            }
+          </Badge>
+        ))}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Category totals can overlap. Output scope, owner, and archive status are
+        separate filters and must all match. Selected resume includes its used
+        independent reviews and inherited library tasks, never another
+        resume&apos;s independent reviews. To include excluded or archived
+        content, choose All content and Active and archived. Missing required
+        text can block that output; translation and library-change reminders do
+        not block valid downloads. Optional empty summaries remain valid. The
+        sidebar count covers the entire workspace, including excluded and
+        archived content. Unused means library text inherited by no output, or a
+        customization excluded from its own resume.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button
@@ -288,7 +337,7 @@ export function TranslationsEditor({
             </CardTitle>
             <CardDescription>
               {currentItem
-                ? `${currentItem.owner} · ${currentItem.field.source} · ${currentItem.field.label} · ${currentItem.locale}`
+                ? `${currentItem.owner} · ${currentItem.field.source} · ${currentItem.field.label} · ${languageNames[currentItem.locale]}`
                 : "This item is unavailable. Its content or resume was removed."}
             </CardDescription>
           </CardHeader>
@@ -303,11 +352,14 @@ export function TranslationsEditor({
                 )}
                 <p className="text-sm">
                   {currentItem.provenance} ·{" "}
-                  {currentItem.output
-                    ? "Used in output"
-                    : "Excluded from output"}{" "}
-                  · Reference:{" "}
-                  {currentItem.locale === "en-US" ? "pt-BR" : "en-US"}
+                  {reviewOutputLabel(currentItem, outputResumeId)} ·{" "}
+                  {currentItem.archived ? "Archived content" : "Active content"}
+                  {" · Reference: "}
+                  {
+                    languageNames[
+                      currentItem.locale === "en-US" ? "pt-BR" : "en-US"
+                    ]
+                  }
                 </p>
                 <p className="text-sm">
                   {currentItem.reasons.join(" · ") || "Resolved"}
@@ -389,7 +441,15 @@ export function TranslationsEditor({
       )}
       <div ref={list} className="flex flex-col gap-2">
         {!visible.length && (
-          <p role="status">No unresolved work matches these filters.</p>
+          <Empty role="status">
+            <EmptyHeader>
+              <EmptyTitle>No wording items match these filters</EmptyTitle>
+              <EmptyDescription>
+                Broaden output scope or archive status to include excluded or
+                archived content.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
         {visible
           .filter((item) => item.id !== currentItem?.id)
@@ -401,7 +461,10 @@ export function TranslationsEditor({
               onClick={() => select(item)}
             >
               {item.owner} · {item.field.source} · {item.field.label} ·{" "}
-              {item.locale} · {item.reasons.join(" · ") || "Resolved"}
+              {languageNames[item.locale]} ·{" "}
+              {item.reasons.join(" · ") || "No unresolved tasks"} ·{" "}
+              {item.archived ? "Archived content" : "Active content"} ·{" "}
+              {reviewOutputLabel(item, outputResumeId)}
             </Button>
           ))}
       </div>

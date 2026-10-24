@@ -325,10 +325,10 @@ export function VariantComparison({
                       </Badge>
                     )}
                     {cell.translation && (
-                      <Badge variant="outline">Translation review</Badge>
+                      <Badge variant="outline">Compare translations</Badge>
                     )}
                     {cell.shared && (
-                      <Badge variant="outline">Shared wording changed</Badge>
+                      <Badge variant="outline">Review library changes</Badge>
                     )}
                   </div>
                   {cell.spans && (

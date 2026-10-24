@@ -9,9 +9,11 @@ import {
   variantWording,
 } from "@/lib/resume/wording";
 import type {
+  ReviewFilters,
   ReviewItem,
   WorkspaceFocusTarget,
 } from "@/types-and-constants/navigation";
+import { reviewCategoryLabels } from "@/types-and-constants/navigation";
 import type { ResumeDocument } from "@/types-and-constants/resume";
 import { locales } from "@/types-and-constants/resume";
 
@@ -28,6 +30,16 @@ export function reviewItems(
   retained?: WorkspaceFocusTarget,
 ): ReviewItem[] {
   const library = localizedFields(document);
+  const archivedPaths = new Set(
+    document.sections.flatMap((section) =>
+      section.entries
+        .filter((entry) => entry.archived)
+        .flatMap((entry) => [
+          `entries.${entry.id}.title`,
+          ...entry.bullets.map((bullet) => `bullets.${bullet.id}.body`),
+        ]),
+    ),
+  );
   const outputPaths = new Map(
     document.variants.map((variant) => {
       const fields = localizedFields(document, variant);
@@ -78,18 +90,28 @@ export function reviewItems(
       for (const locale of locales) {
         if (variant && !wording && retained?.locale !== locale) continue;
         const status = translationStatus(field, locale);
-        const reasons =
+        const categories: ReviewItem["categories"] =
           variant && !wording
             ? []
             : [
                 status.missing && (!variant || wording?.overrides[locale])
-                  ? "Missing required wording"
-                  : "",
-                status.review ? "Translation needs review" : "",
-                status.sharedReview
-                  ? "Library wording changed beneath customization"
-                  : "",
-              ].filter(Boolean);
+                  ? ("missing" as const)
+                  : null,
+                status.review ? ("translation" as const) : null,
+                status.sharedReview ? ("library" as const) : null,
+              ].filter((category) => category !== null);
+        const reasons = categories.map(
+          (category) => reviewCategoryLabels[category],
+        );
+        const usedBy = document.variants
+          .filter(
+            (resume) =>
+              (!variant || resume.id === variant.id) &&
+              outputPaths.get(resume.id)![locale].has(shared.path) &&
+              (!!variant ||
+                !variantWording(resume, shared.path)?.overrides[locale]),
+          )
+          .map((resume) => resume.id);
         if (unresolvedOnly && !reasons.length) continue;
         result.push({
           id: JSON.stringify([
@@ -104,13 +126,10 @@ export function reviewItems(
           owner: variant ? variant.name || "Untitled resume" : "Career library",
           field,
           reasons,
-          output: variant
-            ? outputPaths.get(variant.id)![locale].has(shared.path)
-            : document.variants.some(
-                (resume) =>
-                  outputPaths.get(resume.id)![locale].has(shared.path) &&
-                  !variantWording(resume, shared.path)?.overrides[locale],
-              ),
+          categories,
+          usedBy,
+          archived: archivedPaths.has(shared.path),
+          output: usedBy.length > 0,
           provenance: variant
             ? wording?.overrides[locale]
               ? "Customized for this resume"
@@ -123,4 +142,52 @@ export function reviewItems(
     }
   }
   return result;
+}
+
+/** Intersect independent ownership, output, archive, language, section, and task filters.
+ * @param item Derived owner/field/language item. @param filters Current filters. @param selectedResumeId Resume whose output is selected, retained across editor excursions.
+ * @returns Whether the item matches every dimension; selected output never includes another resume's independent reviews.
+ * @example matchesReviewFilters(item, filters, variant.id)
+ */
+export function matchesReviewFilters(
+  item: ReviewItem,
+  filters: ReviewFilters,
+  selectedResumeId: string,
+): boolean {
+  return (
+    (filters.owner === "all" ||
+      (item.resumeId ? `resume:${item.resumeId}` : "library") ===
+        filters.owner) &&
+    (filters.language === "all" || item.locale === filters.language) &&
+    (filters.section === "all" || item.field.sectionId === filters.section) &&
+    (filters.reason === "all" ||
+      item.categories.some((category) => category === filters.reason)) &&
+    (filters.archive === "all" ||
+      item.archived === (filters.archive === "archived")) &&
+    (filters.output === "all" ||
+      (filters.output === "selected"
+        ? item.usedBy.includes(selectedResumeId)
+        : filters.output === "any"
+          ? item.output
+          : !item.output))
+  );
+}
+
+/** Describe output relevance without confusing retained customizations with unused library wording.
+ * @param item Derived task. @param selectedResumeId Selected output resume.
+ * @returns A readable relevance label for list rows and details.
+ * @example reviewOutputLabel(item, variant.id)
+ */
+export function reviewOutputLabel(
+  item: ReviewItem,
+  selectedResumeId: string,
+): string {
+  if (item.usedBy.includes(selectedResumeId)) return "Used by selected resume";
+  if (item.resumeId)
+    return item.output
+      ? "Used by its owning resume"
+      : "Excluded from its owning resume";
+  return item.output
+    ? "Inherited by another resume's output"
+    : "Not inherited by any resume's output";
 }
