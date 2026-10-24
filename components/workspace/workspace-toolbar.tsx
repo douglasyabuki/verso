@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { BrandMark } from "@/components/brand/brand";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
@@ -58,8 +59,8 @@ export function WorkspaceToolbar({
   const expanded = isMobile ? openMobile : open;
   const PreviewIcon = preview ? PanelRightClose : PanelRightOpen;
   return (
-    <header className="flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-2 md:px-6">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="flex min-h-16 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 md:px-6">
+      <div className="flex min-w-0 flex-1 basis-60 items-center gap-2">
         <Tooltip>
           <TooltipTrigger
             render={
@@ -73,8 +74,9 @@ export function WorkspaceToolbar({
             {expanded ? "Collapse sidebar" : "Expand sidebar"}
           </TooltipContent>
         </Tooltip>
+        {!expanded && <BrandMark className="size-6 shrink-0 text-primary" />}
         <Separator orientation="vertical" />
-        <div className="flex w-40 min-w-0 items-center gap-2 text-sm sm:w-64">
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
           <span className="hidden text-muted-foreground sm:inline">
             Workspace
           </span>
@@ -127,7 +129,7 @@ export function WorkspaceToolbar({
           ))}
         </div>
       </div>
-      <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-3">
+      <div className="ml-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-3">
         <WorkspaceSaveStatus className="text-xs text-muted-foreground" />
         {previewAvailable && (
           <div
@@ -160,6 +162,6 @@ export function WorkspaceToolbar({
           </div>
         )}
       </div>
-    </header>
+    </div>
   );
 }

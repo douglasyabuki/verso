@@ -29,7 +29,7 @@ export function WorkspaceShell({
         open={sidebarOpen}
         onOpenChange={onSidebarChange}
         className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
-        style={{ "--sidebar-width": "15rem" } as CSSProperties}
+        style={{ "--sidebar-width": "16rem" } as CSSProperties}
       >
         {sidebar}
         <SidebarInset className="min-h-0 min-w-0 overflow-hidden">

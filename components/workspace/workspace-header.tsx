@@ -7,6 +7,7 @@ import {
   FileCode,
   FileText,
 } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { WorkspaceSaveStatus } from "@/components/workspace/workspace-toolbar";
+import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
 import type { useWorkspaceExports } from "@/hooks/workspace/use-workspace-exports";
 import type {
   Locale,
@@ -47,7 +48,7 @@ type WorkspaceHeaderProps = {
   hasBilingualErrors: boolean;
 };
 
-export function WorkspaceHeader({
+export function WorkspaceResumeControls({
   document,
   variant,
   setVariantId,
@@ -64,8 +65,8 @@ export function WorkspaceHeader({
     label: item.name || "Untitled resume",
   }));
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 md:px-6">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+      <div className="flex max-w-full min-w-0 flex-wrap items-center gap-3">
         <Label htmlFor="variant-picker" className="sr-only">
           Active resume
         </Label>
@@ -77,7 +78,10 @@ export function WorkspaceHeader({
             setVariantId(value);
           }}
         >
-          <SelectTrigger id="variant-picker" className="max-w-48">
+          <SelectTrigger
+            id="variant-picker"
+            className="w-48 max-w-full min-w-0"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -144,7 +148,21 @@ export function WorkspaceHeader({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <WorkspaceSaveStatus className="text-xs text-muted-foreground sm:hidden" />
     </div>
+  );
+}
+
+export function WorkspaceHeader({
+  context,
+  ...toolbar
+}: ComponentProps<typeof WorkspaceToolbar> & { context: ReactNode }) {
+  return (
+    <header
+      className="shrink-0 border-b bg-card"
+      aria-label="Workspace controls"
+    >
+      <WorkspaceToolbar {...toolbar} />
+      <div className="min-w-0 border-t px-4 py-3 md:px-6">{context}</div>
+    </header>
   );
 }

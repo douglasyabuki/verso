@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { ChevronRight, ListChecks, Pencil, Trash2 } from "lucide-react";
+import { ChevronRight, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { ContentEditor } from "@/components/resume/content-editor";
 import { ResumeCollection } from "@/components/resume/resume-collection";
@@ -143,7 +143,11 @@ export function EditorPane({
   const section = document.sections.find((item) => item.id === sectionId);
   return (
     <div
-      className="@container h-full overflow-auto p-4 sm:p-6"
+      className={cn(
+        "@container h-full overflow-auto p-4 sm:p-6",
+        ["library-overview", "resumes", "review", "data"].includes(view) &&
+          "md:p-8 xl:p-10",
+      )}
       data-workspace-scroll
       onScroll={(event) => {
         if (
@@ -170,9 +174,9 @@ export function EditorPane({
               : "max-w-3xl",
         )}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 basis-48">
+            <h1>
               {view === "content" || view === "library-translations"
                 ? sectionId === "profile"
                   ? "Profile & summary"
@@ -217,6 +221,23 @@ export function EditorPane({
               </InfoHint>
             </div>
           </div>
+          {(view === "library-overview" || view === "resumes") && (
+            <Button
+              disabled={
+                view === "resumes"
+                  ? document.variants.length >= 30
+                  : document.sections.length >= 30
+              }
+              onClick={() =>
+                view === "resumes"
+                  ? navigation.createResume()
+                  : navigation.addSection()
+              }
+            >
+              <Plus data-icon="inline-start" />
+              {view === "resumes" ? "Create resume" : "Add section"}
+            </Button>
+          )}
           {view === "content" && section?.kind === "custom" && (
             <Button
               variant="ghost"

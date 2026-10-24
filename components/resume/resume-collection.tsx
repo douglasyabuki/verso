@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Copy,
-  FileText,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Copy, FileText, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +27,6 @@ export function ResumeCollection({
   document,
   actions,
   onOpen,
-  onCreate,
 }: {
   document: ResumeDocument;
   actions: ReturnType<typeof useResumeActions>;
@@ -43,19 +35,11 @@ export function ResumeCollection({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      <Button
-        className="self-start"
-        disabled={document.variants.length >= 30}
-        onClick={() => onCreate()}
-      >
-        <Plus data-icon="inline-start" />
-        Create resume
-      </Button>
       <div className="grid gap-4 @2xl:grid-cols-2">
         {document.variants.map((resume) => (
           <Card key={resume.id} size="sm">
             <CardHeader>
-              <CardTitle className="flex min-w-0 items-center gap-2">
+              <CardTitle size="section" className="flex min-w-0 items-center gap-2">
                 <FileText
                   aria-hidden="true"
                   className="resume-color size-4 shrink-0 text-(--resume-color)"
@@ -83,7 +67,7 @@ export function ResumeCollection({
               </div>
             </CardContent>
             <CardFooter className="flex flex-wrap gap-2">
-              <Button onClick={() => onOpen(resume.id)}>
+              <Button variant="outline" onClick={() => onOpen(resume.id)}>
                 <FileText data-icon="inline-start" />
                 Open resume
               </Button>

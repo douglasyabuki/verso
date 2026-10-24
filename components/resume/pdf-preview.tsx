@@ -306,7 +306,7 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <div className="relative isolate min-h-0 min-w-0 flex-1 overflow-hidden bg-muted/50">
+      <div className="relative isolate min-h-0 min-w-0 flex-1 overflow-hidden bg-preview-surface">
         <div
           ref={container}
           className="absolute inset-0 overflow-auto"

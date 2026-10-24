@@ -2,7 +2,6 @@
 
 import {
   Award,
-  BookOpen,
   BriefcaseBusiness,
   ChevronRight,
   Code2,
@@ -23,6 +22,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
+import { BrandLockup } from "@/components/brand/brand";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -144,10 +144,7 @@ export function WorkspaceSidebar({
       aria-label="Workspace navigation"
     >
       <SidebarHeader className="h-16 shrink-0 flex-row items-center justify-between border-b px-5">
-        <span className="flex items-center gap-2 font-semibold">
-          <BookOpen className="size-5" aria-hidden="true" />
-          verso<span className="text-muted-foreground">.</span>
-        </span>
+        <BrandLockup />
         {isMobile && (
           <Button
             variant="ghost"

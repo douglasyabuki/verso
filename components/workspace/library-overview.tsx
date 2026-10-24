@@ -1,6 +1,6 @@
 "use client";
 
-import { Languages, ListChecks, Pencil, Plus } from "lucide-react";
+import { Languages, ListChecks, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ import { locales } from "@/types-and-constants/resume";
 export function LibraryOverview({
   document,
   open,
-  addSection,
   onReview,
 }: {
   document: ResumeDocument;
@@ -50,7 +49,7 @@ export function LibraryOverview({
         ].map((section) => (
           <Card key={section.id} size="sm">
             <CardHeader>
-              <CardTitle>{section.label}</CardTitle>
+              <CardTitle size="section">{section.label}</CardTitle>
               <CardDescription>
                 {section.id === "profile"
                   ? "Shared contact details and bilingual summary"
@@ -83,6 +82,7 @@ export function LibraryOverview({
             </CardContent>
             <CardFooter>
               <Button
+                variant="outline"
                 onClick={() =>
                   open({
                     kind: "library-section",
@@ -98,14 +98,6 @@ export function LibraryOverview({
           </Card>
         ))}
       </div>
-      <Button
-        className="self-start"
-        disabled={document.sections.length >= 30}
-        onClick={addSection}
-      >
-        <Plus data-icon="inline-start" />
-        Add section
-      </Button>
     </div>
   );
 }

@@ -26,11 +26,13 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WorkspaceDataMenu } from "@/components/workspace/workspace-data-menu";
 import { WorkspaceFeedback } from "@/components/workspace/workspace-feedback";
-import { WorkspaceHeader } from "@/components/workspace/workspace-header";
+import {
+  WorkspaceHeader,
+  WorkspaceResumeControls,
+} from "@/components/workspace/workspace-header";
 import { WorkspaceOverlays } from "@/components/workspace/workspace-overlays";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
-import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
 import { AppearanceControl } from "@/components/workspace/workspace-utility-rail";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -422,7 +424,71 @@ export function WorkspaceView() {
         />
       }
       toolbar={
-        <WorkspaceToolbar
+        <WorkspaceHeader
+          context={
+            resumeWorkspace ? (
+              <WorkspaceResumeControls
+                document={document}
+                variant={variant}
+                setVariantId={setVariantId}
+                locale={locale}
+                setLocale={setLocale}
+                dirty={dirty}
+                exporting={exports.exporting}
+                runExport={exports.runExport}
+                hasErrors={validation.errors.length > 0}
+                hasBilingualErrors={
+                  validations["en-US"].errors.length > 0 ||
+                  validations["pt-BR"].errors.length > 0
+                }
+              />
+            ) : (
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                <span className="text-xs text-muted-foreground">
+                  {dirty ? "Changes since JSON backup" : "Matches JSON backup"}
+                </span>
+                {!fullWidth && (
+                  <div className="flex max-w-full flex-wrap items-center gap-2 text-sm">
+                    <Label htmlFor="library-language">
+                      {view === "shared-defaults"
+                        ? "Defaults language"
+                        : "Library editing language"}
+                    </Label>
+                    <Select
+                      items={languageItems}
+                      value={
+                        view === "shared-defaults"
+                          ? locale
+                          : navigation.libraryLocale
+                      }
+                      disabled={state.replacing || !!state.pending}
+                      onValueChange={(value) => {
+                        if (value === null || state.replacing || state.pending)
+                          return;
+                        if (view === "shared-defaults")
+                          setLocale(value as typeof locale);
+                        else
+                          navigation.setLibraryLocale(value as typeof locale);
+                      }}
+                    >
+                      <SelectTrigger id="library-language">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {languageItems.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )
+          }
           shortcuts={shortcuts}
           previewAvailable={!fullWidth}
           mobilePreviewControls={
@@ -487,65 +553,6 @@ export function WorkspaceView() {
       }
     >
       <WorkspaceFeedback />
-      {resumeWorkspace ? (
-        <WorkspaceHeader
-          document={document}
-          variant={variant}
-          setVariantId={setVariantId}
-          locale={locale}
-          setLocale={setLocale}
-          dirty={dirty}
-          exporting={exports.exporting}
-          runExport={exports.runExport}
-          hasErrors={validation.errors.length > 0}
-          hasBilingualErrors={
-            validations["en-US"].errors.length > 0 ||
-            validations["pt-BR"].errors.length > 0
-          }
-        />
-      ) : (
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-2">
-          <span className="text-xs text-muted-foreground">
-            {dirty ? "Changes since JSON backup" : "Matches JSON backup"}
-          </span>
-          {!fullWidth && (
-            <div className="flex items-center gap-2 text-sm">
-              <Label htmlFor="library-language">
-                {view === "shared-defaults"
-                  ? "Defaults language"
-                  : "Library editing language"}
-              </Label>
-              <Select
-                items={languageItems}
-                value={
-                  view === "shared-defaults" ? locale : navigation.libraryLocale
-                }
-                disabled={state.replacing || !!state.pending}
-                onValueChange={(value) => {
-                  if (value === null || state.replacing || state.pending)
-                    return;
-                  if (view === "shared-defaults")
-                    setLocale(value as typeof locale);
-                  else navigation.setLibraryLocale(value as typeof locale);
-                }}
-              >
-                <SelectTrigger id="library-language">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {languageItems.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-      )}
       <div className="min-h-0 flex-1">
         {fullWidth ? (
           editor

@@ -96,7 +96,7 @@ export function TextEditor({
         "aria-invalid": String(!!error),
         "aria-describedby": `${id}-instructions${error ? ` ${id}-error` : ""}`,
         spellcheck: "true",
-        class: `w-full whitespace-pre-wrap break-words rounded-b-md px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${multiline ? "min-h-24" : "min-h-16"} [&_em]:italic [&_a]:text-primary [&_a]:underline`,
+        class: `w-full whitespace-pre-wrap break-words rounded-b-md px-3 py-2 text-base outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${multiline ? "min-h-24" : "min-h-16"} [&_em]:italic [&_a]:text-primary [&_a]:underline`,
       },
       handleKeyDown: (_view, event) => {
         if (event.isComposing || event.keyCode === 229) return false;
@@ -353,7 +353,7 @@ export function TextEditor({
   return (
     <div className="flex flex-col gap-2">
       <div
-        className="rounded-md border border-input bg-background"
+        className="rounded-md border border-input bg-card"
         data-invalid={!!error}
       >
         <div
