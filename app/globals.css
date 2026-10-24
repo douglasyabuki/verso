@@ -4,6 +4,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* PDF.js sizes pages by their content; Preflight's border-box shrinks only
+   the canvas beneath its independently sized text and annotation layers. */
+.pdfViewer .page {
+  box-sizing: content-box;
+}
+
 @layer components {
   .quick-actions-dropdown {
     width: 14rem !important;

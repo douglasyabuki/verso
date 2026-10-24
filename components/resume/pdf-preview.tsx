@@ -40,6 +40,7 @@ import type { ResumeOutput } from "@/types-and-constants/resume";
 export default function PdfPreview({ output }: { output?: ResumeOutput }) {
   const container = useRef<HTMLDivElement>(null);
   const pages = useRef<HTMLDivElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const instance = useRef<{ viewer: PDFViewer; bus: EventBus } | null>(null);
   const [page, setPage] = useState(1);
   const [count, setCount] = useState(0);
@@ -179,7 +180,24 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
     })),
   ];
   return (
-    <>
+    <div
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
+      onKeyDown={(event) => {
+        if (
+          !event.defaultPrevented &&
+          !event.nativeEvent.isComposing &&
+          (event.ctrlKey || event.metaKey) &&
+          !event.altKey &&
+          !event.shiftKey &&
+          event.key.toLowerCase() === "f"
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          searchInput.current?.focus();
+          searchInput.current?.select();
+        }
+      }}
+    >
       <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5">
         <div className="flex shrink-0 items-center gap-2">
           <div className="flex items-center gap-1">
@@ -240,6 +258,7 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
             Search PDF text
           </Label>
           <Input
+            ref={searchInput}
             id={id}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -323,6 +342,6 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
           </ScrollArea>
         </CollapsibleContent>
       </Collapsible>
-    </>
+    </div>
   );
 }
