@@ -16,9 +16,14 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { localizedFields, plain } from "@/lib/resume/localization";
 import { reviewItems } from "@/lib/resume/review-queue";
 import { sharedWording, variantWording } from "@/lib/resume/wording";
@@ -49,6 +54,7 @@ export function TranslationsEditor({
   onOwner: (target: WorkspaceFocusTarget) => void;
   queueContext?: ReviewReturnContext;
 }) {
+  const { state } = useWorkspace();
   const all = reviewItems(document, false, context.current ?? undefined);
   const output = localizedFields(document, variant);
   const fields = all.filter(
@@ -212,22 +218,40 @@ export function TranslationsEditor({
             label: string;
             options: string[][];
           }[])
-          .map(({ key, label, options }) => (
-            <Field key={key}>
-              <FieldLabel htmlFor={`review-${key}`}>{label}</FieldLabel>
-              <NativeSelect
-                id={`review-${key}`}
-                value={filters[key]}
-                onChange={(event) => filter(key, event.target.value)}
-              >
-                {options.map(([value, text]) => (
-                  <NativeSelectOption key={value} value={value}>
-                    {text}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </Field>
-          ))}
+          .map(({ key, label, options }) => {
+            const filterItems = options.map(([value, label]) => ({
+              value,
+              label,
+            }));
+            return (
+              <Field key={key}>
+                <FieldLabel htmlFor={`review-${key}`}>{label}</FieldLabel>
+                <Select
+                  items={filterItems}
+                  value={filters[key]}
+                  disabled={state.replacing || !!state.pending}
+                  onValueChange={(value) => {
+                    if (value === null || state.replacing || state.pending)
+                      return;
+                    filter(key, value);
+                  }}
+                >
+                  <SelectTrigger id={`review-${key}`} className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {filterItems.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+            );
+          })}
       </FieldGroup>
       <p className="text-sm text-muted-foreground">
         {candidates.length} unresolved in{" "}

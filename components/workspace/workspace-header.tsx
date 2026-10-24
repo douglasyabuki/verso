@@ -16,10 +16,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WorkspaceSaveStatus } from "@/components/workspace/workspace-toolbar";
 import type { useWorkspaceExports } from "@/hooks/workspace/use-workspace-exports";
@@ -54,24 +59,37 @@ export function WorkspaceHeader({
   hasErrors,
   hasBilingualErrors,
 }: WorkspaceHeaderProps) {
+  const resumeItems = document.variants.map((item) => ({
+    value: item.id,
+    label: item.name || "Untitled resume",
+  }));
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 md:px-6">
       <div className="flex min-w-0 items-center gap-3">
-        <label htmlFor="variant-picker" className="sr-only">
+        <Label htmlFor="variant-picker" className="sr-only">
           Active resume
-        </label>
-        <NativeSelect
-          id="variant-picker"
-          className="max-w-48"
+        </Label>
+        <Select
+          items={resumeItems}
           value={variant.id}
-          onChange={(event) => setVariantId(event.target.value)}
+          onValueChange={(value) => {
+            if (value === null) return;
+            setVariantId(value);
+          }}
         >
-          {document.variants.map((item) => (
-            <NativeSelectOption key={item.id} value={item.id}>
-              {item.name || "Untitled resume"}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          <SelectTrigger id="variant-picker" className="max-w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {resumeItems.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <ToggleGroup
           value={[locale]}
           onValueChange={(values) => {

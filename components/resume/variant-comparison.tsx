@@ -15,9 +15,14 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { plain } from "@/lib/resume/localization";
 import { entryLabel } from "@/lib/resume/section-fields";
 import { resolveSettings } from "@/lib/resume/settings";
@@ -63,6 +68,7 @@ export function VariantComparison({
   locale: Locale;
   onOpen: (issue: Issue) => void;
 }) {
+  const { state } = useWorkspace();
   const [leftId, setLeftId] = useState(variant.id);
   const [rightId, setRightId] = useState(
     document.variants.find((item) => item.id !== variant.id)?.id ?? "",
@@ -203,45 +209,78 @@ export function VariantComparison({
       !differences ||
       JSON.stringify(row.cells[0]) !== JSON.stringify(row.cells[1]),
   );
+  const languageItems = [
+    { value: "en-US", label: "English" },
+    { value: "pt-BR", label: "Português" },
+  ];
   return (
     <div className="flex flex-col gap-4">
       <FieldGroup className="grid gap-4 @2xl:grid-cols-2">
-        {variants.map((item, index) => (
-          <Field key={index}>
-            <FieldLabel htmlFor={`compare-${index}`}>
-              {index ? "Right resume" : "Left resume"}
-            </FieldLabel>
-            <NativeSelect
-              id={`compare-${index}`}
-              value={item.id}
-              onChange={(event) =>
-                index
-                  ? setRightId(event.target.value)
-                  : setLeftId(event.target.value)
-              }
-            >
-              {document.variants
-                .filter((candidate) => candidate.id !== variants[1 - index].id)
-                .map((candidate) => (
-                  <NativeSelectOption key={candidate.id} value={candidate.id}>
-                    {candidate.name || "Untitled resume"}
-                  </NativeSelectOption>
-                ))}
-            </NativeSelect>
-          </Field>
-        ))}
+        {variants.map((item, index) => {
+          const comparisonItems = document.variants
+            .filter((candidate) => candidate.id !== variants[1 - index].id)
+            .map((candidate) => ({
+              value: candidate.id,
+              label: candidate.name || "Untitled resume",
+            }));
+          return (
+            <Field key={index}>
+              <FieldLabel htmlFor={`compare-${index}`}>
+                {index ? "Right resume" : "Left resume"}
+              </FieldLabel>
+              <Select
+                items={comparisonItems}
+                value={item.id}
+                disabled={state.replacing || !!state.pending}
+                onValueChange={(value) => {
+                  if (value === null || state.replacing || state.pending)
+                    return;
+                  if (index) setRightId(value);
+                  else setLeftId(value);
+                }}
+              >
+                <SelectTrigger id={`compare-${index}`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {comparisonItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+          );
+        })}
         <Field>
           <FieldLabel htmlFor="compare-language">
             Comparison language
           </FieldLabel>
-          <NativeSelect
-            id="compare-language"
+          <Select
+            items={languageItems}
             value={locale}
-            onChange={(event) => setLocale(event.target.value as Locale)}
+            disabled={state.replacing || !!state.pending}
+            onValueChange={(value) => {
+              if (value === null || state.replacing || state.pending) return;
+              setLocale(value as Locale);
+            }}
           >
-            <NativeSelectOption value="en-US">English</NativeSelectOption>
-            <NativeSelectOption value="pt-BR">Português</NativeSelectOption>
-          </NativeSelect>
+            <SelectTrigger id="compare-language" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {languageItems.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </Field>
         <CheckField
           label="Differences only"

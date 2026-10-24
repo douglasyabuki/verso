@@ -10,6 +10,7 @@ import { SettingsEditor } from "@/components/resume/template-editor";
 import { TranslationsEditor } from "@/components/resume/translations-editor";
 import { VariantsEditor } from "@/components/resume/variants-editor";
 import { Button } from "@/components/ui/button";
+import { FieldSet } from "@/components/ui/field";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LibraryOverview } from "@/components/workspace/library-overview";
 import { librarySectionLabel } from "@/components/workspace/navigation";
@@ -150,7 +151,7 @@ export function EditorPane({
           });
       }}
     >
-      <fieldset
+      <FieldSet
         disabled={disabled}
         className={cn(
           "mx-auto flex min-w-0 flex-col gap-6 disabled:opacity-70",
@@ -451,7 +452,7 @@ export function EditorPane({
             update={update}
           />
         )}
-      </fieldset>
+      </FieldSet>
     </div>
   );
 }

@@ -21,9 +21,13 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { certificationDateErrors } from "@/lib/resume/certification";
 import type { CertificationDates, Entry } from "@/types-and-constants/resume";
@@ -57,6 +61,7 @@ function DateSetup({
   issueField?: string;
   onSave: (dates: CertificationDates | null) => void;
 }) {
+  const { state } = useWorkspace();
   const committed = entry.certification?.dates ?? null;
   const [open, setOpen] = useState(
     !!issueField?.startsWith(`entries.${entry.id}.certification.`),
@@ -90,6 +95,11 @@ function DateSetup({
     if (JSON.stringify(dates) !== JSON.stringify(committed)) onSave(dates);
     setOpen(false);
   };
+  const expirationItems = [
+    { value: "unspecified", label: "Unspecified" },
+    { value: "never", label: "No expiration" },
+    { value: "date", label: "Expiration date" },
+  ];
   return (
     <FieldGroup>
       <FieldDescription>
@@ -169,23 +179,29 @@ function DateSetup({
             </Field>
             <Field>
               <FieldLabel htmlFor={id}>Expiration status</FieldLabel>
-              <NativeSelect
-                id={id}
+              <Select
+                items={expirationItems}
                 value={expirationKind}
-                onChange={(event) =>
-                  setExpirationKind(event.target.value as typeof expirationKind)
-                }
+                disabled={state.replacing || !!state.pending}
+                onValueChange={(value) => {
+                  if (value === null || state.replacing || state.pending)
+                    return;
+                  setExpirationKind(value as typeof expirationKind);
+                }}
               >
-                <NativeSelectOption value="unspecified">
-                  Unspecified
-                </NativeSelectOption>
-                <NativeSelectOption value="never">
-                  No expiration
-                </NativeSelectOption>
-                <NativeSelectOption value="date">
-                  Expiration date
-                </NativeSelectOption>
-              </NativeSelect>
+                <SelectTrigger id={id} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {expirationItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             {expirationKind === "date" && (
               <Field data-invalid={!!errors.expiration}>

@@ -8,11 +8,21 @@ import { IssuesPanel } from "@/components/resume/issues-panel";
 import { PreviewPane } from "@/components/resume/preview-pane";
 import { ResumeIdentityDialog } from "@/components/resume/resume-identity-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WorkspaceDataMenu } from "@/components/workspace/workspace-data-menu";
 import { WorkspaceFeedback } from "@/components/workspace/workspace-feedback";
@@ -370,6 +380,10 @@ export function WorkspaceView() {
       />
     </div>
   );
+  const languageItems = [
+    { value: "en-US", label: "English" },
+    { value: "pt-BR", label: "Português" },
+  ];
   return (
     <WorkspaceShell
       sidebarOpen={layout.sidebar}
@@ -469,27 +483,40 @@ export function WorkspaceView() {
             {dirty ? "Changes since JSON backup" : "Matches JSON backup"}
           </span>
           {!fullWidth && (
-            <label className="flex items-center gap-2 text-sm">
-              {view === "shared-defaults"
-                ? "Defaults language"
-                : "Library editing language"}
-              <select
-                className="rounded border p-1"
+            <div className="flex items-center gap-2 text-sm">
+              <Label htmlFor="library-language">
+                {view === "shared-defaults"
+                  ? "Defaults language"
+                  : "Library editing language"}
+              </Label>
+              <Select
+                items={languageItems}
                 value={
                   view === "shared-defaults" ? locale : navigation.libraryLocale
                 }
-                onChange={(event) =>
-                  view === "shared-defaults"
-                    ? setLocale(event.target.value as typeof locale)
-                    : navigation.setLibraryLocale(
-                        event.target.value as typeof locale,
-                      )
-                }
+                disabled={state.replacing || !!state.pending}
+                onValueChange={(value) => {
+                  if (value === null || state.replacing || state.pending)
+                    return;
+                  if (view === "shared-defaults")
+                    setLocale(value as typeof locale);
+                  else navigation.setLibraryLocale(value as typeof locale);
+                }}
               >
-                <option value="en-US">English</option>
-                <option value="pt-BR">Português</option>
-              </select>
-            </label>
+                <SelectTrigger id="library-language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {languageItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
           )}
         </div>
       )}
@@ -555,7 +582,7 @@ export function WorkspaceView() {
           disabled={state.replacing || !!state.pending}
         />
       )}
-      <input
+      <Input
         ref={input}
         type="file"
         accept=".json,application/json"

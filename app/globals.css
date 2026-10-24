@@ -4,6 +4,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@layer components {
+  .quick-actions-dropdown {
+    width: 14rem !important;
+    max-width: var(--available-width) !important;
+  }
+
+  .quick-actions-dropdown [data-slot="dropdown-menu-item"] {
+    height: 2rem !important;
+    font-size: 13px !important;
+    line-height: 1rem !important;
+  }
+
+  .quick-actions-dropdown [data-slot="dropdown-menu-item"] > svg {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

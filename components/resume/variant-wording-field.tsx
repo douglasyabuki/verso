@@ -6,6 +6,11 @@ import { LocalizedField } from "@/components/resume/fields";
 import { TranslationReference } from "@/components/resume/translation-reference";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useWorkflowLinks } from "@/hooks/workspace/use-workflow-links";
 import { plain, translationSnapshot } from "@/lib/resume/localization";
 import {
@@ -266,11 +271,8 @@ export function VariantWordingDetails({
   if (!shared) return null;
   const value = effectiveWording(shared, variant, path);
   return (
-    <details
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary className="cursor-pointer text-sm font-medium">
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="cursor-pointer text-left text-sm font-medium">
         <Badge variant="outline">
           {variantWording(variant, path)?.overrides[locale]
             ? "Customized for this resume"
@@ -283,12 +285,14 @@ export function VariantWordingDetails({
           <Badge variant="outline">Shared wording changed</Badge>
         )}{" "}
         Wording: {variant.name || "Untitled resume"} ({locale})
-      </summary>
-      {open && (
-        <div className="pt-3">
-          <VariantWordingField {...props} />
-        </div>
-      )}
-    </details>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {open && (
+          <div className="pt-3">
+            <VariantWordingField {...props} />
+          </div>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

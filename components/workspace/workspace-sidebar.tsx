@@ -305,7 +305,10 @@ export function WorkspaceSidebar({
                         >
                           <MoreHorizontal />
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent
+                          align="end"
+                          className="quick-actions-dropdown"
+                        >
                           <DropdownMenuGroup>
                             <DropdownMenuItem
                               disabled={blocked}

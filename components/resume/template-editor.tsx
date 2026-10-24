@@ -18,9 +18,14 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { resolveSettings } from "@/lib/resume/settings";
 import type { EditorProps } from "@/types-and-constants/editor";
 import type { TemplateSettings } from "@/types-and-constants/resume";
@@ -36,6 +41,7 @@ export function SettingsEditor({
   initialScope?: string;
   sharedDefaults?: boolean;
 }) {
+  const { state } = useWorkspace();
   const [scope, setScope] = useState(initialScope);
   const selectId = useId();
   const scopeVariant = sharedDefaults
@@ -125,6 +131,18 @@ export function SettingsEditor({
       values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     },
   ];
+  const scopeItems = sharedDefaults
+    ? [
+        { value: "base", label: "Workspace defaults" },
+        { value: "locale", label: `Language defaults · ${locale}` },
+      ]
+    : [
+        {
+          value: "variant",
+          label: `Resume · ${variant.name || "Untitled resume"}`,
+        },
+        { value: "variant-locale", label: `Resume language · ${locale}` },
+      ];
   return (
     <div className="flex flex-col gap-5">
       <Card>
@@ -142,31 +160,29 @@ export function SettingsEditor({
             </Badge>
             <Field>
               <FieldLabel htmlFor={selectId}>Apply settings to</FieldLabel>
-              <NativeSelect
-                id={selectId}
+              <Select
+                items={scopeItems}
                 value={scope}
-                onChange={(event) => setScope(event.target.value)}
+                disabled={state.replacing || !!state.pending}
+                onValueChange={(value) => {
+                  if (value === null || state.replacing || state.pending)
+                    return;
+                  setScope(value);
+                }}
               >
-                {sharedDefaults ? (
-                  <>
-                    <NativeSelectOption value="base">
-                      Workspace defaults
-                    </NativeSelectOption>
-                    <NativeSelectOption value="locale">
-                      Language defaults · {locale}
-                    </NativeSelectOption>
-                  </>
-                ) : (
-                  <>
-                    <NativeSelectOption value="variant">
-                      Resume · {variant.name || "Untitled resume"}
-                    </NativeSelectOption>
-                    <NativeSelectOption value="variant-locale">
-                      Resume language · {locale}
-                    </NativeSelectOption>
-                  </>
-                )}
-              </NativeSelect>
+                <SelectTrigger id={selectId} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {scopeItems.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
               <FieldDescription>
                 Precedence: Workspace defaults → Language defaults → Resume →
                 Resume language.
@@ -182,39 +198,57 @@ export function SettingsEditor({
                     ...(current !== undefined ? [current] : []),
                   ]),
                 );
+                const settingItems = [
+                  ...(scope !== "base"
+                    ? [{ value: "inherit", label: "Inherit" }]
+                    : []),
+                  ...choices.map((value) => ({
+                    value: String(value),
+                    label:
+                      value === "a4"
+                        ? "A4"
+                        : value === "letter"
+                          ? "US Letter"
+                          : `${value}${control.unit ? " " + control.unit : ""}`,
+                  })),
+                ];
                 return (
                   <Field key={control.key}>
                     <FieldLabel htmlFor={id}>{control.label}</FieldLabel>
-                    <NativeSelect
-                      id={id}
-                      data-issue-field={`settings.${control.key}`}
-                      value={current ?? "inherit"}
-                      onChange={(event) =>
+                    <Select
+                      items={settingItems}
+                      value={String(current ?? "inherit")}
+                      disabled={state.replacing || !!state.pending}
+                      onValueChange={(value) => {
+                        if (value === null || state.replacing || state.pending)
+                          return;
                         change(
                           control.key,
-                          event.target.value === "inherit"
+                          value === "inherit"
                             ? undefined
                             : control.key === "pageSize"
-                              ? event.target.value
-                              : Number(event.target.value),
-                        )
-                      }
+                              ? value
+                              : Number(value),
+                        );
+                      }}
                     >
-                      {scope !== "base" && (
-                        <NativeSelectOption value="inherit">
-                          Inherit
-                        </NativeSelectOption>
-                      )}
-                      {choices.map((value) => (
-                        <NativeSelectOption key={value} value={value}>
-                          {value === "a4"
-                            ? "A4"
-                            : value === "letter"
-                              ? "US Letter"
-                              : `${value}${control.unit ? " " + control.unit : ""}`}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
+                      <SelectTrigger
+                        id={id}
+                        data-issue-field={`settings.${control.key}`}
+                        className="w-full"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {settingItems.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                     <FieldDescription>
                       Effective: {values[control.key]}
                       {control.unit ? " " + control.unit : ""}. Source:{" "}
@@ -265,6 +299,7 @@ export function CompilerSettings({
   document,
   update,
 }: Pick<EditorProps, "document" | "update">) {
+  const { state } = useWorkspace();
   const selectId = useId();
   return (
     <Card>
@@ -278,41 +313,57 @@ export function CompilerSettings({
       <CardContent>
         <FieldGroup>
           {(["initializationTimeoutMs", "compilationTimeoutMs"] as const).map(
-            (key) => (
-              <Field key={key}>
-                <FieldLabel htmlFor={selectId + key}>
-                  {key === "initializationTimeoutMs"
-                    ? "Initialization timeout"
-                    : "Compilation timeout"}
-                </FieldLabel>
-                <NativeSelect
-                  id={selectId + key}
-                  value={document.compiler[key]}
-                  onChange={(event) =>
-                    update((draft) => {
-                      draft.compiler[key] = Number(event.target.value);
-                    })
-                  }
-                >
-                  {Array.from(
-                    new Set([
-                      5_000,
-                      10_000,
-                      30_000,
-                      60_000,
-                      120_000,
-                      300_000,
-                      600_000,
-                      document.compiler[key],
-                    ]),
-                  ).map((value) => (
-                    <NativeSelectOption key={value} value={value}>
-                      {value / 1000} seconds
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-              </Field>
-            ),
+            (key) => {
+              const timeoutItems = Array.from(
+                new Set([
+                  5_000,
+                  10_000,
+                  30_000,
+                  60_000,
+                  120_000,
+                  300_000,
+                  600_000,
+                  document.compiler[key],
+                ]),
+              ).map((value) => ({
+                value: String(value),
+                label: `${value / 1000} seconds`,
+              }));
+              return (
+                <Field key={key}>
+                  <FieldLabel htmlFor={selectId + key}>
+                    {key === "initializationTimeoutMs"
+                      ? "Initialization timeout"
+                      : "Compilation timeout"}
+                  </FieldLabel>
+                  <Select
+                    items={timeoutItems}
+                    value={String(document.compiler[key])}
+                    disabled={state.replacing || !!state.pending}
+                    onValueChange={(value) => {
+                      if (value === null || state.replacing || state.pending)
+                        return;
+                      update((draft) => {
+                        draft.compiler[key] = Number(value);
+                      });
+                    }}
+                  >
+                    <SelectTrigger id={selectId + key} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {timeoutItems.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              );
+            },
           )}
         </FieldGroup>
       </CardContent>

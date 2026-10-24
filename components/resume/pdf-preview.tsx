@@ -25,11 +25,16 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { ResumeOutput } from "@/types-and-constants/resume";
 
 export default function PdfPreview({ output }: { output?: ResumeOutput }) {
@@ -166,6 +171,13 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
       </div>
     );
 
+  const zoomItems = [
+    { value: "page-width", label: "Fit width" },
+    ...["0.75", "1", "1.25", "1.5"].map((value) => ({
+      value,
+      label: `${Number(value) * 100}%`,
+    })),
+  ];
   return (
     <>
       <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5">
@@ -199,29 +211,34 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
               <ArrowRight />
             </Button>
           </div>
-          <NativeSelect
-            aria-label="PDF zoom"
+          <Select
+            items={zoomItems}
             defaultValue="page-width"
-            onChange={(event) => {
+            onValueChange={(value) => {
+              if (value === null) return;
               if (instance.current)
-                instance.current.viewer.currentScaleValue = event.target.value;
+                instance.current.viewer.currentScaleValue = value;
             }}
-            size="sm"
           >
-            <NativeSelectOption value="page-width">
-              Fit width
-            </NativeSelectOption>
-            <NativeSelectOption value="0.75">75%</NativeSelectOption>
-            <NativeSelectOption value="1">100%</NativeSelectOption>
-            <NativeSelectOption value="1.25">125%</NativeSelectOption>
-            <NativeSelectOption value="1.5">150%</NativeSelectOption>
-          </NativeSelect>
+            <SelectTrigger aria-label="PDF zoom" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {zoomItems.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex min-w-0 flex-[1_1_12rem] items-center gap-2">
           <Search className="size-4 shrink-0 text-muted-foreground" />
-          <label htmlFor={id} className="sr-only">
+          <Label htmlFor={id} className="sr-only">
             Search PDF text
-          </label>
+          </Label>
           <Input
             id={id}
             value={query}
