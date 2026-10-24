@@ -51,6 +51,10 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-attention: var(--attention);
+  --color-attention-foreground: var(--attention-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -73,6 +77,10 @@
 }
 
 :root {
+  --attention: oklch(0.96 0.045 80);
+  --attention-foreground: oklch(0.43 0.095 65);
+  --success: oklch(0.96 0.035 160);
+  --success-foreground: oklch(0.39 0.085 160);
   color-scheme: light;
   --app-scrollbar-size: 6px;
   --app-scrollbar-thumb: color-mix(
@@ -126,6 +134,10 @@
 }
 
 .dark {
+  --attention: oklch(0.27 0.045 75);
+  --attention-foreground: oklch(0.84 0.115 80);
+  --success: oklch(0.25 0.035 160);
+  --success-foreground: oklch(0.8 0.105 160);
   --resume-indigo: oklch(0.76 0.13 278);
   --resume-emerald: oklch(0.76 0.12 166);
   --resume-amber: oklch(0.8 0.13 75);

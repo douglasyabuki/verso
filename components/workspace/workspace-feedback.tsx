@@ -1,5 +1,7 @@
 "use client";
 
+import { CircleAlert } from "lucide-react";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
@@ -11,8 +13,9 @@ export function WorkspaceFeedback() {
   return (
     <Alert
       className="shrink-0 rounded-none border-x-0 border-t-0"
-      variant={state.error && !state.sessionOnly ? "destructive" : "default"}
+      variant={state.error && !state.sessionOnly ? "destructive" : "attention"}
     >
+      <CircleAlert aria-hidden="true" />
       <AlertTitle>
         {state.sessionOnly
           ? "Session only — changes are not saved in this browser"

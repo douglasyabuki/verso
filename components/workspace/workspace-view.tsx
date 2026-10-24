@@ -378,6 +378,7 @@ export function WorkspaceView() {
         setAutoSync={setAutoSync}
         busy={busy}
         locale={locale}
+        onIssues={() => setIssuesOpen(true)}
       />
     </div>
   );

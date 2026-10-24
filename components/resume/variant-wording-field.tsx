@@ -1,9 +1,18 @@
 "use client";
 
+import {
+  Check,
+  ChevronRight,
+  Languages,
+  Pencil,
+  RotateCcw,
+} from "lucide-react";
 import { type ComponentProps, useState } from "react";
 
 import { LocalizedField } from "@/components/resume/fields";
 import { TranslationComparison } from "@/components/resume/translation-comparison";
+import { WordingComparisonDetails } from "@/components/resume/wording-comparison-details";
+import { WordingStatus } from "@/components/resume/wording-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +20,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { InfoHint } from "@/components/ui/info-hint";
 import { useWorkflowLinks } from "@/hooks/workspace/use-workflow-links";
 import { plain, translationSnapshot } from "@/lib/resume/localization";
 import {
@@ -20,7 +30,6 @@ import {
   editWordingOverride,
   effectiveSnapshot,
   effectiveWording,
-  markVariantTranslationReviewed,
   resetWordingOverride,
   sharedWording,
   sharedWordingChanged,
@@ -47,6 +56,7 @@ export function VariantWordingField({
   required = false,
   multiline = true,
   errors = [],
+  showReference = false,
 }: {
   document: ResumeDocument;
   variant: Variant;
@@ -58,6 +68,7 @@ export function VariantWordingField({
   required?: boolean;
   multiline?: boolean;
   errors?: Issue[];
+  showReference?: boolean;
 }) {
   const { editLibrary } = useWorkflowLinks();
   const [feedback, setFeedback] = useState({ identity: "", message: "" });
@@ -86,18 +97,17 @@ export function VariantWordingField({
         <span className="text-sm">
           {variant.name || "Untitled resume"} · {languageNames[locale]}
         </span>
-        {value[locale].needsReview && (
-          <Badge variant="outline">Compare translations</Badge>
-        )}
-        {baselineChanged && (
-          <Badge variant="outline">Review library changes</Badge>
-        )}
+        <WordingStatus
+          missing={required && !plain(value, locale).trim()}
+          review={value[locale].needsReview}
+          library={baselineChanged}
+        />
+        <InfoHint label="wording scope">
+          {override
+            ? "Editing changes only this resume and language. Shared wording and facts stay in the library."
+            : "This wording is inherited. Customize it for this resume, or edit it in the career library."}
+        </InfoHint>
       </div>
-      <p className="text-sm text-muted-foreground">
-        {override
-          ? `Editing this override changes only ${variant.name || "this resume"} in ${languageNames[locale]}. Shared wording and facts stay in the library.`
-          : `This language uses shared library wording. Create an override explicitly to change only ${variant.name || "this resume"} in ${languageNames[locale]}.`}
-      </p>
       {override ? (
         <LocalizedField
           fieldKey={fieldKey}
@@ -116,7 +126,10 @@ export function VariantWordingField({
           }
         />
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+          <p className="text-xs font-medium text-muted-foreground">
+            {label} · From library · read only
+          </p>
           <p
             lang={locale}
             className="text-sm wrap-anywhere whitespace-pre-wrap"
@@ -139,6 +152,7 @@ export function VariantWordingField({
               )
             }
           >
+            <Pencil data-icon="inline-start" />
             Customize for this resume
           </Button>
         </div>
@@ -159,97 +173,113 @@ export function VariantWordingField({
             )
           }
         >
+          <RotateCcw data-icon="inline-start" />
           Reset to library wording
         </Button>
       )}
       {field ? (
-        <TranslationComparison
-          review={field.review}
-          target={target}
-          reference={reference}
-          snapshot={field.review[locale].reviewedCounterpart}
-          needsReview={field.review[locale].needsReview}
-          owner={variant.name || "this resume"}
-          onConfirm={(both) => {
-            let accepted = false;
-            update((draft) => {
-              accepted = both
-                ? confirmVariantTranslationPair(
-                    draft,
-                    variant.id,
-                    path,
-                    target,
-                    reference,
-                  )
-                : markVariantTranslationReviewed(
-                    draft,
-                    variant.id,
-                    path,
-                    target,
-                    reference,
-                  );
-            });
-            return accepted;
-          }}
-        />
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Both languages inherit library wording. Compare and confirm in the
-          career library; no independent resume comparison is recorded here.
-        </p>
-      )}
-      {baselineChanged && override && (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm text-muted-foreground">
-            Library wording changed beneath this customization. Compare the
-            previous library wording, current library wording, and your
-            customization above. Edit it, keep it after checking, or reset to
-            library wording. Editing alone never clears this reminder, even when
-            the text matches the library. This decision applies only to this
-            resume and is separate from translation comparison.
-          </p>
-          <p
-            lang={locale}
-            className="text-sm wrap-anywhere whitespace-pre-wrap"
-          >
-            Previous library baseline:{" "}
-            {override.sharedBaseline.spans.map((span) => span.text).join("") ||
-              "(empty)"}
-          </p>
-          <p
-            lang={locale}
-            className="text-sm wrap-anywhere whitespace-pre-wrap"
-          >
-            Current library wording: {plain(shared, locale) || "(empty)"}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-auto self-start whitespace-normal"
-            onClick={() => {
+        <WordingComparisonDetails expanded={showReference}>
+          <TranslationComparison
+            review={field.review}
+            target={target}
+            reference={reference}
+            snapshot={field.review[locale].reviewedCounterpart}
+            needsReview={field.review[locale].needsReview}
+            owner={variant.name || "this resume"}
+            onConfirm={() => {
               let accepted = false;
               update((draft) => {
-                accepted = acknowledgeSharedWording(
+                accepted = confirmVariantTranslationPair(
                   draft,
                   variant.id,
                   path,
-                  displayedLibrary,
                   target,
+                  reference,
                 );
               });
-              setFeedback({
-                identity: accepted
-                  ? JSON.stringify([target, displayedLibrary, displayedLibrary])
-                  : feedbackIdentity,
-                message: accepted
-                  ? `Customization retained for ${variant.name || "this resume"}. Library-change reminder cleared; translation reminders are unchanged.`
-                  : "Library wording or customization changed. Compare the current versions and try again.",
-              });
+              return accepted;
             }}
+          />
+        </WordingComparisonDetails>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Review inherited wording in the career library.
+        </p>
+      )}
+      {baselineChanged && override && (
+        <Collapsible defaultOpen={showReference}>
+          <CollapsibleTrigger
+            render={<Button variant="outline" size="sm" />}
+            className="group"
           >
-            Keep this customization after checking library changes
-          </Button>
-        </div>
+            <ChevronRight
+              data-icon="inline-start"
+              className="transition-transform group-data-panel-open:rotate-90"
+            />
+            Review library changes
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-3 flex flex-col gap-3 rounded-lg border bg-muted/40 p-3">
+              <p className="text-sm text-muted-foreground">
+                Library changed. Compare it with your customization before
+                keeping or resetting it.
+                <InfoHint label="library-change review">
+                  Editing alone does not clear this reminder. Keeping the
+                  customization applies only to this resume and does not clear
+                  translation reminders.
+                </InfoHint>
+              </p>
+              <p
+                lang={locale}
+                className="text-sm wrap-anywhere whitespace-pre-wrap"
+              >
+                Previous library · read only:{" "}
+                {override.sharedBaseline.spans
+                  .map((span) => span.text)
+                  .join("") || "(empty)"}
+              </p>
+              <p
+                lang={locale}
+                className="text-sm wrap-anywhere whitespace-pre-wrap"
+              >
+                Current library · read only:{" "}
+                {plain(shared, locale) || "(empty)"}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-auto self-start whitespace-normal"
+                onClick={() => {
+                  let accepted = false;
+                  update((draft) => {
+                    accepted = acknowledgeSharedWording(
+                      draft,
+                      variant.id,
+                      path,
+                      displayedLibrary,
+                      target,
+                    );
+                  });
+                  setFeedback({
+                    identity: accepted
+                      ? JSON.stringify([
+                          target,
+                          displayedLibrary,
+                          displayedLibrary,
+                        ])
+                      : feedbackIdentity,
+                    message: accepted
+                      ? `Customization kept for ${variant.name || "this resume"}.`
+                      : "Library wording or customization changed. Compare the current versions and try again.",
+                  });
+                }}
+              >
+                <Check data-icon="inline-start" />
+                Keep customization
+              </Button>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
       <Button
         variant="outline"
@@ -257,7 +287,8 @@ export function VariantWordingField({
         className="self-start"
         onClick={() => editLibrary(path, locale)}
       >
-        Edit in career library
+        <Pencil data-icon="inline-start" />
+        Edit in library
       </Button>
 
       <p
@@ -282,20 +313,26 @@ export function VariantWordingDetails({
   const value = effectiveWording(shared, variant, path);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="cursor-pointer text-left text-sm font-medium">
-        <Badge variant="outline">
-          {variantWording(variant, path)?.overrides[locale]
-            ? "Customized for this resume"
-            : "Uses library text"}
-        </Badge>{" "}
-        {value[locale].needsReview && (
-          <Badge variant="outline">Compare translations</Badge>
-        )}{" "}
-        {sharedWordingChanged(shared, variant, path, locale) && (
-          <Badge variant="outline">Review library changes</Badge>
-        )}{" "}
-        Wording: {variant.name || "Untitled resume"} ({languageNames[locale]})
+      <CollapsibleTrigger
+        render={<Button variant="ghost" size="sm" />}
+        className="group h-auto flex-wrap justify-start whitespace-normal"
+      >
+        <Languages data-icon="inline-start" />
+        {variantWording(variant, path)?.overrides[locale]
+          ? "Customized wording"
+          : "Library wording"}
+        <ChevronRight
+          data-icon="inline-end"
+          className="transition-transform group-data-panel-open:rotate-90"
+        />
       </CollapsibleTrigger>
+      {!open && (
+        <WordingStatus
+          missing={!!props.required && !plain(value, locale).trim()}
+          review={value[locale].needsReview}
+          library={sharedWordingChanged(shared, variant, path, locale)}
+        />
+      )}
       <CollapsibleContent>
         {open && (
           <div className="pt-3">

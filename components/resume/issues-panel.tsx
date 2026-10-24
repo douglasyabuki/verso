@@ -1,16 +1,18 @@
 "use client";
 
-import { ChevronDown, ListChecks } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  CircleAlert,
+  Languages,
+  Library,
+  ListChecks,
+} from "lucide-react";
 import { useId, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { InfoHint } from "@/components/ui/info-hint";
 import type { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import { resolveSettings } from "@/lib/resume/settings";
 import type { validateOutput } from "@/lib/resume/validation";
@@ -147,12 +149,35 @@ export function IssuesPanel({
           aria-live="polite"
           aria-atomic="true"
         >
-          <Badge variant={errors ? "destructive" : "outline"}>
-            {errors} blocking
-          </Badge>
-          <Badge variant="secondary">{reviews} translation comparisons</Badge>
-          <Badge variant="outline">{sharedReviews} library changes</Badge>
-          <Badge variant="outline">{layouts} layout</Badge>
+          {errors > 0 && (
+            <Badge variant="destructive">
+              <CircleAlert data-icon="inline-start" />
+              {errors} blocking
+            </Badge>
+          )}
+          {reviews > 0 && (
+            <Badge variant="attention">
+              <Languages data-icon="inline-start" />
+              {reviews} comparisons
+            </Badge>
+          )}
+          {sharedReviews > 0 && (
+            <Badge variant="attention">
+              <Library data-icon="inline-start" />
+              {sharedReviews} library changes
+            </Badge>
+          )}
+          {layouts > 0 && (
+            <Badge variant="attention">
+              <CircleAlert data-icon="inline-start" />
+              {layouts} layout
+            </Badge>
+          )}
+          {errors + reviews + sharedReviews + layouts === 0 && (
+            <span className="text-xs text-muted-foreground">
+              No issues flagged
+            </span>
+          )}
         </div>
       </div>
       <div
@@ -165,7 +190,10 @@ export function IssuesPanel({
             <p className="mb-3 text-xs text-muted-foreground">
               {variant.name || "Untitled resume"} / Only content used by this
               resume is checked. Shared-field issues affect both languages.
-              Warnings never block downloads.
+              <InfoHint label="issue severity" size="sm">
+                Warnings never block valid downloads. Only output-blocking
+                errors must be fixed.
+              </InfoHint>
             </p>
             <div className="grid gap-6 lg:grid-cols-2">
               {languages.map((language) => (
@@ -186,6 +214,11 @@ export function IssuesPanel({
                         language.errors.length ? "destructive" : "outline"
                       }
                     >
+                      {language.errors.length ? (
+                        <CircleAlert data-icon="inline-start" />
+                      ) : (
+                        <Check data-icon="inline-start" />
+                      )}
                       {language.errors.length
                         ? "Output blocked"
                         : "Valid for export"}
@@ -276,7 +309,7 @@ function IssueGroup({
 }) {
   return (
     <section className="flex flex-col gap-2" aria-label={title}>
-      <h3 className="text-xs font-medium">
+      <h3 className="text-sm font-semibold">
         {title} ({issues.length})
       </h3>
       {issues.length ? (
@@ -307,12 +340,12 @@ function IssueGroup({
           ))}
         </ul>
       ) : (
-        <Empty className="items-start p-3 text-start">
-          <EmptyHeader className="items-start">
-            <EmptyTitle>{emptyTitle}</EmptyTitle>
-            <EmptyDescription>{emptyDescription}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{emptyTitle}</span>
+          <InfoHint label={title} size="sm">
+            {emptyDescription}
+          </InfoHint>
+        </div>
       )}
     </section>
   );

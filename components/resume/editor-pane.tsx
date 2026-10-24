@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { Trash2 } from "lucide-react";
+import { ChevronRight, ListChecks, Pencil, Trash2 } from "lucide-react";
 
 import { ContentEditor } from "@/components/resume/content-editor";
 import { ResumeCollection } from "@/components/resume/resume-collection";
@@ -10,7 +10,13 @@ import { SettingsEditor } from "@/components/resume/template-editor";
 import { TranslationsEditor } from "@/components/resume/translations-editor";
 import { VariantsEditor } from "@/components/resume/variants-editor";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { FieldSet } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LibraryOverview } from "@/components/workspace/library-overview";
 import { librarySectionLabel } from "@/components/workspace/navigation";
@@ -159,7 +165,9 @@ export function EditorPane({
           "mx-auto flex min-w-0 flex-col gap-6 disabled:opacity-70",
           ["library-overview", "resumes", "review", "data"].includes(view)
             ? "max-w-5xl"
-            : "max-w-3xl",
+            : ["library-translations", "resume-translations"].includes(view)
+              ? "max-w-5xl"
+              : "max-w-3xl",
         )}
       >
         <div className="flex items-start justify-between gap-3">
@@ -186,19 +194,28 @@ export function EditorPane({
                         } as Record<string, string>
                       )[view]}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {view === "content" ||
-              view === "library-translations" ||
-              view === "library-overview"
-                ? "Edits affect shared career content used by resumes. Include new content explicitly in Content & order."
-                : navigation.destination.kind === "resume"
-                  ? `${variant.name || "Untitled resume"} · ${locale}`
-                  : view === "review"
-                    ? "Missing text, translation comparisons, and library changes. Start with selected-resume output; broaden output and archive filters to include other content."
-                    : view === "shared-defaults"
-                      ? "These defaults affect multiple resumes. Resume overrides keep their precedence."
-                      : "Your editable workspace stays in this browser. JSON preserves its complete content and settings."}
-            </p>
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>
+                {navigation.destination.kind === "resume"
+                  ? locale
+                  : navigation.destination.kind === "library-section"
+                    ? "Career library"
+                    : "Workspace"}
+              </span>
+              <InfoHint label="this workspace view" size="sm">
+                {view === "content" ||
+                view === "library-translations" ||
+                view === "library-overview"
+                  ? "Edits affect shared career content used by resumes. Include new content explicitly in Content & order."
+                  : navigation.destination.kind === "resume"
+                    ? `${variant.name || "Untitled resume"} · ${locale}`
+                    : view === "review"
+                      ? "Missing text, translation comparisons, and library changes. Start with selected-resume output; broaden output and archive filters to include other content."
+                      : view === "shared-defaults"
+                        ? "These defaults affect multiple resumes. Resume overrides keep their precedence."
+                        : "Your editable workspace stays in this browser. JSON preserves its complete content and settings."}
+              </InfoHint>
+            </div>
           </div>
           {view === "content" && section?.kind === "custom" && (
             <Button
@@ -307,11 +324,19 @@ export function EditorPane({
                   navigation.setLibraryLocale(reviewContext.current.locale);
               }
             }}
-            variant="outline"
+            variant="segmented"
             aria-label="Library section tab"
+            spacing={0}
+            multiple={false}
           >
-            <ToggleGroupItem value="edit">Edit content</ToggleGroupItem>
-            <ToggleGroupItem value="review">Wording tasks</ToggleGroupItem>
+            <ToggleGroupItem value="edit">
+              <Pencil data-icon="inline-start" />
+              Edit content
+            </ToggleGroupItem>
+            <ToggleGroupItem value="review">
+              <ListChecks data-icon="inline-start" />
+              Wording tasks
+            </ToggleGroupItem>
           </ToggleGroup>
         )}
         {view === "library-overview" && (
@@ -347,12 +372,31 @@ export function EditorPane({
         )}
         {view === "data" && (
           <>
-            <p>
-              JSON backup freshness: export the complete workspace regularly.
-              PDF and LaTeX downloads do not update JSON backup freshness.
-            </p>
+            <div className="flex items-center gap-2 text-sm font-medium">
+              Workspace backups
+              <InfoHint label="JSON backups">
+                JSON preserves all editable content and settings. PDF and LaTeX
+                downloads do not update backup freshness.
+              </InfoHint>
+            </div>
             {dataMenu}
-            <CompilerSettings document={document} update={update} />
+            <Collapsible>
+              <CollapsibleTrigger
+                render={<Button variant="outline" />}
+                className="group"
+              >
+                <ChevronRight
+                  data-icon="inline-start"
+                  className="transition-transform group-data-panel-open:rotate-90"
+                />
+                Advanced compiler settings
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-4">
+                  <CompilerSettings document={document} update={update} />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </>
         )}
         {view === "template" && (

@@ -112,7 +112,7 @@ function TailoredFields({
           target.organization = organization;
         }, group)
       }
-      description="Shared across languages. Optional; leave empty when it does not apply."
+      hint="Shared across languages. Optional; leave empty when it does not apply."
     />
   );
   const location = (
@@ -221,7 +221,8 @@ function TailoredFields({
             .slice(0, 100);
         }, group)
       }
-      description="Separate names with commas. Shared across languages; use localized items below for wording that needs translation."
+      description="Separate names with commas."
+      hint="Shared across languages. Use localized items below for wording that needs translation."
     />
   );
   return (
@@ -247,7 +248,7 @@ function TailoredFields({
             fieldKey={`entries.${entry.id}.certification.credentialId`}
             label="Credential ID"
             value={entry.certification?.credentialId ?? ""}
-            description="Optional identifier, shared across languages."
+            hint="Optional identifier, shared across languages."
             onChange={(credentialId, group) =>
               changeEntry((target) => {
                 target.certification = {

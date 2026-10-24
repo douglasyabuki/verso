@@ -17,6 +17,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import {
   Select,
   SelectContent,
@@ -147,11 +148,8 @@ export function SettingsEditor({
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader>
-          <CardTitle size="section">The reference template</CardTitle>
-          <CardDescription>
-            Inter typography, sepia headings, and a single-column layout adapted
-            from your Overleaf resume.
-          </CardDescription>
+          <CardTitle size="section">Template settings</CardTitle>
+          <CardDescription>Inter · Single column</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup>
@@ -159,7 +157,13 @@ export function SettingsEditor({
               {document.template.id}@{document.template.version}
             </Badge>
             <Field>
-              <FieldLabel htmlFor={selectId}>Apply settings to</FieldLabel>
+              <div className="flex items-center gap-2">
+                <FieldLabel htmlFor={selectId}>Apply settings to</FieldLabel>
+                <InfoHint label="settings precedence">
+                  Workspace defaults → Language defaults → Resume → Resume
+                  language. Choose Inherit to reset an override.
+                </InfoHint>
+              </div>
               <Select
                 items={scopeItems}
                 value={scope}
@@ -183,10 +187,6 @@ export function SettingsEditor({
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <FieldDescription>
-                Precedence: Workspace defaults → Language defaults → Resume →
-                Resume language.
-              </FieldDescription>
             </Field>
             <FieldGroup className="grid gap-4 sm:grid-cols-2">
               {controls.map((control) => {
@@ -250,7 +250,8 @@ export function SettingsEditor({
                       </SelectContent>
                     </Select>
                     <FieldDescription>
-                      Effective: {values[control.key]}
+                      {current === undefined ? "Inherited" : "Effective"}:{" "}
+                      {values[control.key]}
                       {control.unit ? " " + control.unit : ""}. Source:{" "}
                       {current !== undefined
                         ? sharedDefaults
@@ -270,9 +271,6 @@ export function SettingsEditor({
                                 undefined
                             ? "Language defaults"
                             : "Workspace defaults"}
-                      .{" "}
-                      {scope !== "base" &&
-                        "Choose Inherit to reset this setting."}
                     </FieldDescription>
                   </Field>
                 );
@@ -280,14 +278,16 @@ export function SettingsEditor({
             </FieldGroup>
             <p className="text-xs text-muted-foreground">
               Current output: {output.pageSize.toUpperCase()}, {output.fontSize}{" "}
-              pt, target {output.targetPages} pages. Content is never removed to
-              meet the target.
+              pt · Target {output.targetPages} pages
+              <InfoHint label="page target" size="sm">
+                Content is never removed to meet the page target.
+              </InfoHint>
             </p>
           </FieldGroup>
         </CardContent>
         <CardFooter>
           <p className="text-xs text-muted-foreground">
-            All template settings and overrides are included in JSON backups.
+            Included in JSON backups
           </p>
         </CardFooter>
       </Card>

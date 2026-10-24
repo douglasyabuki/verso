@@ -1,5 +1,6 @@
 "use client";
 
+import { Archive, Check, EyeOff, Minus, Search, X } from "lucide-react";
 import {
   type PointerEvent,
   type ReactElement,
@@ -12,12 +13,8 @@ import {
 import { CheckField } from "@/components/resume/fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -127,9 +124,17 @@ export function LibrarySearch({
 }) {
   const id = useId();
   return (
-    <FieldGroup>
+    <FieldGroup className="gap-3">
       <Field>
-        <FieldLabel htmlFor={id}>Search entries</FieldLabel>
+        <div className="flex items-center gap-2">
+          <FieldLabel htmlFor={id}>
+            <Search className="size-4" aria-hidden="true" />
+            Search entries
+          </FieldLabel>
+          <InfoHint label="entry search">
+            Searches English and Portuguese, regardless of the editing language.
+          </InfoHint>
+        </div>
         <div className="flex items-center gap-2">
           <Input
             id={id}
@@ -137,7 +142,6 @@ export function LibrarySearch({
             value={query}
             onChange={(event) => onQuery(event.target.value)}
             placeholder="Organization, title, technology, or achievement"
-            aria-describedby={`${id}-help`}
           />
           <Button
             variant="outline"
@@ -145,21 +149,21 @@ export function LibrarySearch({
             disabled={!query}
             onClick={() => onQuery("")}
           >
-            Clear search
+            <X data-icon="inline-start" />
+            Clear
           </Button>
         </div>
-        <FieldDescription id={`${id}-help`}>
-          Searches English and Portuguese, regardless of the editing language.
-        </FieldDescription>
       </Field>
-      <CheckField
-        label="Include archived entries"
-        checked={showArchived}
-        onChange={onArchived}
-      />
-      <p className="text-sm text-muted-foreground" role="status">
-        {count} of {total} entries
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <CheckField
+          label="Include archived entries"
+          checked={showArchived}
+          onChange={onArchived}
+        />
+        <p className="text-xs text-muted-foreground" role="status">
+          {count} of {total} entries
+        </p>
+      </div>
     </FieldGroup>
   );
 }
@@ -185,6 +189,11 @@ export function InclusionStatus({
       aria-label={`Selection in ${variantName}`}
     >
       <Badge variant={selected ? "secondary" : "outline"}>
+        {selected ? (
+          <Check data-icon="inline-start" />
+        ) : (
+          <Minus data-icon="inline-start" />
+        )}
         {selected ? "Selected" : "Not selected"}
       </Badge>
       {count !== undefined && (
@@ -193,10 +202,16 @@ export function InclusionStatus({
         </span>
       )}
       {archived && (
-        <Badge variant="outline">Archived · omitted from output</Badge>
+        <Badge variant="outline">
+          <Archive data-icon="inline-start" />
+          Archived · omitted
+        </Badge>
       )}
       {!archived && !sectionVisible && (
-        <span className="sr-only">Section hidden · omitted from output</span>
+        <Badge variant="outline">
+          <EyeOff data-icon="inline-start" />
+          Section hidden · omitted
+        </Badge>
       )}
     </div>
   );

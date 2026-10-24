@@ -14,6 +14,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { Input } from "@/components/ui/input";
 import { useFieldHistory } from "@/hooks/workspace/use-field-history";
 import { plain } from "@/lib/resume/localization";
@@ -35,6 +36,7 @@ export function TextField({
   onChange,
   error,
   description,
+  hint,
   placeholder,
   type = "text",
   maxLength = 500,
@@ -45,6 +47,7 @@ export function TextField({
   onChange: (value: string, group?: EditGroup) => void;
   error?: string;
   description?: string;
+  hint?: string;
   placeholder?: string;
   type?: string;
   maxLength?: number;
@@ -53,7 +56,10 @@ export function TextField({
   const history = useFieldHistory({ fieldKey, onChange });
   return (
     <Field data-invalid={!!error}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div className="flex items-center gap-2">
+        <FieldLabel htmlFor={id}>{label}</FieldLabel>
+        {hint && <InfoHint label={label}>{hint}</InfoHint>}
+      </div>
       <Input
         id={id}
         data-issue-field={fieldKey}
@@ -144,6 +150,7 @@ export function LocalizedField({
   error,
   multiline = false,
   description,
+  hint,
 }: {
   fieldKey: string;
   label: string;
@@ -152,6 +159,7 @@ export function LocalizedField({
   onChange: (spans: Span[], group?: EditGroup) => void;
   multiline?: boolean;
   description?: string;
+  hint?: string;
   required?: boolean;
   error?: string;
 }) {
@@ -161,7 +169,7 @@ export function LocalizedField({
   return (
     <FieldGroup className="gap-3">
       <Field data-invalid={!!error}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <FieldLabel htmlFor={id}>
             {label}{" "}
             <span className="text-muted-foreground">
@@ -169,12 +177,9 @@ export function LocalizedField({
               {required ? " *" : ""}
             </span>
           </FieldLabel>
-          {missing && required ? (
-            <Badge variant="outline">Missing text</Badge>
-          ) : missing ? (
+          {hint && <InfoHint label={label}>{hint}</InfoHint>}
+          {missing && !required ? (
             <Badge variant="outline">Optional empty</Badge>
-          ) : record.needsReview ? (
-            <Badge variant="secondary">Compare translations</Badge>
           ) : null}
         </div>
         <TextEditor
@@ -189,8 +194,7 @@ export function LocalizedField({
         />
         {missing && required && (
           <FieldDescription>
-            Enter the required {languageNames[locale]} wording to resolve this
-            task. Translation confirmation does not supply missing text.
+            Enter the required {languageNames[locale]} wording.
           </FieldDescription>
         )}
         {description && <FieldDescription>{description}</FieldDescription>}

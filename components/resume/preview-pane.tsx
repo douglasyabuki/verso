@@ -1,7 +1,14 @@
 "use client";
 
 import { cn } from "cn";
-import { ChevronRight, FileText, RefreshCw } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  CircleAlert,
+  FileText,
+  ListChecks,
+  RefreshCw,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -20,6 +27,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import { validateOutput } from "@/lib/resume/validation";
@@ -49,6 +57,7 @@ export function PreviewPane({
   setAutoSync,
   busy,
   locale,
+  onIssues,
 }: {
   compiler: ReturnType<typeof useResumeCompiler>;
   validation: ReturnType<typeof validateOutput>;
@@ -56,6 +65,7 @@ export function PreviewPane({
   setAutoSync: (value: boolean) => void;
   busy: boolean;
   locale: Locale;
+  onIssues: () => void;
 }) {
   const compilerLog = compiler.error?.log || compiler.preview?.log;
 
@@ -70,7 +80,12 @@ export function PreviewPane({
           <span className="text-sm font-medium">PDF preview</span>
           {compiler.preview && (
             <>
-              <Badge variant={compiler.stale ? "outline" : "secondary"}>
+              <Badge variant={compiler.stale ? "attention" : "success"}>
+                {compiler.stale ? (
+                  <CircleAlert data-icon="inline-start" />
+                ) : (
+                  <Check data-icon="inline-start" />
+                )}
                 {compiler.stale ? "Out of date" : "Current"}
               </Badge>
               <span className="text-xs text-muted-foreground">
@@ -116,7 +131,11 @@ export function PreviewPane({
         </div>
       </div>
       {validation.errors.length > 0 && (
-        <Alert className="shrink-0 rounded-none border-x-0">
+        <Alert
+          variant="destructive"
+          className="shrink-0 rounded-none border-x-0"
+        >
+          <CircleAlert aria-hidden="true" />
           <AlertTitle>Draft needs {locale} content</AlertTitle>
           <AlertDescription>
             {validation.errors
@@ -126,27 +145,32 @@ export function PreviewPane({
             {validation.errors.length > 3
               ? ` +${validation.errors.length - 3} more issues.`
               : ""}{" "}
-            A valid individual language can still be downloaded.
+            <Button variant="outline" size="sm" onClick={onIssues}>
+              Review blocking issues
+            </Button>
           </AlertDescription>
         </Alert>
       )}
       {validation.warnings.length > 0 && (
-        <Alert className="shrink-0 rounded-none border-x-0">
-          <AlertTitle>
-            {validation.warnings.length} wording review flag
-            {validation.warnings.length === 1 ? "" : "s"}
-          </AlertTitle>
-          <AlertDescription>
-            You can preview and download this draft while reviewing its wording.
-          </AlertDescription>
-        </Alert>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2">
+          <Badge variant="attention">
+            <ListChecks data-icon="inline-start" />
+            {validation.warnings.length} wording tasks
+          </Badge>
+          <Button variant="ghost" size="sm" onClick={onIssues}>
+            Review issues
+          </Button>
+          <InfoHint label="wording tasks and downloads">
+            Wording review reminders do not block valid previews or downloads.
+          </InfoHint>
+        </div>
       )}
       {compiler.error && validation.errors.length === 0 && (
         <Alert variant="destructive" className="shrink-0 rounded-none">
           <AlertTitle>Compilation could not finish</AlertTitle>
           <AlertDescription>
             {compiler.error.message} Previous preview retained. If assets are
-            missing, run npm run compiler:prepare.
+            missing, check compiler diagnostics.
           </AlertDescription>
         </Alert>
       )}

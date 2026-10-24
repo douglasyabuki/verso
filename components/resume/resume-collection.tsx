@@ -1,6 +1,13 @@
 "use client";
 
-import { FileText } from "lucide-react";
+import {
+  Copy,
+  FileText,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +18,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { InfoHint } from "@/components/ui/info-hint";
 import type { useResumeActions } from "@/hooks/workspace/use-resume-actions";
 import type { ResumeDocument } from "@/types-and-constants/resume";
 import type { Variant } from "@/types-and-constants/resume";
@@ -33,60 +48,90 @@ export function ResumeCollection({
         disabled={document.variants.length >= 30}
         onClick={() => onCreate()}
       >
+        <Plus data-icon="inline-start" />
         Create resume
       </Button>
-      {document.variants.map((resume) => (
-        <Card key={resume.id}>
-          <CardHeader>
-            <CardTitle className="flex min-w-0 items-center gap-2">
-              <FileText
-                aria-hidden="true"
-                className="resume-color size-4 shrink-0 text-(--resume-color)"
-                data-resume-color={resume.color}
-              />
-              <span className="truncate">
-                {resume.name || "Untitled resume"}
-              </span>
-            </CardTitle>
-            <CardDescription>
-              {resume.sections.reduce(
-                (count, section) => count + section.entries.length,
-                0,
-              )}{" "}
-              selected entries
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Shared profile and career library; independent selections,
-              wording, reviews, and appearance.
-            </p>
-          </CardContent>
-          <CardFooter className="flex flex-wrap gap-2">
-            <Button onClick={() => onOpen(resume.id)}>Open resume</Button>
-            <Button
-              variant="outline"
-              onClick={(event) => actions.edit(resume.id, event.currentTarget)}
-            >
-              Rename &amp; color
-            </Button>
-            <Button
-              variant="outline"
-              disabled={document.variants.length >= 30}
-              onClick={() => actions.duplicate(resume.id)}
-            >
-              Duplicate
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={document.variants.length <= 1}
-              onClick={() => actions.remove(resume.id)}
-            >
-              Delete
-            </Button>
-          </CardFooter>
-        </Card>
-      ))}
+      <div className="grid gap-4 @2xl:grid-cols-2">
+        {document.variants.map((resume) => (
+          <Card key={resume.id} size="sm">
+            <CardHeader>
+              <CardTitle className="flex min-w-0 items-center gap-2">
+                <FileText
+                  aria-hidden="true"
+                  className="resume-color size-4 shrink-0 text-(--resume-color)"
+                  data-resume-color={resume.color}
+                />
+                <span className="truncate">
+                  {resume.name || "Untitled resume"}
+                </span>
+              </CardTitle>
+              <CardDescription>
+                {resume.sections.reduce(
+                  (count, section) => count + section.entries.length,
+                  0,
+                )}{" "}
+                selected entries
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                Shared library content
+                <InfoHint label="resume independence" size="sm">
+                  This resume uses shared career content, with its own
+                  selections, wording, reviews, and appearance.
+                </InfoHint>
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-wrap gap-2">
+              <Button onClick={() => onOpen(resume.id)}>
+                <FileText data-icon="inline-start" />
+                Open resume
+              </Button>
+              <Button
+                variant="outline"
+                onClick={(event) =>
+                  actions.edit(resume.id, event.currentTarget)
+                }
+              >
+                <Pencil data-icon="inline-start" />
+                Rename &amp; color
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Actions for ${resume.name || "Untitled resume"}`}
+                    />
+                  }
+                >
+                  <MoreHorizontal />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      disabled={document.variants.length >= 30}
+                      onClick={() => actions.duplicate(resume.id)}
+                    >
+                      <Copy />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      disabled={document.variants.length <= 1}
+                      onClick={() => actions.remove(resume.id)}
+                    >
+                      <Trash2 />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

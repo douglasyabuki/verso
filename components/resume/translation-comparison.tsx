@@ -1,11 +1,14 @@
 "use client";
 
+import { Check, CheckCheck, CircleAlert } from "lucide-react";
 import { useState } from "react";
 
 import { TranslationReference } from "@/components/resume/translation-reference";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InfoHint } from "@/components/ui/info-hint";
 import type { Locale, ReviewSnapshot } from "@/types-and-constants/resume";
-import { languageNames, locales } from "@/types-and-constants/resume";
+import { locales } from "@/types-and-constants/resume";
 
 type ComparisonVersion = ReviewSnapshot & { source?: "shared" | "override" };
 type ComparisonReview = Record<
@@ -41,35 +44,37 @@ export function TranslationComparison({
   snapshot: ComparisonVersion | null;
   needsReview: boolean;
   owner: string;
-  onConfirm: (both: boolean) => boolean;
+  onConfirm: () => boolean;
   review: ComparisonReview;
 }) {
-  const [feedback, setFeedback] = useState({ version: "", message: "" });
+  const [feedback, setFeedback] = useState({
+    version: "",
+    message: "",
+    accepted: false,
+  });
   const version = JSON.stringify([target, reference, owner]);
   const identity = `${version}:${comparisonIdentity(review)}`;
   const populated = target.spans.some((span) => span.text.trim());
   const pairPopulated =
     populated && reference.spans.some((span) => span.text.trim());
-  const confirm = (both: boolean) => {
-    const accepted = onConfirm(both);
+  const confirm = () => {
+    const accepted = onConfirm();
     const checked = {
       ...review,
       [target.locale]: { needsReview: false, reviewedCounterpart: reference },
-    };
-    if (both)
-      checked[reference.locale] = {
+      [reference.locale]: {
         needsReview: false,
         reviewedCounterpart: target,
-      };
+      },
+    };
     setFeedback({
+      accepted,
       version: accepted
         ? `${version}:${comparisonIdentity(checked)}`
         : identity,
       message: accepted
-        ? both
-          ? `English and Portuguese comparison recorded for ${owner}. Both translation reminders cleared. Wording is unchanged.`
-          : `${languageNames[target.locale]} comparison with ${languageNames[reference.locale]} recorded for ${owner}. Only the ${languageNames[target.locale]} translation reminder was cleared. Wording is unchanged.`
-        : "Wording or its source changed, or this action is unavailable. Check the current pair and confirm again.",
+        ? `Both languages confirmed for ${owner}.`
+        : "Wording changed or confirmation is unavailable. Check the current pair and try again.",
     });
   };
   return (
@@ -80,46 +85,41 @@ export function TranslationComparison({
         target={target}
         needsReview={needsReview}
       />
-      <p className="text-sm text-muted-foreground">
-        Confirmation applies to {owner}. It clears a translation reminder and
-        records the displayed comparison; it does not change text or PDF
-        appearance. Unchanged wording can be confirmed. Translation reminders do
-        not block valid downloads.
-      </p>
-      {populated && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-auto self-start whitespace-normal"
-          onClick={() => confirm(false)}
-        >
-          Confirm {languageNames[target.locale]} matches{" "}
-          {languageNames[reference.locale]}
-        </Button>
-      )}
-      {pairPopulated && (
-        <>
-          <p className="text-sm text-muted-foreground">
-            Checked both languages? Confirm the pair to clear both translation
-            reminders for this wording and owner. Other resumes and
-            library-change reminders are unaffected.
-          </p>
+      <div className="flex flex-wrap items-center gap-2">
+        {pairPopulated && (
           <Button
-            variant="outline"
             size="sm"
             className="h-auto self-start whitespace-normal"
-            onClick={() => confirm(true)}
+            onClick={confirm}
           >
+            <CheckCheck data-icon="inline-start" />
             Confirm English and Portuguese match
           </Button>
-        </>
-      )}
+        )}
+        {pairPopulated && (
+          <InfoHint label="translation confirmation">
+            {`Confirmation records this comparison without changing text and clears both translation reminders for ${owner}. Other owners and library-change reminders are unaffected. Review reminders do not block valid downloads.`}
+          </InfoHint>
+        )}
+      </div>
       <p
         role="status"
         aria-live="polite"
         className="text-sm text-muted-foreground"
       >
-        {feedback.version === identity ? feedback.message : ""}
+        {feedback.version === identity && feedback.message && (
+          <Badge
+            variant={feedback.accepted ? "success" : "destructive"}
+            className="h-auto whitespace-normal"
+          >
+            {feedback.accepted ? (
+              <Check data-icon="inline-start" />
+            ) : (
+              <CircleAlert data-icon="inline-start" />
+            )}
+            {feedback.message}
+          </Badge>
+        )}
       </p>
     </div>
   );

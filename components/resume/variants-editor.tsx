@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+import { Columns2, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
 import { TextField } from "@/components/resume/fields";
@@ -24,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Empty,
   EmptyDescription,
@@ -31,6 +32,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { Toggle } from "@/components/ui/toggle";
 import { matchesEntry, selectAllAchievements } from "@/lib/resume/library";
 import { plain } from "@/lib/resume/localization";
@@ -78,11 +80,13 @@ export function VariantsEditor({
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader>
-          <CardTitle size="section">Your resume, with focus</CardTitle>
-          <CardDescription>
-            Resumes reference the same content. Select sections, entries, and
-            achievements, then set their output order.
-          </CardDescription>
+          <div className="flex items-center gap-1.5 text-lg">
+            <CardTitle size="section">Resume details</CardTitle>
+            <InfoHint label="resume content" size="lg">
+              Select sections, entries, and achievements, then set their output
+              order. Library ordering is independent.
+            </InfoHint>
+          </div>
         </CardHeader>
         <CardContent>
           <FieldGroup>
@@ -109,6 +113,7 @@ export function VariantsEditor({
         className="self-start"
         onClick={() => setComparing(!comparing)}
       >
+        <Columns2 data-icon="inline-start" />
         {comparing ? "Back to resume editing" : "Compare resumes"}
       </Button>
       {comparing ? (
@@ -125,10 +130,13 @@ export function VariantsEditor({
         <>
           <Card>
             <CardHeader>
-              <CardTitle size="section">Profile summary wording</CardTitle>
-              <CardDescription>
-                Shared by default. Overrides belong to this resume and language.
-              </CardDescription>
+              <div className="flex items-center gap-1.5 text-lg">
+                <CardTitle size="section">Profile summary wording</CardTitle>
+                <InfoHint label="summary scope" size="lg">
+                  Shared by default. Customizations belong to this resume and
+                  language.
+                </InfoHint>
+              </div>
             </CardHeader>
             <CardContent>
               <VariantWordingField
@@ -145,12 +153,14 @@ export function VariantsEditor({
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle size="section">Find resume content</CardTitle>
-              <CardDescription>
-                Selections and output order belong to{" "}
-                {variant.name || "this resume"}. Library ordering stays
-                separate.
-              </CardDescription>
+              <div className="flex items-center gap-1.5 text-lg">
+                <CardTitle size="section">Find resume content</CardTitle>
+                <InfoHint label="content order" size="lg">
+                  Selected content appears first in output order. Archived
+                  entries are omitted until restored.
+                </InfoHint>
+              </div>
+              <CardDescription>{variant.name || "This resume"}</CardDescription>
             </CardHeader>
             <CardContent>
               <LibrarySearch
@@ -164,10 +174,6 @@ export function VariantsEditor({
                   0,
                 )}
               />
-              <p className="mt-4 text-xs text-muted-foreground">
-                Selected content appears first, in output order. Archived
-                entries are omitted from output until restored.
-              </p>
             </CardContent>
           </Card>
           {!matches.length && (
@@ -379,7 +385,7 @@ function VariantSection({
                                 >
                                   {label}
                                 </span>
-                                <VisibilityToggle
+                                <InclusionToggle
                                   label={label}
                                   visible={!!selection}
                                   disabled={entry.archived && !selection}
@@ -488,7 +494,7 @@ function VariantSection({
                                               <span className="min-w-0 flex-1 py-1 text-sm leading-snug">
                                                 {label}
                                               </span>
-                                              <VisibilityToggle
+                                              <InclusionToggle
                                                 label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
                                                 visible={bulletIds.includes(
                                                   bullet.id,
@@ -567,14 +573,40 @@ function VisibilityToggle({
   return (
     <Toggle
       size="sm"
-      className="size-7 shrink-0 p-0"
+      className="shrink-0"
       aria-label={`Show ${label}`}
       title={visible ? "Hide from resume" : "Show in resume"}
       pressed={visible}
       onPressedChange={onChange}
       disabled={disabled}
     >
-      {visible ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
+      {visible ? (
+        <Eye data-icon="inline-start" aria-hidden="true" />
+      ) : (
+        <EyeOff data-icon="inline-start" aria-hidden="true" />
+      )}
+      {visible ? "Visible" : "Hidden"}
     </Toggle>
+  );
+}
+
+function InclusionToggle({
+  label,
+  visible,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  visible: boolean;
+  onChange: (visible: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Checkbox
+      aria-label={`Include ${label}`}
+      checked={visible}
+      onCheckedChange={onChange}
+      disabled={disabled}
+    />
   );
 }

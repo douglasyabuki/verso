@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { InfoHint } from "@/components/ui/info-hint";
 import {
   Tooltip,
   TooltipContent,
@@ -47,25 +48,34 @@ export function WorkspaceDataMenu({
   if (inline)
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
           {dirty ? "Changes since the last JSON backup" : "Matches JSON backup"}
+          <InfoHint label="backup freshness" size="sm">
+            Browser saving and JSON backups are separate. Export JSON to
+            preserve the complete editable workspace.
+          </InfoHint>
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button disabled={disabled} onClick={importJson}>
+          <Button variant="outline" disabled={disabled} onClick={importJson}>
+            <Upload data-icon="inline-start" />
             Import JSON
           </Button>
           <Button disabled={disabled} onClick={exportJson}>
+            <Download data-icon="inline-start" />
             Export JSON backup
           </Button>
           <Button variant="outline" disabled={disabled} onClick={example}>
+            <FilePlus2 data-icon="inline-start" />
             Load fictional example
           </Button>
           {recover && (
             <Button variant="outline" disabled={disabled} onClick={recover}>
+              <Undo2 data-icon="inline-start" />
               Recover previous workspace
             </Button>
           )}
           <Button variant="outline" disabled={disabled} onClick={resume}>
+            <RefreshCw data-icon="inline-start" />
             Review browser saving
           </Button>
         </div>

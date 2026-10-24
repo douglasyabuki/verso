@@ -1,5 +1,8 @@
 "use client";
 
+import { Languages, ListChecks, Pencil, Plus } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { InfoHint } from "@/components/ui/info-hint";
 import { librarySectionLabel } from "@/components/workspace/navigation";
 import { reviewItems } from "@/lib/resume/review-queue";
 import type { WorkspaceDestination } from "@/types-and-constants/navigation";
@@ -29,75 +33,77 @@ export function LibraryOverview({
   const queue = reviewItems(document).filter((item) => !item.resumeId);
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-sm text-muted-foreground">
-        Counts include active and archived career-library wording. Use archive
-        and output filters in Wording tasks to choose what to work on.
-      </p>
-      {[
-        { id: "profile", label: "Profile & summary", entries: [] },
-        ...document.sections.map((section) => ({
-          ...section,
-          label: librarySectionLabel(section),
-        })),
-      ].map((section) => (
-        <Card key={section.id}>
-          <CardHeader>
-            <CardTitle>{section.label}</CardTitle>
-            <CardDescription>
-              {section.id === "profile"
-                ? "Shared contact details and bilingual summary"
-                : `${section.entries.filter((entry) => !entry.archived).length} active · ${section.entries.filter((entry) => entry.archived).length} archived entries`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {locales.map((locale) => {
-              const items = queue.filter(
-                (item) =>
-                  item.field.sectionId === section.id && item.locale === locale,
-              );
-              return (
-                <Button
-                  key={locale}
-                  variant="outline"
-                  className="justify-start"
-                  onClick={() => onReview(section.id, locale)}
-                >
-                  {locale === "en-US" ? "English" : "Portuguese"}:{" "}
-                  {
-                    items.filter((item) => item.categories.includes("missing"))
-                      .length
-                  }{" "}
-                  missing ·{" "}
-                  {
-                    items.filter((item) =>
-                      item.categories.some((reason) => reason !== "missing"),
-                    ).length
-                  }{" "}
-                  need review
-                </Button>
-              );
-            })}
-          </CardContent>
-          <CardFooter>
-            <Button
-              onClick={() =>
-                open({
-                  kind: "library-section",
-                  sectionId: section.id,
-                  tab: "edit",
-                })
-              }
-            >
-              Edit content
-            </Button>
-          </CardFooter>
-        </Card>
-      ))}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        Shared career content
+        <InfoHint label="library task counts" size="sm">
+          Counts include active and archived wording. Use wording-task filters
+          to choose the content to review.
+        </InfoHint>
+      </div>
+      <div className="grid gap-4 @2xl:grid-cols-2">
+        {[
+          { id: "profile", label: "Profile & summary", entries: [] },
+          ...document.sections.map((section) => ({
+            ...section,
+            label: librarySectionLabel(section),
+          })),
+        ].map((section) => (
+          <Card key={section.id} size="sm">
+            <CardHeader>
+              <CardTitle>{section.label}</CardTitle>
+              <CardDescription>
+                {section.id === "profile"
+                  ? "Shared contact details and bilingual summary"
+                  : `${section.entries.filter((entry) => !entry.archived).length} active · ${section.entries.filter((entry) => entry.archived).length} archived entries`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              {locales.map((locale) => {
+                const items = queue.filter(
+                  (item) =>
+                    item.field.sectionId === section.id &&
+                    item.locale === locale,
+                );
+                return (
+                  <Button
+                    key={locale}
+                    variant="outline"
+                    className="justify-start"
+                    onClick={() => onReview(section.id, locale)}
+                  >
+                    <Languages data-icon="inline-start" />
+                    {locale === "en-US" ? "English" : "Portuguese"}
+                    <Badge variant={items.length ? "attention" : "outline"}>
+                      <ListChecks data-icon="inline-start" />
+                      {items.length ? `${items.length} tasks` : "No tasks"}
+                    </Badge>
+                  </Button>
+                );
+              })}
+            </CardContent>
+            <CardFooter>
+              <Button
+                onClick={() =>
+                  open({
+                    kind: "library-section",
+                    sectionId: section.id,
+                    tab: "edit",
+                  })
+                }
+              >
+                <Pencil data-icon="inline-start" />
+                Edit content
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
       <Button
         className="self-start"
         disabled={document.sections.length >= 30}
         onClick={addSection}
       >
+        <Plus data-icon="inline-start" />
         Add section
       </Button>
     </div>

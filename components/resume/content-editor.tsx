@@ -1,11 +1,14 @@
 "use client";
 
+import { cn } from "cn";
 import {
   Archive,
   ArchiveRestore,
   ChevronRight,
   Copy,
   FilePlus2,
+  MoreHorizontal,
+  Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -31,6 +34,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -43,11 +53,11 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { Separator } from "@/components/ui/separator";
-import { librarySectionLabel } from "@/components/workspace/navigation";
 import { createEntry } from "@/lib/resume/factories";
 import { duplicateEntry, matchesEntry } from "@/lib/resume/library";
-import { localized } from "@/lib/resume/localization";
+import { localized, plain } from "@/lib/resume/localization";
 import { reorderVisible } from "@/lib/resume/operations";
 import { entryLabel } from "@/lib/resume/section-fields";
 import type { EditorProps } from "@/types-and-constants/editor";
@@ -83,8 +93,12 @@ export function ContentEditor({
       <Card>
         <CardHeader>
           <CardTitle size="section">Your profile</CardTitle>
-          <CardDescription>
-            Contact details are shared. Wording is specific to each language.
+          <CardDescription className="flex items-center gap-1.5">
+            <span>Shared contact details</span>
+            <InfoHint label="profile languages">
+              Contact details apply to both languages. Summary wording is
+              specific to each language.
+            </InfoHint>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -192,12 +206,6 @@ export function ContentEditor({
             </FieldSet>
           </FieldGroup>
         </CardContent>
-        <CardFooter>
-          <p className="text-xs text-muted-foreground">
-            Plain text, emphasis, and links are supported. LaTeX syntax is
-            treated as text.
-          </p>
-        </CardFooter>
       </Card>
     );
 
@@ -233,11 +241,20 @@ export function ContentEditor({
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader>
-          <CardTitle size="section">{librarySectionLabel(section)}</CardTitle>
-          <CardDescription>
-            {terms.description} Choose what belongs in each resume under Resumes
-            → Content &amp; order.
-          </CardDescription>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-lg">
+              <CardTitle size="section">Entries</CardTitle>
+              <InfoHint label="library entries" size="lg">
+                Library changes update resumes referencing these entries.
+                Include new entries in each resume’s Content & order. Library
+                and resume ordering are independent.
+              </InfoHint>
+            </div>
+            <Button onClick={addEntry} disabled={section.entries.length >= 300}>
+              <Plus data-icon="inline-start" />
+              Add {terms.singular}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <FieldGroup>
@@ -317,21 +334,49 @@ export function ContentEditor({
                         id={item.id}
                         label={entryLabel(item, section.kind, locale)}
                         as="li"
-                        className="flex flex-col gap-2 rounded-lg border p-3"
+                        className={cn(
+                          "flex flex-col gap-2 rounded-lg border border-l-2 border-l-transparent p-2",
+                          entry?.id === item.id &&
+                            "border-l-foreground bg-muted",
+                        )}
                       >
                         {({ dragHandle, orderButtons }) => (
                           <>
                             <div className="flex items-center gap-2">
                               {dragHandle}
                               <Button
-                                className="min-w-0 flex-1 justify-start truncate"
+                                className="h-auto min-w-0 flex-1 justify-start py-2 text-left whitespace-normal"
                                 variant={
                                   entry?.id === item.id ? "secondary" : "ghost"
                                 }
                                 onClick={() => setEntryId(item.id)}
                                 aria-pressed={entry?.id === item.id}
                               >
-                                {entryLabel(item, section.kind, locale)}
+                                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                                  <span className="text-base font-semibold">
+                                    {entryLabel(item, section.kind, locale)}
+                                  </span>
+                                  <span className="text-xs font-normal text-muted-foreground">
+                                    {[
+                                      plain(item.title, locale) !==
+                                      entryLabel(item, section.kind, locale)
+                                        ? plain(item.title, locale)
+                                        : item.organization !==
+                                            entryLabel(
+                                              item,
+                                              section.kind,
+                                              locale,
+                                            )
+                                          ? item.organization
+                                          : "",
+                                      item.start,
+                                      item.ongoing ? "Present" : item.end,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </span>
+                                </span>
+                                <Pencil data-icon="inline-end" />
                                 {item.archived && (
                                   <Badge variant="outline">Archived</Badge>
                                 )}
@@ -367,103 +412,111 @@ export function ContentEditor({
             )}
           </FieldGroup>
         </CardContent>
-        <CardFooter className="flex flex-wrap justify-between gap-2">
-          <Button onClick={addEntry} disabled={section.entries.length >= 300}>
-            <Plus data-icon="inline-start" />
-            Add {terms.singular}
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            Library ordering is separate from resume output ordering.
-          </span>
-        </CardFooter>
       </Card>
       {entry && (
         <Card key={entry.id}>
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>{entryLabel(entry, section.kind, locale)}</CardTitle>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={section.entries.length >= 300}
-                  onClick={() => {
-                    const copy = duplicateEntry(entry);
-                    update((draft) => {
-                      const entries = draft.sections.find(
-                        (item) => item.id === sectionId,
-                      )!.entries;
-                      if (entries.length >= 300) return;
-                      const index = entries.findIndex(
-                        (item) => item.id === entry.id,
-                      );
-                      if (index >= 0) entries.splice(index + 1, 0, copy);
-                    });
-                    onContext({ ...context, query: "", entryId: copy.id });
-                  }}
-                >
-                  <Copy data-icon="inline-start" />
-                  Duplicate entry
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    changeEntry((target) => {
-                      target.archived = !target.archived;
-                    })
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Entry actions"
+                    />
                   }
                 >
-                  {entry.archived ? (
-                    <ArchiveRestore data-icon="inline-start" />
-                  ) : (
-                    <Archive data-icon="inline-start" />
-                  )}
-                  {entry.archived ? "Restore" : "Archive"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="icon-sm"
-                  aria-label="Delete entry permanently"
-                  onClick={() => {
-                    const affected = document.variants
-                      .filter((variant) =>
-                        variant.sections.some((section) =>
-                          section.entries.some(
-                            (item) => item.entryId === entry.id,
-                          ),
-                        ),
-                      )
-                      .map((variant) => variant.name || "Untitled");
-                    confirm(
-                      "Permanently delete this entry?",
-                      `Its achievements and links will also be removed. Affected resumes: ${affected.join(", ") || "none"}. Export a JSON backup first if you need a copy.`,
-                      () =>
+                  <MoreHorizontal />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      disabled={section.entries.length >= 300}
+                      onClick={() => {
+                        const copy = duplicateEntry(entry);
                         update((draft) => {
-                          draft.sections.find(
-                            (section) => section.id === sectionId,
-                          )!.entries = section.entries.filter(
-                            (item) => item.id !== entry.id,
+                          const entries = draft.sections.find(
+                            (item) => item.id === sectionId,
+                          )!.entries;
+                          if (entries.length >= 300) return;
+                          const index = entries.findIndex(
+                            (item) => item.id === entry.id,
                           );
-                          draft.variants.forEach((variant) =>
-                            variant.sections.forEach((section) => {
-                              section.entries = section.entries.filter(
-                                (item) => item.entryId !== entry.id,
+                          if (index >= 0) entries.splice(index + 1, 0, copy);
+                        });
+                        onContext({ ...context, query: "", entryId: copy.id });
+                      }}
+                    >
+                      <Copy data-icon="inline-start" />
+                      Duplicate entry
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        changeEntry((target) => {
+                          target.archived = !target.archived;
+                        })
+                      }
+                    >
+                      {entry.archived ? (
+                        <ArchiveRestore data-icon="inline-start" />
+                      ) : (
+                        <Archive data-icon="inline-start" />
+                      )}
+                      {entry.archived ? "Restore" : "Archive"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => {
+                        const affected = document.variants
+                          .filter((variant) =>
+                            variant.sections.some((section) =>
+                              section.entries.some(
+                                (item) => item.entryId === entry.id,
+                              ),
+                            ),
+                          )
+                          .map((variant) => variant.name || "Untitled");
+                        confirm(
+                          "Permanently delete this entry?",
+                          `Its achievements and links will also be removed. Affected resumes: ${affected.join(", ") || "none"}. Export a JSON backup first if you need a copy.`,
+                          () =>
+                            update((draft) => {
+                              draft.sections.find(
+                                (section) => section.id === sectionId,
+                              )!.entries = section.entries.filter(
+                                (item) => item.id !== entry.id,
+                              );
+                              draft.variants.forEach((variant) =>
+                                variant.sections.forEach((section) => {
+                                  section.entries = section.entries.filter(
+                                    (item) => item.entryId !== entry.id,
+                                  );
+                                }),
                               );
                             }),
-                          );
-                        }),
-                    );
-                  }}
-                >
-                  <Trash2 />
-                </Button>
-              </div>
+                        );
+                      }}
+                    >
+                      <Trash2 />
+                      Delete permanently
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <CardDescription>
-              {entry.archived
-                ? "Archived entries stay editable and are hidden from all generated outputs."
-                : "Changes update every resume referencing this entry."}
+            <CardDescription className="flex items-center gap-1.5">
+              {entry.archived ? (
+                "Archived entries stay editable and are hidden from all generated outputs."
+              ) : (
+                <>
+                  <span>Shared entry</span>
+                  <InfoHint label="shared entry">
+                    Changes update every resume referencing this entry.
+                  </InfoHint>
+                </>
+              )}
             </CardDescription>
           </CardHeader>
 
@@ -481,7 +534,14 @@ export function ContentEditor({
               />
               <Separator />
               <FieldSet>
-                <FieldLegend>{terms.items}</FieldLegend>
+                <FieldLegend>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>{terms.items}</span>
+                    <InfoHint label="achievement inclusion">
+                      Choose achievements in each resume’s Content &amp; order.
+                    </InfoHint>
+                  </span>
+                </FieldLegend>
                 {!entry.bullets.length && (
                   <FieldDescription>
                     No {terms.items.toLowerCase()} yet. Add a{" "}
@@ -489,10 +549,6 @@ export function ContentEditor({
                     in each language.
                   </FieldDescription>
                 )}
-                <FieldDescription>
-                  Include achievements explicitly in a resume?s Content &amp;
-                  order page.
-                </FieldDescription>
                 <SortableList
                   scope={`library:${section.id}:${entry.id}:bullets`}
                   revision={document}
@@ -635,8 +691,7 @@ export function ContentEditor({
 
           <CardFooter>
             <p className="text-xs text-muted-foreground">
-              Dates and links are shared facts. Translations keep the same entry
-              and achievement IDs.
+              Dates and links apply to both languages.
             </p>
           </CardFooter>
         </Card>

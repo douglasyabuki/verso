@@ -2,11 +2,14 @@
 
 import { LocalizedField } from "@/components/resume/fields";
 import { TranslationComparison } from "@/components/resume/translation-comparison";
+import { WordingComparisonDetails } from "@/components/resume/wording-comparison-details";
+import { WordingStatus } from "@/components/resume/wording-status";
+import { Badge } from "@/components/ui/badge";
+import { InfoHint } from "@/components/ui/info-hint";
 import {
   confirmTranslationPair,
   editTranslation,
   findLocalized,
-  markTranslationReviewed,
   plain,
   translationSnapshot,
 } from "@/lib/resume/localization";
@@ -48,10 +51,17 @@ export function WordingField({
   const populated = !!plain(value, locale).trim();
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">
-        Shared wording · Editing updates every resume that inherits this
-        language.
-      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline">Shared wording</Badge>
+        <WordingStatus
+          missing={!populated && !!required}
+          review={value[locale].needsReview}
+        />
+        <InfoHint label="shared wording">
+          Editing updates every resume that inherits this language. No review
+          flag does not imply verification.
+        </InfoHint>
+      </div>
       <LocalizedField
         fieldKey={`${path}.${locale}`}
         label={label}
@@ -59,7 +69,7 @@ export function WordingField({
         locale={locale}
         required={required}
         multiline={multiline}
-        description={description}
+        hint={description}
         error={errors.find((error) => error.path === path)?.message}
         onChange={(spans, group) =>
           update((draft) => {
@@ -69,29 +79,28 @@ export function WordingField({
         }
       />
       {(showReference || populated || required) && (
-        <TranslationComparison
-          review={value}
-          target={target}
-          reference={reference}
-          snapshot={value[locale].reviewedCounterpart}
-          needsReview={value[locale].needsReview}
-          owner="the career library"
-          onConfirm={(both) => {
-            let accepted = false;
-            update((draft) => {
-              accepted = both
-                ? confirmTranslationPair(draft, path, target, reference)
-                : markTranslationReviewed(
-                    draft,
-                    path,
-                    target,
-                    reference,
-                    referenceLocale,
-                  );
-            });
-            return accepted;
-          }}
-        />
+        <WordingComparisonDetails expanded={showReference}>
+          <TranslationComparison
+            review={value}
+            target={target}
+            reference={reference}
+            snapshot={value[locale].reviewedCounterpart}
+            needsReview={value[locale].needsReview}
+            owner="the career library"
+            onConfirm={() => {
+              let accepted = false;
+              update((draft) => {
+                accepted = confirmTranslationPair(
+                  draft,
+                  path,
+                  target,
+                  reference,
+                );
+              });
+              return accepted;
+            }}
+          />
+        </WordingComparisonDetails>
       )}
     </div>
   );
