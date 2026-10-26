@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { type ComponentProps, useState } from "react";
 
 import { CheckField } from "@/components/resume/fields";
-import { Badge } from "@/components/ui/badge";
+import { ReviewStatusBadge } from "@/components/resume/semantic-badges/review-status-badge";
+import { WordingSourceBadge } from "@/components/resume/semantic-badges/wording-source-badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -44,7 +45,7 @@ import type { Issue } from "@/types-and-constants/review";
 type Cell = {
   status: string;
   spans?: Span[];
-  source?: string;
+  source?: ComponentProps<typeof WordingSourceBadge>["source"];
   translation?: boolean;
   shared?: boolean;
 };
@@ -99,8 +100,8 @@ export function VariantComparison({
       status,
       spans: value[locale].spans,
       source: variantWording(selected, path)?.overrides[locale]
-        ? "Customized for this resume"
-        : "Shared wording",
+        ? "custom"
+        : "inherited",
       translation: value[locale].needsReview,
       shared: sharedWordingChanged(shared, selected, path, locale),
     };
@@ -313,23 +314,11 @@ export function VariantComparison({
                   </p>
                   <p className="text-sm">{cell.status}</p>
                   <div className="flex flex-wrap gap-2">
-                    {cell.source && (
-                      <Badge
-                        variant={
-                          cell.source === "Customized for this resume"
-                            ? "secondary"
-                            : "outline"
-                        }
-                      >
-                        {cell.source}
-                      </Badge>
-                    )}
+                    {cell.source && <WordingSourceBadge source={cell.source} />}
                     {cell.translation && (
-                      <Badge variant="outline">Compare translations</Badge>
+                      <ReviewStatusBadge state="translation" />
                     )}
-                    {cell.shared && (
-                      <Badge variant="outline">Review library changes</Badge>
-                    )}
+                    {cell.shared && <ReviewStatusBadge state="library" />}
                   </div>
                   {cell.spans && (
                     <p

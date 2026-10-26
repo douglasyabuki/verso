@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
+import { TemplateIdentityBadge } from "@/components/resume/semantic-badges/template-identity-badge";
 import {
   Card,
   CardContent,
@@ -153,9 +153,10 @@ export function SettingsEditor({
         </CardHeader>
         <CardContent>
           <FieldGroup>
-            <Badge variant="outline">
-              {document.template.id}@{document.template.version}
-            </Badge>
+            <TemplateIdentityBadge
+              id={document.template.id}
+              version={document.template.version}
+            />
             <Field>
               <div className="flex items-center gap-2">
                 <FieldLabel htmlFor={selectId}>Apply settings to</FieldLabel>

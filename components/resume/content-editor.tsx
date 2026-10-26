@@ -16,9 +16,9 @@ import {
 import { EntryFields } from "@/components/resume/entry-fields";
 import { LinksEditor, TextField } from "@/components/resume/fields";
 import { LibrarySearch } from "@/components/resume/library-controls";
+import { ContentStatusBadge } from "@/components/resume/semantic-badges/content-status-badge";
 import { SortableList, SortableRow } from "@/components/resume/sortable-list";
 import { WordingField } from "@/components/resume/wording-field";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -379,7 +379,7 @@ export function ContentEditor({
                                 </span>
                                 <Pencil data-icon="inline-end" />
                                 {item.archived && (
-                                  <Badge variant="outline">Archived</Badge>
+                                  <ContentStatusBadge state="archived" />
                                 )}
                               </Button>
                               {orderButtons}

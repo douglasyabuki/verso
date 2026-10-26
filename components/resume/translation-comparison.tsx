@@ -1,10 +1,10 @@
 "use client";
 
-import { Check, CheckCheck, CircleAlert } from "lucide-react";
+import { CheckCheck } from "lucide-react";
 import { useState } from "react";
 
+import { TranslationFeedbackBadge } from "@/components/resume/semantic-badges/translation-feedback-badge";
 import { TranslationReference } from "@/components/resume/translation-reference";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/info-hint";
 import type { Locale } from "@/types-and-constants/languages";
@@ -50,7 +50,6 @@ export function TranslationComparison({
 }) {
   const [feedback, setFeedback] = useState({
     version: "",
-    message: "",
     accepted: false,
   });
   const version = JSON.stringify([target, reference, owner]);
@@ -73,9 +72,6 @@ export function TranslationComparison({
       version: accepted
         ? `${version}:${comparisonIdentity(checked)}`
         : identity,
-      message: accepted
-        ? `Both languages confirmed for ${owner}.`
-        : "Wording changed or confirmation is unavailable. Check the current pair and try again.",
     });
   };
   return (
@@ -108,18 +104,11 @@ export function TranslationComparison({
         aria-live="polite"
         className="text-sm text-muted-foreground"
       >
-        {feedback.version === identity && feedback.message && (
-          <Badge
-            variant={feedback.accepted ? "success" : "destructive"}
-            className="h-auto whitespace-normal"
-          >
-            {feedback.accepted ? (
-              <Check data-icon="inline-start" />
-            ) : (
-              <CircleAlert data-icon="inline-start" />
-            )}
-            {feedback.message}
-          </Badge>
+        {feedback.version === identity && (
+          <TranslationFeedbackBadge
+            state={feedback.accepted ? "accepted" : "rejected"}
+            owner={owner}
+          />
         )}
       </p>
     </div>

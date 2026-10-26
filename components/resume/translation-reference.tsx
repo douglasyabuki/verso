@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { WordingSourceText } from "@/components/resume/semantic-badges/wording-source-badge";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -26,9 +27,9 @@ function ReferenceWording({
       </p>
       {version.source && (
         <p className="text-xs text-muted-foreground">
-          {version.source === "override"
-            ? "Customized for this resume"
-            : "Career library wording"}
+          <WordingSourceText
+            source={version.source === "override" ? "custom" : "inherited"}
+          />
         </p>
       )}
       <p

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Check,
   ChevronDown,
   CircleAlert,
   Languages,
@@ -10,10 +9,12 @@ import {
 } from "lucide-react";
 import { useId, useState } from "react";
 
+import { ExportStatusBadge } from "@/components/resume/semantic-badges/export-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/info-hint";
 import type { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
+import { formatCount } from "@/lib/format-count";
 import { resolveSettings } from "@/lib/resume/settings";
 import type { validateOutput } from "@/lib/resume/validation";
 import type { Locale } from "@/types-and-constants/languages";
@@ -78,7 +79,7 @@ export function IssuesPanel({
       ? "Waiting for the current compiled PDF and its page count."
       : (layout.result?.error ??
         (pages !== undefined
-          ? `${pages} ${pages === 1 ? "page" : "pages"} / target ${target}. This checks page count, not clipping or overlapping text.`
+          ? `${formatCount(pages, "page", "pages")} / target ${target}. This checks page count, not clipping or overlapping text.`
           : validation[locale].errors.length
             ? "Fix this language's blocking errors before checking its layout."
             : "Check layout to compile this language. Older PDFs do not describe the current draft."));
@@ -155,19 +156,19 @@ export function IssuesPanel({
           {reviews > 0 && (
             <Badge variant="attention">
               <Languages data-icon="inline-start" />
-              {reviews} comparisons
+              {formatCount(reviews, "comparison", "comparisons")}
             </Badge>
           )}
           {sharedReviews > 0 && (
             <Badge variant="attention">
               <Library data-icon="inline-start" />
-              {sharedReviews} library changes
+              {formatCount(sharedReviews, "library change", "library changes")}
             </Badge>
           )}
           {layouts > 0 && (
             <Badge variant="attention">
               <CircleAlert data-icon="inline-start" />
-              {layouts} layout
+              {formatCount(layouts, "layout issue", "layout issues")}
             </Badge>
           )}
           {errors + reviews + sharedReviews + layouts === 0 && (
@@ -206,20 +207,9 @@ export function IssuesPanel({
                         {language.locale}
                       </span>
                     </h2>
-                    <Badge
-                      variant={
-                        language.errors.length ? "destructive" : "outline"
-                      }
-                    >
-                      {language.errors.length ? (
-                        <CircleAlert data-icon="inline-start" />
-                      ) : (
-                        <Check data-icon="inline-start" />
-                      )}
-                      {language.errors.length
-                        ? "Output blocked"
-                        : "Valid for export"}
-                    </Badge>
+                    <ExportStatusBadge
+                      state={language.errors.length ? "blocked" : "valid"}
+                    />
                   </div>
                   <IssueGroup
                     title="Output-blocking errors"

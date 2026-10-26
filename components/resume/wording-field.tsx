@@ -1,11 +1,10 @@
 "use client";
 
 import { LocalizedField } from "@/components/resume/fields";
+import { WordingSourceBadge } from "@/components/resume/semantic-badges/wording-source-badge";
 import { TranslationComparison } from "@/components/resume/translation-comparison";
 import { WordingComparisonDetails } from "@/components/resume/wording-comparison-details";
 import { WordingStatus } from "@/components/resume/wording-status";
-import { Badge } from "@/components/ui/badge";
-import { InfoHint } from "@/components/ui/info-hint";
 import {
   confirmTranslationPair,
   editTranslation,
@@ -50,15 +49,11 @@ export function WordingField({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline">Shared wording</Badge>
+        <WordingSourceBadge source="library" />
         <WordingStatus
           missing={!populated && !!required}
           review={value[locale].needsReview}
         />
-        <InfoHint label="shared wording">
-          Editing updates every resume that inherits this language. No review
-          flag does not imply verification.
-        </InfoHint>
       </div>
       <LocalizedField
         fieldKey={`${path}.${locale}`}

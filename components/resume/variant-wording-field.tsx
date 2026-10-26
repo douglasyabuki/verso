@@ -5,10 +5,10 @@ import { type ComponentProps, useState } from "react";
 
 import { LocalizedField } from "@/components/resume/fields";
 import { LanguageFlag } from "@/components/resume/language-flag";
+import { WordingSourceBadge } from "@/components/resume/semantic-badges/wording-source-badge";
 import { TranslationComparison } from "@/components/resume/translation-comparison";
 import { WordingComparisonDetails } from "@/components/resume/wording-comparison-details";
 import { WordingStatus } from "@/components/resume/wording-status";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -83,9 +83,7 @@ export function VariantWordingField({
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={override ? "secondary" : "outline"}>
-          {override ? "Customized for this resume" : "Uses library text"}
-        </Badge>
+        <WordingSourceBadge source={override ? "custom" : "inherited"} />
         <span className="text-sm">
           {variant.name || "Untitled resume"} · {languageNames[locale]}
         </span>
@@ -94,11 +92,6 @@ export function VariantWordingField({
           review={value[locale].needsReview}
           library={baselineChanged}
         />
-        <InfoHint label="wording scope">
-          {override
-            ? "Editing changes only this resume and language. Shared wording and facts stay in the library."
-            : "This wording is inherited. Customize it for this resume, or edit it in the career library."}
-        </InfoHint>
       </div>
       {override ? (
         <LocalizedField

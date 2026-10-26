@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/info-hint";
 import { librarySectionLabel } from "@/components/workspace/navigation";
+import { formatCount } from "@/lib/format-count";
 import { reviewItems } from "@/lib/resume/review-queue";
 import type { Locale } from "@/types-and-constants/languages";
 import { locales } from "@/types-and-constants/languages";
@@ -78,7 +79,9 @@ export function LibraryOverview({
                     </div>
                     <Badge variant={items.length ? "attention" : "outline"}>
                       <ListChecks data-icon="inline-start" />
-                      {items.length ? `${items.length} tasks` : "No tasks"}
+                      {items.length
+                        ? formatCount(items.length, "task", "tasks")
+                        : "No tasks"}
                     </Badge>
                   </Button>
                 );

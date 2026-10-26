@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Check, EyeOff, Minus, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import {
   type PointerEvent,
   type ReactElement,
@@ -11,7 +11,8 @@ import {
 } from "react";
 
 import { CheckField } from "@/components/resume/fields";
-import { Badge } from "@/components/ui/badge";
+import { ContentStatusBadge } from "@/components/resume/semantic-badges/content-status-badge";
+import { SelectionBadge } from "@/components/resume/semantic-badges/selection-badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
@@ -188,30 +189,15 @@ export function InclusionStatus({
       className="flex flex-wrap items-center gap-2"
       aria-label={`Selection in ${variantName}`}
     >
-      <Badge variant={selected ? "secondary" : "outline"}>
-        {selected ? (
-          <Check data-icon="inline-start" />
-        ) : (
-          <Minus data-icon="inline-start" />
-        )}
-        {selected ? "Selected" : "Not selected"}
-      </Badge>
+      <SelectionBadge selected={selected} />
       {count !== undefined && (
         <span className="text-xs text-muted-foreground">
           {count}/{total} selected
         </span>
       )}
-      {archived && (
-        <Badge variant="outline">
-          <Archive data-icon="inline-start" />
-          Archived · omitted
-        </Badge>
-      )}
+      {archived && <ContentStatusBadge state="archived-omitted" />}
       {!archived && !sectionVisible && (
-        <Badge variant="outline">
-          <EyeOff data-icon="inline-start" />
-          Section hidden · omitted
-        </Badge>
+        <ContentStatusBadge state="section-hidden" />
       )}
     </div>
   );

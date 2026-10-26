@@ -3,8 +3,8 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useId } from "react";
 
+import { ContentStatusBadge } from "@/components/resume/semantic-badges/content-status-badge";
 import { TextEditor } from "@/components/resume/text-editor";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -179,7 +179,7 @@ export function LocalizedField({
           </FieldLabel>
           {hint && <InfoHint label={label}>{hint}</InfoHint>}
           {missing && !required ? (
-            <Badge variant="outline">Optional empty</Badge>
+            <ContentStatusBadge state="optional-empty" />
           ) : null}
         </div>
         <TextEditor

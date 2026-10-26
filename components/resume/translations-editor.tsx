@@ -4,13 +4,14 @@ import { cn } from "cn";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   ChevronDown,
   Filter,
   ListChecks,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
+import { ContentStatusBadge } from "@/components/resume/semantic-badges/content-status-badge";
+import { ReviewStatusBadge } from "@/components/resume/semantic-badges/review-status-badge";
 import { VariantWordingField } from "@/components/resume/variant-wording-field";
 import { WordingField } from "@/components/resume/wording-field";
 import { WordingStatus } from "@/components/resume/wording-status";
@@ -415,6 +416,7 @@ export function TranslationsEditor({
                 {plain(item.field.value, item.locale) || "Empty wording"}
               </span>
               <WordingStatus
+                showHelp={false}
                 missing={item.categories.includes("missing")}
                 review={item.categories.includes("translation")}
                 library={item.categories.includes("library")}
@@ -433,10 +435,7 @@ export function TranslationsEditor({
                 <CardTitle>
                   {currentItem?.field.label || "Current item"}{" "}
                   {currentItem && !currentItem.reasons.length && (
-                    <Badge variant="success">
-                      <Check data-icon="inline-start" />
-                      Resolved
-                    </Badge>
+                    <ReviewStatusBadge state="resolved" />
                   )}
                 </CardTitle>
                 <CardDescription>
@@ -461,7 +460,7 @@ export function TranslationsEditor({
                         {reviewOutputLabel(currentItem, outputResumeId)}
                       </span>
                       {currentItem.archived && (
-                        <Badge variant="outline">Archived</Badge>
+                        <ContentStatusBadge state="archived" />
                       )}
                     </div>
                     {currentItem.resumeId ||

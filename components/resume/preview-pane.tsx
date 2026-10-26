@@ -2,7 +2,6 @@
 
 import { cn } from "cn";
 import {
-  Check,
   ChevronRight,
   CircleAlert,
   FileText,
@@ -11,6 +10,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
+import { PreviewStatusBadge } from "@/components/resume/semantic-badges/preview-status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
+import { formatCount } from "@/lib/format-count";
 import { validateOutput } from "@/lib/resume/validation";
 import type { Locale } from "@/types-and-constants/languages";
 
@@ -80,14 +81,9 @@ export function PreviewPane({
           <span className="text-sm font-medium">PDF preview</span>
           {compiler.preview && (
             <>
-              <Badge variant={compiler.stale ? "attention" : "success"}>
-                {compiler.stale ? (
-                  <CircleAlert data-icon="inline-start" />
-                ) : (
-                  <Check data-icon="inline-start" />
-                )}
-                {compiler.stale ? "Out of date" : "Current"}
-              </Badge>
+              <PreviewStatusBadge
+                state={compiler.stale ? "stale" : "current"}
+              />
               <span className="text-xs text-muted-foreground">
                 r{compiler.preview.revision} · {compiler.preview.locale}
               </span>
@@ -155,14 +151,18 @@ export function PreviewPane({
         <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2">
           <Badge variant="attention">
             <ListChecks data-icon="inline-start" />
-            {validation.warnings.length} wording tasks
+            {formatCount(
+              validation.warnings.length,
+              "wording task",
+              "wording tasks",
+            )}
+            <InfoHint label="wording tasks and downloads" variant="badge">
+              Wording review reminders do not block valid previews or downloads.
+            </InfoHint>
           </Badge>
           <Button variant="ghost" size="sm" onClick={onIssues}>
             Review issues
           </Button>
-          <InfoHint label="wording tasks and downloads">
-            Wording review reminders do not block valid previews or downloads.
-          </InfoHint>
         </div>
       )}
       {compiler.error && validation.errors.length === 0 && (

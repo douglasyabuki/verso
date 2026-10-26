@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/sidebar";
 import { librarySectionLabel } from "@/components/workspace/navigation";
 import type { useResumeActions } from "@/hooks/workspace/use-resume-actions";
+import { formatCount } from "@/lib/format-count";
 import type { WorkspaceDestination } from "@/types-and-constants/navigation";
 import type { ResumeDocument } from "@/types-and-constants/resume";
 
@@ -404,7 +405,7 @@ export function WorkspaceSidebar({
               <span>Wording tasks</span>
             </SidebarMenuButton>
             <SidebarMenuBadge
-              aria-label={`${reviewCount} unresolved wording items across the workspace`}
+              aria-label={`${formatCount(reviewCount, "unresolved wording item", "unresolved wording items")} across the workspace`}
               title="Workspace-wide unresolved wording items"
             >
               {reviewCount}
