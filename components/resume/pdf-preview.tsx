@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ResumeOutput } from "@/types-and-constants/resume";
+import type { ResumeOutput } from "@/types-and-constants/output";
 
 export default function PdfPreview({ output }: { output?: ResumeOutput }) {
   const container = useRef<HTMLDivElement>(null);

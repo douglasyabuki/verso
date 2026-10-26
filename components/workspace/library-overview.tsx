@@ -1,7 +1,8 @@
 "use client";
 
-import { Languages, ListChecks, Pencil } from "lucide-react";
+import { ListChecks, Pencil } from "lucide-react";
 
+import { LanguageFlag } from "@/components/resume/language-flag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,9 +16,10 @@ import {
 import { InfoHint } from "@/components/ui/info-hint";
 import { librarySectionLabel } from "@/components/workspace/navigation";
 import { reviewItems } from "@/lib/resume/review-queue";
+import type { Locale } from "@/types-and-constants/languages";
+import { locales } from "@/types-and-constants/languages";
 import type { WorkspaceDestination } from "@/types-and-constants/navigation";
-import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
-import { locales } from "@/types-and-constants/resume";
+import type { ResumeDocument } from "@/types-and-constants/resume";
 
 export function LibraryOverview({
   document,
@@ -67,11 +69,13 @@ export function LibraryOverview({
                   <Button
                     key={locale}
                     variant="outline"
-                    className="justify-start"
+                    className="justify-between"
                     onClick={() => onReview(section.id, locale)}
                   >
-                    <Languages data-icon="inline-start" />
-                    {locale === "en-US" ? "English" : "Portuguese"}
+                    <div className="flex items-center gap-2">
+                      <LanguageFlag locale={locale} className="rounded-sm" />
+                      {locale === "en-US" ? "English" : "Portuguese"}
+                    </div>
                     <Badge variant={items.length ? "attention" : "outline"}>
                       <ListChecks data-icon="inline-start" />
                       {items.length ? `${items.length} tasks` : "No tasks"}

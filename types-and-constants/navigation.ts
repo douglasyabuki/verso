@@ -1,10 +1,10 @@
-import type {
-  Locale,
-  LocalizedFieldDescriptor,
-} from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import type { Issue } from "@/types-and-constants/review";
 
-export type LibraryTab = "edit" | "review";
-export type ResumePage = "content" | "translations" | "layout";
+type LibraryTab = "edit" | "review";
+
+type ResumePage = "content" | "translations" | "layout";
+
 export type WorkspaceDestination =
   | { kind: "library-overview" }
   | { kind: "library-section"; sectionId: string; tab: LibraryTab }
@@ -13,46 +13,19 @@ export type WorkspaceDestination =
   | { kind: "review" }
   | { kind: "data" }
   | { kind: "shared-defaults" };
+
 export type WorkspaceFocusTarget = {
   path: string;
   locale: Locale;
   resumeId?: string;
 };
 
-export type ReviewItem = WorkspaceFocusTarget & {
+export type IssueNavigation = {
   id: string;
-  owner: string;
-  field: LocalizedFieldDescriptor;
-  reasons: string[];
-  categories: ReviewCategory[];
-  usedBy: string[];
-  archived: boolean;
-  output: boolean;
-  provenance: string;
+  issue: Issue;
+  pending: boolean;
 };
 
-export const reviewCategoryLabels = {
-  missing: "Missing required text",
-  translation: "Compare translations",
-  library: "Review library changes",
-} as const;
-
-export type ReviewCategory = keyof typeof reviewCategoryLabels;
-export type ReviewFilters = {
-  owner: string;
-  language: string;
-  section: string;
-  reason: string;
-  output: string;
-  archive: string;
-};
-export type ReviewReturnContext = {
-  outputResumeId?: string;
-  current: WorkspaceFocusTarget | null;
-  filters: ReviewFilters;
-  scroll: number;
-  pageScroll?: number;
-};
 export type LibraryEditorContext = {
   entryId: string;
   query: string;

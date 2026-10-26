@@ -1,7 +1,8 @@
 import { equivalentSpans, normalizeSpans } from "@/lib/resume/spans";
+import type { Locale } from "@/types-and-constants/languages";
+import { locales } from "@/types-and-constants/languages";
 import type {
   EffectiveSnapshot,
-  Locale,
   LocalizedText,
   ResumeDocument,
   ReviewSnapshot,
@@ -9,7 +10,6 @@ import type {
   Variant,
   VariantWording,
 } from "@/types-and-constants/resume";
-import { locales } from "@/types-and-constants/resume";
 
 /** Find shared summary or achievement wording by stable identity.
  * @param doc Workspace. @param path Summary or achievement field path.

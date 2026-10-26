@@ -39,7 +39,10 @@ export function ResumeCollection({
         {document.variants.map((resume) => (
           <Card key={resume.id} size="sm">
             <CardHeader>
-              <CardTitle size="section" className="flex min-w-0 items-center gap-2">
+              <CardTitle
+                size="section"
+                className="flex min-w-0 items-center gap-2"
+              >
                 <FileText
                   aria-hidden="true"
                   className="resume-color size-4 shrink-0 text-(--resume-color)"

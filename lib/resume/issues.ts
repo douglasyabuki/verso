@@ -1,11 +1,9 @@
 import { plain } from "@/lib/resume/localization";
 import { entryLabel } from "@/lib/resume/section-fields";
-import type {
-  Issue,
-  Locale,
-  ResumeDocument,
-} from "@/types-and-constants/resume";
-import { entryTerminology } from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import type { ResumeDocument } from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
+import { entryTerminology } from "@/types-and-constants/sections";
 
 /** Describe a validation path using stable editor targets and current labels.
  * @param document Current workspace.

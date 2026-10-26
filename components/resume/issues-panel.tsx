@@ -16,13 +16,10 @@ import { InfoHint } from "@/components/ui/info-hint";
 import type { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import { resolveSettings } from "@/lib/resume/settings";
 import type { validateOutput } from "@/lib/resume/validation";
-import type {
-  Issue,
-  Locale,
-  ResumeDocument,
-  Variant,
-} from "@/types-and-constants/resume";
-import { locales } from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import { locales } from "@/types-and-constants/languages";
+import type { ResumeDocument, Variant } from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
 
 type IssuesPanelProps = {
   document: ResumeDocument;

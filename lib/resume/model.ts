@@ -1,11 +1,9 @@
 import { z } from "zod";
 
 import { certificationDateErrors } from "@/lib/resume/certification";
-import {
-  locales,
-  resumeColors,
-  sectionKinds,
-} from "@/types-and-constants/resume";
+import { locales } from "@/types-and-constants/languages";
+import { resumeColors } from "@/types-and-constants/resume";
+import { sectionKinds } from "@/types-and-constants/sections";
 
 export const templateIdentity = {
   id: "yabuki-reference",

@@ -26,16 +26,12 @@ import type { useWorkspaceNavigation } from "@/hooks/workspace/use-workspace-nav
 import { resolveOwnerDestination } from "@/lib/resume/destinations";
 import { validateOutput } from "@/lib/resume/validation";
 import type { ConfirmAction } from "@/types-and-constants/editor";
-import type {
-  ReviewReturnContext,
-  WorkspaceFocusTarget,
-} from "@/types-and-constants/navigation";
-import type {
-  Issue,
-  IssueNavigation,
-  Locale,
-  ResumeDocument,
-} from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
+import type { IssueNavigation } from "@/types-and-constants/navigation";
+import type { ResumeDocument } from "@/types-and-constants/resume";
+import type { ReviewReturnContext } from "@/types-and-constants/review";
+import type { Issue } from "@/types-and-constants/review";
 import type { WorkspaceEdit } from "@/types-and-constants/workspace";
 
 export function EditorPane({

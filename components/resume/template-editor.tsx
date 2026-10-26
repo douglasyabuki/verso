@@ -29,7 +29,7 @@ import {
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { resolveSettings } from "@/lib/resume/settings";
 import type { EditorProps } from "@/types-and-constants/editor";
-import type { TemplateSettings } from "@/types-and-constants/resume";
+import type { TemplateSettings } from "@/types-and-constants/output";
 
 export function SettingsEditor({
   document,

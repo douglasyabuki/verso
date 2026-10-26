@@ -7,8 +7,9 @@ import { TranslationReference } from "@/components/resume/translation-reference"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/info-hint";
-import type { Locale, ReviewSnapshot } from "@/types-and-constants/resume";
-import { locales } from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import { locales } from "@/types-and-constants/languages";
+import type { ReviewSnapshot } from "@/types-and-constants/resume";
 
 type ComparisonVersion = ReviewSnapshot & { source?: "shared" | "override" };
 type ComparisonReview = Record<

@@ -1,10 +1,7 @@
 import { localized } from "@/lib/resume/localization";
 import { templateIdentity } from "@/lib/resume/model";
-import {
-  defaultSettings,
-  type Entry,
-  type ResumeDocument,
-} from "@/types-and-constants/resume";
+import { defaultSettings } from "@/types-and-constants/output";
+import { type Entry, type ResumeDocument } from "@/types-and-constants/resume";
 
 /** Create the deterministic empty workspace used during hydration. @returns An editable draft. @example createEmptyDocument() */
 export function createEmptyDocument(): ResumeDocument {

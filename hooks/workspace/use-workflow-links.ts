@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from "react";
 
-import type { Locale } from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
 
 export const WorkflowLinksContext = createContext<{
   editLibrary: (path: string, locale: Locale) => void;

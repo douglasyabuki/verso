@@ -31,15 +31,15 @@ import {
   sharedWordingChanged,
   variantWording,
 } from "@/lib/resume/wording";
+import type { Locale } from "@/types-and-constants/languages";
+import { templateSettingLabels } from "@/types-and-constants/output";
 import type {
-  Issue,
-  Locale,
   LocalizedText,
   ResumeDocument,
   Span,
   Variant,
 } from "@/types-and-constants/resume";
-import { templateSettingLabels } from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
 
 type Cell = {
   status: string;

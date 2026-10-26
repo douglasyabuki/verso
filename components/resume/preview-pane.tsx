@@ -31,7 +31,7 @@ import { InfoHint } from "@/components/ui/info-hint";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import { validateOutput } from "@/lib/resume/validation";
-import type { Locale } from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
 
 const PdfPreview = dynamic(() => import("@/components/resume/pdf-preview"), {
   ssr: false,

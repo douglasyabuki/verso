@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import type { IssueNavigation } from "@/types-and-constants/resume";
+import type { IssueNavigation } from "@/types-and-constants/navigation";
 
 type IssueFocusOptions = {
   navigation?: IssueNavigation;

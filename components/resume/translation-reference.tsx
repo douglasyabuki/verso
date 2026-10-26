@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/collapsible";
 import { InfoHint } from "@/components/ui/info-hint";
 import { equivalentSpans } from "@/lib/resume/spans";
+import { languageNames } from "@/types-and-constants/languages";
 import type { ReviewSnapshot } from "@/types-and-constants/resume";
-import { languageNames } from "@/types-and-constants/resume";
 
 function ReferenceWording({
   title,

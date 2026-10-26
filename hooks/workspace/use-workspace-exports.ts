@@ -11,8 +11,9 @@ import {
   latexZip,
 } from "@/lib/resume/files";
 import { validateOutput } from "@/lib/resume/validation";
-import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
-import { locales } from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import { locales } from "@/types-and-constants/languages";
+import type { ResumeDocument } from "@/types-and-constants/resume";
 
 type WorkspaceExportsOptions = {
   document: ResumeDocument;

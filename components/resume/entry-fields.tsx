@@ -20,8 +20,9 @@ import {
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { dateErrors } from "@/lib/resume/validation";
 import type { EditorProps } from "@/types-and-constants/editor";
-import type { Entry, Issue, Section } from "@/types-and-constants/resume";
-import { entryTerminology } from "@/types-and-constants/resume";
+import type { Entry, Section } from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
+import { entryTerminology } from "@/types-and-constants/sections";
 import type { EditGroup } from "@/types-and-constants/workspace";
 
 type EntryFieldsProps = Pick<EditorProps, "document" | "locale" | "update"> & {

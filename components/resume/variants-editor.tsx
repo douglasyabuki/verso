@@ -40,9 +40,10 @@ import { reorderVisible } from "@/lib/resume/operations";
 import { entryLabel } from "@/lib/resume/section-fields";
 import { effectiveWording } from "@/lib/resume/wording";
 import type { EditorProps } from "@/types-and-constants/editor";
-import type { Issue, IssueNavigation } from "@/types-and-constants/resume";
+import type { IssueNavigation } from "@/types-and-constants/navigation";
 import type { Variant } from "@/types-and-constants/resume";
-import { entryTerminology } from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
+import { entryTerminology } from "@/types-and-constants/sections";
 
 export function VariantsEditor({
   document,

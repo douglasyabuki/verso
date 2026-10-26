@@ -13,11 +13,9 @@ import {
   plain,
   translationSnapshot,
 } from "@/lib/resume/localization";
-import type {
-  Issue,
-  Locale,
-  ResumeDocument,
-} from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import type { ResumeDocument } from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
 import type { WorkspaceEdit } from "@/types-and-constants/workspace";
 
 export function WordingField({

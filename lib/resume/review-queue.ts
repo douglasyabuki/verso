@@ -8,14 +8,11 @@ import {
   sharedWordingChanged,
   variantWording,
 } from "@/lib/resume/wording";
-import type {
-  ReviewFilters,
-  ReviewItem,
-  WorkspaceFocusTarget,
-} from "@/types-and-constants/navigation";
-import { reviewCategoryLabels } from "@/types-and-constants/navigation";
+import { locales } from "@/types-and-constants/languages";
+import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
 import type { ResumeDocument } from "@/types-and-constants/resume";
-import { locales } from "@/types-and-constants/resume";
+import type { ReviewFilters, ReviewItem } from "@/types-and-constants/review";
+import { reviewCategoryLabels } from "@/types-and-constants/review";
 
 /** Derive review ownership without merging independent resume reviews or duplicating inherited missing text.
  * @param document Current workspace, including archived library and retained resume wording.

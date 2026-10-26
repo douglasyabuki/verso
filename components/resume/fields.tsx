@@ -20,13 +20,13 @@ import { useFieldHistory } from "@/hooks/workspace/use-field-history";
 import { plain } from "@/lib/resume/localization";
 import { urlError } from "@/lib/resume/validation";
 import type { ConfirmAction } from "@/types-and-constants/editor";
+import type { Locale } from "@/types-and-constants/languages";
+import { languageNames } from "@/types-and-constants/languages";
 import type {
-  Locale,
   LocalizedText,
   ResumeLink,
   Span,
 } from "@/types-and-constants/resume";
-import { languageNames } from "@/types-and-constants/resume";
 import type { EditGroup } from "@/types-and-constants/workspace";
 
 export function TextField({

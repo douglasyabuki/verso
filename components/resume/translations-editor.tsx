@@ -54,14 +54,14 @@ import {
 } from "@/lib/resume/review-queue";
 import { sharedWording, variantWording } from "@/lib/resume/wording";
 import type { EditorProps } from "@/types-and-constants/editor";
+import { languageNames } from "@/types-and-constants/languages";
+import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
 import type {
   ReviewFilters,
   ReviewItem,
   ReviewReturnContext,
-  WorkspaceFocusTarget,
-} from "@/types-and-constants/navigation";
-import { reviewCategoryLabels } from "@/types-and-constants/navigation";
-import { languageNames } from "@/types-and-constants/resume";
+} from "@/types-and-constants/review";
+import { reviewCategoryLabels } from "@/types-and-constants/review";
 
 export function TranslationsEditor({
   document,

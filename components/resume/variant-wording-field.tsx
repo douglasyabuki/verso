@@ -1,15 +1,10 @@
 "use client";
 
-import {
-  Check,
-  ChevronRight,
-  Languages,
-  Pencil,
-  RotateCcw,
-} from "lucide-react";
+import { Check, ChevronRight, Pencil, RotateCcw } from "lucide-react";
 import { type ComponentProps, useState } from "react";
 
 import { LocalizedField } from "@/components/resume/fields";
+import { LanguageFlag } from "@/components/resume/language-flag";
 import { TranslationComparison } from "@/components/resume/translation-comparison";
 import { WordingComparisonDetails } from "@/components/resume/wording-comparison-details";
 import { WordingStatus } from "@/components/resume/wording-status";
@@ -36,13 +31,10 @@ import {
   variantWording,
 } from "@/lib/resume/wording";
 import type { ConfirmAction } from "@/types-and-constants/editor";
-import type {
-  Issue,
-  Locale,
-  ResumeDocument,
-  Variant,
-} from "@/types-and-constants/resume";
-import { languageNames } from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import { languageNames } from "@/types-and-constants/languages";
+import type { ResumeDocument, Variant } from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
 import type { WorkspaceEdit } from "@/types-and-constants/workspace";
 
 export function VariantWordingField({
@@ -317,7 +309,7 @@ export function VariantWordingDetails({
         render={<Button variant="ghost" size="sm" />}
         className="group h-auto flex-wrap justify-start whitespace-normal"
       >
-        <Languages data-icon="inline-start" />
+        <LanguageFlag locale={locale} />
         {variantWording(variant, path)?.overrides[locale]
           ? "Customized wording"
           : "Library wording"}

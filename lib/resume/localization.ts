@@ -1,8 +1,8 @@
 import { entryLabel } from "@/lib/resume/section-fields";
 import { equivalentSpans, normalizeSpans } from "@/lib/resume/spans";
 import { effectiveWording, sharedWordingChanged } from "@/lib/resume/wording";
+import type { Locale } from "@/types-and-constants/languages";
 import type {
-  Locale,
   LocalizedFieldDescriptor,
   LocalizedText,
   ResumeDocument,
@@ -10,7 +10,7 @@ import type {
   Span,
   Variant,
 } from "@/types-and-constants/resume";
-import { entryTerminology } from "@/types-and-constants/resume";
+import { entryTerminology } from "@/types-and-constants/sections";
 
 /** Create separate language records. @param en English text. @param pt Portuguese text. @returns Localized content. @example localized("Projects", "Projetos") */
 export function localized(en = "", pt = ""): LocalizedText {

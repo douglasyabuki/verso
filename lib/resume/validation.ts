@@ -9,16 +9,17 @@ import {
   sharedWordingChanged,
   variantWording,
 } from "@/lib/resume/wording";
+import type { Locale } from "@/types-and-constants/languages";
+import { languageNames } from "@/types-and-constants/languages";
 import type {
   Entry,
-  Issue,
-  Locale,
   LocalizedText,
   ResumeDocument,
   ResumeLink,
   Variant,
 } from "@/types-and-constants/resume";
-import { entryTerminology, languageNames } from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
+import { entryTerminology } from "@/types-and-constants/sections";
 
 /** Validate supported clickable links. @param value URL. @returns An error or undefined, including for an empty optional value. @example urlError("javascript:alert(1)") */
 export function urlError(value: string): string | undefined {

@@ -3,9 +3,9 @@ import { templateIdentity } from "@/lib/resume/model";
 import { resolveSettings } from "@/lib/resume/settings";
 import { validateOutput } from "@/lib/resume/validation";
 import { effectiveWording } from "@/lib/resume/wording";
+import type { Locale } from "@/types-and-constants/languages";
 import type {
   Entry,
-  Locale,
   LocalizedText,
   ResumeDocument,
   ResumeLink,

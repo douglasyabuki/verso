@@ -6,8 +6,9 @@ import { renderLatex } from "@/lib/resume/render";
 import { resolveSettings } from "@/lib/resume/settings";
 import { effectiveWording, sharedWordingChanged } from "@/lib/resume/wording";
 import { BrowserCompiler } from "@/tools/compiler-proof/compiler.mjs";
-import type { OutputLayout, ResumeOutput } from "@/types-and-constants/resume";
-import type { Locale, ResumeDocument } from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import type { OutputLayout, ResumeOutput } from "@/types-and-constants/output";
+import type { ResumeDocument } from "@/types-and-constants/resume";
 
 type ResumeCompilerOptions = {
   document: ResumeDocument;

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
+import { LanguageFlag } from "@/components/resume/language-flag";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,11 +30,8 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
 import type { useWorkspaceExports } from "@/hooks/workspace/use-workspace-exports";
-import type {
-  Locale,
-  ResumeDocument,
-  Variant,
-} from "@/types-and-constants/resume";
+import type { Locale } from "@/types-and-constants/languages";
+import type { ResumeDocument, Variant } from "@/types-and-constants/resume";
 
 type WorkspaceHeaderProps = {
   document: ResumeDocument;
@@ -104,8 +102,14 @@ export function WorkspaceResumeControls({
           size="sm"
           aria-label="Resume language"
         >
-          <ToggleGroupItem value="en-US">EN</ToggleGroupItem>
-          <ToggleGroupItem value="pt-BR">PT</ToggleGroupItem>
+          <ToggleGroupItem value="en-US">
+            <LanguageFlag locale="en-US" ratio="1x1" rounded />
+            EN
+          </ToggleGroupItem>
+          <ToggleGroupItem value="pt-BR">
+            <LanguageFlag locale="pt-BR" ratio="1x1" rounded />
+            PT
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
       <div className="flex flex-wrap items-center gap-2">

@@ -4,17 +4,17 @@ import { useEffect, useState } from "react";
 
 import { localized } from "@/lib/resume/localization";
 import type { WorkspaceController } from "@/stores/workspace/controller";
+import type { Locale } from "@/types-and-constants/languages";
 import type {
   LibraryEditorContext,
-  ReviewReturnContext,
   WorkspaceDestination,
 } from "@/types-and-constants/navigation";
 import type {
-  Locale,
   ResumeDocument,
   Section,
   Variant,
 } from "@/types-and-constants/resume";
+import type { ReviewReturnContext } from "@/types-and-constants/review";
 
 type WorkspaceNavigationOptions = {
   document: ResumeDocument;

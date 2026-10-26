@@ -1,6 +1,6 @@
 import { plain } from "@/lib/resume/localization";
-import { librarySectionLabels } from "@/types-and-constants/editor";
 import type { Section } from "@/types-and-constants/resume";
+import { librarySectionLabels } from "@/types-and-constants/sections";
 
 /** Name a library section independently of the selected resume language.
  * @param section Library section with a fixed kind or a user-defined English heading.

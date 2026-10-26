@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import { EditorPane } from "@/components/resume/editor-pane";
 import { IssuesPanel } from "@/components/resume/issues-panel";
+import { LanguageFlag } from "@/components/resume/language-flag";
 import { PreviewPane } from "@/components/resume/preview-pane";
 import { ResumeIdentityDialog } from "@/components/resume/resume-identity-dialog";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,8 @@ import { reviewItems } from "@/lib/resume/review-queue";
 import { validateOutput } from "@/lib/resume/validation";
 import type { Confirmation } from "@/types-and-constants/editor";
 import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
-import type { Issue, IssueNavigation } from "@/types-and-constants/resume";
+import type { IssueNavigation } from "@/types-and-constants/navigation";
+import type { Issue } from "@/types-and-constants/review";
 
 export function WorkspaceView() {
   const { state, controller } = useWorkspace();
@@ -472,13 +474,25 @@ export function WorkspaceView() {
                       }}
                     >
                       <SelectTrigger id="library-language">
+                        <LanguageFlag
+                          locale={
+                            view === "shared-defaults"
+                              ? locale
+                              : navigation.libraryLocale
+                          }
+                        />
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
                           {languageItems.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
-                              {option.label}
+                              <span className="inline-flex items-center gap-2">
+                                <LanguageFlag
+                                  locale={option.value as typeof locale}
+                                />
+                                {option.label}
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectGroup>

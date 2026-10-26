@@ -1,9 +1,6 @@
-import {
-  type Entry,
-  entryTerminology,
-  type Locale,
-  type Section,
-} from "@/types-and-constants/resume";
+import { type Locale } from "@/types-and-constants/languages";
+import { type Entry, type Section } from "@/types-and-constants/resume";
+import { entryTerminology } from "@/types-and-constants/sections";
 
 /** Name an entry using the same section-aware heading priority as its output.
  * @param entry Library record.

@@ -3,7 +3,8 @@ import type {
   WorkspaceDestination,
   WorkspaceFocusTarget,
 } from "@/types-and-constants/navigation";
-import type { Issue, ResumeDocument } from "@/types-and-constants/resume";
+import type { ResumeDocument } from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
 
 /** Resolve stable wording identity to its owner, including excluded or archived targets.
  * @param document Current restored workspace.
