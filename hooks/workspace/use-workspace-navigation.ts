@@ -70,6 +70,7 @@ export function useWorkspaceNavigation({
     controller.endEditGroup();
   }, [controller, selected, locale, libraryLocale]);
   const open = (next: WorkspaceDestination, excursion = false) => {
+    if (blocked || !controller.commitEditorDrafts()) return focusToken;
     const token = crypto.randomUUID();
     setFocusToken(token);
     controller.endEditGroup();
@@ -117,7 +118,12 @@ export function useWorkspaceNavigation({
           )[destination.page]
         : destination.kind;
   const addSection = () => {
-    if (blocked || document.sections.length >= 30) return;
+    if (
+      blocked ||
+      !controller.commitEditorDrafts() ||
+      document.sections.length >= 30
+    )
+      return;
     const id = crypto.randomUUID();
     const section: Section = {
       id,
@@ -152,7 +158,12 @@ export function useWorkspaceNavigation({
     return () => cancelAnimationFrame(frame);
   }, [nameFocus, selected]);
   const createResume = (source?: Variant) => {
-    if (blocked || document.variants.length >= 30) return;
+    if (
+      blocked ||
+      !controller.commitEditorDrafts() ||
+      document.variants.length >= 30
+    )
+      return;
     const id = crypto.randomUUID();
     const created: Variant = source
       ? {
@@ -189,17 +200,24 @@ export function useWorkspaceNavigation({
     createResume,
     variant,
     setVariantId: (id: string) => {
+      if (blocked || !controller.commitEditorDrafts()) return;
       selectVariant(id);
       if (destination.kind === "resume") open({ ...destination, resumeId: id });
     },
     setSectionId: (id: string) =>
       open({ kind: "library-section", sectionId: id, tab: "edit" }),
     locale,
-    setLocale,
+    setLocale: (next: Locale | ((current: Locale) => Locale)) => {
+      if (!blocked && controller.commitEditorDrafts()) setLocale(next);
+    },
     libraryLocale,
-    setLibraryLocale,
+    setLibraryLocale: (next: Locale | ((current: Locale) => Locale)) => {
+      if (!blocked && controller.commitEditorDrafts()) setLibraryLocale(next);
+    },
     mobilePanel,
-    setMobilePanel,
+    setMobilePanel: (next: string) => {
+      if (!blocked && controller.commitEditorDrafts()) setMobilePanel(next);
+    },
     libraryContexts,
     setLibraryContexts,
     reviewContext,

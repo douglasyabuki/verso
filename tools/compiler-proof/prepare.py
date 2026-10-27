@@ -5,6 +5,7 @@ Only this preparation step downloads third-party resources. Runtime compilation
 does not resolve packages or fonts over the network.
 """
 
+import argparse
 import base64
 import gzip
 import hashlib
@@ -20,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 DEST = ROOT / '.cache/compiler-proof/assets'
 CACHE = ROOT / '.cache/compiler-proof/downloads'
+TEMPLATE = {'id': 'yabuki-reference', 'version': '1.0.0-proof.4'}
 
 
 def digest(data):
@@ -74,6 +76,39 @@ self.onmessage=function(event){
     return text.encode('utf8')
 
 
+def refresh_manifests():
+    """Verify existing payloads before refreshing only template identity metadata."""
+    directories = [DEST, ROOT / 'public/compiler']
+    manifests = []
+    for directory in directories:
+        manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf8'))
+        if manifest['id'] != TEMPLATE['id'] or manifest['version'] not in ['1.0.0-proof.3', TEMPLATE['version']]:
+            raise ValueError('Unsupported existing template manifest; run full preparation')
+        for name, expected in manifest['assets'].items():
+            if Path(name).name != name or '/' in name or "\\" in name or name in ['.', '..', 'manifest.json']:
+                raise ValueError('Invalid compiler asset path')
+            data = (directory / name).read_bytes()
+            if len(data) != expected['bytes'] or digest(data) != expected['sha256']:
+                raise ValueError('Compiler asset integrity mismatch: ' + name)
+        bundle = (directory / 'resources.bundle').read_bytes()
+        if len(bundle) != manifest['bundleBytes'] or digest(bundle) != manifest['bundleSha256']:
+            raise ValueError('Compiler bundle integrity mismatch; run full preparation')
+        resources = json.loads(gzip.decompress(bundle))
+        if len(resources) != manifest['resourceCount'] or sum(len(base64.b64decode(data)) for _, data in resources) != manifest['uncompressedResourceBytes']:
+            raise ValueError('Compiler resource metadata mismatch; run full preparation')
+        if (directory / 'compiler.mjs').read_bytes() != (HERE / 'compiler.mjs').read_bytes():
+            raise ValueError('Compiler source changed; run full preparation')
+        manifests.append(manifest)
+    if manifests[0]['assets'] != manifests[1]['assets'] or manifests[0]['bundleSha256'] != manifests[1]['bundleSha256']:
+        raise ValueError('Prepared and public compiler assets differ; run full preparation')
+    # Validate both locations before writing either manifest. Payloads remain untouched.
+    for directory, manifest in zip(directories, manifests):
+        manifest.update(TEMPLATE)
+        (directory / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf8')
+    print('Updated template manifests only: ' + TEMPLATE['version'])
+    print('Unchanged bundle SHA-256: ' + manifests[0]['bundleSha256'])
+
+
 def main():
     """Build the complete bundle and extract only the supplied reference inputs."""
     DEST.mkdir(parents=True, exist_ok=True)
@@ -112,7 +147,7 @@ def main():
     for license_file in (HERE / 'licenses').iterdir():
         (DEST / ('license-' + license_file.name)).write_bytes(license_file.read_bytes())
     manifest = {
-        'id': 'yabuki-reference', 'version': '1.0.0-proof.3',
+        **TEMPLATE,
         'engine': lock['engine']['version'],
         'bundleBytes': len(bundle),
         'bundleSha256': digest(bundle),
@@ -149,4 +184,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--manifest-only', action='store_true', help='Verify existing payloads and update template identity without rebuilding assets')
+    args = parser.parse_args()
+    if args.manifest_only:
+        refresh_manifests()
+    else:
+        main()

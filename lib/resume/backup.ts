@@ -6,6 +6,7 @@ import {
   schema2DocumentSchema,
   schema3DocumentSchema,
   schema4DocumentSchema,
+  schema5DocumentSchema,
   templateIdentity,
 } from "@/lib/resume/model";
 import type { ResumeDocument } from "@/types-and-constants/resume";
@@ -39,7 +40,7 @@ export function parseBackup(source: string): ResumeDocument {
     throw new Error(
       "This file is not a supported Verso backup. Choose a JSON backup downloaded from Verso.",
     );
-  if (![1, 2, 3, 4, 5].includes(header.data.schemaVersion))
+  if (![1, 2, 3, 4, 5, 6].includes(header.data.schemaVersion))
     throw new Error(
       `This backup uses an unsupported format (version ${header.data.schemaVersion}). Open it with a compatible version of Verso. Your current work has not changed.`,
     );
@@ -49,7 +50,9 @@ export function parseBackup(source: string): ResumeDocument {
     template.version !==
       (header.data.schemaVersion === 1
         ? "1.0.0-proof.2"
-        : templateIdentity.version)
+        : header.data.schemaVersion < 6
+          ? "1.0.0-proof.3"
+          : templateIdentity.version)
   )
     throw new Error(
       `This backup needs a resume template that is not available in this version of Verso. Open it with a compatible version. Your current work has not changed.`,
@@ -63,7 +66,9 @@ export function parseBackup(source: string): ResumeDocument {
           ? schema3DocumentSchema.safeParse(data)
           : header.data.schemaVersion === 4
             ? schema4DocumentSchema.safeParse(data)
-            : documentSchema.safeParse(data);
+            : header.data.schemaVersion === 5
+              ? schema5DocumentSchema.safeParse(data)
+              : documentSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue.path.join(".");
@@ -72,7 +77,7 @@ export function parseBackup(source: string): ResumeDocument {
       `${incompatible ? "This backup contains unsupported layout settings" : "This backup contains missing or invalid details"}. Choose another Verso backup. Your current work has not changed. Details: ${path}: ${issue.message}`,
     );
   }
-  const doc =
+  const migrated =
     result.data.schemaVersion === 1
       ? migrateSchema4(
           migrateSchema3(migrateSchema2(migrateSchema1(result.data))),
@@ -84,6 +89,8 @@ export function parseBackup(source: string): ResumeDocument {
           : result.data.schemaVersion === 4
             ? migrateSchema4(result.data)
             : result.data;
+  const doc =
+    migrated.schemaVersion === 5 ? migrateSchema5(migrated) : migrated;
   const seen = new Set<string>();
   const unique = (value: string) => {
     if (seen.has(value))
@@ -177,7 +184,7 @@ export function migrateSchema1(
   return schema2DocumentSchema.parse({
     ...legacy,
     schemaVersion: 2,
-    template: { ...templateIdentity },
+    template: { id: templateIdentity.id, version: "1.0.0-proof.3" },
     sections: legacy.sections.map((section) => ({
       ...section,
       entries: section.entries.map((entry) =>
@@ -247,13 +254,33 @@ export function migrateSchema3(
  */
 export function migrateSchema4(
   legacy: z.infer<typeof schema4DocumentSchema>,
-): ResumeDocument {
-  return documentSchema.parse({
+): z.infer<typeof schema5DocumentSchema> {
+  return schema5DocumentSchema.parse({
     ...legacy,
     schemaVersion: 5,
     variants: legacy.variants.map((variant) => ({
       ...variant,
       color: "indigo",
     })),
+  });
+}
+
+/** Preserve original PDF styling while adding supported color settings.
+ * @param legacy Validated schema-5 document with its supported template identity.
+ * @returns A schema-6 document with template-default colors and unchanged overrides, content, and revision.
+ * @example migrateSchema5(schema5DocumentSchema.parse(data))
+ */
+export function migrateSchema5(
+  legacy: z.infer<typeof schema5DocumentSchema>,
+): ResumeDocument {
+  return documentSchema.parse({
+    ...legacy,
+    schemaVersion: 6,
+    template: { ...templateIdentity },
+    settings: {
+      ...legacy.settings,
+      headingColor: "template-default",
+      bodyColor: "template-default",
+    },
   });
 }

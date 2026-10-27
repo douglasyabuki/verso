@@ -115,6 +115,7 @@ export function WorkspaceToolbar({
                     variant="ghost"
                     size="icon-sm"
                     aria-label={label}
+                    data-workspace-history
                     disabled={!available}
                     onClick={action}
                   />

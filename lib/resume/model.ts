@@ -2,12 +2,13 @@ import { z } from "zod";
 
 import { certificationDateErrors } from "@/lib/resume/certification";
 import { locales } from "@/types-and-constants/languages";
+import { bodyColors, headingColors } from "@/types-and-constants/output";
 import { resumeColors } from "@/types-and-constants/resume";
 import { sectionKinds } from "@/types-and-constants/sections";
 
 export const templateIdentity = {
   id: "yabuki-reference",
-  version: "1.0.0-proof.3",
+  version: "1.0.0-proof.4",
 } as const;
 
 const id = z.string().min(1).max(100);
@@ -77,7 +78,7 @@ const sectionSchema = z.strictObject({
   heading: localizedSchema,
   entries: z.array(entrySchema).max(300),
 });
-export const settingsSchema = z.strictObject({
+const legacySettingsSchema = z.strictObject({
   pageSize: z.enum(["a4", "letter"]),
   fontSize: z.number().min(9).max(12),
   marginTop: z.number().min(10).max(35),
@@ -87,7 +88,7 @@ export const settingsSchema = z.strictObject({
   sectionGap: z.number().min(0).max(8),
   targetPages: z.number().int().min(1).max(10),
 });
-const overridesSchema = settingsSchema.partial();
+const overridesSchema = legacySettingsSchema.partial();
 const localeOverridesSchema = z.strictObject({
   "en-US": overridesSchema.optional(),
   "pt-BR": overridesSchema.optional(),
@@ -126,7 +127,7 @@ export const schema2DocumentSchema = z.strictObject({
   }),
   sections: z.array(sectionSchema).max(30),
   variants: z.array(variantSchema).min(1).max(30),
-  settings: settingsSchema,
+  settings: legacySettingsSchema,
   localeSettings: localeOverridesSchema,
   compiler: z.strictObject({
     initializationTimeoutMs: z.number().min(100).max(600_000),
@@ -252,12 +253,37 @@ export const schema4DocumentSchema = schema3DocumentSchema.extend({
     .max(30),
 });
 
-export const documentSchema = schema4DocumentSchema.extend({
+export const schema5DocumentSchema = schema4DocumentSchema.extend({
   schemaVersion: z.literal(5),
   variants: z
     .array(
       schema4DocumentSchema.shape.variants.element.extend({
         color: z.enum(resumeColors),
+      }),
+    )
+    .min(1)
+    .max(30),
+});
+
+export const settingsSchema = legacySettingsSchema.extend({
+  headingColor: z.enum(headingColors),
+  bodyColor: z.enum(bodyColors),
+});
+const colorOverridesSchema = settingsSchema.partial();
+const colorLocaleOverridesSchema = z.strictObject({
+  "en-US": colorOverridesSchema.optional(),
+  "pt-BR": colorOverridesSchema.optional(),
+});
+
+export const documentSchema = schema5DocumentSchema.extend({
+  schemaVersion: z.literal(6),
+  settings: settingsSchema,
+  localeSettings: colorLocaleOverridesSchema,
+  variants: z
+    .array(
+      schema5DocumentSchema.shape.variants.element.extend({
+        settings: colorOverridesSchema,
+        localeSettings: colorLocaleOverridesSchema,
       }),
     )
     .min(1)

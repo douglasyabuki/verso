@@ -126,7 +126,13 @@ export function WorkspaceView() {
     );
   }, []);
   const onIssue = (issue: Issue) => {
-    if (!issue.target || state.replacing || state.pending) return;
+    if (
+      !issue.target ||
+      state.replacing ||
+      state.pending ||
+      !controller.commitEditorDrafts()
+    )
+      return;
     const destination = resolveIssueDestination(document, issue, variant.id);
     if (!destination) return;
     if (destination.kind === "library-section")
@@ -178,6 +184,7 @@ export function WorkspaceView() {
   );
   const resumeWorkspace = navigation.destination.kind === "resume";
   const onOwner = (target: WorkspaceFocusTarget) => {
+    if (!controller.commitEditorDrafts()) return;
     const field = localizedFields(document).find(
       (field) => field.path === target.path,
     );
@@ -549,7 +556,10 @@ export function WorkspaceView() {
                   )[view]
           }
           preview={layout.preview}
-          togglePreview={() => changeLayout({ preview: !layout.preview })}
+          togglePreview={() => {
+            if (controller.commitEditorDrafts())
+              changeLayout({ preview: !layout.preview });
+          }}
         />
       }
       overlays={

@@ -61,6 +61,31 @@ Page-boundary review added
 the pinned `needspace` package to keep section/entry headings with their details.
 Both reference outputs were rechecked in all three available browsers afterward.
 
+## Template color settings (proof.4)
+
+The structured renderer supports heading and body color presets using the already
+bundled `xcolor` and `hyperref` packages. Schema-6 documents use template
+`yabuki-reference@1.0.0-proof.4`; supported schema-1 through schema-5 backups migrate
+explicitly, retaining template-default colors and existing layout overrides.
+
+Template identity is stored in `manifest.json`, outside `resources.bundle`.
+When only that identity changes, refresh metadata without rebuilding payloads:
+
+```sh
+npm run compiler:prepare -- --manifest-only
+```
+
+This path verifies asset sizes/hashes, compressed bundle integrity, resource
+metadata, and the current compiler source in both prepared and public locations
+before writing either manifest. It accepts the preceding proof.3 identity or the
+current identity. Missing or invalid assets require full preparation. Worker,
+font, package, and bundle bytes remain unchanged by a manifest-only refresh.
+
+For the color-settings implementation, manifest-only preparation completed with
+bundle SHA-256 `ff88716cbb2b4bf2ed2b33d6a92fa326492599183cec7af810aa877733193c6a`
+unchanged. Browser and bilingual PDF review were left to the owner at their
+request; the historical observations below do not verify proof.4 output.
+
 ## Observed browser results — October 19, 2026
 
 These are historical local observations, not production performance guarantees

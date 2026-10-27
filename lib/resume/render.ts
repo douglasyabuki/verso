@@ -4,6 +4,7 @@ import { resolveSettings } from "@/lib/resume/settings";
 import { validateOutput } from "@/lib/resume/validation";
 import { effectiveWording } from "@/lib/resume/wording";
 import type { Locale } from "@/types-and-constants/languages";
+import { pdfColorPresets } from "@/types-and-constants/output";
 import type {
   Entry,
   LocalizedText,
@@ -142,6 +143,8 @@ export function renderLatex(
   if (validation.errors.length)
     throw new Error(validation.errors.map((issue) => issue.message).join(" "));
   const settings = resolveSettings(doc, variant, locale);
+  const headingHex = pdfColorPresets[settings.headingColor].hex;
+  const bodyHex = pdfColorPresets[settings.bodyColor].hex;
   const contacts = [
     doc.profile.city || doc.profile.country
       ? `{\\color{icnclr}\\faMapMarker}~${escapeLatex(displayLocation(doc.profile.city, doc.profile.country, locale))}`
@@ -303,23 +306,25 @@ export function renderLatex(
 \setlist[itemize]{noitemsep,left=2em}
 \usepackage[xetex,dvipsnames]{xcolor}
 \definecolor{customgray}{gray}{0.25}
-\colorlet{roleclr}{customgray}
-\colorlet{icnclr}{gray}
+${headingHex ? `\\definecolor{headingclr}{HTML}{${headingHex.slice(1)}}` : "\\colorlet{headingclr}{Sepia}"}
+${bodyHex ? `\\definecolor{bodyclr}{HTML}{${bodyHex.slice(1)}}` : "\\colorlet{bodyclr}{black}"}
+\colorlet{roleclr}{${bodyHex ? "bodyclr" : "customgray"}}
+\colorlet{icnclr}{${bodyHex ? "bodyclr" : "gray"}}
 \usepackage{fontawesome5}
 \usepackage{titlesec}
 \usepackage{needspace}
 \titlespacing{\section}{0pt}{${settings.sectionGap}mm}{2mm}
 \titlespacing{\subsection}{0pt}{0pt}{0pt}
 \titlespacing{\subsubsection}{0pt}{0pt}{0pt}
-\titleformat{\section}{\color{Sepia}\large\interheavy}{}{}{\ruleafter}[\global\RemVStrue]
+\titleformat{\section}{\color{headingclr}\large\interheavy}{}{}{\ruleafter}[\global\RemVStrue]
 \titleformat{\subsection}{\bfseries}{}{}{\rvs}
-\titleformat{\subsubsection}{\color{gray}\bfseries}{}{}{}
+\titleformat{\subsubsection}{\color{${bodyHex ? "bodyclr" : "gray"}}\bfseries}{}{}{}
 \usepackage{xhfill}
 \newcommand\ruleafter[1]{#1~\xrfill[.5ex]{1pt}[gray]}
 \newif\ifRemVS
 \newcommand{\rvs}{\ifRemVS\vspace{-1.5ex}\fi\global\RemVSfalse}
 \usepackage[bookmarks=true,bookmarksdepth=1]{hyperref}
-\hypersetup{colorlinks=true,urlcolor=Sepia,pdftitle={${escapeLatex(doc.profile.name + " · " + variant.name)}},pdfauthor={${escapeLatex(doc.profile.name)}},pdflang={${locale}},pdfsubject={Verso revision ${doc.revision}; ${templateIdentity.id}@${templateIdentity.version}}}
+\hypersetup{colorlinks=true,urlcolor=headingclr,pdftitle={${escapeLatex(doc.profile.name + " · " + variant.name)}},pdfauthor={${escapeLatex(doc.profile.name)}},pdflang={${locale}},pdfsubject={Verso revision ${doc.revision}; ${templateIdentity.id}@${templateIdentity.version}}}
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \renewcommand{\headrulewidth}{0pt}
@@ -328,6 +333,7 @@ export function renderLatex(
 \begin{document}
 \language=${locale === "pt-BR" ? 1 : 0}
 \normalsize
+\color{bodyclr}
 \begin{center}
 {\fontsize{20}{22}\selectfont ${escapeLatex(doc.profile.name)}}\\[8pt]
 ${contacts.join(" \\quad ")}

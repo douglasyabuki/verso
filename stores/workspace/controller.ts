@@ -49,6 +49,26 @@ export class WorkspaceController {
   private editGroup: (EditGroup & { at: number }) | null = null;
   private textHistoryEpoch = 0;
 
+  private editorDraftGuard: (() => boolean) | null = null;
+
+  /** Register the mounted editor's local draft boundary.
+   * @param guard Validate and commit outgoing drafts; false keeps the context.
+   * @returns Cleanup that cannot unregister a newer editor.
+   * @example return controller.registerEditorDraftGuard(commitDrafts);
+   */
+  registerEditorDraftGuard = (guard: () => boolean) => {
+    this.editorDraftGuard = guard;
+    return () => {
+      if (this.editorDraftGuard === guard) this.editorDraftGuard = null;
+    };
+  };
+
+  /** Validate local drafts before changing editor context.
+   * @returns False when an invalid draft blocks navigation.
+   * @example if (!controller.commitEditorDrafts()) return;
+   */
+  commitEditorDrafts = () => this.editorDraftGuard?.() ?? true;
+
   /** Read the stable observable state. @returns Current immutable state. @example controller.getSnapshot() */
   getSnapshot = () => this.state;
 
