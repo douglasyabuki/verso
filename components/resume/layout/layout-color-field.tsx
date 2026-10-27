@@ -1,3 +1,4 @@
+import { layoutSettingIcons } from "@/components/resume/layout/layout-icon";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -28,15 +29,19 @@ export function LayoutColorField({
   explicit: boolean;
   id: string;
   disabled: boolean;
-  source: string;
+  source?: string;
   change: (value: string) => void;
   reset?: () => void;
 }) {
   const presets = textColors;
+  const Icon = layoutSettingIcons[setting];
   return (
     <Field data-disabled={disabled}>
       <div className="flex items-center justify-between gap-2">
-        <FieldTitle id={id}>{templateSettingLabels[setting]}</FieldTitle>
+        <FieldTitle id={id}>
+          <Icon aria-hidden="true" className="size-4 shrink-0" />
+          {templateSettingLabels[setting]}
+        </FieldTitle>
         {reset && (
           <Button
             type="button"
@@ -55,7 +60,7 @@ export function LayoutColorField({
         size="sm"
         className="w-full flex-wrap justify-start"
         aria-labelledby={id}
-        aria-describedby={`${id}-description`}
+        aria-describedby={source ? `${id}-description` : undefined}
         data-issue-field={`settings.${setting}`}
         value={[value]}
         disabled={disabled}
@@ -78,9 +83,9 @@ export function LayoutColorField({
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      <FieldDescription id={`${id}-description`}>
-        {pdfColorPresets[value].label} · {source}
-      </FieldDescription>
+      {source && (
+        <FieldDescription id={`${id}-description`}>{source}</FieldDescription>
+      )}
     </Field>
   );
 }

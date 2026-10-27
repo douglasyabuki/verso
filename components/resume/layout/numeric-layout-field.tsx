@@ -1,6 +1,6 @@
-import { ArrowDownUp, Hash, Minus, Plus, Type } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 
-import { LayoutIcon } from "@/components/resume/layout/layout-icon";
+import { layoutSettingIcons } from "@/components/resume/layout/layout-icon";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -35,7 +35,7 @@ export function NumericLayoutField({
   id: string;
   drafts: ReturnType<typeof useLayoutDrafts>;
   disabled: boolean;
-  source: string;
+  source?: string;
   reset?: () => void;
   templateDefault?: () => void;
   highlight: (key: string | null) => void;
@@ -43,16 +43,20 @@ export function NumericLayoutField({
   const { key } = control;
   const text = drafts.text(key);
   const error = drafts.errors[key];
-  const icon =
-    key === "fontSize" ? (
-      <Type className="size-4" />
-    ) : key === "lineHeight" ? (
-      <ArrowDownUp className="size-4" />
-    ) : key === "targetPages" ? (
-      <Hash className="size-4" />
-    ) : (
-      <LayoutIcon kind={key} className="size-4" />
-    );
+  const Icon = layoutSettingIcons[key];
+  const description = [
+    source,
+    "description" in control ? control.description : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const describedBy =
+    [
+      description ? `${id}-description` : undefined,
+      error ? `${id}-error` : undefined,
+    ]
+      .filter(Boolean)
+      .join(" ") || undefined;
   const adjust = (direction: number) => {
     const number = Number(text);
     if (!text.trim() || !Number.isFinite(number)) return;
@@ -80,7 +84,7 @@ export function NumericLayoutField({
     >
       <div className="flex items-center justify-between gap-2">
         <FieldLabel htmlFor={id}>
-          {icon}
+          <Icon aria-hidden="true" className="size-4 shrink-0" />
           {control.label}
         </FieldLabel>
         {templateDefault && (
@@ -123,7 +127,7 @@ export function NumericLayoutField({
           value={text}
           disabled={disabled}
           aria-invalid={!!error}
-          aria-describedby={`${id}-description${error ? ` ${id}-error` : ""}`}
+          aria-describedby={describedBy}
           data-issue-field={`settings.${key}`}
           onChange={(event) => drafts.edit(key, event.target.value)}
           onBlur={(event) => {
@@ -196,13 +200,11 @@ export function NumericLayoutField({
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
-      <FieldDescription id={`${id}-description`}>
-        {source}
-        {"templateDefault" in control && (
-          <> · Template default: {control.templateDefault}</>
-        )}
-        {"description" in control && <> · {control.description}</>}
-      </FieldDescription>
+      {description && (
+        <FieldDescription id={`${id}-description`}>
+          {description}
+        </FieldDescription>
+      )}
       {error && <FieldError id={`${id}-error`}>{error}</FieldError>}
     </Field>
   );

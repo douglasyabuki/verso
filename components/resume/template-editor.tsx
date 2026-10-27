@@ -1,10 +1,21 @@
 "use client";
 
-import { ChevronRight, Files, Ruler, Type } from "lucide-react";
+import {
+  ChevronRight,
+  Files,
+  Layers,
+  Link2,
+  Ruler,
+  Scaling,
+  TextInitial,
+} from "lucide-react";
 import { useId, useState } from "react";
 
 import { LayoutColorField } from "@/components/resume/layout/layout-color-field";
-import { LayoutIcon } from "@/components/resume/layout/layout-icon";
+import {
+  LayoutIcon,
+  layoutSettingIcons,
+} from "@/components/resume/layout/layout-icon";
 import { MarginGuide } from "@/components/resume/layout/margin-guide";
 import { NumericLayoutField } from "@/components/resume/layout/numeric-layout-field";
 import { TemplateIdentityBadge } from "@/components/resume/semantic-badges/template-identity-badge";
@@ -237,8 +248,8 @@ function LayoutInspector({
           : variant.localeSettings[locale] || {};
   const scopeItems = sharedDefaults
     ? [
-        { value: "base", label: "All resumes" },
-        { value: "locale", label: `All resumes · ${languageNames[locale]}` },
+        { value: "base", label: "Default layout" },
+        { value: "locale", label: `Default layout · ${languageNames[locale]}` },
       ]
     : [
         {
@@ -299,19 +310,18 @@ function LayoutInspector({
     },
   });
   const source = (key: keyof TemplateSettings) => {
+    if (scope === "base" || target[key] !== undefined) return undefined;
+
     const origin =
-      target[key] !== undefined
-        ? scopeItems.find((item) => item.value === scope)?.label
-        : !sharedDefaults &&
-            scope === "variant-locale" &&
-            variant.settings[key] !== undefined
-          ? "Resume"
-          : scope !== "base" &&
-              scope !== "locale" &&
-              document.localeSettings[locale]?.[key] !== undefined
-            ? `All resumes · ${languageNames[locale]}`
-            : "All resumes";
-    return `${target[key] === undefined ? "Inherited" : "Set here"} · ${origin}`;
+      !sharedDefaults &&
+      scope === "variant-locale" &&
+      variant.settings[key] !== undefined
+        ? "Resume"
+        : scope !== "locale" &&
+            document.localeSettings[locale]?.[key] !== undefined
+          ? `Default layout · ${languageNames[locale]}`
+          : "Default layout";
+    return `Inherited from ${origin}`;
   };
   const reset = (key: keyof TemplateSettings) =>
     scope === "base" || target[key] !== undefined
@@ -331,7 +341,7 @@ function LayoutInspector({
           id={id + control.key}
           drafts={drafts}
           disabled={disabled}
-          source={`${numericLayoutValue(values, control.key) === undefined ? "Automatic" : `${numericLayoutValue(values, control.key)} ${control.unit}`}${values[control.key] === "template-default" ? " · Template default" : ""} · ${source(control.key)}`}
+          source={source(control.key)}
           reset={reset(control.key)}
           templateDefault={
             "templateDefault" in control
@@ -344,6 +354,7 @@ function LayoutInspector({
         />
       ));
   const choice = (key: keyof typeof choiceControls) => {
+    const Icon = layoutSettingIcons[key];
     const items = choiceControls[key].map(([value, label]) => ({
       value,
       label,
@@ -352,6 +363,7 @@ function LayoutInspector({
       <Field key={key} data-disabled={disabled}>
         <div className="flex items-center justify-between gap-2">
           <FieldLabel htmlFor={id + key}>
+            <Icon aria-hidden="true" className="size-4 shrink-0" />
             {templateSettingLabels[key]}
           </FieldLabel>
           {reset(key) && (
@@ -392,10 +404,7 @@ function LayoutInspector({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <FieldDescription>
-          {items.find((item) => item.value === values[key])?.label} ·{" "}
-          {source(key)}
-        </FieldDescription>
+        {source(key) && <FieldDescription>{source(key)}</FieldDescription>}
       </Field>
     );
   };
@@ -427,7 +436,10 @@ function LayoutInspector({
         <FieldGroup>
           <Field data-layout-scope>
             <div className="flex items-center gap-2">
-              <FieldLabel htmlFor={id}>Apply settings to</FieldLabel>
+              <FieldLabel htmlFor={id}>
+                <Layers aria-hidden="true" className="size-4 shrink-0" />
+                Apply settings to
+              </FieldLabel>
               <InfoHint label="which layout settings apply">
                 Settings for this resume and language take priority over its
                 general settings, then language defaults, then defaults for all
@@ -467,7 +479,10 @@ function LayoutInspector({
             <FieldGroup>
               <Field>
                 <div className="flex items-center justify-between gap-2">
-                  <FieldLabel id={id + "paper"}>Paper size</FieldLabel>
+                  <FieldLabel id={id + "paper"}>
+                    <Scaling aria-hidden="true" className="size-4 shrink-0" />
+                    Paper size
+                  </FieldLabel>
                   {reset("pageSize") && (
                     <Button
                       type="button"
@@ -486,7 +501,9 @@ function LayoutInspector({
                   value={[values.pageSize]}
                   disabled={disabled}
                   aria-labelledby={id + "paper"}
-                  aria-describedby={id + "paper-source"}
+                  aria-describedby={
+                    source("pageSize") ? id + "paper-source" : undefined
+                  }
                   data-issue-field="settings.pageSize"
                   className="w-full flex-wrap"
                   onValueChange={(selection) => {
@@ -511,9 +528,11 @@ function LayoutInspector({
                     </ToggleGroupItem>
                   ))}
                 </ToggleGroup>
-                <FieldDescription id={id + "paper-source"}>
-                  {source("pageSize")}
-                </FieldDescription>
+                {source("pageSize") && (
+                  <FieldDescription id={id + "paper-source"}>
+                    {source("pageSize")}
+                  </FieldDescription>
+                )}
               </Field>
               {numeric(["targetPages"])}
             </FieldGroup>
@@ -530,6 +549,7 @@ function LayoutInspector({
               <FieldGroup>
                 <Field>
                   <FieldLabel id={id + "linked"}>
+                    <Link2 aria-hidden="true" className="size-4 shrink-0" />
                     Link left and right margins
                   </FieldLabel>
                   <ToggleGroup
@@ -566,7 +586,7 @@ function LayoutInspector({
           <FieldSet disabled={disabled}>
             <FieldLegend>
               <span className="flex items-center gap-2">
-                <Type className="size-4" />
+                <TextInitial aria-hidden="true" className="size-4" />
                 Body typography
               </span>
             </FieldLegend>
