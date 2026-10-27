@@ -240,7 +240,11 @@ export function VariantComparison({
                   else setLeftId(value);
                 }}
               >
-                <SelectTrigger id={`compare-${index}`} className="w-full">
+                <SelectTrigger
+                  appearance="utility"
+                  id={`compare-${index}`}
+                  className="w-full"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,7 +273,11 @@ export function VariantComparison({
               setLocale(value as Locale);
             }}
           >
-            <SelectTrigger id="compare-language" className="w-full">
+            <SelectTrigger
+              appearance="utility"
+              id="compare-language"
+              className="w-full"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

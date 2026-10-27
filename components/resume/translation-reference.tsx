@@ -21,7 +21,7 @@ function ReferenceWording({
   version: ReviewSnapshot & { source?: "shared" | "override" };
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+    <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-transparent bg-field-readonly p-3">
       <p className="text-sm font-medium">
         {title} · {languageNames[version.locale]}
       </p>

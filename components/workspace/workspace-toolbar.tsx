@@ -128,6 +128,7 @@ export function WorkspaceToolbar({
             </Tooltip>
           ))}
         </div>
+        <Separator orientation="vertical" />
       </div>
       <div className="ml-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-3">
         <WorkspaceSaveStatus className="text-xs text-muted-foreground" />

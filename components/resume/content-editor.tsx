@@ -576,7 +576,7 @@ export function ContentEditor({
                         key={bullet.id}
                         id={bullet.id}
                         label={`${terms.item.toLowerCase()} ${index + 1}`}
-                        className="flex flex-col gap-3 rounded-lg border p-3"
+                        className="flex flex-col gap-3 rounded-lg border border-field-filled p-3"
                       >
                         {({ dragHandle, orderButtons }) => (
                           <>

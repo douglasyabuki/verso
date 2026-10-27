@@ -138,6 +138,7 @@ export function LibrarySearch({
         </div>
         <div className="flex items-center gap-2">
           <Input
+            appearance="utility"
             id={id}
             type="search"
             value={query}

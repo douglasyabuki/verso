@@ -49,6 +49,8 @@
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
+  --color-field-filled: var(--field-filled);
+  --color-field-readonly: var(--field-readonly);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-attention: var(--attention);
@@ -118,6 +120,13 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  --field-filled: color-mix(in oklab, var(--border) 40%, transparent);
+  --field-empty: var(--border);
+  --field-surface: color-mix(in oklab, var(--card) 45%, transparent);
+  --field-hover: color-mix(in oklab, var(--muted) 45%, var(--card));
+  --field-hover-border: color-mix(in oklab, var(--input) 55%, var(--border));
+  --field-readonly: color-mix(in oklab, var(--muted) 55%, var(--card));
+  --field-disabled: var(--muted);
   --radius: 0.625rem;
   --sidebar: #f5f7f6;
   --sidebar-foreground: #202827;
@@ -315,5 +324,108 @@
   .pdfViewer .page {
     background: white;
     color-scheme: light;
+  }
+}
+
+/* Field states share tokens, while utility controls retain a stronger boundary.
+   Keep a real border in every state so interaction never shifts the layout. */
+@layer components {
+  .form-control {
+    border: 1px solid var(--field-filled);
+    background-color: var(--field-surface);
+    color: var(--foreground);
+    outline: none;
+    transition:
+      border-color 150ms,
+      background-color 150ms,
+      box-shadow 150ms;
+  }
+
+  /* Large editor surfaces need quieter edges than compact fields. The toolbar
+     inherits the same border token, while interaction states stay shared. */
+  .form-control:where([data-slot="text-editor"]) {
+    --field-filled: color-mix(in oklab, var(--border) 30%, transparent);
+    --field-empty: color-mix(in oklab, var(--border) 75%, transparent);
+    --field-surface: color-mix(in oklab, var(--card) 25%, transparent);
+  }
+
+  .form-control::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
+  }
+
+  .form-control:where(
+    [data-empty="true"],
+    [data-placeholder],
+    :not([data-empty]):placeholder-shown,
+    select:has(option:checked[value=""])
+  ) {
+    border-color: var(--field-empty);
+  }
+
+  .form-control:where([data-placeholder]) [data-slot="select-value"] {
+    color: var(--muted-foreground);
+  }
+
+  .form-control:where([data-appearance="utility"]) {
+    border-color: var(--field-hover-border);
+    background-color: var(--card);
+  }
+
+  @media (hover: hover) {
+    .form-control:where(
+      :not(
+        :disabled,
+        [data-disabled="true"],
+        [data-disabled=""],
+        [readonly],
+        [data-readonly]
+      ):hover
+    ) {
+      border-color: var(--field-hover-border);
+      background-color: var(--field-hover);
+    }
+  }
+
+  .form-control:where([readonly], [data-readonly]) {
+    border-color: var(--field-filled);
+    background-color: var(--field-readonly);
+  }
+
+  .form-control:where(:disabled, [data-disabled="true"], [data-disabled=""]) {
+    border-color: var(--border);
+    background-color: var(--field-disabled);
+    color: var(--foreground);
+    cursor: not-allowed;
+  }
+
+  .form-control:where(
+    :focus,
+    [data-popup-open],
+    :has([contenteditable="true"]:focus),
+    :has(:focus-visible)
+  ) {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent);
+  }
+
+  .form-control:where([aria-invalid="true"], [data-invalid="true"]) {
+    border-color: var(--destructive);
+    box-shadow: 0 0 0 3px
+      color-mix(in oklab, var(--destructive) 20%, transparent);
+  }
+
+  .form-control:where([aria-invalid="true"], [data-invalid="true"]):where(
+      :focus,
+      :has(:focus-visible)
+    ) {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .form-control {
+      transition: none;
+    }
   }
 }

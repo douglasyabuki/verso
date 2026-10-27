@@ -77,6 +77,7 @@ export function WorkspaceResumeControls({
           }}
         >
           <SelectTrigger
+            appearance="utility"
             id="variant-picker"
             className="w-48 max-w-full min-w-0"
           >

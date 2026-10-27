@@ -238,7 +238,7 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
                 instance.current.viewer.currentScaleValue = value;
             }}
           >
-            <SelectTrigger aria-label="PDF zoom" size="sm">
+            <SelectTrigger appearance="utility" aria-label="PDF zoom" size="sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -258,6 +258,7 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
             Search PDF text
           </Label>
           <Input
+            appearance="utility"
             ref={searchInput}
             id={id}
             value={query}

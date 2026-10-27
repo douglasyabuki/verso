@@ -216,7 +216,10 @@ export function LinksEditor({
   return (
     <FieldGroup className="gap-4">
       {links.map((link, index) => (
-        <FieldGroup key={link.id} className="rounded-lg border p-3">
+        <FieldGroup
+          key={link.id}
+          className="rounded-lg border border-field-filled p-3"
+        >
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground">
               LINK {index + 1}

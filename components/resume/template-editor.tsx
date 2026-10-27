@@ -175,7 +175,11 @@ export function SettingsEditor({
                   setScope(value);
                 }}
               >
-                <SelectTrigger id={selectId} className="w-full">
+                <SelectTrigger
+                  appearance="utility"
+                  id={selectId}
+                  className="w-full"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

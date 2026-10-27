@@ -111,7 +111,7 @@ export function VariantWordingField({
           }
         />
       ) : (
-        <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+        <div className="flex flex-col gap-2 rounded-lg border border-transparent bg-field-readonly p-3">
           <p className="text-xs font-medium text-muted-foreground">
             {label} · From library · read only
           </p>
@@ -204,7 +204,7 @@ export function VariantWordingField({
             Review library changes
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-3 flex flex-col gap-3 rounded-lg border bg-muted/40 p-3">
+            <div className="mt-3 flex flex-col gap-3 rounded-lg border border-transparent bg-field-readonly p-3">
               <p className="text-sm text-muted-foreground">
                 Library changed. Compare it with your customization before
                 keeping or resetting it.

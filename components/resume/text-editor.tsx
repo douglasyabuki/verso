@@ -96,7 +96,7 @@ export function TextEditor({
         "aria-invalid": String(!!error),
         "aria-describedby": `${id}-instructions${error ? ` ${id}-error` : ""}`,
         spellcheck: "true",
-        class: `w-full whitespace-pre-wrap break-words rounded-b-md px-3 py-2 text-base outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${multiline ? "min-h-24" : "min-h-16"} [&_em]:italic [&_a]:text-primary [&_a]:underline`,
+        class: `w-full whitespace-pre-wrap break-words rounded-b-md px-3 py-2 text-base outline-none ${multiline ? "min-h-24" : "min-h-16"} [&_em]:italic [&_a]:text-primary [&_a]:underline`,
       },
       handleKeyDown: (_view, event) => {
         if (event.isComposing || event.keyCode === 229) return false;
@@ -226,7 +226,9 @@ export function TextEditor({
 
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(!state.pending && !state.replacing, false);
+    const disabled = !!state.pending || state.replacing;
+    editor.setEditable(!disabled, false);
+    editor.view.dom.setAttribute("aria-disabled", String(disabled));
   }, [editor, state.pending, state.replacing]);
 
   useEffect(() => {
@@ -353,14 +355,18 @@ export function TextEditor({
   return (
     <div className="flex flex-col gap-2">
       <div
-        className="rounded-md border border-input bg-card"
+        className="form-control rounded-md"
+        data-slot="text-editor"
+        data-appearance="content"
+        data-empty={!spans.some((span) => span.text.length > 0)}
+        data-disabled={!enabled}
         data-invalid={!!error}
       >
         <div
           role="toolbar"
           aria-label={`${label} formatting`}
           aria-controls={id}
-          className="flex flex-wrap items-center gap-1 border-b p-1"
+          className="flex flex-wrap items-center gap-1 border-b border-field-filled p-1"
           onKeyDown={(event) => {
             const tools = [
               ...event.currentTarget.querySelectorAll<HTMLButtonElement>(

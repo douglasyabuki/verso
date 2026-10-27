@@ -373,7 +373,7 @@ function VariantSection({
                           key={entry.id}
                           id={entry.id}
                           label={label}
-                          className="flex flex-col gap-3 rounded-lg border p-3"
+                          className="flex flex-col gap-3 rounded-lg border border-field-filled p-3"
                         >
                           {({ dragHandle, orderButtons }) => (
                             <>

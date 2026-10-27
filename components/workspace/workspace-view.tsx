@@ -473,7 +473,7 @@ export function WorkspaceView() {
                           navigation.setLibraryLocale(value as typeof locale);
                       }}
                     >
-                      <SelectTrigger id="library-language">
+                      <SelectTrigger appearance="utility" id="library-language">
                         <LanguageFlag
                           locale={
                             view === "shared-defaults"

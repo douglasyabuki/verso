@@ -263,7 +263,11 @@ export function TranslationsEditor({
                 filter(key, value);
               }}
             >
-              <SelectTrigger id={`review-${key}`} className="w-full">
+              <SelectTrigger
+                appearance="utility"
+                id={`review-${key}`}
+                className="w-full"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
