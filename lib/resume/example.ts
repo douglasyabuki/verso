@@ -2,7 +2,11 @@ import { createEmptyDocument } from "@/lib/resume/factories";
 import { localized } from "@/lib/resume/localization";
 import type { Entry, ResumeDocument } from "@/types-and-constants/resume";
 
-/** Build an explicitly fictional bilingual example. @returns Editable content with stable references. @example createExampleDocument() */
+/**
+ * Build an explicitly fictional bilingual example with populated resume sections.
+ * @returns {ResumeDocument} Editable content with stable entry, achievement, and variant references.
+ * @example const document = createExampleDocument()
+ */
 export function createExampleDocument(): ResumeDocument {
   const doc = createEmptyDocument();
   doc.profile = {
@@ -69,6 +73,40 @@ export function createExampleDocument(): ResumeDocument {
         ],
       ],
     ),
+    make(
+      "example-role-product",
+      "Cedar Labs · Fictional company",
+      "Software Engineer",
+      "Engenheiro de Software",
+      "2022-01",
+      "2023-02",
+      ["TypeScript", "Node.js", "PostgreSQL"],
+      [
+        [
+          "Built reporting workflows that helped support teams resolve customer requests faster.",
+          "Desenvolvi fluxos de relatórios que ajudaram equipes de suporte a resolver solicitações de clientes mais rapidamente.",
+        ],
+        [
+          "Worked with designers to simplify onboarding and document reusable interface patterns.",
+          "Colaborei com designers para simplificar a integração de usuários e documentar padrões reutilizáveis de interface.",
+        ],
+      ],
+    ),
+    make(
+      "example-role-intern",
+      "Harbor Digital · Fictional company",
+      "Web Development Intern",
+      "Estagiário em Desenvolvimento Web",
+      "2020-08",
+      "2021-12",
+      ["JavaScript", "HTML", "CSS", "Git"],
+      [
+        [
+          "Created responsive pages and improved keyboard navigation across the company website.",
+          "Criei páginas responsivas e melhorei a navegação por teclado no site da empresa.",
+        ],
+      ],
+    ),
   );
   const project = make(
     "example-project",
@@ -90,7 +128,39 @@ export function createExampleDocument(): ResumeDocument {
     label: "example.com/project",
     url: "https://example.com/project",
   });
-  doc.sections[1].entries.push(project);
+  doc.sections[1].entries.push(
+    project,
+    make(
+      "example-project-transit",
+      "Personal project · Fictional",
+      "Transit Companion",
+      "Companheiro de Transporte",
+      "2023-07",
+      "2023-11",
+      ["React", "TypeScript", "CSS"],
+      [
+        [
+          "Designed a responsive journey planner with saved routes and accessible service alerts.",
+          "Desenvolvi um planejador responsivo de viagens com rotas salvas e alertas de serviço acessíveis.",
+        ],
+      ],
+    ),
+    make(
+      "example-project-community",
+      "Community project · Fictional",
+      "Community Pantry",
+      "Despensa Comunitária",
+      "2025-02",
+      "",
+      ["Next.js", "PostgreSQL", "Node.js"],
+      [
+        [
+          "Built an inventory dashboard to help volunteers coordinate donations and collection schedules.",
+          "Desenvolvi um painel de estoque para ajudar voluntários a coordenar doações e horários de coleta.",
+        ],
+      ],
+    ),
+  );
   doc.sections[2].entries.push(
     make(
       "example-education",
@@ -101,6 +171,36 @@ export function createExampleDocument(): ResumeDocument {
       "2022",
       [],
       [],
+    ),
+    make(
+      "example-education-specialization",
+      "Example Institute of Technology",
+      "Specialization · Human-Computer Interaction",
+      "Especialização · Interação Humano-Computador",
+      "2023",
+      "2024",
+      [],
+      [
+        [
+          "Studied usability research, inclusive design, and interface evaluation.",
+          "Estudei pesquisa de usabilidade, design inclusivo e avaliação de interfaces.",
+        ],
+      ],
+    ),
+    make(
+      "example-education-course",
+      "Example Open Learning",
+      "Extension Course · Data Visualization",
+      "Curso de Extensão · Visualização de Dados",
+      "2022-03",
+      "2022-07",
+      ["Python", "SQL"],
+      [
+        [
+          "Created interactive reports using public datasets and clear visual storytelling.",
+          "Criei relatórios interativos com dados públicos e narrativas visuais claras.",
+        ],
+      ],
     ),
   );
   doc.sections[3].entries.push(
@@ -113,6 +213,37 @@ export function createExampleDocument(): ResumeDocument {
       "",
       ["React", "Next.js", "TypeScript", "CSS", "Git", "PostgreSQL"],
       [],
+    ),
+    make(
+      "example-skills-backend",
+      "",
+      "Backend & data",
+      "Backend e dados",
+      "",
+      "",
+      ["Node.js", "Python", "SQL", "REST", "Docker"],
+      [
+        [
+          "Data modeling and API integration",
+          "Modelagem de dados e integração de APIs",
+        ],
+      ],
+    ),
+    make(
+      "example-skills-collaboration",
+      "",
+      "Design & collaboration",
+      "Design e colaboração",
+      "",
+      "",
+      ["Figma", "Storybook"],
+      [
+        [
+          "Usability research and prototyping",
+          "Pesquisa de usabilidade e prototipação",
+        ],
+        ["Technical writing and mentoring", "Escrita técnica e mentoria"],
+      ],
     ),
   );
   doc.sections[2].entries[0].technologies = ["Python", "SQL"];
@@ -148,7 +279,49 @@ export function createExampleDocument(): ResumeDocument {
     label: "Verify credential",
     url: "https://example.com/credential",
   });
-  doc.sections[4].entries.push(certification);
+  const accessibilityCertification = make(
+    "example-certification-accessibility",
+    "Example Accessibility Institute",
+    "Web Accessibility Foundations",
+    "Fundamentos de Acessibilidade Web",
+    "",
+    "",
+    [],
+    [
+      [
+        "Completed practical exercises in semantic markup, keyboard access, and assistive technology.",
+        "Concluí exercícios práticos de marcação semântica, acesso por teclado e tecnologia assistiva.",
+      ],
+    ],
+  );
+  accessibilityCertification.certification = {
+    credentialId: "DEMO-A11Y-2025-002",
+    dates: { issued: "2025-03", expiration: { kind: "never" } },
+  };
+  const dataCertification = make(
+    "example-certification-data",
+    "Example Data Academy",
+    "SQL & Data Analysis Certificate",
+    "Certificado em SQL e Análise de Dados",
+    "",
+    "",
+    [],
+    [
+      [
+        "Completed a capstone project covering relational queries and reporting.",
+        "Concluí um projeto final de consultas relacionais e geração de relatórios.",
+      ],
+    ],
+  );
+  dataCertification.certification = {
+    credentialId: "DEMO-DATA-2023-003",
+    dates: { issued: "2023-09", expiration: { kind: "date", date: "2026-09" } },
+  };
+  doc.sections[4].entries.push(
+    certification,
+    accessibilityCertification,
+    dataCertification,
+  );
   doc.sections.push({
     id: "example-custom",
     kind: "custom",
