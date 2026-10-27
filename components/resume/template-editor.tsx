@@ -602,7 +602,7 @@ function LayoutInspector({
                   className="size-4 text-muted-foreground transition-transform duration-200 group-data-panel-open/layout-group:rotate-90 motion-reduce:transition-none"
                 />
                 <span className="text-sm font-medium">{group.name}</span>
-                <span className="col-start-2 min-w-0 text-xs leading-relaxed text-muted-foreground">
+                <span className="col-start-2 min-w-0 text-xs leading-relaxed text-muted-foreground group-data-panel-open/layout-group:hidden">
                   {group.keys
                     .slice(0, 3)
                     .map((key) => {
