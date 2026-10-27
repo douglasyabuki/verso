@@ -1,6 +1,6 @@
 "use client";
 
-import { Files, Palette, Ruler, Type } from "lucide-react";
+import { ChevronDown, Files, Ruler, Type } from "lucide-react";
 import { useId, useState } from "react";
 
 import { LayoutColorField } from "@/components/resume/layout/layout-color-field";
@@ -17,6 +17,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Field,
   FieldDescription,
@@ -42,10 +47,138 @@ import { resolveSettings } from "@/lib/resume/settings";
 import type { EditorProps } from "@/types-and-constants/editor";
 import { languageNames } from "@/types-and-constants/languages";
 import {
+  defaultSettings,
   layoutPaperSizes,
   numericLayoutControls,
+  templateSettingLabels,
   type TemplateSettings,
 } from "@/types-and-constants/output";
+
+const choiceControls = {
+  fontFamily: [
+    ["inter", "Inter"],
+    ["source-sans-3", "Source Sans 3"],
+    ["source-serif-4", "Source Serif 4"],
+  ],
+  nameWeight: [
+    ["regular", "Regular"],
+    ["bold", "Bold"],
+    ["black", "Black"],
+  ],
+  headerAlignment: [
+    ["left", "Left"],
+    ["center", "Center"],
+  ],
+  contactIcons: [
+    ["on", "On"],
+    ["off", "Off"],
+  ],
+  sectionWeight: [
+    ["regular", "Regular"],
+    ["bold", "Bold"],
+    ["black", "Black"],
+  ],
+  sectionCasing: [
+    ["original", "Original"],
+    ["uppercase", "Uppercase"],
+  ],
+  sectionDivider: [
+    ["on", "On"],
+    ["off", "Off"],
+  ],
+  entryTitleWeight: [
+    ["regular", "Regular"],
+    ["bold", "Bold"],
+    ["black", "Black"],
+  ],
+  entrySubtitleWeight: [
+    ["regular", "Regular"],
+    ["bold", "Bold"],
+    ["black", "Black"],
+  ],
+  bulletMarker: [
+    ["disc", "Disc"],
+    ["dash", "Dash"],
+    ["hollow-circle", "Hollow circle"],
+  ],
+  pageNumbering: [
+    ["hidden", "Hidden"],
+    ["shown", "Shown"],
+  ],
+  pageNumberAlignment: [
+    ["left", "Left"],
+    ["center", "Center"],
+    ["right", "Right"],
+  ],
+  pageNumberFormat: [
+    ["page-x", "Page X"],
+    ["page-x-of-y", "Page X of Y"],
+  ],
+} as const;
+
+const appearanceGroups = [
+  {
+    name: "Header",
+    keys: [
+      "nameSize",
+      "nameWeight",
+      "headerAlignment",
+      "nameContactGap",
+      "headerGap",
+      "contactIcons",
+    ],
+  },
+  {
+    name: "Sections",
+    keys: [
+      "sectionSize",
+      "sectionWeight",
+      "sectionCasing",
+      "sectionGap",
+      "sectionBelow",
+      "sectionDivider",
+      "dividerThickness",
+    ],
+  },
+  {
+    name: "Entry headings",
+    keys: [
+      "entryTitleSize",
+      "entryTitleWeight",
+      "entrySubtitleSize",
+      "entrySubtitleWeight",
+      "headingSubtitleGap",
+      "beforeDetailsGap",
+    ],
+  },
+  { name: "Entries and paragraphs", keys: ["entryGap", "paragraphGap"] },
+  {
+    name: "Bullets",
+    keys: [
+      "bulletMarker",
+      "bulletIndent",
+      "bulletTextGap",
+      "bulletGap",
+      "listAbove",
+      "listBelow",
+    ],
+  },
+  {
+    name: "Colors",
+    keys: [
+      "headingColor",
+      "bodyColor",
+      "secondaryColor",
+      "linkColor",
+      "iconColor",
+      "dividerColor",
+    ],
+  },
+  {
+    name: "Page numbering",
+    keys: ["pageNumbering", "pageNumberAlignment", "pageNumberFormat"],
+  },
+] as const;
 
 type SettingsEditorProps = Pick<
   EditorProps,
@@ -149,7 +282,22 @@ function LayoutInspector({
       }
     });
   };
-  const drafts = useLayoutDrafts({ document, values, change });
+  const [linkedMargins, setLinkedMargins] = useState(
+    values.marginLeft === values.marginRight,
+  );
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
+  const drafts = useLayoutDrafts({
+    document,
+    values,
+    change,
+    linkedMargins,
+    reveal: (key) => {
+      const group = appearanceGroups.find((group) =>
+        (group.keys as readonly string[]).includes(key),
+      );
+      if (group) setOpenGroups((open) => [...new Set([...open, group.name])]);
+    },
+  });
   const source = (key: keyof TemplateSettings) => {
     const origin =
       target[key] !== undefined
@@ -166,9 +314,11 @@ function LayoutInspector({
     return `${target[key] === undefined ? "Inherited" : "Set here"} · ${origin}`;
   };
   const reset = (key: keyof TemplateSettings) =>
-    scope !== "base" && target[key] !== undefined
+    scope === "base" || target[key] !== undefined
       ? () => {
-          drafts.flush({ [key]: undefined });
+          drafts.flush({
+            [key]: scope === "base" ? defaultSettings[key] : undefined,
+          });
         }
       : undefined;
   const numeric = (keys: string[]) =>
@@ -181,11 +331,74 @@ function LayoutInspector({
           id={id + control.key}
           drafts={drafts}
           disabled={disabled}
-          source={`${values[control.key]} ${control.unit} · ${source(control.key)}`}
+          source={`${values[control.key] === "template-default" ? "Template default" : `${values[control.key]} ${control.unit}`} · ${source(control.key)}`}
           reset={reset(control.key)}
+          templateDefault={
+            "templateDefault" in control
+              ? () => {
+                  drafts.flush({ [control.key]: "template-default" });
+                }
+              : undefined
+          }
           highlight={setHovered}
         />
       ));
+  const choice = (key: keyof typeof choiceControls) => {
+    const items = choiceControls[key].map(([value, label]) => ({
+      value,
+      label,
+    }));
+    return (
+      <Field key={key} data-disabled={disabled}>
+        <div className="flex items-center justify-between gap-2">
+          <FieldLabel htmlFor={id + key}>
+            {templateSettingLabels[key]}
+          </FieldLabel>
+          {reset(key) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              disabled={disabled}
+              onClick={reset(key)}
+            >
+              Use default
+            </Button>
+          )}
+        </div>
+        <Select
+          items={items}
+          value={values[key]}
+          disabled={disabled}
+          onValueChange={(value) => {
+            if (value && !disabled) drafts.flush({ [key]: value });
+          }}
+        >
+          <SelectTrigger
+            id={id + key}
+            appearance="utility"
+            className="w-full"
+            data-issue-field={`settings.${key}`}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {items.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <FieldDescription>
+          {items.find((item) => item.value === values[key])?.label} ·{" "}
+          {source(key)}
+        </FieldDescription>
+      </Field>
+    );
+  };
   return (
     <Card
       className="@container/layout-inspector"
@@ -315,7 +528,36 @@ function LayoutInspector({
             </FieldLegend>
             <div className="grid items-start gap-5 @min-[30rem]/layout-inspector:grid-cols-[minmax(0,1fr)_11rem]">
               <FieldGroup>
-                {numeric(["marginTop", "marginBottom", "marginSide"])}
+                <Field>
+                  <FieldLabel id={id + "linked"}>
+                    Link left and right margins
+                  </FieldLabel>
+                  <ToggleGroup
+                    multiple={false}
+                    variant="outline"
+                    value={[linkedMargins ? "linked" : "separate"]}
+                    disabled={disabled}
+                    aria-labelledby={id + "linked"}
+                    onValueChange={(selection) => {
+                      if (selection[0] && drafts.flush())
+                        setLinkedMargins(selection[0] === "linked");
+                    }}
+                  >
+                    <ToggleGroupItem value="linked">Linked</ToggleGroupItem>
+                    <ToggleGroupItem value="separate">Separate</ToggleGroupItem>
+                  </ToggleGroup>
+                  <FieldDescription>
+                    Linking changes no values. The next left or right margin
+                    commit updates both sides together. Use default affects one
+                    field.
+                  </FieldDescription>
+                </Field>
+                {numeric([
+                  "marginTop",
+                  "marginBottom",
+                  "marginLeft",
+                  "marginRight",
+                ])}
               </FieldGroup>
               <MarginGuide values={values} active={hovered ?? focused} />
             </div>
@@ -325,46 +567,102 @@ function LayoutInspector({
             <FieldLegend>
               <span className="flex items-center gap-2">
                 <Type className="size-4" />
-                Typography & spacing
+                Body typography
               </span>
             </FieldLegend>
-            <FieldDescription>Inter · Single column</FieldDescription>
+            <FieldDescription>
+              Single column · Choose a font family and body spacing
+            </FieldDescription>
             <FieldGroup className="grid gap-4 @min-[36rem]/layout-inspector:grid-cols-2">
-              {numeric(["fontSize", "lineHeight", "sectionGap"])}
+              {choice("fontFamily")}
+              {numeric(["fontSize", "lineHeight"])}
             </FieldGroup>
             <TemplateIdentityBadge
               id={document.template.id}
               version={document.template.version}
             />
           </FieldSet>
-          <Separator />
-          <FieldSet disabled={disabled}>
-            <FieldLegend>
-              <span className="flex items-center gap-2">
-                <Palette className="size-4" />
-                Colors
-              </span>
-            </FieldLegend>
-            <FieldDescription>
-              Template default preserves the original colors. Body color
-              includes names, titles, dates, secondary text, and icons.
-            </FieldDescription>
-            <FieldGroup>
-              {(["headingColor", "bodyColor"] as const).map((key) => (
-                <LayoutColorField
-                  key={key}
-                  setting={key}
-                  value={values[key]}
-                  explicit={target[key] !== undefined}
-                  id={id + key}
-                  disabled={disabled}
-                  source={source(key)}
-                  change={(value) => drafts.flush({ [key]: value })}
-                  reset={reset(key)}
-                />
-              ))}
-            </FieldGroup>
-          </FieldSet>
+          {appearanceGroups.map((group) => (
+            <Collapsible
+              key={group.name}
+              open={openGroups.includes(group.name)}
+              onOpenChange={(open) => {
+                if (drafts.flush())
+                  setOpenGroups((groups) =>
+                    open
+                      ? [...new Set([...groups, group.name])]
+                      : groups.filter((name) => name !== group.name),
+                  );
+              }}
+            >
+              <CollapsibleTrigger className="flex w-full flex-col items-start gap-1 rounded-md p-2 text-left hover:bg-muted focus-visible:outline-ring">
+                <span className="flex w-full items-center justify-between font-medium">
+                  {group.name}
+                  <ChevronDown className="size-4" />
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {group.keys
+                    .slice(0, 3)
+                    .map(
+                      (key) =>
+                        `${templateSettingLabels[key]}: ${values[key] === "template-default" ? "Template default" : values[key]}`,
+                    )
+                    .join(" · ")}
+                </span>
+              </CollapsibleTrigger>
+              <CollapsibleContent keepMounted>
+                <FieldSet disabled={disabled} className="pt-4">
+                  <FieldLegend className="sr-only">{group.name}</FieldLegend>
+                  {group.name === "Colors" && (
+                    <FieldDescription>
+                      Named text colors meet 4.5:1 against white.
+                      Template-default links follow section color; secondary
+                      text and icons follow explicit body color, otherwise
+                      original grays. Explicit link colors win inside headings
+                      and emphasis.
+                    </FieldDescription>
+                  )}
+                  {group.name === "Page numbering" && (
+                    <FieldDescription>
+                      Localized at 9 pt, baseline 5 mm below the content box.
+                      Page target remains a warning only.
+                    </FieldDescription>
+                  )}
+                  <FieldGroup>
+                    {numeric([...group.keys])}
+                    {group.keys.map((key) =>
+                      key in choiceControls
+                        ? choice(key as keyof typeof choiceControls)
+                        : null,
+                    )}
+                    {group.name === "Colors" &&
+                      (
+                        [
+                          "headingColor",
+                          "bodyColor",
+                          "secondaryColor",
+                          "linkColor",
+                          "iconColor",
+                          "dividerColor",
+                        ] as const
+                      ).map((key) => (
+                        <LayoutColorField
+                          key={key}
+                          setting={key}
+                          value={values[key]}
+                          explicit={target[key] !== undefined}
+                          id={id + key}
+                          disabled={disabled}
+                          source={source(key)}
+                          change={(value) => drafts.flush({ [key]: value })}
+                          reset={reset(key)}
+                        />
+                      ))}
+                  </FieldGroup>
+                </FieldSet>
+              </CollapsibleContent>
+            </Collapsible>
+          ))}
         </FieldGroup>
       </CardContent>
       <CardFooter>

@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 DEST = ROOT / '.cache/compiler-proof/assets'
 CACHE = ROOT / '.cache/compiler-proof/downloads'
-TEMPLATE = {'id': 'yabuki-reference', 'version': '1.0.0-proof.4'}
+TEMPLATE = {'id': 'yabuki-reference', 'version': '1.0.0-proof.5'}
 
 
 def digest(data):
@@ -82,7 +82,7 @@ def refresh_manifests():
     manifests = []
     for directory in directories:
         manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf8'))
-        if manifest['id'] != TEMPLATE['id'] or manifest['version'] not in ['1.0.0-proof.3', TEMPLATE['version']]:
+        if manifest['id'] != TEMPLATE['id'] or manifest['version'] not in ['1.0.0-proof.4', TEMPLATE['version']]:
             raise ValueError('Unsupported existing template manifest; run full preparation')
         for name, expected in manifest['assets'].items():
             if Path(name).name != name or '/' in name or "\\" in name or name in ['.', '..', 'manifest.json']:
@@ -98,6 +98,8 @@ def refresh_manifests():
             raise ValueError('Compiler resource metadata mismatch; run full preparation')
         if (directory / 'compiler.mjs').read_bytes() != (HERE / 'compiler.mjs').read_bytes():
             raise ValueError('Compiler source changed; run full preparation')
+        if (directory / 'resources.lock.json').read_bytes() != (HERE / 'resources.lock.json').read_bytes():
+            raise ValueError('Compiler resources changed; run full preparation')
         manifests.append(manifest)
     if manifests[0]['assets'] != manifests[1]['assets'] or manifests[0]['bundleSha256'] != manifests[1]['bundleSha256']:
         raise ValueError('Prepared and public compiler assets differ; run full preparation')
@@ -120,9 +122,14 @@ def main():
         wanted = [resource for resource in lock['resources'] if resource['archive'] == name]
         if not wanted:
             continue
-        with tarfile.open(fileobj=io.BytesIO(data)) as archive:
-            for resource in wanted:
-                contents[resource['name']] = archive.extractfile(resource['member']).read()
+        if name.endswith('.zip'):
+            with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                for resource in wanted:
+                    contents[resource['name']] = archive.read(resource['member'])
+        else:
+            with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+                for resource in wanted:
+                    contents[resource['name']] = archive.extractfile(resource['member']).read()
     resources = []
     for resource in lock['resources']:
         data = contents[resource['name']]

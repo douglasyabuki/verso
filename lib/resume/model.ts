@@ -2,13 +2,17 @@ import { z } from "zod";
 
 import { certificationDateErrors } from "@/lib/resume/certification";
 import { locales } from "@/types-and-constants/languages";
-import { bodyColors, headingColors } from "@/types-and-constants/output";
+import {
+  bodyColors,
+  headingColors,
+  textColors,
+} from "@/types-and-constants/output";
 import { resumeColors } from "@/types-and-constants/resume";
 import { sectionKinds } from "@/types-and-constants/sections";
 
 export const templateIdentity = {
   id: "yabuki-reference",
-  version: "1.0.0-proof.4",
+  version: "1.0.0-proof.5",
 } as const;
 
 const id = z.string().min(1).max(100);
@@ -265,25 +269,98 @@ export const schema5DocumentSchema = schema4DocumentSchema.extend({
     .max(30),
 });
 
-export const settingsSchema = legacySettingsSchema.extend({
+const schema6SettingsSchema = legacySettingsSchema.extend({
   headingColor: z.enum(headingColors),
   bodyColor: z.enum(bodyColors),
 });
-const colorOverridesSchema = settingsSchema.partial();
+const colorOverridesSchema = schema6SettingsSchema.partial();
 const colorLocaleOverridesSchema = z.strictObject({
   "en-US": colorOverridesSchema.optional(),
   "pt-BR": colorOverridesSchema.optional(),
 });
 
-export const documentSchema = schema5DocumentSchema.extend({
+export const schema6DocumentSchema = schema5DocumentSchema.extend({
   schemaVersion: z.literal(6),
-  settings: settingsSchema,
+  settings: schema6SettingsSchema,
   localeSettings: colorLocaleOverridesSchema,
   variants: z
     .array(
       schema5DocumentSchema.shape.variants.element.extend({
         settings: colorOverridesSchema,
         localeSettings: colorLocaleOverridesSchema,
+      }),
+    )
+    .min(1)
+    .max(30),
+});
+
+/** Validate an explicit dimension or the original template behavior.
+ * @param min Inclusive numeric lower bound. @param max Inclusive numeric upper bound.
+ * @returns A schema preserving the sentinel or an unrounded numeric value.
+ * @example templateDimension(14, 36)
+ */
+const templateDimension = (min: number, max: number) =>
+  z.union([z.literal("template-default"), z.number().min(min).max(max)]);
+const weightSchema = z.enum(["regular", "bold", "black"]);
+const switchSchema = z.enum(["on", "off"]);
+
+export const settingsSchema = schema6SettingsSchema
+  .omit({ marginSide: true })
+  .extend({
+    marginLeft: z.number().min(10).max(35),
+    marginRight: z.number().min(10).max(35),
+    fontFamily: z.enum(["inter", "source-sans-3", "source-serif-4"]),
+    nameSize: templateDimension(14, 36),
+    nameWeight: weightSchema,
+    headerAlignment: z.enum(["left", "center"]),
+    nameContactGap: templateDimension(0, 24),
+    headerGap: templateDimension(0, 36),
+    contactIcons: switchSchema,
+    sectionSize: templateDimension(9, 20),
+    sectionWeight: weightSchema,
+    sectionCasing: z.enum(["original", "uppercase"]),
+    sectionBelow: templateDimension(0, 8),
+    sectionDivider: switchSchema,
+    dividerThickness: templateDimension(0.1, 2),
+    entryTitleSize: templateDimension(9, 16),
+    entryTitleWeight: weightSchema,
+    entrySubtitleSize: templateDimension(9, 16),
+    entrySubtitleWeight: weightSchema,
+    headingSubtitleGap: templateDimension(0, 12),
+    beforeDetailsGap: templateDimension(0, 12),
+    entryGap: templateDimension(0, 24),
+    paragraphGap: templateDimension(0, 18),
+    bulletMarker: z.enum(["disc", "dash", "hollow-circle"]),
+    bulletIndent: templateDimension(0, 12),
+    bulletTextGap: templateDimension(0, 4),
+    bulletGap: templateDimension(0, 12),
+    listAbove: templateDimension(0, 24),
+    listBelow: templateDimension(0, 24),
+    headingColor: z.enum(textColors),
+    bodyColor: z.enum(textColors),
+    secondaryColor: z.enum(textColors),
+    linkColor: z.enum(textColors),
+    iconColor: z.enum(textColors),
+    dividerColor: z.enum(textColors),
+    pageNumbering: z.enum(["hidden", "shown"]),
+    pageNumberAlignment: z.enum(["left", "center", "right"]),
+    pageNumberFormat: z.enum(["page-x", "page-x-of-y"]),
+  });
+const layoutOverridesSchema = settingsSchema.partial();
+const layoutLocaleOverridesSchema = z.strictObject({
+  "en-US": layoutOverridesSchema.optional(),
+  "pt-BR": layoutOverridesSchema.optional(),
+});
+
+export const documentSchema = schema6DocumentSchema.extend({
+  schemaVersion: z.literal(7),
+  settings: settingsSchema,
+  localeSettings: layoutLocaleOverridesSchema,
+  variants: z
+    .array(
+      schema6DocumentSchema.shape.variants.element.extend({
+        settings: layoutOverridesSchema,
+        localeSettings: layoutLocaleOverridesSchema,
       }),
     )
     .min(1)

@@ -14,6 +14,8 @@ type LayoutDraftsOptions = {
   document: ResumeDocument;
   values: TemplateSettings;
   change: (changes: Partial<TemplateSettings>) => void;
+  linkedMargins?: boolean;
+  reveal?: (key: NumericKey) => void;
 };
 
 /** Keep numeric text local to a mounted document/variant/locale/scope editor.
@@ -26,6 +28,8 @@ export function useLayoutDrafts({
   document,
   values,
   change,
+  linkedMargins = false,
+  reveal,
 }: LayoutDraftsOptions) {
   const { controller } = useWorkspace();
   const [local, setLocal] = useState<{
@@ -62,7 +66,7 @@ export function useLayoutDrafts({
     const changes: Partial<TemplateSettings> = {};
     for (const control of numericLayoutControls) {
       const text = captured.drafts[control.key];
-      if (text === undefined || control.key in extra) continue;
+      if (text === undefined) continue;
       const value = Number(text);
       if (
         !text.trim() ||
@@ -73,13 +77,23 @@ export function useLayoutDrafts({
       ) {
         errors[control.key] =
           `Enter ${control.key === "targetPages" ? "a whole number" : "a number"} from ${control.min} to ${control.max}.`;
-      } else if (value !== values[control.key]) changes[control.key] = value;
+      } else {
+        if (value !== values[control.key]) changes[control.key] = value;
+        if (
+          linkedMargins &&
+          (control.key === "marginLeft" || control.key === "marginRight")
+        ) {
+          changes.marginLeft = value;
+          changes.marginRight = value;
+        }
+      }
     }
     const invalid = numericLayoutControls.find(({ key }) => errors[key]);
     if (invalid) {
       const invalidDrafts = { ...captured, errors };
       latest.current = invalidDrafts;
       setLocal(invalidDrafts);
+      reveal?.(invalid.key);
       requestAnimationFrame(() => {
         if (
           active.current &&
@@ -111,7 +125,9 @@ export function useLayoutDrafts({
     };
   });
   return {
-    text: (key: NumericKey) => current.drafts[key] ?? String(values[key]),
+    text: (key: NumericKey) =>
+      current.drafts[key] ??
+      (values[key] === "template-default" ? "" : String(values[key])),
     errors: current.errors,
     bindInput: (key: NumericKey, node: HTMLInputElement | null) => {
       inputs.current[key] = node;

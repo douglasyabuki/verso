@@ -15,6 +15,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@/components/ui/input-group";
+import { Separator } from "@/components/ui/separator";
 import type { useLayoutDrafts } from "@/hooks/resume/use-layout-drafts";
 import { numericLayoutControls } from "@/types-and-constants/output";
 
@@ -27,6 +28,7 @@ export function NumericLayoutField({
   disabled,
   source,
   reset,
+  templateDefault,
   highlight,
 }: {
   control: Control;
@@ -35,6 +37,7 @@ export function NumericLayoutField({
   disabled: boolean;
   source: string;
   reset?: () => void;
+  templateDefault?: () => void;
   highlight: (key: string | null) => void;
 }) {
   const { key } = control;
@@ -80,6 +83,17 @@ export function NumericLayoutField({
           {icon}
           {control.label}
         </FieldLabel>
+        {templateDefault && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            disabled={disabled}
+            onClick={templateDefault}
+          >
+            Template default
+          </Button>
+        )}
         {reset && (
           <Button
             type="button"
@@ -105,6 +119,9 @@ export function NumericLayoutField({
           min={control.min}
           max={control.max}
           appearance="utility"
+          placeholder={
+            "templateDefault" in control ? "Template default" : undefined
+          }
           value={text}
           disabled={disabled}
           aria-invalid={!!error}
@@ -148,8 +165,9 @@ export function NumericLayoutField({
             }
           }}
         />
-        <InputGroupAddon align="inline-end">
+        <InputGroupAddon align="inline-end" className="gap-1">
           <InputGroupText>{control.unit}</InputGroupText>
+          <Separator orientation="vertical" className="mx-1" />
           <InputGroupButton
             size="icon-xs"
             disabled={
@@ -182,6 +200,9 @@ export function NumericLayoutField({
       </InputGroup>
       <FieldDescription id={`${id}-description`}>
         {source}
+        {"templateDefault" in control && (
+          <> · Template default: {control.templateDefault}</>
+        )}
         {"description" in control && <> · {control.description}</>}
       </FieldDescription>
       {error && <FieldError id={`${id}-error`}>{error}</FieldError>}

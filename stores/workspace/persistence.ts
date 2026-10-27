@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { parseBackup, serializeBackup } from "@/lib/resume/backup";
-import { type ResumeDocument } from "@/types-and-constants/resume";
 import type {
   CommitResult,
   StorageReview,
@@ -119,8 +118,8 @@ export function subscribeWorkspace(notify: () => void): () => void {
  * @returns SHA-256 identity, or exact JSON identity in insecure session-only contexts.
  * @example const baseline = await fingerprint(document);
  */
-export async function fingerprint(document: ResumeDocument): Promise<string> {
-  const json = serializeBackup(document);
+export async function fingerprint(document: unknown): Promise<string> {
+  const json = JSON.stringify(document, null, 2) + "\n";
   if (!globalThis.crypto?.subtle) return `json:${json}`;
   const bytes = await crypto.subtle.digest(
     "SHA-256",
@@ -129,4 +128,22 @@ export async function fingerprint(document: ResumeDocument): Promise<string> {
   return Array.from(new Uint8Array(bytes), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
+}
+
+/** Translate a proven legacy backup baseline through the validated migration.
+ * @param review Exact stored bytes and their already validated migrated snapshot.
+ * @returns The migrated baseline only when the original document matches its stored backup digest; otherwise the existing baseline.
+ * @example const baseline = await migratedBackupFingerprint(review);
+ */
+export async function migratedBackupFingerprint(
+  review: StorageReview,
+): Promise<string | null> {
+  const baseline = review.snapshot?.backupFingerprint ?? null;
+  if (!baseline || !review.raw || !review.snapshot) return baseline;
+  const record = JSON.parse(review.raw) as {
+    document: { schemaVersion: number };
+  };
+  if (record.document.schemaVersion >= 7) return baseline;
+  if ((await fingerprint(record.document)) !== baseline) return baseline;
+  return fingerprint(review.snapshot.document);
 }

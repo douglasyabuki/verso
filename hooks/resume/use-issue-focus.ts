@@ -36,6 +36,13 @@ export function useIssueFocus({
       const element = document.querySelector<HTMLElement>(
         `[data-issue-field="${CSS.escape(target.fieldKey)}"]`,
       );
+      if (element && !element.getClientRects().length) {
+        const group = element.closest('[data-slot="collapsible"]');
+        const trigger = group?.querySelector<HTMLButtonElement>(
+          '[data-slot="collapsible-trigger"]',
+        );
+        if (trigger?.getAttribute("aria-expanded") === "false") trigger.click();
+      }
       if (
         !element ||
         !element.getClientRects().length ||

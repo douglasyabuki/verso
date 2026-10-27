@@ -2,23 +2,28 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
-  bodyColors,
-  headingColors,
   pdfColorPresets,
+  templateSettingLabels,
   type TemplateSettings,
+  textColors,
 } from "@/types-and-constants/output";
 
 export function LayoutColorField({
   setting,
   value,
-  explicit,
   id,
   disabled,
   source,
   change,
   reset,
 }: {
-  setting: "headingColor" | "bodyColor";
+  setting:
+    | "headingColor"
+    | "bodyColor"
+    | "secondaryColor"
+    | "linkColor"
+    | "iconColor"
+    | "dividerColor";
   value: TemplateSettings["headingColor"] | TemplateSettings["bodyColor"];
   explicit: boolean;
   id: string;
@@ -27,13 +32,11 @@ export function LayoutColorField({
   change: (value: string) => void;
   reset?: () => void;
 }) {
-  const presets = setting === "headingColor" ? headingColors : bodyColors;
+  const presets = textColors;
   return (
     <Field data-disabled={disabled}>
       <div className="flex items-center justify-between gap-2">
-        <FieldTitle id={id}>
-          {setting === "headingColor" ? "Headings & links" : "Body text"}
-        </FieldTitle>
+        <FieldTitle id={id}>{templateSettingLabels[setting]}</FieldTitle>
         {reset && (
           <Button
             type="button"
@@ -54,7 +57,7 @@ export function LayoutColorField({
         aria-labelledby={id}
         aria-describedby={`${id}-description`}
         data-issue-field={`settings.${setting}`}
-        value={explicit ? [value] : []}
+        value={[value]}
         disabled={disabled}
         onValueChange={(selection) => {
           const next = selection[0];

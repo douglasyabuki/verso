@@ -39,8 +39,10 @@ export function LayoutIcon({
             <path d="M5 8h13M11.5 4v3m-2-2 2 2 2-2" />
           ) : kind === "marginBottom" ? (
             <path d="M5 16h13M11.5 17v3m-2-2 2-2 2 2" />
-          ) : kind === "marginSide" ? (
-            <path d="M9 3v18m5-18v18M6 12h2m8 0h2" />
+          ) : kind === "marginLeft" ? (
+            <path d="M9 3v18M6 12h2" />
+          ) : kind === "marginRight" ? (
+            <path d="M14 3v18M16 12h2" />
           ) : (
             <path d="M8 17h7m-5-2-2 2 2 2m3-4 2 2-2 2" />
           )}

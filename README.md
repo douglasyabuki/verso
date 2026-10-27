@@ -116,7 +116,7 @@ completion of a browser save dialog cannot be confirmed. Saved work is specific
 to this browser profile and origin: changing the hostname or port opens a separate
 workspace. Use a JSON export/import to move drafts between them.
 
-JSON exports use resume schema 6. Compatible schema-1 through schema-5 backups migrate
+JSON exports use resume schema 7. Compatible schema-1 through schema-6 backups migrate
 on import or browser restoration, preserving wording, IDs, revisions, and review
 flags. Missing historical review snapshots stay unknown until explicitly reviewed;
 schema-1 certification metadata starts unset. Older resumes receive an indigo navigation color and retain their original PDF colors. Unsupported schemas/templates are rejected.
@@ -144,15 +144,18 @@ compiles that language and compares its PDF page count with the template target;
 it does not detect clipping or overlap. Exceeding the page target warns without
 blocking downloads.
 
-PDF appearance settings include text size, heading color (black, dark navy,
-dark teal, dark burgundy), and body text color (black, dark gray). Every explicit
-color has at least 4.5:1 contrast against white. Template default preserves the
-original sepia headings/links and black/gray text. Heading color affects section
-headings and all links; explicit body color also affects names, entry titles,
-dates, secondary text, and icons. Section rules stay gray. These settings follow the existing all-resumes,
-language, resume, and resume-language scopes; Use default removes a scoped
-override, while Template default explicitly restores the original styling.
-Colors are included in editable JSON backups and undo/redo.
+PDF appearance settings cover paper, four margins, Inter/Source Sans 3/Source
+Serif 4, body and heading typography, header alignment, section dividers, entry
+and paragraph gaps, achievement bullets, six color roles, and localized page
+numbering. They follow all-resumes, language, resume, and resume-language scopes.
+Use default removes a scoped override (or restores the factory value at base
+scope); Template default stores the original template behavior explicitly.
+Numeric drafts commit on blur/Enter; Escape cancels. Linking side margins affects
+the next margin commit only. JSON backups and undo/redo include appearance.
+
+Named text colors meet 4.5:1 contrast against white. Explicit link color wins
+inside headings and emphasis. Template-default links follow section color;
+secondary text and icons follow explicit body color, otherwise original grays.
 
 Source ZIPs include generated LaTeX, the exact browser runtime/resources, notices,
 and a standalone local compilation launcher.

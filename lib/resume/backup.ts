@@ -7,8 +7,10 @@ import {
   schema3DocumentSchema,
   schema4DocumentSchema,
   schema5DocumentSchema,
+  schema6DocumentSchema,
   templateIdentity,
 } from "@/lib/resume/model";
+import { defaultSettings } from "@/types-and-constants/output";
 import type { ResumeDocument } from "@/types-and-constants/resume";
 
 /** Serialize complete editable state, excluding interface/compiler state. @param doc Workspace. @returns Versioned JSON backup. @example serializeBackup(doc) */
@@ -40,7 +42,7 @@ export function parseBackup(source: string): ResumeDocument {
     throw new Error(
       "This file is not a supported Verso backup. Choose a JSON backup downloaded from Verso.",
     );
-  if (![1, 2, 3, 4, 5, 6].includes(header.data.schemaVersion))
+  if (![1, 2, 3, 4, 5, 6, 7].includes(header.data.schemaVersion))
     throw new Error(
       `This backup uses an unsupported format (version ${header.data.schemaVersion}). Open it with a compatible version of Verso. Your current work has not changed.`,
     );
@@ -52,7 +54,9 @@ export function parseBackup(source: string): ResumeDocument {
         ? "1.0.0-proof.2"
         : header.data.schemaVersion < 6
           ? "1.0.0-proof.3"
-          : templateIdentity.version)
+          : header.data.schemaVersion === 6
+            ? "1.0.0-proof.4"
+            : templateIdentity.version)
   )
     throw new Error(
       `This backup needs a resume template that is not available in this version of Verso. Open it with a compatible version. Your current work has not changed.`,
@@ -68,7 +72,9 @@ export function parseBackup(source: string): ResumeDocument {
             ? schema4DocumentSchema.safeParse(data)
             : header.data.schemaVersion === 5
               ? schema5DocumentSchema.safeParse(data)
-              : documentSchema.safeParse(data);
+              : header.data.schemaVersion === 6
+                ? schema6DocumentSchema.safeParse(data)
+                : documentSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue.path.join(".");
@@ -89,8 +95,9 @@ export function parseBackup(source: string): ResumeDocument {
           : result.data.schemaVersion === 4
             ? migrateSchema4(result.data)
             : result.data;
-  const doc =
+  const colored =
     migrated.schemaVersion === 5 ? migrateSchema5(migrated) : migrated;
+  const doc = colored.schemaVersion === 6 ? migrateSchema6(colored) : colored;
   const seen = new Set<string>();
   const unique = (value: string) => {
     if (seen.has(value))
@@ -272,15 +279,68 @@ export function migrateSchema4(
  */
 export function migrateSchema5(
   legacy: z.infer<typeof schema5DocumentSchema>,
-): ResumeDocument {
-  return documentSchema.parse({
+): z.infer<typeof schema6DocumentSchema> {
+  return schema6DocumentSchema.parse({
     ...legacy,
     schemaVersion: 6,
-    template: { ...templateIdentity },
+    template: { id: templateIdentity.id, version: "1.0.0-proof.4" },
     settings: {
       ...legacy.settings,
       headingColor: "template-default",
       bodyColor: "template-default",
     },
+  });
+}
+
+/** Split only present side-margin overrides and add compatibility values at base scope.
+ * @param legacy Validated schema-6 workspace with the supported proof.4 identity.
+ * @returns A validated schema-7 copy preserving content, revisions and partial overrides.
+ * @example migrateSchema6(schema6DocumentSchema.parse(data))
+ */
+export function migrateSchema6(
+  legacy: z.infer<typeof schema6DocumentSchema>,
+): ResumeDocument {
+  const validated = schema6DocumentSchema.parse(legacy);
+  if (
+    validated.template.id !== templateIdentity.id ||
+    validated.template.version !== "1.0.0-proof.4"
+  )
+    throw new Error("Unsupported schema-6 template identity.");
+  /** Preserve partial scopes while replacing a present shared side margin.
+   * @param settings Validated historical settings or overrides.
+   * @returns Settings with equal side margins only when marginSide existed.
+   * @example split({ marginSide: 20 })
+   */
+  const split = ({
+    marginSide,
+    ...settings
+  }: Partial<z.infer<typeof schema6DocumentSchema>["settings"]>) => ({
+    ...settings,
+    ...(marginSide === undefined
+      ? {}
+      : { marginLeft: marginSide, marginRight: marginSide }),
+  });
+  /** Migrate only the language overrides present in the historical workspace.
+   * @param settings Validated locale settings.
+   * @returns Locale records preserving absent overrides and other settings.
+   * @example languages(legacy.localeSettings)
+   */
+  const languages = (
+    settings: z.infer<typeof schema6DocumentSchema>["localeSettings"],
+  ) =>
+    Object.fromEntries(
+      Object.entries(settings).map(([locale, value]) => [locale, split(value)]),
+    );
+  return documentSchema.parse({
+    ...validated,
+    schemaVersion: 7,
+    template: { ...templateIdentity },
+    settings: { ...defaultSettings, ...split(validated.settings) },
+    localeSettings: languages(validated.localeSettings),
+    variants: validated.variants.map((variant) => ({
+      ...variant,
+      settings: split(variant.settings),
+      localeSettings: languages(variant.localeSettings),
+    })),
   });
 }

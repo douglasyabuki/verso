@@ -13,16 +13,16 @@ export function MarginGuide({
   active: string | null;
 }) {
   const paper = layoutPaperSizes[values.pageSize];
-  const x = values.marginSide;
+  const x = values.marginLeft;
   const y = values.marginTop;
-  const width = paper.width - x * 2;
+  const width = paper.width - x - values.marginRight;
   const height = paper.height - y - values.marginBottom;
   return (
     <figure className="flex flex-col items-center gap-3 rounded-lg bg-muted/40 p-4">
       <figcaption className="text-sm font-medium">Margin guide</figcaption>
       <svg
         role="img"
-        aria-label={`${paper.label}, ${width.toFixed(1)} by ${height.toFixed(1)} mm printable area. Top ${y}, bottom ${values.marginBottom}, sides ${x} mm.`}
+        aria-label={`${paper.label}, ${width.toFixed(1)} by ${height.toFixed(1)} mm printable area. Top ${y}, bottom ${values.marginBottom}, left ${x}, right ${values.marginRight} mm.`}
         viewBox={`-2 -2 ${paper.width + 4} ${paper.height + 4}`}
         className="h-auto w-36 max-w-full overflow-visible text-muted-foreground"
       >
@@ -48,9 +48,18 @@ export function MarginGuide({
             height={values.marginBottom}
             className={cn(active !== "marginBottom" && "opacity-0")}
           />
-          <g className={cn(active !== "marginSide" && "opacity-0")}>
-            <rect width={x} height={paper.height} />
-            <rect x={paper.width - x} width={x} height={paper.height} />
+          <g>
+            <rect
+              width={x}
+              height={paper.height}
+              className={cn(active !== "marginLeft" && "opacity-0")}
+            />
+            <rect
+              x={paper.width - values.marginRight}
+              width={values.marginRight}
+              height={paper.height}
+              className={cn(active !== "marginRight" && "opacity-0")}
+            />
           </g>
         </g>
         <rect

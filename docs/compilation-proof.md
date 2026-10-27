@@ -86,6 +86,41 @@ bundle SHA-256 `ff88716cbb2b4bf2ed2b33d6a92fa326492599183cec7af810aa877733193c6a
 unchanged. Browser and bilingual PDF review were left to the owner at their
 request; the historical observations below do not verify proof.4 output.
 
+## Layout expansion (proof.5)
+
+A later time-bounded continuation fixed Hollow circle markers requesting
+unbundled math fonts. They now use the existing regular Font Awesome circle
+for both the label and its measured width. Twelve A4 manual specimens compiled
+across all three fonts, both languages and default/explicit list spacing, with
+correct totals and no off-page text spans. Four complete three-page contact
+sheets were visually reviewed. Full manual acceptance remains incomplete.
+No automated tests were run.
+
+Schema 7 expands the scoped inspector and renderer and adds pinned static Source
+Sans 3 and Source Serif 4 faces. Both fonts include regular, bold, black and
+matching italics with OFL notices. The rebuilt bundle contains 120 resources,
+34,831,218 uncompressed bytes and 13,422,161 compressed bytes, SHA-256
+`3c210a9f96146a123f48e0839e62cf6b2db19bc5f0bd905296938b466748e40e`.
+The engine and format are unchanged. Manifest-only refresh now also compares the
+prepared resource lock with the repository lock; resource changes require full
+preparation.
+
+Default structured output was pixel-identical to proof.4 in both languages.
+Twelve extreme font/paper/language combinations compiled in Chrome, plus two
+oversized-heading cases. These observations do not establish complete acceptance.
+A further continuation corrected first-list heading reservations, first-detail
+link spacing, and a long Portuguese Letter heading overflow. Default bilingual
+PDFs remained pixel-identical to the captured schema-6 outputs. Twelve additional
+oversized font/paper/language cases compiled with all six real faces for each
+family embedded, including regular, bold and black italics.
+The historical browser matrix below does not verify proof.5.
+
+Final continuation checks: `npm run format:check`, `npm run lint`,
+`npm run typecheck` and `npm run build` all passed after the renderer and
+autosave corrections. No automated tests were added or run. The final manual compiler pass
+completed all 35 prepared cases, including both full private references;
+compatibility defaults again matched all six captured baseline pages exactly.
+
 ## Observed browser results — October 19, 2026
 
 These are historical local observations, not production performance guarantees

@@ -275,6 +275,16 @@
       "name": "needspace.tar.xz",
       "url": "https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2021/tlnet-final/archive/needspace.tar.xz",
       "sha256": "8a8258682ac174fa92509b5f0cc69ea43416c5df35148a59201a5614f39c70b9"
+    },
+    {
+      "name": "source-sans-3.052R.zip",
+      "url": "https://github.com/adobe-fonts/source-sans/releases/download/3.052R/OTF-source-sans-3.052R.zip",
+      "sha256": "a4ebbdea20b08ccbd7bf3665a9462454eefdd01d9a6307129d3b3d4672981074"
+    },
+    {
+      "name": "source-serif-4.005R.zip",
+      "url": "https://github.com/adobe-fonts/source-serif/releases/download/4.005R/source-serif-4.005_Desktop.zip",
+      "sha256": "549fdb8f9a682bd06944298621404969f6de77c2e422ff3b8244a1dcd6a0c425"
     }
   ],
   "resources": [
@@ -919,6 +929,78 @@
       "archive": "needspace.tar.xz",
       "member": "tex/latex/needspace/needspace.sty",
       "sha256": "5ae673ce2a80fb868c954373252294d9e6469feeb78b445182772fd043eb0914"
+    },
+    {
+      "name": "SourceSans3-Regular.otf",
+      "archive": "source-sans-3.052R.zip",
+      "member": "OTF/SourceSans3-Regular.otf",
+      "sha256": "08df266400933d3178d081a45f94a08814c3e55b4b7dd2e0ff69cb1329f13ab6"
+    },
+    {
+      "name": "SourceSans3-Bold.otf",
+      "archive": "source-sans-3.052R.zip",
+      "member": "OTF/SourceSans3-Bold.otf",
+      "sha256": "7776ddb9f3eb58683e59f28d558d8896b768c2d0c80799fb3f1c56c54dfd98c9"
+    },
+    {
+      "name": "SourceSans3-Black.otf",
+      "archive": "source-sans-3.052R.zip",
+      "member": "OTF/SourceSans3-Black.otf",
+      "sha256": "2fef2100eb883a68f04495c98c900c9e0a6b2168a4edcd55837b6e8e05c65952"
+    },
+    {
+      "name": "SourceSans3-Italic.otf",
+      "archive": "source-sans-3.052R.zip",
+      "member": "OTF/SourceSans3-It.otf",
+      "sha256": "430b9f0eb1170be0981706d14b6cf87122efba9d86c373bbdf69daf276421462"
+    },
+    {
+      "name": "SourceSans3-BoldItalic.otf",
+      "archive": "source-sans-3.052R.zip",
+      "member": "OTF/SourceSans3-BoldIt.otf",
+      "sha256": "05e97d9adc01059607e97b167a68afb25680db904db7aba831dc2510f14b6515"
+    },
+    {
+      "name": "SourceSans3-BlackItalic.otf",
+      "archive": "source-sans-3.052R.zip",
+      "member": "OTF/SourceSans3-BlackIt.otf",
+      "sha256": "7c6ddd2d1957d7f380620db07fc3b6ca8ca0d4f8196005ee14f9446d2196cfda"
+    },
+    {
+      "name": "SourceSerif4-Regular.otf",
+      "archive": "source-serif-4.005R.zip",
+      "member": "source-serif-4.005_Desktop/OTF/SourceSerif4-Regular.otf",
+      "sha256": "edf160d0d584deee8a3bb2c3371b2a7624ca63580fbe02c57c1f4c91e84d8787"
+    },
+    {
+      "name": "SourceSerif4-Bold.otf",
+      "archive": "source-serif-4.005R.zip",
+      "member": "source-serif-4.005_Desktop/OTF/SourceSerif4-Bold.otf",
+      "sha256": "f5fb9a7b1611353fdfebcf8b1e46c7d9108470f25999b841816d8b643b1856ff"
+    },
+    {
+      "name": "SourceSerif4-Black.otf",
+      "archive": "source-serif-4.005R.zip",
+      "member": "source-serif-4.005_Desktop/OTF/SourceSerif4-Black.otf",
+      "sha256": "47feb7b4ecac3271e988fe399b9a26e220f428c0acfa55e59744f9dc5a1e6f41"
+    },
+    {
+      "name": "SourceSerif4-Italic.otf",
+      "archive": "source-serif-4.005R.zip",
+      "member": "source-serif-4.005_Desktop/OTF/SourceSerif4-It.otf",
+      "sha256": "f8062257f4693e438a8e317c9fe2b4393f0d4eed84d897edcbfd733c30a1c1a1"
+    },
+    {
+      "name": "SourceSerif4-BoldItalic.otf",
+      "archive": "source-serif-4.005R.zip",
+      "member": "source-serif-4.005_Desktop/OTF/SourceSerif4-BoldIt.otf",
+      "sha256": "ebb5394e1e11e09480619c9bb10f020aded9530833edcbdb735a4702ae6fa09e"
+    },
+    {
+      "name": "SourceSerif4-BlackItalic.otf",
+      "archive": "source-serif-4.005R.zip",
+      "member": "source-serif-4.005_Desktop/OTF/SourceSerif4-BlackIt.otf",
+      "sha256": "22e74ee4d16b716e481af222899b3894bcd5223c57ba1758d303d2eff68810f8"
     }
   ]
 }
