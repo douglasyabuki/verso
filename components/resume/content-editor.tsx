@@ -12,6 +12,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { EntryFields } from "@/components/resume/entry-fields";
 import { LinksEditor, TextField } from "@/components/resume/fields";
@@ -84,6 +85,29 @@ export function ContentEditor({
   context: LibraryEditorContext;
   onContext: (context: LibraryEditorContext) => void;
 }) {
+  const entryForm = useRef<HTMLDivElement>(null);
+  const [editRequest, setEditRequest] = useState(0);
+
+  useEffect(() => {
+    if (!editRequest) return;
+    const form = entryForm.current;
+    const scroller = form?.closest<HTMLElement>("[data-workspace-scroll]");
+    if (!form || !scroller) return;
+
+    // Keep the workspace shell and its Issues footer out of this scroll.
+    scroller.scrollTo({
+      top:
+        scroller.scrollTop +
+        form.getBoundingClientRect().top -
+        scroller.getBoundingClientRect().top -
+        scroller.clientTop -
+        16,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
+  }, [editRequest]);
+
   const { entryId, showArchived, query } = context;
   const setEntryId = (entryId: string) => onContext({ ...context, entryId });
   const setQuery = (query: string) => onContext({ ...context, query });
@@ -350,7 +374,10 @@ export function ContentEditor({
                                 variant={
                                   entry?.id === item.id ? "secondary" : "ghost"
                                 }
-                                onClick={() => setEntryId(item.id)}
+                                onClick={() => {
+                                  setEntryId(item.id);
+                                  setEditRequest((request) => request + 1);
+                                }}
                                 aria-pressed={entry?.id === item.id}
                               >
                                 <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -415,7 +442,7 @@ export function ContentEditor({
         </CardContent>
       </Card>
       {entry && (
-        <Card key={entry.id}>
+        <Card key={entry.id} ref={entryForm} className="scroll-mt-4">
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>{entryLabel(entry, section.kind, locale)}</CardTitle>

@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -381,7 +382,7 @@ export function TranslationsEditor({
       <div className="grid min-w-0 items-start gap-4 @3xl:grid-cols-[16rem_minmax(0,1fr)]">
         <div
           ref={list}
-          className="flex max-h-80 min-w-0 flex-col gap-2 overflow-y-auto @3xl:max-h-[60dvh]"
+          className="flex max-h-80 min-w-0 flex-col gap-3 overflow-y-auto p-1 @3xl:max-h-[60dvh]"
           role="region"
           aria-label="Wording items"
           onScroll={(event) => {
@@ -407,27 +408,39 @@ export function TranslationsEditor({
               aria-current={item.id === currentItem?.id ? "true" : undefined}
               onClick={() => select(item)}
               className={cn(
-                "flex w-full min-w-0 cursor-pointer flex-col gap-2 rounded-lg border border-l-2 border-l-transparent p-3 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
-                item.id === currentItem?.id && "border-l-foreground bg-muted",
+                "flex w-full min-w-0 shrink-0 cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left text-card-foreground shadow-sm transition-colors hover:border-ring hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
+                item.id === currentItem?.id &&
+                  "border-primary bg-accent ring-1 ring-primary",
               )}
             >
-              <span className="text-sm font-semibold">{item.field.label}</span>
-              <span className="text-xs text-muted-foreground">
-                {item.owner} · {item.field.source} ·{" "}
-                {languageNames[item.locale]}
+              <span className="flex min-w-0 flex-col gap-1.5">
+                <span className="text-sm leading-snug font-semibold wrap-anywhere">
+                  {item.field.label}
+                </span>
+                <span className="text-xs leading-relaxed wrap-anywhere text-muted-foreground">
+                  {item.owner} · {item.field.source}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {languageNames[item.locale]}
+                </span>
               </span>
-              <span lang={item.locale} className="line-clamp-2 text-sm">
+              <span
+                lang={item.locale}
+                className="line-clamp-2 text-sm leading-relaxed wrap-anywhere"
+              >
                 {plain(item.field.value, item.locale) || "Empty wording"}
               </span>
-              <WordingStatus
-                showHelp={false}
-                missing={item.categories.includes("missing")}
-                review={item.categories.includes("translation")}
-                library={item.categories.includes("library")}
-              />
-              <span className="text-xs text-muted-foreground">
-                {item.archived ? "Archived · " : ""}
-                {reviewOutputLabel(item, outputResumeId)}
+              <span className="mt-auto flex flex-col items-start gap-2 border-t pt-3">
+                <WordingStatus
+                  showHelp={false}
+                  missing={item.categories.includes("missing")}
+                  review={item.categories.includes("translation")}
+                  library={item.categories.includes("library")}
+                />
+                <span className="text-xs leading-relaxed text-muted-foreground">
+                  {item.archived ? "Archived · " : ""}
+                  {reviewOutputLabel(item, outputResumeId)}
+                </span>
               </span>
             </button>
           ))}
@@ -435,14 +448,16 @@ export function TranslationsEditor({
         <div className="min-w-0">
           {current && (
             <Card ref={detail} className="min-w-0">
-              <CardHeader>
-                <CardTitle>
-                  {currentItem?.field.label || "Current item"}{" "}
-                  {currentItem && !currentItem.reasons.length && (
-                    <ReviewStatusBadge state="resolved" />
-                  )}
+              <CardHeader className="gap-2">
+                <CardTitle className="min-w-0 wrap-anywhere">
+                  {currentItem?.field.label || "Current item"}
                 </CardTitle>
-                <CardDescription>
+                {currentItem && !currentItem.reasons.length && (
+                  <CardAction>
+                    <ReviewStatusBadge state="resolved" />
+                  </CardAction>
+                )}
+                <CardDescription className="min-w-0 leading-relaxed wrap-anywhere">
                   {currentItem
                     ? `${currentItem.owner} · ${currentItem.field.source} · ${currentItem.field.label} · ${languageNames[currentItem.locale]}`
                     : "This item is unavailable. Its content or resume was removed."}
