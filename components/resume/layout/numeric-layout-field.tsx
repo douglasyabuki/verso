@@ -119,9 +119,7 @@ export function NumericLayoutField({
           min={control.min}
           max={control.max}
           appearance="utility"
-          placeholder={
-            "templateDefault" in control ? "Template default" : undefined
-          }
+          placeholder={"templateDefault" in control ? "Automatic" : undefined}
           value={text}
           disabled={disabled}
           aria-invalid={!!error}

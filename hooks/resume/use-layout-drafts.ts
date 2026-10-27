@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
+import { numericLayoutValue } from "@/lib/resume/settings";
 import {
   numericLayoutControls,
   type TemplateSettings,
@@ -126,8 +127,7 @@ export function useLayoutDrafts({
   });
   return {
     text: (key: NumericKey) =>
-      current.drafts[key] ??
-      (values[key] === "template-default" ? "" : String(values[key])),
+      current.drafts[key] ?? numericLayoutValue(values, key)?.toString() ?? "",
     errors: current.errors,
     bindInput: (key: NumericKey, node: HTMLInputElement | null) => {
       inputs.current[key] = node;

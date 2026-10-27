@@ -43,7 +43,7 @@ import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useLayoutDrafts } from "@/hooks/resume/use-layout-drafts";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
-import { resolveSettings } from "@/lib/resume/settings";
+import { numericLayoutValue, resolveSettings } from "@/lib/resume/settings";
 import type { EditorProps } from "@/types-and-constants/editor";
 import { languageNames } from "@/types-and-constants/languages";
 import {
@@ -331,7 +331,7 @@ function LayoutInspector({
           id={id + control.key}
           drafts={drafts}
           disabled={disabled}
-          source={`${values[control.key] === "template-default" ? "Template default" : `${values[control.key]} ${control.unit}`} · ${source(control.key)}`}
+          source={`${numericLayoutValue(values, control.key) === undefined ? "Automatic" : `${numericLayoutValue(values, control.key)} ${control.unit}`}${values[control.key] === "template-default" ? " · Template default" : ""} · ${source(control.key)}`}
           reset={reset(control.key)}
           templateDefault={
             "templateDefault" in control
@@ -605,10 +605,22 @@ function LayoutInspector({
                 <span className="col-start-2 min-w-0 text-xs leading-relaxed text-muted-foreground">
                   {group.keys
                     .slice(0, 3)
-                    .map(
-                      (key) =>
-                        `${templateSettingLabels[key]}: ${values[key] === "template-default" ? "Template default" : values[key]}`,
-                    )
+                    .map((key) => {
+                      const control = numericLayoutControls.find(
+                        (control) => control.key === key,
+                      );
+                      const value = control
+                        ? numericLayoutValue(values, control.key)
+                        : values[key];
+                      const label = control
+                        ? value === undefined
+                          ? "Automatic"
+                          : `${value} ${control.unit}`
+                        : value === "template-default"
+                          ? "Template default"
+                          : value;
+                      return `${templateSettingLabels[key]}: ${label}`;
+                    })
                     .join(" · ")}
                 </span>
               </CollapsibleTrigger>
