@@ -71,7 +71,7 @@ export async function latexZip(output: ResumeOutput): Promise<Uint8Array> {
   const response = await fetch("/compiler/manifest.json");
   if (!response.ok)
     throw new Error(
-      "The bundled template assets are unavailable. Run npm run compiler:prepare.",
+      "The files needed to download LaTeX are unavailable. Reload the app and try again. If this continues, the app’s template files need to be prepared again.",
     );
   const manifest = (await response.json()) as {
     id: string;
@@ -82,7 +82,9 @@ export async function latexZip(output: ResumeOutput): Promise<Uint8Array> {
     manifest.id !== output.templateId ||
     manifest.version !== output.templateVersion
   )
-    throw new Error("The available template bundle differs from this output.");
+    throw new Error(
+      "The available template files do not match this resume. Reload the app and try downloading again.",
+    );
   const files: Record<string, Uint8Array> = {
     "main.tex": strToU8(output.rendered.source),
     "assets/manifest.json": strToU8(JSON.stringify(manifest, null, 2)),

@@ -29,6 +29,7 @@ import {
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { resolveSettings } from "@/lib/resume/settings";
 import type { EditorProps } from "@/types-and-constants/editor";
+import { languageNames } from "@/types-and-constants/languages";
 import type { TemplateSettings } from "@/types-and-constants/output";
 
 export function SettingsEditor({
@@ -93,7 +94,7 @@ export function SettingsEditor({
     { key: "pageSize", label: "Page size", values: ["a4", "letter"] },
     {
       key: "fontSize",
-      label: "Body size",
+      label: "Text size",
       values: [9, 10, 10.5, 11, 11.5, 12],
       unit: "pt",
     },
@@ -128,27 +129,30 @@ export function SettingsEditor({
     },
     {
       key: "targetPages",
-      label: "Page-count target",
+      label: "Target number of pages",
       values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     },
   ];
   const scopeItems = sharedDefaults
     ? [
-        { value: "base", label: "Workspace defaults" },
-        { value: "locale", label: `Language defaults · ${locale}` },
+        { value: "base", label: "All resumes" },
+        { value: "locale", label: `All resumes · ${languageNames[locale]}` },
       ]
     : [
         {
           value: "variant",
           label: `Resume · ${variant.name || "Untitled resume"}`,
         },
-        { value: "variant-locale", label: `Resume language · ${locale}` },
+        {
+          value: "variant-locale",
+          label: `This resume · ${languageNames[locale]}`,
+        },
       ];
   return (
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader>
-          <CardTitle size="section">Template settings</CardTitle>
+          <CardTitle size="section">Layout settings</CardTitle>
           <CardDescription>Inter · Single column</CardDescription>
         </CardHeader>
         <CardContent>
@@ -160,9 +164,10 @@ export function SettingsEditor({
             <Field>
               <div className="flex items-center gap-2">
                 <FieldLabel htmlFor={selectId}>Apply settings to</FieldLabel>
-                <InfoHint label="settings precedence">
-                  Workspace defaults → Language defaults → Resume → Resume
-                  language. Choose Inherit to reset an override.
+                <InfoHint label="which layout settings apply">
+                  Settings for this resume and language take priority over its
+                  general settings, then language defaults, then defaults for
+                  all resumes. Choose Use default to remove a custom setting.
                 </InfoHint>
               </div>
               <Select
@@ -205,7 +210,7 @@ export function SettingsEditor({
                 );
                 const settingItems = [
                   ...(scope !== "base"
-                    ? [{ value: "inherit", label: "Inherit" }]
+                    ? [{ value: "inherit", label: "Use default" }]
                     : []),
                   ...choices.map((value) => ({
                     value: String(value),
@@ -255,17 +260,17 @@ export function SettingsEditor({
                       </SelectContent>
                     </Select>
                     <FieldDescription>
-                      {current === undefined ? "Inherited" : "Effective"}:{" "}
+                      {current === undefined ? "Using default" : "Set here"}:{" "}
                       {values[control.key]}
-                      {control.unit ? " " + control.unit : ""}. Source:{" "}
+                      {control.unit ? " " + control.unit : ""}. From:{" "}
                       {current !== undefined
                         ? sharedDefaults
                           ? scope === "base"
-                            ? "Workspace defaults"
-                            : "Language defaults"
+                            ? "All resumes"
+                            : "All resumes in this language"
                           : scope === "variant"
                             ? "Resume"
-                            : "Resume language"
+                            : "This resume in this language"
                         : !sharedDefaults &&
                             scope === "variant-locale" &&
                             variant.settings[control.key] !== undefined
@@ -274,16 +279,16 @@ export function SettingsEditor({
                               scope !== "locale" &&
                               document.localeSettings[locale]?.[control.key] !==
                                 undefined
-                            ? "Language defaults"
-                            : "Workspace defaults"}
+                            ? "All resumes in this language"
+                            : "All resumes"}
                     </FieldDescription>
                   </Field>
                 );
               })}
             </FieldGroup>
             <p className="text-xs text-muted-foreground">
-              Current output: {output.pageSize.toUpperCase()}, {output.fontSize}{" "}
-              pt · Target {output.targetPages} pages
+              Current PDF layout: {output.pageSize.toUpperCase()},{" "}
+              {output.fontSize} pt · Target {output.targetPages} pages
               <InfoHint label="page target" size="sm">
                 Content is never removed to meet the page target.
               </InfoHint>
@@ -291,9 +296,7 @@ export function SettingsEditor({
           </FieldGroup>
         </CardContent>
         <CardFooter>
-          <p className="text-xs text-muted-foreground">
-            Included in JSON backups
-          </p>
+          <p className="text-xs text-muted-foreground">Included in backups</p>
         </CardFooter>
       </Card>
     </div>
@@ -309,10 +312,10 @@ export function CompilerSettings({
   return (
     <Card>
       <CardHeader>
-        <CardTitle size="section">Browser compiler</CardTitle>
+        <CardTitle size="section">PDF generation</CardTitle>
         <CardDescription>
-          Initialization and compilation have independent timeouts. Changing
-          these settings restarts the engine.
+          Choose how long to allow PDF tools to start and PDFs to be created.
+          Changing these settings restarts the PDF tools.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -338,8 +341,8 @@ export function CompilerSettings({
                 <Field key={key}>
                   <FieldLabel htmlFor={selectId + key}>
                     {key === "initializationTimeoutMs"
-                      ? "Initialization timeout"
-                      : "Compilation timeout"}
+                      ? "Maximum startup time"
+                      : "Maximum PDF creation time"}
                   </FieldLabel>
                   <Select
                     items={timeoutItems}
@@ -374,7 +377,7 @@ export function CompilerSettings({
       </CardContent>
       <CardFooter>
         <p className="text-xs text-muted-foreground">
-          Timeouts apply across the workspace and are included in JSON backups.
+          These time limits apply to all resumes and are included in backups.
         </p>
       </CardFooter>
     </Card>

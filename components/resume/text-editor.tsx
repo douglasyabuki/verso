@@ -326,7 +326,7 @@ export function TextEditor({
     if (!editor || !enabled || !target) return;
     if (!remove) {
       const error = !linkValue
-        ? "Enter a complete URL, including its scheme."
+        ? "Enter a complete link, such as https://example.com."
         : urlError(linkValue);
       if (error) {
         setLinkError(error);
@@ -400,13 +400,13 @@ export function TextEditor({
             }
             pressed={!!selection?.emphasized && !selection?.mixed}
             aria-pressed={selection?.mixed ? "mixed" : !!selection?.emphasized}
-            aria-label="Emphasis"
-            title="Emphasis (Ctrl/Command+I)"
+            aria-label="Italic"
+            title="Italic (Ctrl/Command+I)"
             onFocus={() => setTool(0)}
             onPressedChange={emphasize}
           >
             <Italic data-icon="inline-start" />
-            Emphasis
+            Italic
           </Toggle>
           <Popover
             open={!!linkEdit}
@@ -448,7 +448,7 @@ export function TextEditor({
                 }}
               >
                 <Field data-invalid={!!linkError}>
-                  <FieldLabel htmlFor={`${id}-url`}>URL</FieldLabel>
+                  <FieldLabel htmlFor={`${id}-url`}>Link address</FieldLabel>
                   <Input
                     ref={urlInput}
                     id={`${id}-url`}
@@ -522,8 +522,9 @@ export function TextEditor({
       <div role="status" aria-live="polite" aria-atomic="true">
         {rejections > 0 && (
           <FieldError>
-            The edit exceeds the limit of 100 text spans. Your text, selection,
-            and undo history have been kept.
+            This edit adds more text formatting than the editor can support. Try
+            pasting as plain text or making a smaller edit. Your text,
+            selection, and undo history have been kept.
             <span className="sr-only"> Rejected edit {rejections}.</span>
           </FieldError>
         )}

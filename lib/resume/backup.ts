@@ -18,12 +18,16 @@ export function serializeBackup(doc: ResumeDocument): string {
 /** Validate a portable backup before any mutation. @param source JSON text up to 5 MB. @returns A normalized document; throws actionable schema, template, or reference errors. @example parseBackup(fileText) */
 export function parseBackup(source: string): ResumeDocument {
   if (new TextEncoder().encode(source).length > 5_000_000)
-    throw new Error("Backup exceeds the 5 MB limit.");
+    throw new Error(
+      "This backup is larger than 5 MB. Choose a smaller Verso backup.",
+    );
   let data: unknown;
   try {
     data = JSON.parse(source);
   } catch {
-    throw new Error("This file is not valid JSON.");
+    throw new Error(
+      "This file could not be read as a backup. Choose a JSON backup downloaded from Verso.",
+    );
   }
   const header = z
     .object({
@@ -32,10 +36,12 @@ export function parseBackup(source: string): ResumeDocument {
     })
     .safeParse(data);
   if (!header.success)
-    throw new Error("This is not a versioned Verso workspace backup.");
+    throw new Error(
+      "This file is not a supported Verso backup. Choose a JSON backup downloaded from Verso.",
+    );
   if (![1, 2, 3, 4, 5].includes(header.data.schemaVersion))
     throw new Error(
-      `Workspace schema ${header.data.schemaVersion} is unsupported. This release imports schemas 1, 2, 3, 4, and 5.`,
+      `This backup uses an unsupported format (version ${header.data.schemaVersion}). Open it with a compatible version of Verso. Your current work has not changed.`,
     );
   const template = header.data.template;
   if (
@@ -46,7 +52,7 @@ export function parseBackup(source: string): ResumeDocument {
         : templateIdentity.version)
   )
     throw new Error(
-      `Template ${template.id}@${template.version} is unavailable. This app bundles ${templateIdentity.id}@${templateIdentity.version}. The workspace has not changed.`,
+      `This backup needs a resume template that is not available in this version of Verso. Open it with a compatible version. Your current work has not changed.`,
     );
   const result =
     header.data.schemaVersion === 1
@@ -63,7 +69,7 @@ export function parseBackup(source: string): ResumeDocument {
     const path = issue.path.join(".");
     const incompatible = path.includes("settings") || path.includes("Settings");
     throw new Error(
-      `${incompatible ? "Incompatible template settings" : "Invalid backup"} at ${path}: ${issue.message}`,
+      `${incompatible ? "This backup contains unsupported layout settings" : "This backup contains missing or invalid details"}. Choose another Verso backup. Your current work has not changed. Details: ${path}: ${issue.message}`,
     );
   }
   const doc =
@@ -80,7 +86,10 @@ export function parseBackup(source: string): ResumeDocument {
             : result.data;
   const seen = new Set<string>();
   const unique = (value: string) => {
-    if (seen.has(value)) throw new Error(`Duplicate identifier: ${value}`);
+    if (seen.has(value))
+      throw new Error(
+        `This backup contains repeated content IDs (${value}). Choose another Verso backup. Your current work has not changed.`,
+      );
     seen.add(value);
   };
   doc.profile.links.forEach((link) => unique(link.id));
@@ -104,28 +113,32 @@ export function parseBackup(source: string): ResumeDocument {
     for (const bulletId of Object.keys(variant.wording.achievements))
       if (!bulletIds.has(bulletId))
         throw new Error(
-          `Resume ${variant.name} has an unavailable wording override achievement reference.`,
+          `Resume ${variant.name} has custom text for an achievement that is missing from the backup. Choose another Verso backup.`,
         );
     const sectionIds = new Set<string>();
     if (variant.sections.length !== doc.sections.length)
       throw new Error(
-        `Resume ${variant.name || "Untitled"} must contain a selection for every library section, including hidden sections.`,
+        `Resume ${variant.name || "Untitled"} is missing section settings, including settings for hidden sections. Choose another Verso backup.`,
       );
     for (const selected of variant.sections) {
       if (sectionIds.has(selected.sectionId))
-        throw new Error("A resume contains a duplicate section reference.");
+        throw new Error(
+          "A resume in this backup lists the same section twice. Choose another Verso backup.",
+        );
       sectionIds.add(selected.sectionId);
       const section = doc.sections.find(
         (section) => section.id === selected.sectionId,
       );
       if (!section)
         throw new Error(
-          `Resume ${variant.name} references an unavailable section.`,
+          `Resume ${variant.name} uses a section that is missing from this backup. Choose another Verso backup.`,
         );
       const entryIds = new Set<string>();
       for (const selection of selected.entries) {
         if (entryIds.has(selection.entryId))
-          throw new Error("A resume contains a duplicate entry reference.");
+          throw new Error(
+            "A resume in this backup lists the same career entry twice. Choose another Verso backup.",
+          );
         entryIds.add(selection.entryId);
         const entry = section.entries.find(
           (entry) => entry.id === selection.entryId,
@@ -138,7 +151,7 @@ export function parseBackup(source: string): ResumeDocument {
           )
         )
           throw new Error(
-            `Resume ${variant.name} has an invalid entry or achievement reference.`,
+            `Resume ${variant.name} uses a career entry or achievement that is missing or repeated in this backup. Choose another Verso backup.`,
           );
       }
     }
@@ -159,7 +172,7 @@ export function migrateSchema1(
     legacy.template.version !== "1.0.0-proof.2"
   )
     throw new Error(
-      "Schema-1 migration requires the bundled yabuki-reference@1.0.0-proof.2 template.",
+      "This older backup needs a different resume template. Open it with a compatible version of Verso.",
     );
   return schema2DocumentSchema.parse({
     ...legacy,

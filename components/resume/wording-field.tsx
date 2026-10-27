@@ -79,7 +79,7 @@ export function WordingField({
             reference={reference}
             snapshot={value[locale].reviewedCounterpart}
             needsReview={value[locale].needsReview}
-            owner="the career library"
+            owner="the career details"
             onConfirm={() => {
               let accepted = false;
               update((draft) => {

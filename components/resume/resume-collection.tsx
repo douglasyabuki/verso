@@ -62,10 +62,10 @@ export function ResumeCollection({
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                Shared library content
+                Shared career details
                 <InfoHint label="resume independence" size="sm">
-                  This resume uses shared career content, with its own
-                  selections, wording, reviews, and appearance.
+                  This resume uses shared career content, with its own selected
+                  content, custom text, reviews, and appearance.
                 </InfoHint>
               </div>
             </CardContent>

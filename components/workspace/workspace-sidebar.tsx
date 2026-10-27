@@ -163,7 +163,7 @@ export function WorkspaceSidebar({
           className="flex min-h-0 flex-1 flex-col gap-2 py-3"
         >
           <SidebarCollection
-            label="Career library"
+            label="Career details"
             active={destination.kind === "library-overview"}
             onOpen={() => go({ kind: "library-overview" })}
             onCreate={() => {
@@ -356,7 +356,7 @@ export function WorkspaceSidebar({
                         {(
                           [
                             ["content", "Content & Order", ListOrdered],
-                            ["translations", "Wording tasks", Languages],
+                            ["translations", "Text to review", Languages],
                             ["layout", "Layout", LayoutTemplate],
                           ] as const
                         ).map(([page, label, Icon]) => (
@@ -402,11 +402,11 @@ export function WorkspaceSidebar({
               onClick={() => go({ kind: "review" })}
             >
               <GlobeCheck aria-hidden="true" />
-              <span>Wording tasks</span>
+              <span>Text to review</span>
             </SidebarMenuButton>
             <SidebarMenuBadge
-              aria-label={`${formatCount(reviewCount, "unresolved wording item", "unresolved wording items")} across the workspace`}
-              title="Workspace-wide unresolved wording items"
+              aria-label={`${formatCount(reviewCount, "item to review", "items to review")} across the workspace`}
+              title="Items to review across all career details and resumes"
             >
               {reviewCount}
             </SidebarMenuBadge>

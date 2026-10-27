@@ -64,24 +64,23 @@ export function WorkspaceOverlays({
             <AlertDialogTitle>{pending?.title}</AlertDialogTitle>
             <AlertDialogDescription>
               {pending?.sessionOnly
-                ? "This replaces only the workspace in this tab. The result remains unsaved. Existing browser data will not be changed. Export JSON to keep it."
-                : "This replaces the current workspace and the stored version reviewed below, only if that version has not changed again."}{" "}
-              One previous workspace will remain recoverable during this
-              session.
+                ? "This replaces your work in this tab only. It will not be saved in this browser and can be lost when you close the tab. Download a backup to keep it. The version already saved in this browser stays unchanged."
+                : "This replaces your current work and the version saved in this browser shown below. If the saved version changes again, you must review it before replacing it."}{" "}
+              You can restore one previous version while this tab stays open.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2 text-sm">
             <p>
-              Candidate:{" "}
+              Version to load:{" "}
               {pending?.snapshot.document.profile.name || "Untitled profile"} ·
               revision {pending?.snapshot.document.revision}
             </p>
             {!pending?.sessionOnly && (
               <p className="text-muted-foreground">
-                Reviewed storage:{" "}
+                Currently saved in this browser:{" "}
                 {reviewed?.snapshot
                   ? `${reviewed.snapshot.document.profile.name || "Untitled profile"} · revision ${reviewed.snapshot.document.revision} · ${reviewed.savedAt}`
-                  : reviewed?.error || "No stored workspace"}
+                  : reviewed?.error || "No work saved in this browser"}
               </p>
             )}
             {state.error && (
@@ -108,7 +107,7 @@ export function WorkspaceOverlays({
                   disabled={state.saving}
                   onClick={controller.reviewOverwrite}
                 >
-                  Review stored version again
+                  Review saved version again
                 </Button>
               </>
             )}

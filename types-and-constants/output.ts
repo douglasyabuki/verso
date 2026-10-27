@@ -20,13 +20,13 @@ export const defaultSettings: TemplateSettings = {
 
 export const templateSettingLabels: Record<keyof TemplateSettings, string> = {
   pageSize: "Page size",
-  fontSize: "Body size (pt)",
+  fontSize: "Text size (pt)",
   marginTop: "Top margin (mm)",
   marginBottom: "Bottom margin (mm)",
   marginSide: "Side margins (mm)",
   lineHeight: "Line height",
   sectionGap: "Section spacing (mm)",
-  targetPages: "Page-count target",
+  targetPages: "Target number of pages",
 };
 
 export type ResumeOutput = CompileResult & {

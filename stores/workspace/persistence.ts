@@ -40,7 +40,7 @@ export function loadWorkspace(): StorageReview {
       snapshot: null,
       savedAt: null,
       error:
-        "Stored workspace is unreadable or incompatible. It has been left untouched.",
+        "Your saved work could not be opened in this version of Verso. It has not been changed. Restore a compatible backup or download a backup of your current work.",
     };
   }
 }
@@ -69,7 +69,7 @@ export async function commitWorkspace(
     return {
       status: "failure",
       error:
-        "Safe browser saving requires Web Locks. Use this tab only or export JSON.",
+        "This browser cannot safely save changes across tabs. Use this tab only and download a backup before closing it.",
     };
   try {
     return await navigator.locks.request(lockName, () => {
@@ -96,7 +96,7 @@ export async function commitWorkspace(
   } catch (error) {
     return {
       status: "failure",
-      error: `Browser save failed: ${error instanceof Error ? error.message : "storage unavailable"}. Export JSON to keep your work.`,
+      error: `Browser save failed: ${error instanceof Error ? error.message : "storage unavailable"}. Download a backup to keep your work.`,
     };
   }
 }

@@ -54,6 +54,7 @@ import { localizedFields } from "@/lib/resume/localization";
 import { reviewItems } from "@/lib/resume/review-queue";
 import { validateOutput } from "@/lib/resume/validation";
 import type { Confirmation } from "@/types-and-constants/editor";
+import { languageNames } from "@/types-and-constants/languages";
 import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
 import type { IssueNavigation } from "@/types-and-constants/navigation";
 import type { Issue } from "@/types-and-constants/review";
@@ -247,7 +248,7 @@ export function WorkspaceView() {
         state.recovery
           ? () =>
               controller.requestReplacement(
-                "Recover previous workspace?",
+                "Restore previous work?",
                 state.recovery!,
               )
           : undefined
@@ -297,7 +298,7 @@ export function WorkspaceView() {
               issue: {
                 id: path,
                 path,
-                message: "Edit shared career wording",
+                message: "Edit shared career text",
                 category: "translation",
                 locale: targetLocale,
                 section: field.source,
@@ -358,7 +359,8 @@ export function WorkspaceView() {
       {!resumeWorkspace && (
         <div className="flex shrink-0 flex-wrap items-center gap-2 border-b p-2">
           <span className="text-xs text-muted-foreground">
-            Previewing {variant.name || "Untitled resume"} · {locale}
+            Previewing {variant.name || "Untitled resume"} ·{" "}
+            {languageNames[locale]}
           </span>
           <Button
             size="sm"
@@ -447,14 +449,16 @@ export function WorkspaceView() {
             ) : (
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
                 <span className="text-xs text-muted-foreground">
-                  {dirty ? "Changes since JSON backup" : "Matches JSON backup"}
+                  {dirty
+                    ? "Changes since your last backup"
+                    : "No changes since your last backup"}
                 </span>
                 {!fullWidth && (
                   <div className="flex max-w-full flex-wrap items-center gap-2 text-sm">
                     <Label htmlFor="library-language">
                       {view === "shared-defaults"
                         ? "Defaults language"
-                        : "Library editing language"}
+                        : "Editing language"}
                     </Label>
                     <Select
                       items={languageItems}
@@ -533,14 +537,14 @@ export function WorkspaceView() {
             navigation.destination.kind === "resume"
               ? variant.name || "Untitled resume"
               : navigation.destination.kind === "library-section"
-                ? "Career library"
+                ? "Career details"
                 : (
                     {
-                      "library-overview": "Career library",
+                      "library-overview": "Career details",
                       resumes: "All resumes",
-                      review: "Wording tasks",
-                      data: "Data & backups",
-                      "shared-defaults": "Shared defaults",
+                      review: "Text to review",
+                      data: "Backups & settings",
+                      "shared-defaults": "Default layout",
                     } as Record<string, string>
                   )[view]
           }
@@ -610,7 +614,7 @@ export function WorkspaceView() {
         type="file"
         accept=".json,application/json"
         className="hidden"
-        aria-label="Import workspace JSON"
+        aria-label="Restore from a JSON backup"
         onChange={(event) => void importJson(event.target.files?.[0])}
       />
     </WorkspaceShell>

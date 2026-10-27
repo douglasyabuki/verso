@@ -121,8 +121,8 @@ export function ContentEditor({
           <CardDescription className="flex items-center gap-1.5">
             <span>Shared contact details</span>
             <InfoHint label="profile languages">
-              Contact details apply to both languages. Summary wording is
-              specific to each language.
+              Contact details apply to both languages. Summary text is specific
+              to each language.
             </InfoHint>
           </CardDescription>
         </CardHeader>
@@ -203,7 +203,7 @@ export function ContentEditor({
                   }, group)
                 }
                 placeholder="BR"
-                description="Two letters, for example BR or US. The PDF localizes the country name."
+                description="Two letters, for example BR or US. The PDF shows the country name in the selected language."
               />
             </FieldGroup>
             <Separator />
@@ -269,10 +269,10 @@ export function ContentEditor({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 text-lg">
               <CardTitle size="section">Entries</CardTitle>
-              <InfoHint label="library entries" size="lg">
-                Library changes update resumes referencing these entries.
-                Include new entries in each resume’s Content & order. Library
-                and resume ordering are independent.
+              <InfoHint label="career entries" size="lg">
+                Changes here update every resume that uses this content. Add new
+                entries to each resume in Content & order. Changing their order
+                here does not change their order in resumes.
               </InfoHint>
             </div>
             <Button onClick={addEntry} disabled={section.entries.length >= 300}>
@@ -348,10 +348,7 @@ export function ContentEditor({
                   })
                 }
               >
-                <ul
-                  className="flex flex-col gap-2"
-                  aria-label="Library entries"
-                >
+                <ul className="flex flex-col gap-2" aria-label="Career entries">
                   {displayed.map((item) => {
                     return (
                       <SortableRow
@@ -536,12 +533,12 @@ export function ContentEditor({
             </div>
             <CardDescription className="flex items-center gap-1.5">
               {entry.archived ? (
-                "Archived entries stay editable and are hidden from all generated outputs."
+                "Archived entries stay editable and are hidden from all resumes."
               ) : (
                 <>
-                  <span>Shared entry</span>
-                  <InfoHint label="shared entry">
-                    Changes update every resume referencing this entry.
+                  <span>Used across resumes</span>
+                  <InfoHint label="content used across resumes">
+                    Changes update every resume that uses this entry.
                   </InfoHint>
                 </>
               )}

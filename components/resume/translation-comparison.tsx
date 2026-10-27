@@ -90,12 +90,12 @@ export function TranslationComparison({
             onClick={confirm}
           >
             <CheckCheck data-icon="inline-start" />
-            Confirm English and Portuguese match
+            Confirm both languages mean the same
           </Button>
         )}
         {pairPopulated && (
           <InfoHint label="translation confirmation">
-            {`Confirmation records this comparison without changing text and clears both translation reminders for ${owner}. Other owners and library-change reminders are unaffected. Review reminders do not block valid downloads.`}
+            {`Confirm that English and Portuguese convey the same information. This clears translation reminders for ${owner} without changing the text. Reviews for other resumes and shared text changes stay separate. You can still download a resume with review reminders.`}
           </InfoHint>
         )}
       </div>

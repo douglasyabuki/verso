@@ -37,9 +37,9 @@ export function LibraryOverview({
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         Shared career content
-        <InfoHint label="library task counts" size="sm">
-          Counts include active and archived wording. Use wording-task filters
-          to choose the content to review.
+        <InfoHint label="review counts" size="sm">
+          Counts include active and archived text. Use the review filters to
+          choose the content to check.
         </InfoHint>
       </div>
       <div className="grid gap-4 @2xl:grid-cols-2">

@@ -233,7 +233,7 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
                 result.templateVersion !== snapshot.template.version
               )
                 throw new Error(
-                  "The prepared compiler bundle does not match this document's exact template version. Prepare the matching assets before exporting.",
+                  "The PDF tools do not support this resume’s template version. Reload the app and try again. If this continues, check PDF generation details.",
                 );
               output = {
                 ...result,
@@ -263,7 +263,7 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
                 key: requestedKey,
                 locale: selectedLocale,
                 error:
-                  "The PDF compiled, but its page count could not be read. Try checking layout again.",
+                  "The PDF was created, but its page count could not be read. Try checking layout again.",
               };
             }
             layoutCache.current.set(requestedKey, layout);

@@ -27,6 +27,7 @@ import { resolveOwnerDestination } from "@/lib/resume/destinations";
 import { validateOutput } from "@/lib/resume/validation";
 import type { ConfirmAction } from "@/types-and-constants/editor";
 import type { Locale } from "@/types-and-constants/languages";
+import { languageNames } from "@/types-and-constants/languages";
 import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
 import type { IssueNavigation } from "@/types-and-constants/navigation";
 import type { ResumeDocument } from "@/types-and-constants/resume";
@@ -178,42 +179,42 @@ export function EditorPane({
                   ? "Profile & summary"
                   : section
                     ? librarySectionLabel(section)
-                    : "Career library"
+                    : "Career details"
                 : view === "variants"
                   ? `${variant.name || "Untitled resume"} · Content & order`
                   : view === "resume-translations"
-                    ? `${variant.name || "Untitled resume"} · Wording tasks`
+                    ? `${variant.name || "Untitled resume"} · Text to review`
                     : (
                         {
-                          "library-overview": "Career library · Overview",
+                          "library-overview": "Career details · Overview",
                           resumes: "All resumes",
-                          review: "Wording tasks",
-                          data: "Data & backups",
+                          review: "Text to review",
+                          data: "Backups & settings",
                           template: "Layout",
-                          "shared-defaults": "Shared defaults",
+                          "shared-defaults": "Default layout",
                         } as Record<string, string>
                       )[view]}
             </h1>
             <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
               <span>
                 {navigation.destination.kind === "resume"
-                  ? locale
+                  ? languageNames[locale]
                   : navigation.destination.kind === "library-section"
-                    ? "Career library"
+                    ? "Career details"
                     : "Workspace"}
               </span>
               <InfoHint label="this workspace view" size="sm">
                 {view === "content" ||
                 view === "library-translations" ||
                 view === "library-overview"
-                  ? "Edits affect shared career content used by resumes. Include new content explicitly in Content & order."
+                  ? "Edits update shared career details used by your resumes. Add new content to each resume in Content & order."
                   : navigation.destination.kind === "resume"
-                    ? `${variant.name || "Untitled resume"} · ${locale}`
+                    ? `${variant.name || "Untitled resume"} · ${languageNames[locale]}`
                     : view === "review"
-                      ? "Missing text, translation comparisons, and library changes. Start with selected-resume output; broaden output and archive filters to include other content."
+                      ? "Find missing text, translations to check, and shared text changes. Use the filters to review a resume or other career details, including archived content."
                       : view === "shared-defaults"
-                        ? "These defaults affect multiple resumes. Resume overrides keep their precedence."
-                        : "Your editable workspace stays in this browser. JSON preserves its complete content and settings."}
+                        ? "These layout settings apply to multiple resumes. Custom settings for a resume still take priority."
+                        : "Your work stays in this browser. Download a backup (JSON) to keep all editable career details, resumes, and settings."}
               </InfoHint>
             </div>
           </div>
@@ -280,7 +281,7 @@ export function EditorPane({
           >
             Return to{" "}
             {navigation.reviewContext
-              ? "wording tasks"
+              ? "text to review"
               : navigation.returnDestination?.kind === "resume"
                 ? "resume"
                 : "previous page"}
@@ -293,7 +294,7 @@ export function EditorPane({
           ) && (
             <p role="status" className="text-sm text-muted-foreground">
               The current review item is unavailable because its content or
-              resume was removed. Return to wording tasks to continue with the
+              resume was removed. Return to text to review to continue with the
               remaining work.
             </p>
           )}
@@ -342,7 +343,7 @@ export function EditorPane({
               }
             }}
             variant="segmented"
-            aria-label="Library section tab"
+            aria-label="Career details section tab"
             spacing={0}
             multiple={false}
           >
@@ -352,7 +353,7 @@ export function EditorPane({
             </ToggleGroupItem>
             <ToggleGroupItem value="review">
               <ListChecks data-icon="inline-start" />
-              Wording tasks
+              Text to review
             </ToggleGroupItem>
           </ToggleGroup>
         )}
@@ -390,10 +391,11 @@ export function EditorPane({
         {view === "data" && (
           <>
             <div className="flex items-center gap-2 text-sm font-medium">
-              Workspace backups
-              <InfoHint label="JSON backups">
-                JSON preserves all editable content and settings. PDF and LaTeX
-                downloads do not update backup freshness.
+              Backups
+              <InfoHint label="editable backups">
+                A backup (JSON) includes all editable career details, resumes,
+                and settings. PDF and LaTeX downloads cannot restore your
+                editable work and do not count as backups.
               </InfoHint>
             </div>
             {dataMenu}
@@ -406,7 +408,7 @@ export function EditorPane({
                   data-icon="inline-start"
                   className="transition-transform group-data-panel-open:rotate-90"
                 />
-                Advanced compiler settings
+                Advanced PDF settings
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="mt-4">
@@ -425,7 +427,7 @@ export function EditorPane({
               navigation.setReturnDestination(navigation.destination);
             }}
           >
-            Edit shared defaults
+            Edit default layout
           </Button>
         )}
         {view === "content" && (

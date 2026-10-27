@@ -13,15 +13,16 @@ const reviewStates = {
     variant: "attention",
   },
   library: {
-    label: "Review library changes",
+    label: "Review shared text changes",
     icon: Library,
     variant: "attention",
   },
   unflagged: {
-    label: "No review flagged",
+    label: "No review reminders",
     icon: Minus,
     variant: "outline",
-    description: "No review flag does not imply verification.",
+    description:
+      "You haven’t been asked to review this text. It may still need checking.",
   },
   resolved: { label: "Resolved", icon: Check, variant: "success" },
 } satisfies Record<string, BadgeAppearance>;

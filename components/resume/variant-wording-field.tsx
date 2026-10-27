@@ -113,13 +113,13 @@ export function VariantWordingField({
       ) : (
         <div className="flex flex-col gap-2 rounded-lg border border-transparent bg-field-readonly p-3">
           <p className="text-xs font-medium text-muted-foreground">
-            {label} · From library · read only
+            {label} · Shared text · read only
           </p>
           <p
             lang={locale}
             className="text-sm wrap-anywhere whitespace-pre-wrap"
           >
-            {plain(value, locale) || "Empty wording"}
+            {plain(value, locale) || "No text yet"}
           </p>
           {errors.find((issue) => issue.path === path) && (
             <p role="alert" className="text-sm text-destructive">
@@ -149,8 +149,8 @@ export function VariantWordingField({
           className="self-start"
           onClick={() =>
             confirm(
-              "Reset to library wording?",
-              `Remove only the ${languageNames[locale]} customization for ${variant.name || "this resume"}. Current library wording: ${plain(shared, locale) || "(empty)"}. Workspace undo can restore the override.`,
+              "Use shared text?",
+              `Remove only the ${languageNames[locale]} customization for ${variant.name || "this resume"}. Current shared text: ${plain(shared, locale) || "(empty)"}. Undo can restore your custom text.`,
               () =>
                 update((draft) =>
                   resetWordingOverride(draft, variant.id, path, locale),
@@ -159,7 +159,7 @@ export function VariantWordingField({
           }
         >
           <RotateCcw data-icon="inline-start" />
-          Reset to library wording
+          Use shared text
         </Button>
       )}
       {field ? (
@@ -188,7 +188,7 @@ export function VariantWordingField({
         </WordingComparisonDetails>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Review inherited wording in the career library.
+          Review shared text in Career details.
         </p>
       )}
       {baselineChanged && override && (
@@ -201,24 +201,24 @@ export function VariantWordingField({
               data-icon="inline-start"
               className="transition-transform group-data-panel-open:rotate-90"
             />
-            Review library changes
+            Review shared text changes
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="mt-3 flex flex-col gap-3 rounded-lg border border-transparent bg-field-readonly p-3">
               <p className="text-sm text-muted-foreground">
-                Library changed. Compare it with your customization before
-                keeping or resetting it.
-                <InfoHint label="library-change review">
-                  Editing alone does not clear this reminder. Keeping the
-                  customization applies only to this resume and does not clear
-                  translation reminders.
+                The shared text changed. Compare it with your custom text, then
+                keep your text or switch to the shared text.
+                <InfoHint label="shared text review">
+                  Editing alone does not clear this reminder. Keeping your
+                  custom text affects only this resume. Translation reminders
+                  stay separate.
                 </InfoHint>
               </p>
               <p
                 lang={locale}
                 className="text-sm wrap-anywhere whitespace-pre-wrap"
               >
-                Previous library · read only:{" "}
+                Previous shared text · read only:{" "}
                 {override.sharedBaseline.spans
                   .map((span) => span.text)
                   .join("") || "(empty)"}
@@ -227,7 +227,7 @@ export function VariantWordingField({
                 lang={locale}
                 className="text-sm wrap-anywhere whitespace-pre-wrap"
               >
-                Current library · read only:{" "}
+                Current shared text · read only:{" "}
                 {plain(shared, locale) || "(empty)"}
               </p>
               <Button
@@ -254,13 +254,13 @@ export function VariantWordingField({
                         ])
                       : feedbackIdentity,
                     message: accepted
-                      ? `Customization kept for ${variant.name || "this resume"}.`
-                      : "Library wording or customization changed. Compare the current versions and try again.",
+                      ? `Custom text kept for ${variant.name || "this resume"}.`
+                      : "The shared or custom text changed. Compare the latest versions and try again.",
                   });
                 }}
               >
                 <Check data-icon="inline-start" />
-                Keep customization
+                Keep my custom text
               </Button>
             </div>
           </CollapsibleContent>
@@ -273,7 +273,7 @@ export function VariantWordingField({
         onClick={() => editLibrary(path, locale)}
       >
         <Pencil data-icon="inline-start" />
-        Edit in library
+        Edit shared text
       </Button>
 
       <p
@@ -304,8 +304,8 @@ export function VariantWordingDetails({
       >
         <LanguageFlag locale={locale} />
         {variantWording(variant, path)?.overrides[locale]
-          ? "Customized wording"
-          : "Library wording"}
+          ? "Custom text"
+          : "Shared text"}
         <ChevronRight
           data-icon="inline-end"
           className="transition-transform group-data-panel-open:rotate-90"

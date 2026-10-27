@@ -84,8 +84,8 @@ export function VariantComparison({
   if (!right)
     return (
       <p className="text-sm text-muted-foreground">
-        Create or duplicate a second resume to compare selections, wording, and
-        settings.
+        Create or duplicate a second resume to compare selected content, text,
+        and layout settings.
       </p>
     );
   const variants = [left, right];
@@ -121,8 +121,8 @@ export function VariantComparison({
             effectiveWording(document.profile.summary, item, "profile.summary"),
             locale,
           ).trim()
-            ? "In output"
-            : "Empty · not in output",
+            ? "Shown in PDF"
+            : "Empty · hidden from PDF",
         ),
       ),
     },
@@ -157,7 +157,7 @@ export function VariantComparison({
             (selected) => selected.entryId === entry.id,
           );
           return {
-            status: `${index < 0 ? "Not selected" : `Selected · entry position ${index + 1}`} · ${entry.archived ? "Archived · not in output" : !selection.visible || index < 0 ? "Not in output" : "In output"}`,
+            status: `${index < 0 ? "Not selected" : `Selected · entry position ${index + 1}`} · ${entry.archived ? "Archived · hidden from PDF" : !selection.visible || index < 0 ? "Hidden from PDF" : "Shown in PDF"}`,
           };
         }),
       });
@@ -181,7 +181,7 @@ export function VariantComparison({
               bullet.body,
               path,
               item,
-              `${index < 0 ? "Not selected" : `Selected · achievement position ${index + 1}`} · ${entry.archived ? "Archived · not in output" : !selected.visible || index < 0 ? "Not in output" : "In output"}`,
+              `${index < 0 ? "Not selected" : `Selected · achievement position ${index + 1}`} · ${entry.archived ? "Archived · hidden from PDF" : !selected.visible || index < 0 ? "Hidden from PDF" : "Shown in PDF"}`,
             );
           }),
         });
@@ -194,7 +194,7 @@ export function VariantComparison({
   for (const key of Object.keys(settings[0]) as (keyof (typeof settings)[0])[])
     rows.push({
       id: `settings.${templateSettingLabels[key]}`,
-      label: `Effective setting · ${templateSettingLabels[key]}`,
+      label: `Final setting · ${templateSettingLabels[key]}`,
       sectionId: "template",
       cells: settings.map((value) => ({
         status:
@@ -298,9 +298,9 @@ export function VariantComparison({
         />
       </FieldGroup>
       <p className="text-sm text-muted-foreground">
-        Read-only comparison. Excluded content and its retained overrides are
-        included below. Settings show the final value after workspace, language,
-        resume, and resume-language overrides.
+        This comparison cannot be edited here. It includes content hidden from
+        the resumes and any custom text saved for it. Layout settings show the
+        final values used for each resume and language.
       </p>
       {!visible.length && <p role="status">No differences in this language.</p>}
       {visible.map((row) => {
@@ -345,7 +345,7 @@ export function VariantComparison({
                               )}
                             </span>
                           ))
-                        : "Empty wording"}
+                        : "No text yet"}
                     </p>
                   )}
                 </div>

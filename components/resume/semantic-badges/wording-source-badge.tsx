@@ -7,25 +7,25 @@ import {
 
 const wordingSources = {
   library: {
-    label: "Library text",
+    label: "Shared text",
     icon: Library,
     variant: "outline",
     description:
-      "Editing this language updates every resume that uses this library text.",
+      "Changes here update every resume that uses this text. Custom text stays specific to one resume and language.",
   },
   inherited: {
-    label: "Uses library text",
+    label: "Uses shared text",
     icon: Library,
     variant: "outline",
     description:
-      "This resume uses the library text for this language. Edit it in the career library, or customize it for this resume.",
+      "This resume uses the shared text for this language. Edit it in Career details, or customize it for this resume.",
   },
   custom: {
     label: "Custom text for this resume",
     icon: Pencil,
     variant: "secondary",
     description:
-      "Edits affect only this resume and language. The library text stays unchanged.",
+      "Edits affect only this resume and language. The shared text stays unchanged.",
   },
 } satisfies Record<string, BadgeAppearance & { description: string }>;
 

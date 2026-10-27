@@ -25,7 +25,7 @@ import { entryTerminology } from "@/types-and-constants/sections";
 export function urlError(value: string): string | undefined {
   if (!value) return;
   if (/[\u0000-\u0020\\]/.test(value))
-    return "Use a URL without spaces, control characters, or backslashes.";
+    return "Enter a link without spaces, line breaks, or backslashes.";
   try {
     const url = new URL(value);
     if (!["https:", "http:", "mailto:", "tel:"].includes(url.protocol))
@@ -36,9 +36,9 @@ export function urlError(value: string): string | undefined {
     )
       return "Add an email address or phone number.";
     if (url.username || url.password)
-      return "Links cannot contain credentials.";
+      return "Remove the username or password from this link.";
   } catch {
-    return "Enter a complete URL, including its scheme.";
+    return "Enter a complete link, such as https://example.com.";
   }
 }
 
@@ -52,7 +52,8 @@ export function dateErrors(entry: Entry): { start?: string; end?: string } {
   const errors: { start?: string; end?: string } = {};
   for (const field of ["start", "end"] as const)
     if (entry[field] && !pattern.test(entry[field]))
-      errors[field] = "Use YYYY or YYYY-MM, between 1900 and 2299.";
+      errors[field] =
+        "Enter a year or a year and month, such as 2024 or 2024-06, between 1900 and 2299.";
   if (
     !errors.start &&
     !errors.end &&
@@ -87,7 +88,7 @@ export function validateOutput(
     if (!plain(value, locale).trim())
       errors.push({
         path,
-        message: `${label} is missing in ${locale}. Add wording for this language or remove the unfinished content from this resume.`,
+        message: `${label} is missing in ${languageNames[locale]}. Add text for this language or remove the unfinished content from this resume.`,
       });
   };
   const wording = (value: LocalizedText, path: string) => {
@@ -96,12 +97,12 @@ export function validateOutput(
       sharedWarnings.push({
         path,
         message:
-          "Library wording changed beneath this customization. Compare it, then explicitly keep the customization or reset to library wording. Editing alone does not clear this reminder. Draft downloads remain available.",
+          "The shared text changed since you customized this resume. Compare the texts, then keep your custom text or use the shared text. Editing alone does not clear this reminder. You can still download this resume.",
       });
     if (value[locale].needsReview && plain(value, locale).trim())
       warnings.push({
         path,
-        message: `Check whether ${languageNames[locale]} still conveys the same information as ${languageNames[locale === "en-US" ? "pt-BR" : "en-US"]}, then confirm that comparison or explicitly confirm both languages. Draft downloads remain available.`,
+        message: `Check whether ${languageNames[locale]} still conveys the same information as ${languageNames[locale === "en-US" ? "pt-BR" : "en-US"]}, then confirm that both languages mean the same. You can still download this resume.`,
       });
     for (const span of value[locale].spans) {
       const error = urlError(span.href);

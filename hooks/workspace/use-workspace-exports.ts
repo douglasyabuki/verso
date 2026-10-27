@@ -12,6 +12,7 @@ import {
 } from "@/lib/resume/files";
 import { validateOutput } from "@/lib/resume/validation";
 import type { Locale } from "@/types-and-constants/languages";
+import { languageNames } from "@/types-and-constants/languages";
 import { locales } from "@/types-and-constants/languages";
 import type { ResumeDocument } from "@/types-and-constants/resume";
 
@@ -50,7 +51,7 @@ export function useWorkspaceExports({
           ).errors;
           if (issues.length)
             throw new Error(
-              `Bilingual export needs valid ${language} content: ${issues.map((issue) => issue.message).join(" ")}`,
+              `Bilingual export needs valid ${languageNames[language]} content: ${issues.map((issue) => issue.message).join(" ")}`,
             );
         }
         const outputs = [];
@@ -82,8 +83,8 @@ export function useWorkspaceExports({
       }
       toast.add({
         type: "success",
-        title: "Download requested",
-        description: `${kind === "both" ? "Bilingual ZIP" : kind === "latex" ? "LaTeX and assets" : "PDF"} download started. JSON backup freshness is unchanged.`,
+        title: "Download started",
+        description: `${kind === "both" ? "Bilingual ZIP" : kind === "latex" ? "LaTeX and assets" : "PDF"} download started. Download a backup separately to keep your editable career details, resumes, and settings.`,
       });
     } catch (error) {
       toast.add({

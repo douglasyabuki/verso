@@ -37,9 +37,9 @@ export function useWorkspaceBackups({
       void controller.markBackup(snapshot);
       toast.add({
         type: "success",
-        title: "Download requested",
+        title: "Download started",
         description:
-          "JSON backup download initiated. Browser saving and backup freshness are tracked separately.",
+          "Your backup download started. It includes all editable career details, resumes, and settings. Saving in this browser is tracked separately.",
       });
     } catch (error) {
       toast.add({
@@ -56,7 +56,7 @@ export function useWorkspaceBackups({
         throw new Error("Choose a JSON backup no larger than 5 MB.");
       const document = parseBackup(await file.text());
       const backupFingerprint = await fingerprint(document);
-      controller.requestReplacement("Import JSON workspace?", {
+      controller.requestReplacement("Restore from backup?", {
         document,
         backupFingerprint,
       });

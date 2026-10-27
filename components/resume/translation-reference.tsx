@@ -50,7 +50,7 @@ function ReferenceWording({
             );
           })
         ) : (
-          <span className="text-muted-foreground">Empty wording</span>
+          <span className="text-muted-foreground">No text yet</span>
         )}
       </p>
     </div>
@@ -83,12 +83,12 @@ export function TranslationReference({
             ? changed
               ? `${languageNames[current.locale]} changed since comparison`
               : "Translation comparison requested"
-            : "No review flagged"}
+            : "No review reminders"}
         </span>
         <InfoHint label="comparison status" size="sm">
-          No review flag does not mean the wording has been explicitly verified.
-          Compare the same information in both languages; no edit is required if
-          it already matches.
+          Check that both languages convey the same information. You do not need
+          to edit text that already matches. Even without a review reminder, the
+          text may still need checking.
         </InfoHint>
       </div>
       <div className="grid gap-3 @2xl:grid-cols-2">

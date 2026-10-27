@@ -10,9 +10,13 @@ export function ExportStatusBadge({
     <SemanticBadge
       appearance={
         state === "valid"
-          ? { label: "Valid for export", icon: Check, variant: "success" }
+          ? {
+              label: "Required details complete",
+              icon: Check,
+              variant: "success",
+            }
           : {
-              label: "Output blocked",
+              label: "Fix errors before downloading",
               icon: CircleAlert,
               variant: "destructive",
             }

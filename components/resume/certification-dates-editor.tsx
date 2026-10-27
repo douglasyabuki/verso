@@ -104,8 +104,8 @@ function DateSetup({
     <FieldGroup>
       <FieldDescription>
         {committed
-          ? "Certification dates are set. Any retained range also appears as Additional dates in the PDF."
-          : "Only the retained date range appears in the PDF. Setup changes nothing until you save."}
+          ? "Certification dates are set. Any original date range also appears as Additional dates in the PDF."
+          : "Only the original date range appears in the PDF. Setup changes nothing until you save."}
       </FieldDescription>
       {committed && (
         <FieldDescription>
@@ -150,8 +150,8 @@ function DateSetup({
           <DialogHeader>
             <DialogTitle>Certification dates</DialogTitle>
             <DialogDescription>
-              Use YYYY or YYYY-MM, between 1900 and 2299. Your retained date
-              range stays unchanged.
+              Enter a year or a year and month, such as 2024 or 2024-06, between
+              1900 and 2299. Your original date range stays unchanged.
             </DialogDescription>
           </DialogHeader>
           <FieldGroup>
@@ -238,7 +238,7 @@ function DateSetup({
       </Dialog>
       {committed && (
         <Button variant="outline" onClick={() => onSave(null)}>
-          Use legacy dates only
+          Use original dates only
         </Button>
       )}
     </FieldGroup>

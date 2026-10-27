@@ -36,7 +36,7 @@ export type ReviewItem = WorkspaceFocusTarget & {
 export const reviewCategoryLabels = {
   missing: "Missing required text",
   translation: "Compare translations",
-  library: "Review library changes",
+  library: "Review shared text changes",
 } as const;
 
 type ReviewCategory = keyof typeof reviewCategoryLabels;

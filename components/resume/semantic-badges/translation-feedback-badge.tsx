@@ -19,7 +19,7 @@ export function TranslationFeedbackBadge({
             }
           : {
               label:
-                "Wording changed or confirmation is unavailable. Check the current pair and try again.",
+                "The text changed or could not be confirmed. Compare the latest text in both languages and try again.",
               icon: CircleAlert,
               variant: "destructive",
             }

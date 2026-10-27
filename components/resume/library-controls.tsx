@@ -100,9 +100,9 @@ export function SectionVisibilityHint({
         onPointerEnter={() => clearTimeout(leaveTimer.current)}
         onPointerLeave={close}
       >
-        This section is hidden in this resume and omitted from output. Turn on
-        its eye toggle in Content & order to include it. You can still edit and
-        sort its content.
+        This section is hidden from this resume’s PDF. Use Show in resume in
+        Content & order to include it. You can still edit and reorder its
+        content.
       </TooltipContent>
     </Tooltip>
   );

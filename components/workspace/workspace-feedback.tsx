@@ -18,22 +18,23 @@ export function WorkspaceFeedback() {
       <CircleAlert aria-hidden="true" />
       <AlertTitle>
         {state.sessionOnly
-          ? "Session only — changes are not saved in this browser"
+          ? "Changes are kept only in this tab"
           : state.conflict
             ? "Browser saving paused"
             : "Saving unavailable"}
       </AlertTitle>
       <AlertDescription>
         <p>
+          {state.sessionOnly && "Closing this tab can lose your changes. "}
           {state.error ||
-            "Export JSON to keep your work. Existing stored data is untouched."}
+            "Download a backup to keep your work. The version saved in this browser is unchanged."}
         </p>
         {stored && (
           <p>
-            Stored version:{" "}
+            Saved in this browser:{" "}
             {stored.snapshot
               ? `${stored.snapshot.document.profile.name || "Untitled profile"} · revision ${stored.snapshot.document.revision} · ${stored.savedAt}`
-              : stored.error || "No stored workspace"}
+              : stored.error || "No work saved in this browser"}
             .
           </p>
         )}
@@ -45,7 +46,7 @@ export function WorkspaceFeedback() {
               disabled={state.saving}
               onClick={() => void controller.loadReviewed()}
             >
-              Load reviewed stored version
+              Load the saved version shown above
             </Button>
           )}
           <Button
@@ -55,8 +56,8 @@ export function WorkspaceFeedback() {
             onClick={controller.reviewOverwrite}
           >
             {state.sessionOnly
-              ? "Resume browser saving…"
-              : "Review and retry saving…"}
+              ? "Start saving in this browser…"
+              : "Review saved version and retry…"}
           </Button>
           {!state.sessionOnly && (
             <Button

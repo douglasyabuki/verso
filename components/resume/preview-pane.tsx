@@ -33,6 +33,7 @@ import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import { formatCount } from "@/lib/format-count";
 import { validateOutput } from "@/lib/resume/validation";
 import type { Locale } from "@/types-and-constants/languages";
+import { languageNames } from "@/types-and-constants/languages";
 
 const PdfPreview = dynamic(() => import("@/components/resume/pdf-preview"), {
   ssr: false,
@@ -43,12 +44,12 @@ const PdfPreview = dynamic(() => import("@/components/resume/pdf-preview"), {
 const statusLabels: Record<string, string> = {
   idle: "Ready",
   queued: "Preview queued",
-  initializing: "Loading compiler",
-  ready: "Compiler ready",
-  compiling: "Compiling PDF",
+  initializing: "Starting PDF tools",
+  ready: "Ready to create PDF",
+  compiling: "Creating PDF",
   successful: "Preview ready",
   failed: "Needs attention",
-  "timed-out": "Compilation timed out",
+  "timed-out": "PDF creation took too long",
 };
 
 export function PreviewPane({
@@ -85,7 +86,12 @@ export function PreviewPane({
                 state={compiler.stale ? "stale" : "current"}
               />
               <span className="text-xs text-muted-foreground">
-                r{compiler.preview.revision} · {compiler.preview.locale}
+                Version {compiler.preview.revision} ·{" "}
+                {compiler.preview.locale === "pt-BR"
+                  ? languageNames["pt-BR"]
+                  : compiler.preview.locale === "en-US"
+                    ? languageNames["en-US"]
+                    : compiler.preview.locale}
               </span>
             </>
           )}
@@ -132,7 +138,9 @@ export function PreviewPane({
           className="shrink-0 rounded-none border-x-0"
         >
           <CircleAlert aria-hidden="true" />
-          <AlertTitle>Draft needs {locale} content</AlertTitle>
+          <AlertTitle>
+            Check this resume’s {languageNames[locale]} details
+          </AlertTitle>
           <AlertDescription>
             {validation.errors
               .slice(0, 3)
@@ -153,11 +161,11 @@ export function PreviewPane({
             <ListChecks data-icon="inline-start" />
             {formatCount(
               validation.warnings.length,
-              "wording task",
-              "wording tasks",
+              "review item",
+              "text to review",
             )}
-            <InfoHint label="wording tasks and downloads" variant="badge">
-              Wording review reminders do not block valid previews or downloads.
+            <InfoHint label="text to review and downloads" variant="badge">
+              You can still preview and download a resume with review reminders.
             </InfoHint>
           </Badge>
           <Button variant="ghost" size="sm" onClick={onIssues}>
@@ -167,10 +175,10 @@ export function PreviewPane({
       )}
       {compiler.error && validation.errors.length === 0 && (
         <Alert variant="destructive" className="shrink-0 rounded-none">
-          <AlertTitle>Compilation could not finish</AlertTitle>
+          <AlertTitle>Could not create the PDF</AlertTitle>
           <AlertDescription>
-            {compiler.error.message} Previous preview retained. If assets are
-            missing, check compiler diagnostics.
+            {compiler.error.message} Your previous preview is still available.
+            Open PDF generation details for technical information.
           </AlertDescription>
         </Alert>
       )}
@@ -185,7 +193,7 @@ export function PreviewPane({
               data-icon="inline-start"
               className="transition-transform group-data-panel-open:rotate-90"
             />
-            Compiler diagnostics
+            PDF generation details
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CodeBlock size="sm" className="mt-2">
@@ -196,7 +204,7 @@ export function PreviewPane({
                 className="max-h-[min(12rem,20dvh)] min-w-0"
                 viewportProps={{
                   role: "region",
-                  "aria-label": "Compiler diagnostics log",
+                  "aria-label": "PDF generation details log",
                 }}
               >
                 <CodeBlockContent

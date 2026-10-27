@@ -115,8 +115,10 @@ export function WorkspaceResumeControls({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground">
-          {dirty ? "Changes since JSON backup" : "Matches JSON backup"} · Draft
-          r{document.revision}
+          {dirty
+            ? "Changes since your last backup"
+            : "No changes since your last backup"}{" "}
+          · Draft version {document.revision}
         </span>
         <DropdownMenu>
           <DropdownMenuTrigger

@@ -8,12 +8,12 @@ import {
 const contentStates = {
   archived: { label: "Archived", icon: Archive, variant: "outline" },
   "archived-omitted": {
-    label: "Archived · omitted",
+    label: "Archived · hidden from resumes",
     icon: Archive,
     variant: "outline",
   },
   "section-hidden": {
-    label: "Section hidden · omitted",
+    label: "Hidden from this resume",
     icon: EyeOff,
     variant: "outline",
   },

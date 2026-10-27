@@ -120,7 +120,7 @@ export function reviewItems(
           path: shared.path,
           locale,
           resumeId: variant?.id,
-          owner: variant ? variant.name || "Untitled resume" : "Career library",
+          owner: variant ? variant.name || "Untitled resume" : "Career details",
           field,
           reasons,
           categories,
@@ -131,9 +131,9 @@ export function reviewItems(
             ? wording?.overrides[locale]
               ? "Customized for this resume"
               : wording
-                ? "Uses library text · independent resume review"
-                : "Uses library text · customization reset"
-            : "Library text",
+                ? "Uses shared text · review separately for this resume"
+                : "Uses shared text · custom text removed"
+            : "Shared text",
         });
       }
     }
@@ -170,7 +170,7 @@ export function matchesReviewFilters(
   );
 }
 
-/** Describe output relevance without confusing retained customizations with unused library wording.
+/** Describe output relevance without confusing retained customizations with unused shared text.
  * @param item Derived task. @param selectedResumeId Selected output resume.
  * @returns A readable relevance label for list rows and details.
  * @example reviewOutputLabel(item, variant.id)
@@ -181,10 +181,6 @@ export function reviewOutputLabel(
 ): string {
   if (item.usedBy.includes(selectedResumeId)) return "Used by selected resume";
   if (item.resumeId)
-    return item.output
-      ? "Used by its owning resume"
-      : "Excluded from its owning resume";
-  return item.output
-    ? "Inherited by another resume's output"
-    : "Not inherited by any resume's output";
+    return item.output ? "Used by this resume" : "Not used by this resume";
+  return item.output ? "Used by another resume" : "Not used by any resume";
 }

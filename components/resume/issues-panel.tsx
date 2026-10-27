@@ -57,10 +57,10 @@ export function IssuesPanel({
               category: "layout",
               locale,
               path: "settings.targetPages",
-              section: "Whole output",
-              entry: "Whole output",
-              field: "Template page target",
-              message: `${pages} pages exceeds the target of ${target}. Shorten wording, change resume selections, or adjust layout settings. Downloads remain available.`,
+              section: "Whole resume",
+              entry: "Whole resume",
+              field: "Target number of pages",
+              message: `${pages} pages exceeds the target of ${target}. Shorten the text, change resume selections, or adjust layout settings. Downloads remain available.`,
             },
           ]
         : [];
@@ -76,13 +76,13 @@ export function IssuesPanel({
             ? "Layout out of date"
             : "Layout not checked";
     const layoutDescription = layout.pending
-      ? "Waiting for the current compiled PDF and its page count."
+      ? "Waiting for the latest PDF and its page count."
       : (layout.result?.error ??
         (pages !== undefined
           ? `${formatCount(pages, "page", "pages")} / target ${target}. This checks page count, not clipping or overlapping text.`
           : validation[locale].errors.length
             ? "Fix this language's blocking errors before checking its layout."
-            : "Check layout to compile this language. Older PDFs do not describe the current draft."));
+            : "Check layout to create the PDF in this language. Older PDFs do not describe the current draft."));
     return {
       locale,
       ...validation[locale],
@@ -162,7 +162,11 @@ export function IssuesPanel({
           {sharedReviews > 0 && (
             <Badge variant="attention">
               <Library data-icon="inline-start" />
-              {formatCount(sharedReviews, "library change", "library changes")}
+              {formatCount(
+                sharedReviews,
+                "shared text change",
+                "shared text changes",
+              )}
             </Badge>
           )}
           {layouts > 0 && (
@@ -173,7 +177,7 @@ export function IssuesPanel({
           )}
           {errors + reviews + sharedReviews + layouts === 0 && (
             <span className="text-xs text-muted-foreground">
-              No issues flagged
+              No issues found
             </span>
           )}
         </div>
@@ -189,8 +193,8 @@ export function IssuesPanel({
               {variant.name || "Untitled resume"} / Only content used by this
               resume is checked. Shared-field issues affect both languages.
               <InfoHint label="issue severity" size="sm">
-                Warnings never block valid downloads. Only output-blocking
-                errors must be fixed.
+                Review reminders do not prevent downloading. Fix the errors
+                listed below before creating or downloading a PDF.
               </InfoHint>
             </p>
             <div className="grid gap-6 lg:grid-cols-2">
@@ -212,10 +216,10 @@ export function IssuesPanel({
                     />
                   </div>
                   <IssueGroup
-                    title="Output-blocking errors"
+                    title="Errors to fix before downloading"
                     issues={language.errors}
                     emptyTitle="No blocking errors"
-                    emptyDescription="This language can be compiled and downloaded."
+                    emptyDescription="You can create and download the PDF in this language."
                     onIssue={onIssue}
                     disabled={disabled}
                   />
@@ -224,18 +228,18 @@ export function IssuesPanel({
                     issues={language.warnings.filter(
                       (issue) => issue.category === "translation",
                     )}
-                    emptyTitle="No translation changes flagged"
-                    emptyDescription="No included wording is flagged for review in this language."
+                    emptyTitle="No translation reminders"
+                    emptyDescription="No text used in this resume has a translation reminder in this language."
                     onIssue={onIssue}
                     disabled={disabled}
                   />
                   <IssueGroup
-                    title="Review library changes"
+                    title="Review shared text changes"
                     issues={language.warnings.filter(
                       (issue) => issue.category === "shared-wording",
                     )}
-                    emptyTitle="No library changes flagged"
-                    emptyDescription="No included customization differs from its library baseline. This does not mean it has been explicitly checked."
+                    emptyTitle="No shared text changes to review"
+                    emptyDescription="No shared text changes need review for this resume’s custom text. This does not mean the text has been checked."
                     onIssue={onIssue}
                     disabled={disabled}
                   />

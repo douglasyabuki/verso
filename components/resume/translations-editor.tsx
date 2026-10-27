@@ -173,10 +173,10 @@ export function TranslationsEditor({
       ? [
           {
             key: "owner" as keyof ReviewFilters,
-            label: "Owner",
+            label: "Text belongs to",
             options: [
-              ["all", "All owners"],
-              ["library", "Career library"],
+              ["all", "All career details and resumes"],
+              ["library", "Career details"],
               ...document.variants.map((resume) => [
                 `resume:${resume.id}`,
                 resume.name || "Untitled resume",
@@ -203,7 +203,7 @@ export function TranslationsEditor({
     .concat([
       {
         key: "language",
-        label: "Target language",
+        label: "Language",
         options: [
           ["all", "Both languages"],
           ["en-US", "English"],
@@ -212,9 +212,9 @@ export function TranslationsEditor({
       },
       {
         key: "reason",
-        label: "Task category",
+        label: "Review type",
         options: [
-          ["all", scope === "queue" ? "All unresolved reasons" : "All wording"],
+          ["all", scope === "queue" ? "All review types" : "All text"],
           ...Object.entries(reviewCategoryLabels),
         ],
       },
@@ -229,14 +229,14 @@ export function TranslationsEditor({
       },
       {
         key: "output",
-        label: "Output scope",
+        label: "Used in",
         options: [
           [
             "selected",
             `Selected resume: ${outputResume?.name || "Unavailable resume"}`,
           ],
           ["any", "Any resume"],
-          ["all", "All content (includes excluded)"],
+          ["all", "All content, including content outside resumes"],
           ["unused", "Unused by any resume"],
         ],
       },
@@ -332,7 +332,7 @@ export function TranslationsEditor({
                 ? "Archived"
                 : "Active and archived"}
             {filters.owner !== "all" &&
-              ` · ${filters.owner === "library" ? "Career library" : document.variants.find((resume) => `resume:${resume.id}` === filters.owner)?.name || "Unavailable owner"}`}
+              ` · ${filters.owner === "library" ? "Career details" : document.variants.find((resume) => `resume:${resume.id}` === filters.owner)?.name || "Unavailable content"}`}
             {filters.section !== "all" &&
               ` · ${
                 filters.section === "profile"
@@ -343,11 +343,12 @@ export function TranslationsEditor({
                       .join("") || "Unavailable section"
               }`}
           </span>
-          <InfoHint label="wording task filters">
-            Filters intersect. Counts identify one field, language, and owner;
-            categories may overlap. Missing required text can block its output.
-            Translation and library-change reminders do not block valid
-            downloads. Sidebar counts include the whole workspace.
+          <InfoHint label="review item filters">
+            Only text matching all your filters appears. Each item is counted
+            once for its language and the career details or resume it belongs
+            to, even if it needs more than one kind of review. Missing required
+            text can prevent downloading. Translation and shared text reminders
+            do not. The sidebar count includes all career details and resumes.
           </InfoHint>
         </div>
         <CollapsibleContent>
@@ -364,8 +365,8 @@ export function TranslationsEditor({
           aria-live="polite"
           className="text-xs text-muted-foreground"
         >
-          {candidates.length} unresolved
-          {queueContext ? " in global queue" : " matching tasks"}
+          {candidates.length} items left
+          {queueContext ? " across all reviews" : " matching your filters"}
         </p>
         {Object.entries(reviewCategoryLabels).map(([category, label]) => {
           const count = candidates.filter((item) =>
@@ -384,7 +385,7 @@ export function TranslationsEditor({
           ref={list}
           className="flex max-h-80 min-w-0 flex-col gap-3 overflow-y-auto p-1 @3xl:max-h-[60dvh]"
           role="region"
-          aria-label="Wording items"
+          aria-label="Text to review"
           onScroll={(event) => {
             if (event.currentTarget.scrollTop !== context.scroll)
               onContext({ ...context, scroll: event.currentTarget.scrollTop });
@@ -393,7 +394,7 @@ export function TranslationsEditor({
           {!visible.length && !currentItem && (
             <Empty role="status">
               <EmptyHeader>
-                <EmptyTitle>No matching wording</EmptyTitle>
+                <EmptyTitle>No matching text</EmptyTitle>
                 <EmptyDescription>
                   Change filters to see other content.
                 </EmptyDescription>
@@ -428,7 +429,7 @@ export function TranslationsEditor({
                 lang={item.locale}
                 className="line-clamp-2 text-sm leading-relaxed wrap-anywhere"
               >
-                {plain(item.field.value, item.locale) || "Empty wording"}
+                {plain(item.field.value, item.locale) || "No text yet"}
               </span>
               <span className="mt-auto flex flex-col items-start gap-2 border-t pt-3">
                 <WordingStatus
@@ -469,8 +470,7 @@ export function TranslationsEditor({
                     {!matches(currentItem) && (
                       <p className="text-sm text-muted-foreground">
                         Current item is outside these filters. It stays open
-                        until you open another item or leave this review
-                        context.
+                        until you open another item or leave this page.
                       </p>
                     )}
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -509,7 +509,7 @@ export function TranslationsEditor({
                           className="text-sm whitespace-pre-wrap"
                         >
                           {plain(currentItem.field.value, currentItem.locale) ||
-                            "Empty library wording"}
+                            "No shared text yet"}
                         </p>
                         <Button
                           variant="outline"
@@ -520,7 +520,7 @@ export function TranslationsEditor({
                             })
                           }
                         >
-                          Review in career library
+                          Review in career details
                         </Button>
                       </div>
                     ) : (
@@ -560,7 +560,7 @@ export function TranslationsEditor({
                         variant="outline"
                         onClick={() => onOwner(currentItem)}
                       >
-                        Open owning editor
+                        Open in editor
                       </Button>
                     )}
                   </CardFooter>
@@ -569,7 +569,7 @@ export function TranslationsEditor({
               {!currentItem && (
                 <CardFooter>
                   <Button variant="outline" onClick={() => onOwner(current)}>
-                    Return safely to review
+                    Return to text reviews
                   </Button>
                 </CardFooter>
               )}
@@ -579,7 +579,7 @@ export function TranslationsEditor({
           {!current && (
             <Empty>
               <EmptyHeader>
-                <EmptyTitle>Select wording</EmptyTitle>
+                <EmptyTitle>Select text to review</EmptyTitle>
               </EmptyHeader>
             </Empty>
           )}

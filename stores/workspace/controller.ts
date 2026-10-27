@@ -104,7 +104,7 @@ export class WorkspaceController {
           error:
             this.review.error ??
             (!canCoordinate()
-              ? "Web Locks are unavailable. Browser saving is disabled."
+              ? "This browser cannot safely save changes across tabs. Changes are kept only in this tab and can be lost when you close it. Download a backup to keep your work."
               : null),
           savedIdentity: snapshot ? this.identity(snapshot) : null,
         });
@@ -329,7 +329,7 @@ export class WorkspaceController {
         replacing: false,
         conflict: result.review,
         error:
-          "Stored data changed after it was reviewed. Review it again before replacing anything.",
+          "The version saved in this browser changed. Review the latest version before replacing it.",
       });
     } else if (result.status === "failure") {
       const backupChanged =
@@ -339,7 +339,7 @@ export class WorkspaceController {
         saving: false,
         replacing: false,
         error: backupChanged
-          ? `The JSON backup marker could not be saved in this browser. ${result.error}`
+          ? `The record of your latest backup could not be saved in this browser. ${result.error}`
           : result.error,
       });
     } else this.patch({ saving: false, replacing: false });
@@ -449,14 +449,14 @@ export class WorkspaceController {
     try {
       if (!canCoordinate())
         throw new Error(
-          "Web Locks are unavailable. Continue in this tab or export JSON.",
+          "This browser cannot safely save changes across tabs. Continue in this tab only and download a backup to keep your work.",
         );
       const review = loadWorkspace();
       this.generation++;
       clearTimeout(this.timer);
       this.patch({
         pending: {
-          title: "Replace the reviewed stored version",
+          title: "Replace the version saved in this browser",
           snapshot: this.state.pending?.snapshot ?? {
             document: this.state.document,
             backupFingerprint: this.state.backupFingerprint,
@@ -470,7 +470,7 @@ export class WorkspaceController {
         error:
           error instanceof Error
             ? error.message
-            : "Storage could not be reviewed.",
+            : "Could not read the version saved in this browser. Download a backup to keep your current work.",
       });
     }
   };
@@ -514,7 +514,8 @@ export class WorkspaceController {
         saving: false,
         replacing: false,
         conflict: result.review,
-        error: "Stored data changed again. Review the newer version.",
+        error:
+          "The version saved in this browser changed again. Review the latest version.",
       });
     else
       this.patch({

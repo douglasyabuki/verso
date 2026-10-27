@@ -84,8 +84,8 @@ export function VariantsEditor({
           <div className="flex items-center gap-1.5 text-lg">
             <CardTitle size="section">Resume details</CardTitle>
             <InfoHint label="resume content" size="lg">
-              Select sections, entries, and achievements, then set their output
-              order. Library ordering is independent.
+              Select sections, entries, and achievements, then choose their
+              order in the PDF. Their order in Career details stays separate.
             </InfoHint>
           </div>
         </CardHeader>
@@ -132,7 +132,7 @@ export function VariantsEditor({
           <Card>
             <CardHeader>
               <div className="flex items-center gap-1.5 text-lg">
-                <CardTitle size="section">Profile summary wording</CardTitle>
+                <CardTitle size="section">Profile summary text</CardTitle>
                 <InfoHint label="summary scope" size="lg">
                   Shared by default. Customizations belong to this resume and
                   language.
@@ -157,8 +157,8 @@ export function VariantsEditor({
               <div className="flex items-center gap-1.5 text-lg">
                 <CardTitle size="section">Find resume content</CardTitle>
                 <InfoHint label="content order" size="lg">
-                  Selected content appears first in output order. Archived
-                  entries are omitted until restored.
+                  Selected content appears first, in the order used in the PDF.
+                  Archived entries stay hidden until restored.
                 </InfoHint>
               </div>
               <CardDescription>{variant.name || "This resume"}</CardDescription>
@@ -182,8 +182,8 @@ export function VariantsEditor({
               <EmptyHeader>
                 <EmptyTitle>No matching entries</EmptyTitle>
                 <EmptyDescription>
-                  Clear search, include archived entries, or add content in the
-                  library.
+                  Clear search, include archived entries, or add content in
+                  Career details.
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -320,7 +320,7 @@ function VariantSection({
                   <p className="text-sm text-muted-foreground">
                     {section.entries.length
                       ? "No matching entries in this section."
-                      : `Add ${terms.singular} entries to this section in the career library.`}
+                      : `Add ${terms.singular} entries to this section in the career details.`}
                   </p>
                 )}
                 <SortableList

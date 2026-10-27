@@ -141,7 +141,7 @@ function TailoredFields({
             target.country = country.toUpperCase();
           }, group)
         }
-        description="Two letters. The PDF localizes the country name."
+        description="Two letters. The PDF shows the country name in the selected language."
       />
     </FieldGroup>
   );
@@ -149,7 +149,7 @@ function TailoredFields({
     <FieldSet>
       <FieldLegend>
         {certification
-          ? "Retained date range"
+          ? "Original date range"
           : education
             ? "Attendance dates"
             : section.kind === "experience"
@@ -161,7 +161,7 @@ function TailoredFields({
       <FieldDescription>
         {certification
           ? "These original facts are independent of certification dates. They remain visible in the PDF, and setup never changes them."
-          : "Optional shared facts. Use YYYY or YYYY-MM."}
+          : "Optional shared facts. Enter a year or a year and month, for example 2024 or 2024-06."}
       </FieldDescription>
       <FieldGroup className="grid gap-4 sm:grid-cols-2">
         <TextField
@@ -182,7 +182,7 @@ function TailoredFields({
             fieldKey={`entries.${entry.id}.end`}
             label={
               entry.ongoing
-                ? "Retained end date (not displayed while ongoing)"
+                ? "Original end date (hidden while ongoing)"
                 : "End date"
             }
             value={entry.end}
@@ -223,7 +223,7 @@ function TailoredFields({
         }, group)
       }
       description="Separate names with commas."
-      hint="Shared across languages. Use localized items below for wording that needs translation."
+      hint="Shared across languages. Use the text fields below for details that need translation."
     />
   );
   return (
@@ -237,7 +237,7 @@ function TailoredFields({
         label={terms.title}
         required
         errors={errors}
-        description={`For example: ${terms.example}. Wording is specific to each language.`}
+        description={`For example: ${terms.example}. Text is specific to each language.`}
       />
       {!skills && !organizationFirst && organization}
       {locationInMain && location}

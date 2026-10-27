@@ -164,8 +164,8 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
             </EmptyMedia>
             <EmptyTitle>Your document starts here</EmptyTitle>
             <EmptyDescription>
-              Add your name and some career content. The compiled PDF will
-              appear here as you work.
+              Add your name and some career content. The PDF will appear here as
+              you work.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -327,14 +327,14 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
             data-icon="inline-start"
             className="transition-transform group-data-panel-open:rotate-90"
           />
-          Text extraction & diagnostics
+          PDF text & technical details
         </CollapsibleTrigger>
         <CollapsibleContent>
           <ScrollArea
             className="mt-2 max-h-[min(12rem,20dvh)] min-w-0"
             viewportProps={{
               role: "region",
-              "aria-label": "Extracted PDF text and diagnostics",
+              "aria-label": "PDF text and technical details",
             }}
           >
             <pre className="pr-3 text-xs wrap-anywhere whitespace-pre-wrap">

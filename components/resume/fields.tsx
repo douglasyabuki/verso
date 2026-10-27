@@ -256,7 +256,7 @@ export function LinksEditor({
           />
           <TextField
             fieldKey={`links.${link.id}.url`}
-            label="URL"
+            label="Link address"
             value={link.url}
             maxLength={2_000}
             onChange={(url, group) =>
