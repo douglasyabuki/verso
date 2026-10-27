@@ -581,6 +581,10 @@ export function WorkspaceView() {
               editor: layout.split,
               preview: 100 - layout.split,
             }}
+            resizeTargetMinimumSize={{
+              fine: 5,
+              coarse: 16,
+            }}
             onLayoutChanged={(sizes) => changeLayout({ split: sizes.editor })}
           >
             <ResizablePanel id="editor" minSize="30%">
