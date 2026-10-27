@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ChevronDown,
+  ChevronRight,
   CircleAlert,
   Languages,
   Library,
@@ -133,13 +133,17 @@ export function IssuesPanel({
         <Button
           variant="ghost"
           size="sm"
+          className="group/issues"
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen(!open)}
         >
           <ListChecks data-icon="inline-start" />
           Issues ({errors + reviews + sharedReviews + layouts})
-          <ChevronDown data-icon="inline-end" />
+          <ChevronRight
+            data-icon="inline-end"
+            className="transition-transform duration-200 group-aria-expanded/issues:rotate-90 motion-reduce:transition-none"
+          />
         </Button>
         <div
           className="flex flex-wrap items-center gap-2"

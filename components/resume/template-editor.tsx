@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Files, Ruler, Type } from "lucide-react";
+import { ChevronRight, Files, Ruler, Type } from "lucide-react";
 import { useId, useState } from "react";
 
 import { LayoutColorField } from "@/components/resume/layout/layout-color-field";
@@ -585,6 +585,7 @@ function LayoutInspector({
           {appearanceGroups.map((group) => (
             <Collapsible
               key={group.name}
+              className="min-w-0"
               open={openGroups.includes(group.name)}
               onOpenChange={(open) => {
                 if (drafts.flush())
@@ -595,12 +596,13 @@ function LayoutInspector({
                   );
               }}
             >
-              <CollapsibleTrigger className="flex w-full flex-col items-start gap-1 rounded-md p-2 text-left hover:bg-muted focus-visible:outline-ring">
-                <span className="flex w-full items-center justify-between font-medium">
-                  {group.name}
-                  <ChevronDown className="size-4" />
-                </span>
-                <span className="text-xs text-muted-foreground">
+              <CollapsibleTrigger className="group/layout-group grid w-full grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 rounded-md p-2 text-left transition-colors hover:bg-muted focus-visible:outline-ring data-panel-open:bg-muted/50 motion-reduce:transition-none">
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-4 text-muted-foreground transition-transform duration-200 group-data-panel-open/layout-group:rotate-90 motion-reduce:transition-none"
+                />
+                <span className="text-sm font-medium">{group.name}</span>
+                <span className="col-start-2 min-w-0 text-xs leading-relaxed text-muted-foreground">
                   {group.keys
                     .slice(0, 3)
                     .map(
@@ -611,7 +613,10 @@ function LayoutInspector({
                 </span>
               </CollapsibleTrigger>
               <CollapsibleContent keepMounted>
-                <FieldSet disabled={disabled} className="pt-4">
+                <FieldSet
+                  disabled={disabled}
+                  className="ms-4 me-2 mt-3 mb-2 min-w-0 border-s py-1 ps-4"
+                >
                   <FieldLegend className="sr-only">{group.name}</FieldLegend>
                   {group.name === "Colors" && (
                     <FieldDescription>

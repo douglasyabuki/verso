@@ -275,7 +275,7 @@ export function WorkspaceSidebar({
                         <span>{name}</span>
                       </SidebarMenuButton>
                       <SidebarMenuAction
-                        className="right-auto left-1"
+                        className="group/sidebar-expansion right-auto left-1"
                         aria-label={`${expanded ? "Collapse" : "Expand"} ${name} pages`}
                         aria-expanded={expanded}
                         aria-controls={`resume-pages-${resume.id}`}
@@ -287,7 +287,8 @@ export function WorkspaceSidebar({
                         }
                       >
                         <ChevronRight
-                          className={expanded ? "rotate-90" : undefined}
+                          aria-hidden="true"
+                          className="transition-transform duration-200 group-aria-expanded/sidebar-expansion:rotate-90 motion-reduce:transition-none"
                         />
                       </SidebarMenuAction>
                       <DropdownMenu>

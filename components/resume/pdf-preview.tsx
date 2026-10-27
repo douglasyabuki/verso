@@ -325,7 +325,7 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
         >
           <ChevronRight
             data-icon="inline-start"
-            className="transition-transform group-data-panel-open:rotate-90"
+            className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
           />
           PDF text & technical details
         </CollapsibleTrigger>

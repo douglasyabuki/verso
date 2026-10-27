@@ -199,7 +199,7 @@ export function VariantWordingField({
           >
             <ChevronRight
               data-icon="inline-start"
-              className="transition-transform group-data-panel-open:rotate-90"
+              className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
             />
             Review shared text changes
           </CollapsibleTrigger>
@@ -308,7 +308,7 @@ export function VariantWordingDetails({
           : "Shared text"}
         <ChevronRight
           data-icon="inline-end"
-          className="transition-transform group-data-panel-open:rotate-90"
+          className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
         />
       </CollapsibleTrigger>
       {!open && (

@@ -4,7 +4,7 @@ import { cn } from "cn";
 import {
   ArrowLeft,
   ArrowRight,
-  ChevronDown,
+  ChevronRight,
   Filter,
   ListChecks,
 } from "lucide-react";
@@ -312,9 +312,9 @@ export function TranslationsEditor({
             {advancedCount > 0 && (
               <Badge variant="secondary">{advancedCount}</Badge>
             )}
-            <ChevronDown
+            <ChevronRight
               data-icon="inline-end"
-              className="transition-transform group-data-panel-open:rotate-180"
+              className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
             />
           </CollapsibleTrigger>
           <span className="text-xs text-muted-foreground">

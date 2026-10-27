@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Languages } from "lucide-react";
+import { ChevronRight, Languages } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -25,9 +25,9 @@ export function WordingComparisonDetails({
       >
         <Languages data-icon="inline-start" />
         Compare languages
-        <ChevronDown
+        <ChevronRight
           data-icon="inline-end"
-          className="transition-transform group-data-panel-open:rotate-180"
+          className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
         />
       </CollapsibleTrigger>
       <CollapsibleContent>
