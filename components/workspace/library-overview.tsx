@@ -83,7 +83,10 @@ export function LibraryOverview({
                 size="section"
                 className="flex items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
               >
-                <SectionIcon kind={section.kind} />
+                <SectionIcon
+                  kind={section.kind}
+                  icon={"icon" in section ? section.icon : undefined}
+                />
                 {section.label}
               </CardTitle>
               <CardDescription>

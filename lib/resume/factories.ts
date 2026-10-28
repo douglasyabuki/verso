@@ -2,6 +2,7 @@ import { localized } from "@/lib/resume/localization";
 import { templateIdentity } from "@/lib/resume/model";
 import { defaultSettings } from "@/types-and-constants/output";
 import { type Entry, type ResumeDocument } from "@/types-and-constants/resume";
+import { defaultSectionIcons } from "@/types-and-constants/sections";
 
 /** Create the deterministic empty workspace used during hydration. @returns An editable draft. @example createEmptyDocument() */
 export function createEmptyDocument(): ResumeDocument {
@@ -15,11 +16,12 @@ export function createEmptyDocument(): ResumeDocument {
   const sections = headings.map(([kind, en, pt]) => ({
     id: kind,
     kind,
+    icon: defaultSectionIcons[kind],
     heading: localized(en, pt),
     entries: [],
   }));
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     revision: 0,
     template: { ...templateIdentity },
     profile: {

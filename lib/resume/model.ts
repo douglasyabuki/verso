@@ -8,7 +8,11 @@ import {
   textColors,
 } from "@/types-and-constants/output";
 import { resumeColors } from "@/types-and-constants/resume";
-import { sectionKinds } from "@/types-and-constants/sections";
+import {
+  defaultSectionIcons,
+  sectionIconIds,
+  sectionKinds,
+} from "@/types-and-constants/sections";
 
 export const templateIdentity = {
   id: "yabuki-reference",
@@ -352,7 +356,7 @@ const layoutLocaleOverridesSchema = z.strictObject({
   "pt-BR": layoutOverridesSchema.optional(),
 });
 
-export const documentSchema = schema6DocumentSchema.extend({
+export const schema7DocumentSchema = schema6DocumentSchema.extend({
   schemaVersion: z.literal(7),
   settings: settingsSchema,
   localeSettings: layoutLocaleOverridesSchema,
@@ -364,5 +368,28 @@ export const documentSchema = schema6DocumentSchema.extend({
       }),
     )
     .min(1)
+    .max(30),
+});
+
+export const documentSchema = schema7DocumentSchema.extend({
+  schemaVersion: z.literal(8),
+  sections: z
+    .array(
+      schema7DocumentSchema.shape.sections.element
+        .extend({
+          icon: z.enum(sectionIconIds),
+        })
+        .superRefine((section, context) => {
+          if (
+            section.kind !== "custom" &&
+            section.icon !== defaultSectionIcons[section.kind]
+          )
+            context.addIssue({
+              code: "custom",
+              path: ["icon"],
+              message: "Built-in sections must use their default icon.",
+            });
+        }),
+    )
     .max(30),
 });

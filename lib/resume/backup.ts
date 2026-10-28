@@ -8,10 +8,12 @@ import {
   schema4DocumentSchema,
   schema5DocumentSchema,
   schema6DocumentSchema,
+  schema7DocumentSchema,
   templateIdentity,
 } from "@/lib/resume/model";
 import { defaultSettings } from "@/types-and-constants/output";
 import type { ResumeDocument } from "@/types-and-constants/resume";
+import { defaultSectionIcons } from "@/types-and-constants/sections";
 
 /** Serialize complete editable state, excluding interface/compiler state. @param doc Workspace. @returns Versioned JSON backup. @example serializeBackup(doc) */
 export function serializeBackup(doc: ResumeDocument): string {
@@ -42,7 +44,7 @@ export function parseBackup(source: string): ResumeDocument {
     throw new Error(
       "This file is not a supported Verso backup. Choose a JSON backup downloaded from Verso.",
     );
-  if (![1, 2, 3, 4, 5, 6, 7].includes(header.data.schemaVersion))
+  if (![1, 2, 3, 4, 5, 6, 7, 8].includes(header.data.schemaVersion))
     throw new Error(
       `This backup uses an unsupported format (version ${header.data.schemaVersion}). Open it with a compatible version of Verso. Your current work has not changed.`,
     );
@@ -74,7 +76,9 @@ export function parseBackup(source: string): ResumeDocument {
               ? schema5DocumentSchema.safeParse(data)
               : header.data.schemaVersion === 6
                 ? schema6DocumentSchema.safeParse(data)
-                : documentSchema.safeParse(data);
+                : header.data.schemaVersion === 7
+                  ? schema7DocumentSchema.safeParse(data)
+                  : documentSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue.path.join(".");
@@ -97,7 +101,9 @@ export function parseBackup(source: string): ResumeDocument {
             : result.data;
   const colored =
     migrated.schemaVersion === 5 ? migrateSchema5(migrated) : migrated;
-  const doc = colored.schemaVersion === 6 ? migrateSchema6(colored) : colored;
+  const layout =
+    colored.schemaVersion === 6 ? migrateSchema6(colored) : colored;
+  const doc = layout.schemaVersion === 7 ? migrateSchema7(layout) : layout;
   const seen = new Set<string>();
   const unique = (value: string) => {
     if (seen.has(value))
@@ -299,7 +305,7 @@ export function migrateSchema5(
  */
 export function migrateSchema6(
   legacy: z.infer<typeof schema6DocumentSchema>,
-): ResumeDocument {
+): z.infer<typeof schema7DocumentSchema> {
   const validated = schema6DocumentSchema.parse(legacy);
   if (
     validated.template.id !== templateIdentity.id ||
@@ -331,7 +337,7 @@ export function migrateSchema6(
     Object.fromEntries(
       Object.entries(settings).map(([locale, value]) => [locale, split(value)]),
     );
-  return documentSchema.parse({
+  return schema7DocumentSchema.parse({
     ...validated,
     schemaVersion: 7,
     template: { ...templateIdentity },
@@ -341,6 +347,25 @@ export function migrateSchema6(
       ...variant,
       settings: split(variant.settings),
       localeSettings: languages(variant.localeSettings),
+    })),
+  });
+}
+
+/** Add the existing section icons to a legacy workspace without changing output.
+ * @param legacy Validated schema-7 workspace.
+ * @returns A validated schema-8 copy with the current default icon on every section.
+ * @example const document = migrateSchema7(schema7DocumentSchema.parse(data));
+ */
+export function migrateSchema7(
+  legacy: z.infer<typeof schema7DocumentSchema>,
+): ResumeDocument {
+  const validated = schema7DocumentSchema.parse(legacy);
+  return documentSchema.parse({
+    ...validated,
+    schemaVersion: 8,
+    sections: validated.sections.map((section) => ({
+      ...section,
+      icon: defaultSectionIcons[section.kind],
     })),
   });
 }

@@ -1,6 +1,7 @@
 import { createEmptyDocument } from "@/lib/resume/factories";
 import { localized } from "@/lib/resume/localization";
 import type { Entry, ResumeDocument } from "@/types-and-constants/resume";
+import { defaultSectionIcons } from "@/types-and-constants/sections";
 
 /**
  * Build an explicitly fictional bilingual example with populated resume sections.
@@ -325,6 +326,7 @@ export function createExampleDocument(): ResumeDocument {
   doc.sections.push({
     id: "example-custom",
     kind: "custom",
+    icon: defaultSectionIcons.custom,
     heading: localized("Community", "Comunidade"),
     entries: [
       make(

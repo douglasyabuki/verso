@@ -143,7 +143,7 @@ export async function migratedBackupFingerprint(
   const record = JSON.parse(review.raw) as {
     document: { schemaVersion: number };
   };
-  if (record.document.schemaVersion >= 7) return baseline;
+  if (record.document.schemaVersion >= 8) return baseline;
   if ((await fingerprint(record.document)) !== baseline) return baseline;
   return fingerprint(review.snapshot.document);
 }

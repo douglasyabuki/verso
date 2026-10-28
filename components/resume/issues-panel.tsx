@@ -331,7 +331,16 @@ function IssueGroup({
                 className="flex min-w-0 flex-col gap-1 rounded-lg border p-3"
               >
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground [&>svg]:size-3 [&>svg]:shrink-0">
-                  {sectionKind && <SectionIcon kind={sectionKind} />}
+                  {sectionKind && (
+                    <SectionIcon
+                      kind={sectionKind}
+                      icon={
+                        document.sections.find(
+                          (section) => section.id === issue.target?.sectionId,
+                        )?.icon
+                      }
+                    />
+                  )}
                   <span className="min-w-0 wrap-anywhere">
                     {issue.section} / {issue.entry} / {issue.locale}
                   </span>

@@ -304,7 +304,7 @@ function VariantSection({
                 className="flex min-w-0 flex-1 items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
                 size="section"
               >
-                <SectionIcon kind={section.kind} />
+                <SectionIcon kind={section.kind} icon={section.icon} />
                 <span className="min-w-0 wrap-anywhere">{heading}</span>
               </CardTitle>
               <VisibilityToggle

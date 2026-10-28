@@ -7,6 +7,7 @@ import { ContentEditor } from "@/components/resume/content-editor";
 import { ProfileEditor } from "@/components/resume/profile-editor";
 import { ResumeCollection } from "@/components/resume/resume-collection";
 import { SectionIcon } from "@/components/resume/section-icon";
+import { SectionIconPicker } from "@/components/resume/section-icon-picker";
 import { SummaryEditor } from "@/components/resume/summary-editor";
 import { CompilerSettings } from "@/components/resume/template-editor";
 import { SettingsEditor } from "@/components/resume/template-editor";
@@ -181,37 +182,48 @@ export function EditorPane({
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1 basis-48">
-            <h1 className="flex items-center gap-2 [&>svg]:size-[1em] [&>svg]:shrink-0">
+            <div className="flex items-center gap-2 [&>svg]:size-6 [&>svg]:shrink-0">
               {navigation.destination.kind === "library-profile" ? (
                 <SectionIcon kind="profile" />
               ) : summary ? (
                 <SectionIcon kind="summary" />
               ) : section ? (
-                <SectionIcon kind={section.kind} />
+                section.kind === "custom" ? (
+                  <SectionIconPicker
+                    key={section.id}
+                    section={section}
+                    update={update}
+                    disabled={disabled}
+                  />
+                ) : (
+                  <SectionIcon kind={section.kind} icon={section.icon} />
+                )
               ) : null}
-              {view === "profile"
-                ? "Profile"
-                : summary
-                  ? "Summary"
-                  : view === "content" || view === "library-translations"
-                    ? section
-                      ? librarySectionLabel(section)
-                      : "Career details"
-                    : view === "variants"
-                      ? `${variant.name || "Untitled resume"} · Content & order`
-                      : view === "resume-translations"
-                        ? `${variant.name || "Untitled resume"} · Text to review`
-                        : (
-                            {
-                              "library-overview": "Career details · Overview",
-                              resumes: "All resumes",
-                              review: "Text to review",
-                              data: "Backups & settings",
-                              template: "Layout",
-                              "shared-defaults": "Default layout",
-                            } as Record<string, string>
-                          )[view]}
-            </h1>
+              <h1>
+                {view === "profile"
+                  ? "Profile"
+                  : summary
+                    ? "Summary"
+                    : view === "content" || view === "library-translations"
+                      ? section
+                        ? librarySectionLabel(section)
+                        : "Career details"
+                      : view === "variants"
+                        ? `${variant.name || "Untitled resume"} · Content & order`
+                        : view === "resume-translations"
+                          ? `${variant.name || "Untitled resume"} · Text to review`
+                          : (
+                              {
+                                "library-overview": "Career details · Overview",
+                                resumes: "All resumes",
+                                review: "Text to review",
+                                data: "Backups & settings",
+                                template: "Layout",
+                                "shared-defaults": "Default layout",
+                              } as Record<string, string>
+                            )[view]}
+              </h1>
+            </div>
             {navigation.destination.kind !== "resume" && (
               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{library ? "Career details" : "Workspace"}</span>

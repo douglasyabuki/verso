@@ -15,6 +15,7 @@ import type {
   Variant,
 } from "@/types-and-constants/resume";
 import type { ReviewReturnContext } from "@/types-and-constants/review";
+import { defaultSectionIcons } from "@/types-and-constants/sections";
 
 type WorkspaceNavigationOptions = {
   document: ResumeDocument;
@@ -133,6 +134,7 @@ export function useWorkspaceNavigation({
     const section: Section = {
       id,
       kind: "custom",
+      icon: defaultSectionIcons.custom,
       heading: localized("Custom section", "Seção personalizada"),
       entries: [],
     };

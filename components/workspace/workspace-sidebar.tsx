@@ -200,7 +200,7 @@ export function WorkspaceSidebar({
                         })
                       }
                     >
-                      <SectionIcon kind={section.kind} />
+                      <SectionIcon kind={section.kind} icon={section.icon} />
                       <span>{librarySectionLabel(section)}</span>
                     </SidebarMenuButton>
                     <SidebarMenuBadge>

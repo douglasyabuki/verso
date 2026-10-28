@@ -252,6 +252,10 @@ export function TranslationsEditor({
       const filterItems = options.map(([value, label]) => ({
         value,
         label,
+        sectionIcon:
+          key === "section"
+            ? document.sections.find((section) => section.id === value)?.icon
+            : undefined,
         sectionKind:
           key === "section" && value !== "all"
             ? value === "profile"
@@ -259,9 +263,9 @@ export function TranslationsEditor({
               : document.sections.find((section) => section.id === value)?.kind
             : undefined,
       }));
-      const selectedSectionKind = filterItems.find(
+      const selectedSection = filterItems.find(
         (option) => option.value === filters[key],
-      )?.sectionKind;
+      );
       return {
         key,
         element: (
@@ -281,8 +285,11 @@ export function TranslationsEditor({
                 id={`review-${key}`}
                 className="w-full"
               >
-                {selectedSectionKind && (
-                  <SectionIcon kind={selectedSectionKind} />
+                {selectedSection?.sectionKind && (
+                  <SectionIcon
+                    kind={selectedSection.sectionKind}
+                    icon={selectedSection.sectionIcon}
+                  />
                 )}
                 <SelectValue />
               </SelectTrigger>
@@ -291,7 +298,10 @@ export function TranslationsEditor({
                   {filterItems.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.sectionKind && (
-                        <SectionIcon kind={option.sectionKind} />
+                        <SectionIcon
+                          kind={option.sectionKind}
+                          icon={option.sectionIcon}
+                        />
                       )}
                       {option.label}
                     </SelectItem>
@@ -355,6 +365,11 @@ export function TranslationsEditor({
               <span className="inline-flex items-center gap-1.5 align-middle [&>svg]:size-3 [&>svg]:shrink-0">
                 {" · "}
                 <SectionIcon
+                  icon={
+                    document.sections.find(
+                      (section) => section.id === filters.section,
+                    )?.icon
+                  }
                   kind={
                     filters.section === "profile"
                       ? "summary"

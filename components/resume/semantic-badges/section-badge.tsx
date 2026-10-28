@@ -28,6 +28,7 @@ export function SectionBadge({
       title={label}
     >
       <SectionIcon
+        icon={typeof section === "object" ? section?.icon : undefined}
         kind={
           typeof section === "string" ? section : (section?.kind ?? "custom")
         }

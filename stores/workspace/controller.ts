@@ -306,7 +306,7 @@ export class WorkspaceController {
   flush = async () => {
     clearTimeout(this.timer);
     // Finish translating a legacy backup baseline before its original bytes are
-    // replaced by schema 7. A late digest cannot recover them after that write.
+    // replaced by the current schema. A late digest cannot recover them after that write.
     const document = this.state.document;
     await this.identify();
     if (this.state.document !== document) {

@@ -315,7 +315,16 @@ export function VariantComparison({
           <Card key={row.id}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0">
-                {row.sectionKind && <SectionIcon kind={row.sectionKind} />}
+                {row.sectionKind && (
+                  <SectionIcon
+                    kind={row.sectionKind}
+                    icon={
+                      document.sections.find(
+                        (section) => section.id === row.sectionId,
+                      )?.icon
+                    }
+                  />
+                )}
                 <span className="min-w-0 wrap-anywhere">{row.label}</span>
               </CardTitle>
               <CardDescription>

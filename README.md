@@ -116,10 +116,15 @@ completion of a browser save dialog cannot be confirmed. Saved work is specific
 to this browser profile and origin: changing the hostname or port opens a separate
 workspace. Use a JSON export/import to move drafts between them.
 
-JSON exports use resume schema 7. Compatible schema-1 through schema-6 backups migrate
+JSON exports use resume schema 8. Compatible schema-1 through schema-7 backups migrate
 on import or browser restoration, preserving wording, IDs, revisions, and review
 flags. Missing historical review snapshots stay unknown until explicitly reviewed;
 schema-1 certification metadata starts unset. Older resumes receive an indigo navigation color and retain their original PDF colors. Unsupported schemas/templates are rejected.
+
+Custom career sections have a shared icon selected from 25 career-related choices.
+Click the section heading icon to choose an icon, then Save or Cancel. Saved icons
+appear throughout the workspace, including Content & order and Text to review,
+and are included in JSON backups. Built-in sections retain their default icons.
 
 Other-tab changes pause saving. Review the stored version before loading it or
 explicitly replacing it; a changed version invalidates any previous confirmation.
