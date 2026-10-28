@@ -15,8 +15,9 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { EntryFields } from "@/components/resume/entry-fields";
-import { LinksEditor, TextField } from "@/components/resume/fields";
+import { TextField } from "@/components/resume/fields";
 import { LibrarySearch } from "@/components/resume/library-controls";
+import { LinksEditor } from "@/components/resume/links-editor";
 import { ContentStatusBadge } from "@/components/resume/semantic-badges/content-status-badge";
 import { SortableList, SortableRow } from "@/components/resume/sortable-list";
 import { WordingField } from "@/components/resume/wording-field";
@@ -220,6 +221,8 @@ export function ContentEditor({
             <FieldSet>
               <FieldLegend>Social & website links</FieldLegend>
               <LinksEditor
+                document={document}
+                scope="library:profile:links"
                 links={document.profile.links}
                 onChange={(links, group) =>
                   update((draft) => {
@@ -357,7 +360,7 @@ export function ContentEditor({
                         label={entryLabel(item, section.kind, locale)}
                         as="li"
                         className={cn(
-                          "flex flex-col gap-2 rounded-lg border border-l-2 border-l-transparent p-2",
+                          "flex flex-col gap-2 rounded-lg border border-l-2 p-2",
                           entry?.id === item.id &&
                             "border-l-foreground bg-muted",
                         )}
@@ -702,6 +705,8 @@ export function ContentEditor({
                       : "Links"}
                 </FieldLegend>
                 <LinksEditor
+                  document={document}
+                  scope={`library:${section.id}:${entry.id}:links`}
                   links={entry.links}
                   onChange={(links, group) =>
                     changeEntry((target) => {

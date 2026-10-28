@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useId } from "react";
 
 import { ContentStatusBadge } from "@/components/resume/semantic-badges/content-status-badge";
@@ -18,15 +18,9 @@ import { InfoHint } from "@/components/ui/info-hint";
 import { Input } from "@/components/ui/input";
 import { useFieldHistory } from "@/hooks/workspace/use-field-history";
 import { plain } from "@/lib/resume/localization";
-import { urlError } from "@/lib/resume/validation";
-import type { ConfirmAction } from "@/types-and-constants/editor";
 import type { Locale } from "@/types-and-constants/languages";
 import { languageNames } from "@/types-and-constants/languages";
-import type {
-  LocalizedText,
-  ResumeLink,
-  Span,
-} from "@/types-and-constants/resume";
+import type { LocalizedText, Span } from "@/types-and-constants/resume";
 import type { EditGroup } from "@/types-and-constants/workspace";
 
 export function TextField({
@@ -200,89 +194,6 @@ export function LocalizedField({
         {description && <FieldDescription>{description}</FieldDescription>}
         {error && <FieldError id={id + "-error"}>{error}</FieldError>}
       </Field>
-    </FieldGroup>
-  );
-}
-
-export function LinksEditor({
-  links,
-  onChange,
-  confirm,
-}: {
-  links: ResumeLink[];
-  onChange: (links: ResumeLink[], group?: EditGroup) => void;
-  confirm: ConfirmAction;
-}) {
-  return (
-    <FieldGroup className="gap-4">
-      {links.map((link, index) => (
-        <FieldGroup
-          key={link.id}
-          className="rounded-lg border border-field-filled p-3"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              LINK {index + 1}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Remove link ${index + 1}`}
-              onClick={() =>
-                confirm(
-                  "Remove this link?",
-                  "This removes the shared link from every draft that uses it.",
-                  () => onChange(links.filter((item) => item.id !== link.id)),
-                )
-              }
-            >
-              <Trash2 />
-            </Button>
-          </div>
-          <TextField
-            fieldKey={`links.${link.id}.label`}
-            label="Link label"
-            value={link.label}
-            maxLength={200}
-            onChange={(label, group) =>
-              onChange(
-                links.map((item) =>
-                  item.id === link.id ? { ...item, label } : item,
-                ),
-                group,
-              )
-            }
-            placeholder="My website"
-          />
-          <TextField
-            fieldKey={`links.${link.id}.url`}
-            label="Link address"
-            value={link.url}
-            maxLength={2_000}
-            onChange={(url, group) =>
-              onChange(
-                links.map((item) =>
-                  item.id === link.id ? { ...item, url } : item,
-                ),
-                group,
-              )
-            }
-            error={urlError(link.url)}
-            placeholder="https://example.com"
-          />
-        </FieldGroup>
-      ))}
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={links.length >= 30}
-        onClick={() =>
-          onChange([...links, { id: crypto.randomUUID(), label: "", url: "" }])
-        }
-      >
-        <Plus data-icon="inline-start" />
-        Add link
-      </Button>
     </FieldGroup>
   );
 }

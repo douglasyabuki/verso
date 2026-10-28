@@ -195,9 +195,7 @@ export function SortableRow(props: SortableRowProps) {
     return (
       <Tag className={props.className}>
         {props.children({
-          dragHandle: (
-            <span aria-hidden="true" className="-ml-3 size-7 shrink-0" />
-          ),
+          dragHandle: <span aria-hidden="true" className="size-7 shrink-0" />,
           orderButtons: (
             <span aria-hidden="true" className="h-6 w-12 shrink-0" />
           ),
@@ -238,7 +236,7 @@ function RegisteredRow({
       }}
       variant="ghost"
       size="icon-sm"
-      className="-ml-3 cursor-grab touch-none active:cursor-grabbing disabled:invisible"
+      className="cursor-grab touch-none active:cursor-grabbing disabled:invisible"
       disabled={context.items.length < 2}
       aria-label={`Reorder ${label}`}
     >
