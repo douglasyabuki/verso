@@ -10,6 +10,7 @@ import {
   LibrarySearch,
   SectionVisibilityHint,
 } from "@/components/resume/library-controls";
+import { ResumeColorPicker } from "@/components/resume/resume-color-picker";
 import { SectionIcon } from "@/components/resume/section-icon";
 import { SortableList, SortableRow } from "@/components/resume/sortable-list";
 import { VariantComparison } from "@/components/resume/variant-comparison";
@@ -105,6 +106,17 @@ export function VariantsEditor({
               }
               error={
                 !variant.name.trim() ? "Give this resume a name." : undefined
+              }
+            />
+            <ResumeColorPicker
+              value={variant.color}
+              onChange={(color) =>
+                update((draft) => {
+                  const resume = draft.variants.find(
+                    (item) => item.id === variant.id,
+                  );
+                  if (resume) resume.color = color;
+                })
               }
             />
           </FieldGroup>

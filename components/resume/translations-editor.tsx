@@ -11,6 +11,7 @@ import {
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { LanguageFlag } from "@/components/resume/language-flag";
+import { ResumeIcon } from "@/components/resume/resume-icon";
 import { SectionIcon } from "@/components/resume/section-icon";
 import { ContentStatusBadge } from "@/components/resume/semantic-badges/content-status-badge";
 import { ReviewStatusBadge } from "@/components/resume/semantic-badges/review-status-badge";
@@ -252,6 +253,14 @@ export function TranslationsEditor({
       const filterItems = options.map(([value, label]) => ({
         value,
         label,
+        resumeColor:
+          key === "owner"
+            ? document.variants.find(
+                (resume) => `resume:${resume.id}` === value,
+              )?.color
+            : key === "output" && value === "selected"
+              ? outputResume?.color
+              : undefined,
         sectionIcon:
           key === "section"
             ? document.sections.find((section) => section.id === value)?.icon
@@ -291,7 +300,10 @@ export function TranslationsEditor({
                     icon={selectedSection.sectionIcon}
                   />
                 )}
-                <SelectValue />
+                {selectedSection?.resumeColor && (
+                  <ResumeIcon color={selectedSection.resumeColor} />
+                )}
+                <SelectValue className="min-w-0 truncate" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
@@ -303,7 +315,10 @@ export function TranslationsEditor({
                           icon={option.sectionIcon}
                         />
                       )}
-                      {option.label}
+                      {option.resumeColor && (
+                        <ResumeIcon color={option.resumeColor} />
+                      )}
+                      <span className="max-w-64 truncate">{option.label}</span>
                     </SelectItem>
                   ))}
                 </SelectGroup>

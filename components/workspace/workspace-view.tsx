@@ -37,6 +37,7 @@ import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { AppearanceControl } from "@/components/workspace/workspace-utility-rail";
 import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useCareerActions } from "@/hooks/workspace/use-career-actions";
 import { useResumeActions } from "@/hooks/workspace/use-resume-actions";
 import { WorkflowLinksContext } from "@/hooks/workspace/use-workflow-links";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
@@ -113,6 +114,13 @@ export function WorkspaceView() {
     );
     changeLocale(next);
   };
+  const careerActions = useCareerActions({
+    controller,
+    navigation,
+    confirm: (title, description, action, returnFocus) =>
+      setConfirmation({ title, description, action, returnFocus }),
+    onChanged: () => setIssueNavigation(undefined),
+  });
   const onIssueFocused = useCallback((id: string) => {
     setIssueNavigation((current) =>
       current?.id === id ? { ...current, pending: false } : current,
@@ -322,6 +330,7 @@ export function WorkspaceView() {
     >
       <EditorPane
         resumeActions={resumeActions}
+        careerActions={careerActions}
         document={document}
         view={view}
         sectionId={activeSectionId}
@@ -406,6 +415,7 @@ export function WorkspaceView() {
       sidebar={
         <WorkspaceSidebar
           actions={resumeActions}
+          careerActions={careerActions}
           blocked={state.replacing || !!state.pending}
           document={document}
           destination={navigation.destination}

@@ -3,10 +3,12 @@
 import {
   ChevronRight,
   Copy,
+  Eraser,
   FileText,
   GlobeCheck,
   Languages,
   LayoutTemplate,
+  ListChecks,
   ListOrdered,
   MoreHorizontal,
   Pencil,
@@ -47,10 +49,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { librarySectionLabel } from "@/components/workspace/navigation";
+import type { useCareerActions } from "@/hooks/workspace/use-career-actions";
 import type { useResumeActions } from "@/hooks/workspace/use-resume-actions";
 import { formatCount } from "@/lib/format-count";
 import type { WorkspaceDestination } from "@/types-and-constants/navigation";
-import type { ResumeDocument } from "@/types-and-constants/resume";
+import type {
+  CareerTarget,
+  ResumeDocument,
+} from "@/types-and-constants/resume";
 
 export function WorkspaceSidebar({
   document,
@@ -62,6 +68,7 @@ export function WorkspaceSidebar({
   reviewCount,
   utilities,
   actions,
+  careerActions,
   blocked,
 }: {
   document: ResumeDocument;
@@ -73,6 +80,7 @@ export function WorkspaceSidebar({
   reviewCount: number;
   utilities: ReactNode;
   actions: ReturnType<typeof useResumeActions>;
+  careerActions: ReturnType<typeof useCareerActions>;
   blocked: boolean;
 }) {
   const {
@@ -163,6 +171,7 @@ export function WorkspaceSidebar({
               {(["profile", "summary"] as const).map((kind) => (
                 <SidebarMenuItem key={kind}>
                   <SidebarMenuButton
+                    className="pr-9"
                     isActive={destination.kind === `library-${kind}`}
                     aria-current={
                       destination.kind === `library-${kind}`
@@ -180,6 +189,24 @@ export function WorkspaceSidebar({
                     <SectionIcon kind={kind} />
                     <span>{kind === "profile" ? "Profile" : "Summary"}</span>
                   </SidebarMenuButton>
+                  <CareerMenu
+                    target={{ kind }}
+                    name={kind === "profile" ? "Profile" : "Summary"}
+                    actions={careerActions}
+                    blocked={blocked}
+                    edit={() =>
+                      go(
+                        kind === "profile"
+                          ? { kind: "library-profile" }
+                          : { kind: "library-summary", tab: "edit" },
+                      )
+                    }
+                    review={
+                      kind === "summary"
+                        ? () => go({ kind: "library-summary", tab: "review" })
+                        : undefined
+                    }
+                  />
                 </SidebarMenuItem>
               ))}
               {document.sections.map((section) => {
@@ -189,7 +216,7 @@ export function WorkspaceSidebar({
                 return (
                   <SidebarMenuItem key={section.id}>
                     <SidebarMenuButton
-                      className="pr-9"
+                      className="pr-16"
                       isActive={active}
                       aria-current={active ? "page" : undefined}
                       onClick={() =>
@@ -203,12 +230,33 @@ export function WorkspaceSidebar({
                       <SectionIcon kind={section.kind} icon={section.icon} />
                       <span>{librarySectionLabel(section)}</span>
                     </SidebarMenuButton>
-                    <SidebarMenuBadge>
+                    <SidebarMenuBadge className="right-8">
                       {
                         section.entries.filter((entry) => !entry.archived)
                           .length
                       }
                     </SidebarMenuBadge>
+                    <CareerMenu
+                      target={{ kind: "section", sectionId: section.id }}
+                      name={librarySectionLabel(section)}
+                      actions={careerActions}
+                      blocked={blocked}
+                      edit={() =>
+                        go({
+                          kind: "library-section",
+                          sectionId: section.id,
+                          tab: "edit",
+                        })
+                      }
+                      review={() =>
+                        go({
+                          kind: "library-section",
+                          sectionId: section.id,
+                          tab: "review",
+                        })
+                      }
+                      remove={section.kind === "custom"}
+                    />
                   </SidebarMenuItem>
                 );
               })}
@@ -485,5 +533,85 @@ function SidebarCollection({
         <div ref={contentRef}>{children}</div>
       </div>
     </SidebarGroup>
+  );
+}
+
+function CareerMenu({
+  target,
+  name,
+  actions,
+  blocked,
+  edit,
+  review,
+  remove,
+}: {
+  target: CareerTarget;
+  name: string;
+  actions: ReturnType<typeof useCareerActions>;
+  blocked: boolean;
+  edit: () => void;
+  review?: () => void;
+  remove?: boolean;
+}) {
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <SidebarMenuAction
+            ref={trigger}
+            showOnHover
+            className="[@media(hover:none)]:opacity-100"
+            aria-label={`Actions for ${name}`}
+          />
+        }
+      >
+        <MoreHorizontal />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="quick-actions-dropdown">
+        <DropdownMenuGroup>
+          <DropdownMenuItem disabled={blocked} onClick={edit}>
+            <Pencil />
+            Edit content
+          </DropdownMenuItem>
+          {review && (
+            <DropdownMenuItem disabled={blocked} onClick={review}>
+              <ListChecks />
+              Text to review
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={!actions.canClear(target)}
+            onClick={() => actions.clear(target, trigger.current)}
+          >
+            <Eraser />
+            Clear content
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        {remove && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={blocked}
+                onClick={() => {
+                  if (target.kind === "section")
+                    actions.remove(target.sectionId, trigger.current);
+                }}
+              >
+                <Trash2 />
+                Delete section
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -3,6 +3,7 @@
 import { type ComponentProps, useState } from "react";
 
 import { CheckField } from "@/components/resume/fields";
+import { ResumeIcon } from "@/components/resume/resume-icon";
 import { SectionIcon } from "@/components/resume/section-icon";
 import { ReviewStatusBadge } from "@/components/resume/semantic-badges/review-status-badge";
 import { WordingSourceBadge } from "@/components/resume/semantic-badges/wording-source-badge";
@@ -227,6 +228,7 @@ export function VariantComparison({
             .filter((candidate) => candidate.id !== variants[1 - index].id)
             .map((candidate) => ({
               value: candidate.id,
+              color: candidate.color,
               label: candidate.name || "Untitled resume",
             }));
           return (
@@ -250,13 +252,17 @@ export function VariantComparison({
                   id={`compare-${index}`}
                   className="w-full"
                 >
-                  <SelectValue />
+                  <ResumeIcon color={item.color} />
+                  <SelectValue className="min-w-0 truncate" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     {comparisonItems.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        <ResumeIcon color={option.color} />
+                        <span className="max-w-64 truncate">
+                          {option.label}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectGroup>

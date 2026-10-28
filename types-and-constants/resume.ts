@@ -44,6 +44,11 @@ export type Variant = ResumeDocument["variants"][number];
 
 export type ResumeColor = Variant["color"];
 
+export type CareerTarget =
+  | { kind: "profile" }
+  | { kind: "summary" }
+  | { kind: "section"; sectionId: string };
+
 export type DocumentUpdate = (draft: ResumeDocument) => void;
 
 export type LocalizedFieldDescriptor = {

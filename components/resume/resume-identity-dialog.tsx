@@ -2,6 +2,7 @@
 
 import { type RefObject, useState } from "react";
 
+import { ResumeColorPicker } from "@/components/resume/resume-color-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,12 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  type ResumeColor,
-  resumeColors,
-  type Variant,
-} from "@/types-and-constants/resume";
+import { type ResumeColor, type Variant } from "@/types-and-constants/resume";
 
 export function ResumeIdentityDialog({
   resume,
@@ -72,33 +68,7 @@ export function ResumeIdentityDialog({
                 onChange={(event) => setName(event.target.value)}
               />
             </Field>
-            <Field>
-              <FieldLabel id="resume-color-label">Color</FieldLabel>
-              <ToggleGroup
-                aria-labelledby="resume-color-label"
-                value={[color]}
-                onValueChange={(values) => {
-                  const selected = resumeColors.find(
-                    (item) => item === values[0],
-                  );
-                  if (selected) setColor(selected);
-                }}
-              >
-                {resumeColors.map((item) => (
-                  <ToggleGroupItem
-                    key={item}
-                    value={item}
-                    aria-label={item}
-                    title={item}
-                  >
-                    <span
-                      className="resume-color size-4 rounded-full bg-(--resume-color)"
-                      data-resume-color={item}
-                    />
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </Field>
+            <ResumeColorPicker value={color} onChange={setColor} />
           </FieldGroup>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={close}>

@@ -6,12 +6,14 @@ export type ConfirmAction = (
   title: string,
   description: string,
   action: () => void,
+  returnFocus?: HTMLElement | null,
 ) => void;
 
 export type Confirmation = {
   title: string;
   description: string;
   action: () => void;
+  returnFocus?: HTMLElement | null;
 };
 
 export type EditorProps = {

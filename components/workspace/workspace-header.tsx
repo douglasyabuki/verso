@@ -10,6 +10,7 @@ import {
 import type { ComponentProps, ReactNode } from "react";
 
 import { LanguageFlag } from "@/components/resume/language-flag";
+import { ResumeIcon } from "@/components/resume/resume-icon";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -60,6 +61,7 @@ export function WorkspaceResumeControls({
 }: WorkspaceHeaderProps) {
   const resumeItems = document.variants.map((item) => ({
     value: item.id,
+    color: item.color,
     label: item.name || "Untitled resume",
   }));
   return (
@@ -81,13 +83,15 @@ export function WorkspaceResumeControls({
             id="variant-picker"
             className="w-48 max-w-full min-w-0"
           >
-            <SelectValue />
+            <ResumeIcon color={variant.color} />
+            <SelectValue className="min-w-0 truncate" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               {resumeItems.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  <ResumeIcon color={option.color} />
+                  <span className="max-w-64 truncate">{option.label}</span>
                 </SelectItem>
               ))}
             </SelectGroup>

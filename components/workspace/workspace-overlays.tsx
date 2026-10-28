@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +26,10 @@ export function WorkspaceOverlays({
   const { state, controller } = useWorkspace();
   const pending = state.pending;
   const reviewed = pending?.review;
+  const returnFocus = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (confirmation) returnFocus.current = confirmation.returnFocus ?? null;
+  }, [confirmation]);
   return (
     <>
       <AlertDialog
@@ -32,7 +38,17 @@ export function WorkspaceOverlays({
           if (!open) dismiss();
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent
+          finalFocus={() => {
+            const trigger = returnFocus.current;
+            if (!trigger) return undefined;
+            return trigger.isConnected && !trigger.matches(":disabled")
+              ? trigger
+              : (globalThis.document.querySelector<HTMLElement>(
+                  "[data-workspace-heading]",
+                ) ?? undefined);
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>{confirmation?.title}</AlertDialogTitle>
             <AlertDialogDescription>

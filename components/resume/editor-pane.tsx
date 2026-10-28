@@ -1,7 +1,14 @@
 "use client";
 
 import { cn } from "cn";
-import { ChevronRight, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  ChevronRight,
+  Eraser,
+  ListChecks,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 import { ContentEditor } from "@/components/resume/content-editor";
 import { ProfileEditor } from "@/components/resume/profile-editor";
@@ -25,6 +32,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LibraryOverview } from "@/components/workspace/library-overview";
 import { librarySectionLabel } from "@/components/workspace/navigation";
 import { useIssueFocus } from "@/hooks/resume/use-issue-focus";
+import type { useCareerActions } from "@/hooks/workspace/use-career-actions";
 import type { useResumeActions } from "@/hooks/workspace/use-resume-actions";
 import type { useWorkspaceNavigation } from "@/hooks/workspace/use-workspace-navigation";
 import { resolveOwnerDestination } from "@/lib/resume/destinations";
@@ -33,7 +41,10 @@ import type { ConfirmAction } from "@/types-and-constants/editor";
 import type { Locale } from "@/types-and-constants/languages";
 import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
 import type { IssueNavigation } from "@/types-and-constants/navigation";
-import type { ResumeDocument } from "@/types-and-constants/resume";
+import type {
+  CareerTarget,
+  ResumeDocument,
+} from "@/types-and-constants/resume";
 import type { ReviewReturnContext } from "@/types-and-constants/review";
 import type { Issue } from "@/types-and-constants/review";
 import type { WorkspaceEdit } from "@/types-and-constants/workspace";
@@ -55,6 +66,7 @@ export function EditorPane({
   dataMenu,
   onOwner,
   resumeActions,
+  careerActions,
 }: {
   document: ResumeDocument;
   view: ReturnType<typeof useWorkspaceNavigation>["view"];
@@ -72,6 +84,7 @@ export function EditorPane({
   dataMenu: React.ReactNode;
   onOwner: (target: WorkspaceFocusTarget) => void;
   resumeActions: ReturnType<typeof useResumeActions>;
+  careerActions: ReturnType<typeof useCareerActions>;
 }) {
   useIssueFocus({
     navigation: issueNavigation,
@@ -83,6 +96,14 @@ export function EditorPane({
     summary ||
     navigation.destination.kind === "library-profile" ||
     navigation.destination.kind === "library-section";
+  const careerTarget: CareerTarget | undefined =
+    navigation.destination.kind === "library-section"
+      ? { kind: "section", sectionId: navigation.destination.sectionId }
+      : summary
+        ? { kind: "summary" }
+        : navigation.destination.kind === "library-profile"
+          ? { kind: "profile" }
+          : undefined;
   const reviewKey = library ? sectionId : variant.id;
   const defaultContext: ReviewReturnContext = {
     outputResumeId: variant.id,
@@ -199,7 +220,7 @@ export function EditorPane({
                   <SectionIcon kind={section.kind} icon={section.icon} />
                 )
               ) : null}
-              <h1>
+              <h1 tabIndex={-1} data-workspace-heading>
                 {view === "profile"
                   ? "Profile"
                   : summary
@@ -258,33 +279,32 @@ export function EditorPane({
               {view === "resumes" ? "Create resume" : "Add section"}
             </Button>
           )}
-          {view === "content" && section?.kind === "custom" && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Delete custom section"
-              onClick={() =>
-                confirm(
-                  "Delete this custom section?",
-                  "All entries, achievements, and references to this section will be removed from every resume.",
-                  () => {
-                    update((draft) => {
-                      draft.sections = draft.sections.filter(
-                        (item) => item.id !== section.id,
-                      );
-                      draft.variants.forEach((variant) => {
-                        variant.sections = variant.sections.filter(
-                          (item) => item.sectionId !== section.id,
-                        );
-                      });
-                    });
-                    navigation.open({ kind: "library-profile" });
-                  },
-                )
-              }
-            >
-              <Trash2 />
-            </Button>
+          {careerTarget && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!careerActions.canClear(careerTarget)}
+                onClick={(event) =>
+                  careerActions.clear(careerTarget, event.currentTarget)
+                }
+              >
+                <Eraser data-icon="inline-start" />
+                Clear content
+              </Button>
+              {section?.kind === "custom" && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Delete custom section"
+                  onClick={(event) =>
+                    careerActions.remove(section.id, event.currentTarget)
+                  }
+                >
+                  <Trash2 />
+                </Button>
+              )}
+            </div>
           )}
         </div>
         {(navigation.returnDestination ||
