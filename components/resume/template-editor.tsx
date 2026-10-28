@@ -12,6 +12,8 @@ import {
 import { useId, useState } from "react";
 
 import { LayoutColorField } from "@/components/resume/layout/layout-color-field";
+import { LayoutFieldGrid } from "@/components/resume/layout/layout-field-grid";
+import { LayoutFieldHeader } from "@/components/resume/layout/layout-field-header";
 import {
   LayoutIcon,
   layoutSettingIcons,
@@ -19,7 +21,6 @@ import {
 import { MarginGuide } from "@/components/resume/layout/margin-guide";
 import { NumericLayoutField } from "@/components/resume/layout/numeric-layout-field";
 import { TemplateIdentityBadge } from "@/components/resume/semantic-badges/template-identity-badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -332,8 +333,11 @@ function LayoutInspector({
         }
       : undefined;
   const numeric = (keys: string[]) =>
-    numericLayoutControls
-      .filter((control) => keys.includes(control.key))
+    keys
+      .map((key) =>
+        numericLayoutControls.find((control) => control.key === key),
+      )
+      .filter((control) => control !== undefined)
       .map((control) => (
         <NumericLayoutField
           key={control.key}
@@ -361,23 +365,12 @@ function LayoutInspector({
     }));
     return (
       <Field key={key} data-disabled={disabled}>
-        <div className="flex items-center justify-between gap-2">
+        <LayoutFieldHeader disabled={disabled} reset={reset(key)}>
           <FieldLabel htmlFor={id + key}>
             <Icon aria-hidden="true" className="size-4 shrink-0" />
             {templateSettingLabels[key]}
           </FieldLabel>
-          {reset(key) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              disabled={disabled}
-              onClick={reset(key)}
-            >
-              Use default
-            </Button>
-          )}
-        </div>
+        </LayoutFieldHeader>
         <Select
           items={items}
           value={values[key]}
@@ -390,6 +383,7 @@ function LayoutInspector({
             id={id + key}
             appearance="utility"
             className="w-full"
+            aria-describedby={source(key) ? `${id}${key}-source` : undefined}
             data-issue-field={`settings.${key}`}
           >
             <SelectValue />
@@ -404,7 +398,11 @@ function LayoutInspector({
             </SelectGroup>
           </SelectContent>
         </Select>
-        {source(key) && <FieldDescription>{source(key)}</FieldDescription>}
+        {source(key) && (
+          <FieldDescription id={`${id}${key}-source`}>
+            {source(key)}
+          </FieldDescription>
+        )}
       </Field>
     );
   };
@@ -476,25 +474,17 @@ function LayoutInspector({
                 Page
               </span>
             </FieldLegend>
-            <FieldGroup>
+            <LayoutFieldGrid layout="page">
               <Field>
-                <div className="flex items-center justify-between gap-2">
+                <LayoutFieldHeader
+                  disabled={disabled}
+                  reset={reset("pageSize")}
+                >
                   <FieldLabel id={id + "paper"}>
                     <Scaling aria-hidden="true" className="size-4 shrink-0" />
                     Paper size
                   </FieldLabel>
-                  {reset("pageSize") && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      disabled={disabled}
-                      onClick={reset("pageSize")}
-                    >
-                      Use default
-                    </Button>
-                  )}
-                </div>
+                </LayoutFieldHeader>
                 <ToggleGroup
                   multiple={false}
                   variant="outline"
@@ -535,18 +525,21 @@ function LayoutInspector({
                 )}
               </Field>
               {numeric(["targetPages"])}
-            </FieldGroup>
+            </LayoutFieldGrid>
           </FieldSet>
           <Separator />
-          <FieldSet disabled={disabled}>
+          <FieldSet
+            disabled={disabled}
+            className="@container/layout-margins min-w-0"
+          >
             <FieldLegend>
               <span className="flex items-center gap-2">
                 <Ruler className="size-4" />
                 Margins
               </span>
             </FieldLegend>
-            <div className="grid items-start gap-5 @min-[30rem]/layout-inspector:grid-cols-[minmax(0,1fr)_11rem]">
-              <FieldGroup>
+            <div className="grid min-w-0 items-start gap-4 @min-[40rem]/layout-margins:grid-cols-[minmax(0,1fr)_11rem]">
+              <FieldGroup className="min-w-0 gap-4">
                 <Field>
                   <FieldLabel id={id + "linked"}>
                     <Link2 aria-hidden="true" className="size-4 shrink-0" />
@@ -558,6 +551,7 @@ function LayoutInspector({
                     value={[linkedMargins ? "linked" : "separate"]}
                     disabled={disabled}
                     aria-labelledby={id + "linked"}
+                    aria-describedby={id + "linked-description"}
                     onValueChange={(selection) => {
                       if (selection[0] && drafts.flush())
                         setLinkedMargins(selection[0] === "linked");
@@ -566,18 +560,20 @@ function LayoutInspector({
                     <ToggleGroupItem value="linked">Linked</ToggleGroupItem>
                     <ToggleGroupItem value="separate">Separate</ToggleGroupItem>
                   </ToggleGroup>
-                  <FieldDescription>
+                  <FieldDescription id={id + "linked-description"}>
                     Linking changes no values. The next left or right margin
                     commit updates both sides together. Use default affects one
                     field.
                   </FieldDescription>
                 </Field>
-                {numeric([
-                  "marginTop",
-                  "marginBottom",
-                  "marginLeft",
-                  "marginRight",
-                ])}
+                <LayoutFieldGrid layout="pair">
+                  {numeric([
+                    "marginTop",
+                    "marginBottom",
+                    "marginLeft",
+                    "marginRight",
+                  ])}
+                </LayoutFieldGrid>
               </FieldGroup>
               <MarginGuide values={values} active={hovered ?? focused} />
             </div>
@@ -593,10 +589,10 @@ function LayoutInspector({
             <FieldDescription>
               Single column · Choose a font family and body spacing
             </FieldDescription>
-            <FieldGroup className="grid gap-4 @min-[36rem]/layout-inspector:grid-cols-2">
+            <LayoutFieldGrid>
               {choice("fontFamily")}
               {numeric(["fontSize", "lineHeight"])}
-            </FieldGroup>
+            </LayoutFieldGrid>
             <TemplateIdentityBadge
               id={document.template.id}
               version={document.template.version}
@@ -665,37 +661,35 @@ function LayoutInspector({
                       Page target remains a warning only.
                     </FieldDescription>
                   )}
-                  <FieldGroup>
-                    {numeric([...group.keys])}
-                    {group.keys.map((key) =>
-                      key in choiceControls
-                        ? choice(key as keyof typeof choiceControls)
-                        : null,
-                    )}
-                    {group.name === "Colors" &&
-                      (
-                        [
-                          "headingColor",
-                          "bodyColor",
-                          "secondaryColor",
-                          "linkColor",
-                          "iconColor",
-                          "dividerColor",
-                        ] as const
-                      ).map((key) => (
-                        <LayoutColorField
-                          key={key}
-                          setting={key}
-                          value={values[key]}
-                          explicit={target[key] !== undefined}
-                          id={id + key}
-                          disabled={disabled}
-                          source={source(key)}
-                          change={(value) => drafts.flush({ [key]: value })}
-                          reset={reset(key)}
-                        />
-                      ))}
-                  </FieldGroup>
+                  <LayoutFieldGrid
+                    layout={
+                      group.name === "Colors"
+                        ? "colors"
+                        : group.keys.length === 2
+                          ? "pair"
+                          : "standard"
+                    }
+                  >
+                    {group.name === "Colors"
+                      ? group.keys.map((key) => (
+                          <LayoutColorField
+                            key={key}
+                            setting={key}
+                            value={values[key]}
+                            explicit={target[key] !== undefined}
+                            id={id + key}
+                            disabled={disabled}
+                            source={source(key)}
+                            change={(value) => drafts.flush({ [key]: value })}
+                            reset={reset(key)}
+                          />
+                        ))
+                      : group.keys.map((key) =>
+                          key in choiceControls
+                            ? choice(key as keyof typeof choiceControls)
+                            : numeric([key]),
+                        )}
+                  </LayoutFieldGrid>
                 </FieldSet>
               </CollapsibleContent>
             </Collapsible>

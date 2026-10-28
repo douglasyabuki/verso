@@ -1,5 +1,5 @@
+import { LayoutFieldHeader } from "@/components/resume/layout/layout-field-header";
 import { layoutSettingIcons } from "@/components/resume/layout/layout-icon";
-import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -37,23 +37,12 @@ export function LayoutColorField({
   const Icon = layoutSettingIcons[setting];
   return (
     <Field data-disabled={disabled}>
-      <div className="flex items-center justify-between gap-2">
+      <LayoutFieldHeader disabled={disabled} reset={reset}>
         <FieldTitle id={id}>
           <Icon aria-hidden="true" className="size-4 shrink-0" />
           {templateSettingLabels[setting]}
         </FieldTitle>
-        {reset && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            disabled={disabled}
-            onClick={reset}
-          >
-            Use default
-          </Button>
-        )}
-      </div>
+      </LayoutFieldHeader>
       <ToggleGroup
         multiple={false}
         variant="outline"
