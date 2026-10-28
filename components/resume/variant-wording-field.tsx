@@ -205,7 +205,7 @@ export function VariantWordingField({
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="mt-3 flex flex-col gap-3 rounded-lg border border-transparent bg-field-readonly p-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs leading-normal text-muted-foreground">
                 The shared text changed. Compare it with your custom text, then
                 keep your text or switch to the shared text.
                 <InfoHint label="shared text review">

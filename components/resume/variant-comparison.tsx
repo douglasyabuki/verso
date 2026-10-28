@@ -83,7 +83,7 @@ export function VariantComparison({
     ) ?? document.variants.find((item) => item.id !== left.id);
   if (!right)
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-xs leading-normal text-muted-foreground">
         Create or duplicate a second resume to compare selected content, text,
         and layout settings.
       </p>
@@ -297,7 +297,7 @@ export function VariantComparison({
           onChange={setDifferences}
         />
       </FieldGroup>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-xs leading-normal text-muted-foreground">
         This comparison cannot be edited here. It includes content hidden from
         the resumes and any custom text saved for it. Layout settings show the
         final values used for each resume and language.

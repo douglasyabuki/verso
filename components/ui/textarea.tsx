@@ -20,7 +20,7 @@ function Textarea({
       }
       placeholder={placeholder ?? " "}
       className={cn(
-        "form-control flex field-sizing-content min-h-16 w-full rounded-lg px-2.5 py-2 text-base",
+        "form-control flex field-sizing-content min-h-16 w-full rounded-lg px-2.5 py-2 text-sm",
         className,
       )}
       {...props}

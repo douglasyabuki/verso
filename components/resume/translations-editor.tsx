@@ -468,7 +468,7 @@ export function TranslationsEditor({
                 <>
                   <CardContent className="flex flex-col gap-4">
                     {!matches(currentItem) && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs leading-normal text-muted-foreground">
                         Current item is outside these filters. It stays open
                         until you open another item or leave this page.
                       </p>

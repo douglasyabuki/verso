@@ -317,7 +317,7 @@ function VariantSection({
               <FieldSet>
                 <FieldLegend className="sr-only">Section selection</FieldLegend>
                 {!ordered.length && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs leading-normal text-muted-foreground">
                     {section.entries.length
                       ? "No matching entries in this section."
                       : `Add ${terms.singular} entries to this section in the career details.`}

@@ -23,7 +23,7 @@ function Input({
       }
       placeholder={placeholder ?? " "}
       className={cn(
-        "form-control h-8 w-full min-w-0 rounded-lg px-2.5 py-1 text-base file:inline-flex file:h-6 file:border-0 file:bg-card file:text-sm file:font-medium file:text-foreground",
+        "form-control h-8 w-full min-w-0 rounded-lg px-2.5 py-1 text-sm file:inline-flex file:h-6 file:border-0 file:bg-card file:text-sm file:font-medium file:text-foreground",
         className,
       )}
       {...props}

@@ -96,7 +96,7 @@ export function TextEditor({
         "aria-invalid": String(!!error),
         "aria-describedby": `${id}-instructions${error ? ` ${id}-error` : ""}`,
         spellcheck: "true",
-        class: `w-full whitespace-pre-wrap break-words rounded-b-md px-3 py-2 text-base outline-none ${multiline ? "min-h-24" : "min-h-16"} [&_em]:italic [&_a]:text-primary [&_a]:underline`,
+        class: `w-full whitespace-pre-wrap break-words rounded-b-md px-3 py-2 text-sm outline-none ${multiline ? "min-h-24" : "min-h-16"} [&_em]:italic [&_a]:text-primary [&_a]:underline`,
       },
       handleKeyDown: (_view, event) => {
         if (event.isComposing || event.keyCode === 229) return false;
