@@ -10,8 +10,10 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef } from "react";
 
+import { LanguageFlag } from "@/components/resume/language-flag";
 import { ContentStatusBadge } from "@/components/resume/semantic-badges/content-status-badge";
 import { ReviewStatusBadge } from "@/components/resume/semantic-badges/review-status-badge";
+import { SectionBadge } from "@/components/resume/semantic-badges/section-badge";
 import { VariantWordingField } from "@/components/resume/variant-wording-field";
 import { WordingField } from "@/components/resume/wording-field";
 import { WordingStatus } from "@/components/resume/wording-status";
@@ -19,7 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -58,6 +59,7 @@ import { sharedWording, variantWording } from "@/lib/resume/wording";
 import type { EditorProps } from "@/types-and-constants/editor";
 import { languageNames } from "@/types-and-constants/languages";
 import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
+import type { ResumeDocument } from "@/types-and-constants/resume";
 import type {
   ReviewFilters,
   ReviewItem,
@@ -380,10 +382,18 @@ export function TranslationsEditor({
           ) : null;
         })}
       </div>
-      <div className="grid min-w-0 items-start gap-4 @3xl:grid-cols-[16rem_minmax(0,1fr)]">
+      <div
+        className={cn(
+          "grid min-w-0 items-start gap-4",
+          current && "@3xl:grid-cols-[16rem_minmax(0,1fr)]",
+        )}
+      >
         <div
           ref={list}
-          className="flex max-h-80 min-w-0 flex-col gap-3 overflow-y-auto p-1 @3xl:max-h-[60dvh]"
+          className={cn(
+            "flex min-w-0 flex-col gap-3 overflow-y-auto p-1",
+            current && "max-h-80 @3xl:max-h-[60dvh]",
+          )}
           role="region"
           aria-label="Text to review"
           onScroll={(event) => {
@@ -414,15 +424,12 @@ export function TranslationsEditor({
                   "border-primary bg-accent ring-1 ring-primary",
               )}
             >
-              <span className="flex min-w-0 flex-col gap-1.5">
-                <span className="text-sm leading-snug font-semibold wrap-anywhere">
-                  {item.field.label}
-                </span>
-                <span className="text-xs leading-relaxed wrap-anywhere text-muted-foreground">
-                  {item.owner} · {item.field.source}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {languageNames[item.locale]}
+              <span className="flex min-w-0 flex-col gap-2">
+                <span className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+                  <span className="min-w-0 text-sm leading-snug font-semibold wrap-anywhere">
+                    {item.field.label}
+                  </span>
+                  <ReviewItemBadges item={item} document={document} />
                 </span>
               </span>
               <span
@@ -446,23 +453,26 @@ export function TranslationsEditor({
             </button>
           ))}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0" hidden={!current}>
           {current && (
             <Card ref={detail} className="min-w-0">
-              <CardHeader className="gap-2">
-                <CardTitle className="min-w-0 wrap-anywhere">
+              <CardHeader className="flex flex-wrap items-start gap-2">
+                <CardTitle className="min-w-0 flex-1 basis-32 wrap-anywhere">
                   {currentItem?.field.label || "Current item"}
                 </CardTitle>
-                {currentItem && !currentItem.reasons.length && (
-                  <CardAction>
-                    <ReviewStatusBadge state="resolved" />
-                  </CardAction>
+                {currentItem && (
+                  <div className="ml-auto flex max-w-full min-w-0 flex-wrap justify-end gap-2">
+                    <ReviewItemBadges item={currentItem} document={document} />
+                    {!currentItem.reasons.length && (
+                      <ReviewStatusBadge state="resolved" />
+                    )}
+                  </div>
                 )}
-                <CardDescription className="min-w-0 leading-relaxed wrap-anywhere">
-                  {currentItem
-                    ? `${currentItem.owner} · ${currentItem.field.source} · ${currentItem.field.label} · ${languageNames[currentItem.locale]}`
-                    : "This item is unavailable. Its content or resume was removed."}
-                </CardDescription>
+                {!currentItem && (
+                  <CardDescription className="min-w-0 basis-full leading-relaxed wrap-anywhere">
+                    This item is unavailable. Its content or resume was removed.
+                  </CardDescription>
+                )}
               </CardHeader>
               {currentItem && (
                 <>
@@ -575,16 +585,32 @@ export function TranslationsEditor({
               )}
             </Card>
           )}
-
-          {!current && (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>Select text to review</EmptyTitle>
-              </EmptyHeader>
-            </Empty>
-          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function ReviewItemBadges({
+  item,
+  document,
+}: {
+  item: ReviewItem;
+  document: ResumeDocument;
+}) {
+  const section = document.sections.find(
+    (section) => section.id === item.field.sectionId,
+  );
+
+  return (
+    <span className="flex max-w-full min-w-0 flex-wrap items-center gap-1.5">
+      <SectionBadge
+        section={item.field.sectionId === "profile" ? "profile" : section}
+      />
+      <span className="inline-flex shrink-0" title={languageNames[item.locale]}>
+        <LanguageFlag locale={item.locale} ratio="1x1" rounded />
+        <span className="sr-only">{languageNames[item.locale]}</span>
+      </span>
+    </span>
   );
 }

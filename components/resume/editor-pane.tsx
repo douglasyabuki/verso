@@ -27,7 +27,6 @@ import { resolveOwnerDestination } from "@/lib/resume/destinations";
 import { validateOutput } from "@/lib/resume/validation";
 import type { ConfirmAction } from "@/types-and-constants/editor";
 import type { Locale } from "@/types-and-constants/languages";
-import { languageNames } from "@/types-and-constants/languages";
 import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
 import type { IssueNavigation } from "@/types-and-constants/navigation";
 import type { ResumeDocument } from "@/types-and-constants/resume";
@@ -195,28 +194,26 @@ export function EditorPane({
                         } as Record<string, string>
                       )[view]}
             </h1>
-            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-              <span>
-                {navigation.destination.kind === "resume"
-                  ? languageNames[locale]
-                  : navigation.destination.kind === "library-section"
+            {navigation.destination.kind !== "resume" && (
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <span>
+                  {navigation.destination.kind === "library-section"
                     ? "Career details"
                     : "Workspace"}
-              </span>
-              <InfoHint label="this workspace view" size="sm">
-                {view === "content" ||
-                view === "library-translations" ||
-                view === "library-overview"
-                  ? "Edits update shared career details used by your resumes. Add new content to each resume in Content & order."
-                  : navigation.destination.kind === "resume"
-                    ? `${variant.name || "Untitled resume"} · ${languageNames[locale]}`
+                </span>
+                <InfoHint label="this workspace view" size="sm">
+                  {view === "content" ||
+                  view === "library-translations" ||
+                  view === "library-overview"
+                    ? "Edits update shared career details used by your resumes. Add new content to each resume in Content & order."
                     : view === "review"
                       ? "Find missing text, translations to check, and shared text changes. Use the filters to review a resume or other career details, including archived content."
                       : view === "shared-defaults"
                         ? "These layout settings apply to multiple resumes. Custom settings for a resume still take priority."
                         : "Your work stays in this browser. Download a backup (JSON) to keep all editable career details, resumes, and settings."}
-              </InfoHint>
-            </div>
+                </InfoHint>
+              </div>
+            )}
           </div>
           {(view === "library-overview" || view === "resumes") && (
             <Button

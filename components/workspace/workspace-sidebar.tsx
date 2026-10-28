@@ -1,15 +1,10 @@
 "use client";
 
 import {
-  Award,
-  BriefcaseBusiness,
   ChevronRight,
-  Code2,
   Copy,
   FileText,
-  FolderKanban,
   GlobeCheck,
-  GraduationCap,
   Languages,
   LayoutTemplate,
   ListOrdered,
@@ -17,12 +12,12 @@ import {
   Pencil,
   Plus,
   Trash2,
-  UserRound,
   X,
 } from "lucide-react";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
 import { BrandLockup } from "@/components/brand/brand";
+import { SectionIcon } from "@/components/resume/section-icon";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -56,15 +51,6 @@ import type { useResumeActions } from "@/hooks/workspace/use-resume-actions";
 import { formatCount } from "@/lib/format-count";
 import type { WorkspaceDestination } from "@/types-and-constants/navigation";
 import type { ResumeDocument } from "@/types-and-constants/resume";
-
-const sectionIcons = {
-  experience: BriefcaseBusiness,
-  projects: FolderKanban,
-  education: GraduationCap,
-  skills: Code2,
-  certifications: Award,
-  custom: FileText,
-};
 
 export function WorkspaceSidebar({
   document,
@@ -194,12 +180,11 @@ export function WorkspaceSidebar({
                     })
                   }
                 >
-                  <UserRound />
+                  <SectionIcon kind="profile" />
                   <span>Profile &amp; summary</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {document.sections.map((section) => {
-                const Icon = sectionIcons[section.kind];
                 const active =
                   destination.kind === "library-section" &&
                   destination.sectionId === section.id;
@@ -217,7 +202,7 @@ export function WorkspaceSidebar({
                         })
                       }
                     >
-                      <Icon />
+                      <SectionIcon kind={section.kind} />
                       <span>{librarySectionLabel(section)}</span>
                     </SidebarMenuButton>
                     <SidebarMenuBadge>
