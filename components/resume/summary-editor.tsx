@@ -1,3 +1,4 @@
+import { SectionIcon } from "@/components/resume/section-icon";
 import { WordingField } from "@/components/resume/wording-field";
 import {
   Card,
@@ -18,7 +19,13 @@ export function SummaryEditor({
   return (
     <Card>
       <CardHeader>
-        <CardTitle size="section">Summary</CardTitle>
+        <CardTitle
+          size="section"
+          className="flex items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
+        >
+          <SectionIcon kind="summary" />
+          Summary
+        </CardTitle>
         <CardDescription>
           Shared text for this language. Individual resumes can use customized
           wording.

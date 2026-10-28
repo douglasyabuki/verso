@@ -11,6 +11,7 @@ import {
 import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { LanguageFlag } from "@/components/resume/language-flag";
+import { SectionIcon } from "@/components/resume/section-icon";
 import { ContentStatusBadge } from "@/components/resume/semantic-badges/content-status-badge";
 import { ReviewStatusBadge } from "@/components/resume/semantic-badges/review-status-badge";
 import { SectionBadge } from "@/components/resume/semantic-badges/section-badge";
@@ -251,7 +252,16 @@ export function TranslationsEditor({
       const filterItems = options.map(([value, label]) => ({
         value,
         label,
+        sectionKind:
+          key === "section" && value !== "all"
+            ? value === "profile"
+              ? ("summary" as const)
+              : document.sections.find((section) => section.id === value)?.kind
+            : undefined,
       }));
+      const selectedSectionKind = filterItems.find(
+        (option) => option.value === filters[key],
+      )?.sectionKind;
       return {
         key,
         element: (
@@ -271,12 +281,18 @@ export function TranslationsEditor({
                 id={`review-${key}`}
                 className="w-full"
               >
+                {selectedSectionKind && (
+                  <SectionIcon kind={selectedSectionKind} />
+                )}
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   {filterItems.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
+                      {option.sectionKind && (
+                        <SectionIcon kind={option.sectionKind} />
+                      )}
                       {option.label}
                     </SelectItem>
                   ))}
@@ -335,15 +351,26 @@ export function TranslationsEditor({
                 : "Active and archived"}
             {filters.owner !== "all" &&
               ` · ${filters.owner === "library" ? "Career details" : document.variants.find((resume) => `resume:${resume.id}` === filters.owner)?.name || "Unavailable content"}`}
-            {filters.section !== "all" &&
-              ` · ${
-                filters.section === "profile"
+            {filters.section !== "all" && (
+              <span className="inline-flex items-center gap-1.5 align-middle [&>svg]:size-3 [&>svg]:shrink-0">
+                {" · "}
+                <SectionIcon
+                  kind={
+                    filters.section === "profile"
+                      ? "summary"
+                      : (document.sections.find(
+                          (section) => section.id === filters.section,
+                        )?.kind ?? "custom")
+                  }
+                />
+                {filters.section === "profile"
                   ? "Summary"
                   : document.sections
                       .find((section) => section.id === filters.section)
                       ?.heading["en-US"].spans.map((span) => span.text)
-                      .join("") || "Unavailable section"
-              }`}
+                      .join("") || "Unavailable section"}
+              </span>
+            )}
           </span>
           <InfoHint label="review item filters">
             Only text matching all your filters appears. Each item is counted

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useId, useState } from "react";
 
+import { SectionIcon } from "@/components/resume/section-icon";
 import { ExportStatusBadge } from "@/components/resume/semantic-badges/export-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -220,6 +221,7 @@ export function IssuesPanel({
                     />
                   </div>
                   <IssueGroup
+                    document={document}
                     title="Errors to fix before downloading"
                     issues={language.errors}
                     emptyTitle="No blocking errors"
@@ -228,6 +230,7 @@ export function IssuesPanel({
                     disabled={disabled}
                   />
                   <IssueGroup
+                    document={document}
                     title="Compare translations"
                     issues={language.warnings.filter(
                       (issue) => issue.category === "translation",
@@ -238,6 +241,7 @@ export function IssuesPanel({
                     disabled={disabled}
                   />
                   <IssueGroup
+                    document={document}
                     title="Review shared text changes"
                     issues={language.warnings.filter(
                       (issue) => issue.category === "shared-wording",
@@ -248,6 +252,7 @@ export function IssuesPanel({
                     disabled={disabled}
                   />
                   <IssueGroup
+                    document={document}
                     title="Layout warnings"
                     issues={language.overflow}
                     emptyTitle={language.layoutTitle}
@@ -288,6 +293,7 @@ export function IssuesPanel({
 }
 
 function IssueGroup({
+  document,
   title,
   issues,
   emptyTitle,
@@ -295,6 +301,7 @@ function IssueGroup({
   onIssue,
   disabled,
 }: {
+  document: ResumeDocument;
   title: string;
   issues: Issue[];
   emptyTitle: string;
@@ -309,30 +316,43 @@ function IssueGroup({
       </h3>
       {issues.length ? (
         <ul className="flex flex-col gap-2">
-          {issues.map((issue) => (
-            <li
-              key={issue.id}
-              className="flex min-w-0 flex-col gap-1 rounded-lg border p-3"
-            >
-              <p className="text-xs text-muted-foreground">
-                {issue.section} / {issue.entry} / {issue.locale}
-              </p>
-              {issue.target ? (
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto justify-start self-start px-0 text-start whitespace-normal"
-                  disabled={disabled}
-                  onClick={() => onIssue(issue)}
-                >
-                  {issue.field}
-                </Button>
-              ) : (
-                <p className="text-sm font-medium">{issue.field}</p>
-              )}
-              <p className="text-sm wrap-anywhere">{issue.message}</p>
-            </li>
-          ))}
+          {issues.map((issue) => {
+            const sectionKind =
+              issue.target?.sectionId === "profile"
+                ? issue.path.includes("summary")
+                  ? "summary"
+                  : "profile"
+                : document.sections.find(
+                    (section) => section.id === issue.target?.sectionId,
+                  )?.kind;
+            return (
+              <li
+                key={issue.id}
+                className="flex min-w-0 flex-col gap-1 rounded-lg border p-3"
+              >
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground [&>svg]:size-3 [&>svg]:shrink-0">
+                  {sectionKind && <SectionIcon kind={sectionKind} />}
+                  <span className="min-w-0 wrap-anywhere">
+                    {issue.section} / {issue.entry} / {issue.locale}
+                  </span>
+                </p>
+                {issue.target ? (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto justify-start self-start px-0 text-start whitespace-normal"
+                    disabled={disabled}
+                    onClick={() => onIssue(issue)}
+                  >
+                    {issue.field}
+                  </Button>
+                ) : (
+                  <p className="text-sm font-medium">{issue.field}</p>
+                )}
+                <p className="text-sm wrap-anywhere">{issue.message}</p>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

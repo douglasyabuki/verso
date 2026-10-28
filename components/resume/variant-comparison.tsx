@@ -3,6 +3,7 @@
 import { type ComponentProps, useState } from "react";
 
 import { CheckField } from "@/components/resume/fields";
+import { SectionIcon } from "@/components/resume/section-icon";
 import { ReviewStatusBadge } from "@/components/resume/semantic-badges/review-status-badge";
 import { WordingSourceBadge } from "@/components/resume/semantic-badges/wording-source-badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import { templateSettingLabels } from "@/types-and-constants/output";
 import type {
   LocalizedText,
   ResumeDocument,
+  Section,
   Span,
   Variant,
 } from "@/types-and-constants/resume";
@@ -53,6 +55,7 @@ type Row = {
   id: string;
   label: string;
   sectionId: string;
+  sectionKind?: Section["kind"] | "summary";
   path?: string;
   entryId?: string;
   cells: Cell[];
@@ -110,6 +113,7 @@ export function VariantComparison({
     {
       id: "summary",
       label: "Summary",
+      sectionKind: "summary",
       sectionId: "profile",
       path: "profile.summary",
       cells: variants.map((item) =>
@@ -131,6 +135,7 @@ export function VariantComparison({
     rows.push({
       id: section.id,
       label: plain(section.heading, locale) || "Untitled section",
+      sectionKind: section.kind,
       sectionId: section.id,
       cells: variants.map((item) => {
         const index = item.sections.findIndex(
@@ -309,7 +314,10 @@ export function VariantComparison({
         return (
           <Card key={row.id}>
             <CardHeader>
-              <CardTitle>{row.label}</CardTitle>
+              <CardTitle className="flex items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0">
+                {row.sectionKind && <SectionIcon kind={row.sectionKind} />}
+                <span className="min-w-0 wrap-anywhere">{row.label}</span>
+              </CardTitle>
               <CardDescription>
                 {changed ? "Different between resumes" : "Same in both resumes"}
               </CardDescription>

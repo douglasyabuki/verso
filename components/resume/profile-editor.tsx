@@ -1,5 +1,6 @@
 import { TextField } from "@/components/resume/fields";
 import { LinksEditor } from "@/components/resume/links-editor";
+import { SectionIcon } from "@/components/resume/section-icon";
 import {
   Card,
   CardContent,
@@ -22,7 +23,13 @@ export function ProfileEditor({
   return (
     <Card>
       <CardHeader>
-        <CardTitle size="section">Your profile</CardTitle>
+        <CardTitle
+          size="section"
+          className="flex items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
+        >
+          <SectionIcon kind="profile" />
+          Your profile
+        </CardTitle>
         <CardDescription className="flex items-center gap-1.5">
           <span>Shared contact details</span>
           <InfoHint label="profile languages">

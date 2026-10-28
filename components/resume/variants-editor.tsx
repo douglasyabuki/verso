@@ -10,6 +10,7 @@ import {
   LibrarySearch,
   SectionVisibilityHint,
 } from "@/components/resume/library-controls";
+import { SectionIcon } from "@/components/resume/section-icon";
 import { SortableList, SortableRow } from "@/components/resume/sortable-list";
 import { VariantComparison } from "@/components/resume/variant-comparison";
 import {
@@ -132,7 +133,13 @@ export function VariantsEditor({
           <Card>
             <CardHeader>
               <div className="flex items-center gap-1.5 text-lg">
-                <CardTitle size="section">Summary</CardTitle>
+                <CardTitle
+                  size="section"
+                  className="flex items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
+                >
+                  <SectionIcon kind="summary" />
+                  Summary
+                </CardTitle>
                 <InfoHint label="summary scope" size="lg">
                   Shared by default. Customizations belong to this resume and
                   language.
@@ -293,8 +300,12 @@ function VariantSection({
           <CardHeader>
             <div className="flex items-center gap-2">
               {dragHandle}
-              <CardTitle className="min-w-0 flex-1" size="section">
-                {heading}
+              <CardTitle
+                className="flex min-w-0 flex-1 items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
+                size="section"
+              >
+                <SectionIcon kind={section.kind} />
+                <span className="min-w-0 wrap-anywhere">{heading}</span>
               </CardTitle>
               <VisibilityToggle
                 label={`${heading} section`}

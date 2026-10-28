@@ -6,6 +6,7 @@ import { ChevronRight, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
 import { ContentEditor } from "@/components/resume/content-editor";
 import { ProfileEditor } from "@/components/resume/profile-editor";
 import { ResumeCollection } from "@/components/resume/resume-collection";
+import { SectionIcon } from "@/components/resume/section-icon";
 import { SummaryEditor } from "@/components/resume/summary-editor";
 import { CompilerSettings } from "@/components/resume/template-editor";
 import { SettingsEditor } from "@/components/resume/template-editor";
@@ -180,7 +181,14 @@ export function EditorPane({
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1 basis-48">
-            <h1>
+            <h1 className="flex items-center gap-2 [&>svg]:size-[1em] [&>svg]:shrink-0">
+              {navigation.destination.kind === "library-profile" ? (
+                <SectionIcon kind="profile" />
+              ) : summary ? (
+                <SectionIcon kind="summary" />
+              ) : section ? (
+                <SectionIcon kind={section.kind} />
+              ) : null}
               {view === "profile"
                 ? "Profile"
                 : summary
