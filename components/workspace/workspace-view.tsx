@@ -71,7 +71,6 @@ export function WorkspaceView() {
   const {
     view,
     activeSectionId,
-    setSectionId: changeSection,
     variant,
     setVariantId: changeVariant,
     locale,
@@ -102,12 +101,6 @@ export function WorkspaceView() {
       navigationToken: string;
     }
   >();
-  const setSectionId = (id: string) => {
-    setIssueNavigation((current) =>
-      current ? { ...current, pending: false } : current,
-    );
-    changeSection(id);
-  };
   const setVariantId = (id: string) => {
     setIssueNavigation((current) =>
       current ? { ...current, pending: false } : current,
@@ -135,9 +128,12 @@ export function WorkspaceView() {
       return;
     const destination = resolveIssueDestination(document, issue, variant.id);
     if (!destination) return;
-    if (destination.kind === "library-section")
+    if (
+      destination.kind === "library-section" ||
+      destination.kind === "library-summary"
+    )
       navigation.setLibraryLocale(issue.locale);
-    else changeLocale(issue.locale);
+    else if (destination.kind === "resume") changeLocale(issue.locale);
     const navigationToken = navigation.open(destination);
     if (destination.kind === "library-section") {
       navigation.setLibraryContexts((current) => ({
@@ -329,9 +325,10 @@ export function WorkspaceView() {
         document={document}
         view={view}
         sectionId={activeSectionId}
-        setSectionId={setSectionId}
         locale={
-          navigation.destination.kind === "library-section"
+          navigation.destination.kind === "library-section" ||
+          navigation.destination.kind === "library-summary" ||
+          navigation.destination.kind === "library-profile"
             ? navigation.libraryLocale
             : locale
         }
@@ -341,7 +338,9 @@ export function WorkspaceView() {
           setConfirmation({ title, description, action })
         }
         validation={
-          navigation.destination.kind === "library-section"
+          navigation.destination.kind === "library-section" ||
+          navigation.destination.kind === "library-summary" ||
+          navigation.destination.kind === "library-profile"
             ? validations[navigation.libraryLocale]
             : validation
         }
@@ -460,57 +459,68 @@ export function WorkspaceView() {
                     ? "Changes since your last backup"
                     : "No changes since your last backup"}
                 </span>
-                {!fullWidth && (
-                  <div className="flex max-w-full flex-wrap items-center gap-2 text-sm">
-                    <Label htmlFor="library-language">
-                      {view === "shared-defaults"
-                        ? "Defaults language"
-                        : "Editing language"}
-                    </Label>
-                    <Select
-                      items={languageItems}
-                      value={
-                        view === "shared-defaults"
-                          ? locale
-                          : navigation.libraryLocale
-                      }
-                      disabled={state.replacing || !!state.pending}
-                      onValueChange={(value) => {
-                        if (value === null || state.replacing || state.pending)
-                          return;
-                        if (view === "shared-defaults")
-                          setLocale(value as typeof locale);
-                        else
-                          navigation.setLibraryLocale(value as typeof locale);
-                      }}
-                    >
-                      <SelectTrigger appearance="utility" id="library-language">
-                        <LanguageFlag
-                          locale={
-                            view === "shared-defaults"
-                              ? locale
-                              : navigation.libraryLocale
-                          }
-                        />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {languageItems.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              <span className="inline-flex items-center gap-2">
-                                <LanguageFlag
-                                  locale={option.value as typeof locale}
-                                />
-                                {option.label}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                {!fullWidth &&
+                  navigation.destination.kind !== "library-profile" && (
+                    <div className="flex max-w-full flex-wrap items-center gap-2 text-sm">
+                      <Label htmlFor="library-language">
+                        {view === "shared-defaults"
+                          ? "Defaults language"
+                          : "Editing language"}
+                      </Label>
+                      <Select
+                        items={languageItems}
+                        value={
+                          view === "shared-defaults"
+                            ? locale
+                            : navigation.libraryLocale
+                        }
+                        disabled={state.replacing || !!state.pending}
+                        onValueChange={(value) => {
+                          if (
+                            value === null ||
+                            state.replacing ||
+                            state.pending
+                          )
+                            return;
+                          if (view === "shared-defaults")
+                            setLocale(value as typeof locale);
+                          else
+                            navigation.setLibraryLocale(value as typeof locale);
+                        }}
+                      >
+                        <SelectTrigger
+                          appearance="utility"
+                          id="library-language"
+                        >
+                          <LanguageFlag
+                            locale={
+                              view === "shared-defaults"
+                                ? locale
+                                : navigation.libraryLocale
+                            }
+                          />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {languageItems.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                <span className="inline-flex items-center gap-2">
+                                  <LanguageFlag
+                                    locale={option.value as typeof locale}
+                                  />
+                                  {option.label}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
               </div>
             )
           }
@@ -543,7 +553,9 @@ export function WorkspaceView() {
           title={
             navigation.destination.kind === "resume"
               ? variant.name || "Untitled resume"
-              : navigation.destination.kind === "library-section"
+              : navigation.destination.kind === "library-section" ||
+                  navigation.destination.kind === "library-summary" ||
+                  navigation.destination.kind === "library-profile"
                 ? "Career details"
                 : (
                     {

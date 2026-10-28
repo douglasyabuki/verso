@@ -9,15 +9,17 @@ export function SectionBadge({
   section,
   className,
 }: {
-  section: Section | "profile" | undefined;
+  section: Section | "profile" | "summary" | undefined;
   className?: string;
 }) {
   const label =
     section === "profile"
-      ? "Profile & summary"
-      : section
-        ? librarySectionLabel(section)
-        : "Unavailable section";
+      ? "Profile"
+      : section === "summary"
+        ? "Summary"
+        : section
+          ? librarySectionLabel(section)
+          : "Unavailable section";
 
   return (
     <Badge
@@ -26,7 +28,9 @@ export function SectionBadge({
       title={label}
     >
       <SectionIcon
-        kind={section === "profile" ? "profile" : (section?.kind ?? "custom")}
+        kind={
+          typeof section === "string" ? section : (section?.kind ?? "custom")
+        }
         data-icon="inline-start"
       />
       <span className="truncate">{label}</span>

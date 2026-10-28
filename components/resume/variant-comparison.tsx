@@ -109,7 +109,7 @@ export function VariantComparison({
   const rows: Row[] = [
     {
       id: "summary",
-      label: "Profile summary",
+      label: "Summary",
       sectionId: "profile",
       path: "profile.summary",
       cells: variants.map((item) =>

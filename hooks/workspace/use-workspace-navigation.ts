@@ -56,7 +56,6 @@ export function useWorkspaceNavigation({
     !document.variants.some((item) => item.id === selected.resumeId)
       ? { kind: "resumes" }
       : selected.kind === "library-section" &&
-          selected.sectionId !== "profile" &&
           !document.sections.some((item) => item.id === selected.sectionId)
         ? { kind: "library-overview" }
         : selected;
@@ -104,19 +103,25 @@ export function useWorkspaceNavigation({
   const activeSectionId =
     destination.kind === "library-section" ? destination.sectionId : "profile";
   const view =
-    destination.kind === "library-section"
-      ? destination.tab === "edit"
-        ? "content"
-        : "library-translations"
-      : destination.kind === "resume"
-        ? (
-            {
-              content: "variants",
-              translations: "resume-translations",
-              layout: "template",
-            } as const
-          )[destination.page]
-        : destination.kind;
+    destination.kind === "library-profile"
+      ? "profile"
+      : destination.kind === "library-summary"
+        ? destination.tab === "edit"
+          ? "summary"
+          : "library-translations"
+        : destination.kind === "library-section"
+          ? destination.tab === "edit"
+            ? "content"
+            : "library-translations"
+          : destination.kind === "resume"
+            ? (
+                {
+                  content: "variants",
+                  translations: "resume-translations",
+                  layout: "template",
+                } as const
+              )[destination.page]
+            : destination.kind;
   const addSection = () => {
     if (
       blocked ||
@@ -204,8 +209,6 @@ export function useWorkspaceNavigation({
       selectVariant(id);
       if (destination.kind === "resume") open({ ...destination, resumeId: id });
     },
-    setSectionId: (id: string) =>
-      open({ kind: "library-section", sectionId: id, tab: "edit" }),
     locale,
     setLocale: (next: Locale | ((current: Locale) => Locale)) => {
       if (!blocked && controller.commitEditorDrafts()) setLocale(next);

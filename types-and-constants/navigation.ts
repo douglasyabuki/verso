@@ -7,6 +7,8 @@ type ResumePage = "content" | "translations" | "layout";
 
 export type WorkspaceDestination =
   | { kind: "library-overview" }
+  | { kind: "library-profile" }
+  | { kind: "library-summary"; tab: LibraryTab }
   | { kind: "library-section"; sectionId: string; tab: LibraryTab }
   | { kind: "resumes" }
   | { kind: "resume"; resumeId: string; page: ResumePage }

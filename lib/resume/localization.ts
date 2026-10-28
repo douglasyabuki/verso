@@ -70,7 +70,7 @@ export function localizedFields(
         : undefined,
       path: "profile.summary",
       label: "Summary",
-      source: "Profile",
+      source: "Summary",
       sectionId: "profile",
       value: variant
         ? effectiveWording(doc.profile.summary, variant, "profile.summary")

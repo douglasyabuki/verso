@@ -26,6 +26,8 @@ export function resolveOwnerDestination(
     return document.variants.some((resume) => resume.id === target.resumeId)
       ? { kind: "resume", resumeId: target.resumeId, page: "translations" }
       : null;
+  if (target.path === "profile.summary")
+    return { kind: "library-summary", tab: edit ? "edit" : "review" };
   return {
     kind: "library-section",
     sectionId: field.sectionId,
@@ -57,10 +59,10 @@ export function resolveIssueDestination(
         }
       : null;
   }
-  if (
-    target.sectionId === "profile" ||
-    document.sections.some((section) => section.id === target.sectionId)
-  )
+  if (issue.path === "profile.summary")
+    return { kind: "library-summary", tab: "edit" };
+  if (issue.path.startsWith("profile.")) return { kind: "library-profile" };
+  if (document.sections.some((section) => section.id === target.sectionId))
     return {
       kind: "library-section",
       sectionId: target.sectionId,

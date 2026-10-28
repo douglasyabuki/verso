@@ -22,8 +22,8 @@ export function outputIssue(
   category: "error" | "translation" | "shared-wording",
 ): Issue {
   const parts = path.split(".");
-  let sectionName = "Profile";
-  let entryName = "Profile";
+  let sectionName = path === "profile.summary" ? "Summary" : "Profile";
+  let entryName = sectionName;
   let sectionId = "profile";
   let entryId: string | undefined;
   let field = parts.at(-1) ?? "Field";

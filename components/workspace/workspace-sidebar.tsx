@@ -160,30 +160,28 @@ export function WorkspaceSidebar({
             createDisabled={blocked || document.sections.length >= 30}
           >
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={
-                    destination.kind === "library-section" &&
-                    destination.sectionId === "profile"
-                  }
-                  aria-current={
-                    destination.kind === "library-section" &&
-                    destination.sectionId === "profile"
-                      ? "page"
-                      : undefined
-                  }
-                  onClick={() =>
-                    go({
-                      kind: "library-section",
-                      sectionId: "profile",
-                      tab: "edit",
-                    })
-                  }
-                >
-                  <SectionIcon kind="profile" />
-                  <span>Profile &amp; summary</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {(["profile", "summary"] as const).map((kind) => (
+                <SidebarMenuItem key={kind}>
+                  <SidebarMenuButton
+                    isActive={destination.kind === `library-${kind}`}
+                    aria-current={
+                      destination.kind === `library-${kind}`
+                        ? "page"
+                        : undefined
+                    }
+                    onClick={() =>
+                      go(
+                        kind === "profile"
+                          ? { kind: "library-profile" }
+                          : { kind: "library-summary", tab: "edit" },
+                      )
+                    }
+                  >
+                    <SectionIcon kind={kind} />
+                    <span>{kind === "profile" ? "Profile" : "Summary"}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
               {document.sections.map((section) => {
                 const active =
                   destination.kind === "library-section" &&

@@ -3,6 +3,7 @@
 import { ListChecks, Pencil } from "lucide-react";
 
 import { LanguageFlag } from "@/components/resume/language-flag";
+import { SectionIcon } from "@/components/resume/section-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,8 +30,13 @@ export function LibraryOverview({
 }: {
   document: ResumeDocument;
   open: (destination: WorkspaceDestination) => void;
-  addSection: () => void;
-  onReview: (sectionId: string, locale: Locale) => void;
+  onReview: (
+    destination: Extract<
+      WorkspaceDestination,
+      { kind: "library-summary" | "library-section" }
+    >,
+    locale: Locale,
+  ) => void;
 }) {
   const queue = reviewItems(document).filter((item) => !item.resumeId);
   return (
@@ -44,59 +50,90 @@ export function LibraryOverview({
       </div>
       <div className="grid gap-4 @2xl:grid-cols-2">
         {[
-          { id: "profile", label: "Profile & summary", entries: [] },
+          {
+            id: "profile",
+            kind: "profile" as const,
+            label: "Profile",
+            entries: [],
+            destination: { kind: "library-profile" } as const,
+            reviewSectionId: null,
+          },
+          {
+            id: "summary",
+            kind: "summary" as const,
+            label: "Summary",
+            entries: [],
+            destination: { kind: "library-summary", tab: "edit" } as const,
+            reviewSectionId: "profile",
+          },
           ...document.sections.map((section) => ({
             ...section,
             label: librarySectionLabel(section),
+            destination: {
+              kind: "library-section",
+              sectionId: section.id,
+              tab: "edit",
+            } as const,
+            reviewSectionId: section.id,
           })),
         ].map((section) => (
-          <Card key={section.id} size="sm">
+          <Card key={JSON.stringify(section.destination)} size="sm">
             <CardHeader>
-              <CardTitle size="section">{section.label}</CardTitle>
+              <CardTitle
+                size="section"
+                className="flex items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
+              >
+                <SectionIcon kind={section.kind} />
+                {section.label}
+              </CardTitle>
               <CardDescription>
-                {section.id === "profile"
-                  ? "Shared contact details and bilingual summary"
-                  : `${section.entries.filter((entry) => !entry.archived).length} active · ${section.entries.filter((entry) => entry.archived).length} archived entries`}
+                {section.destination.kind === "library-profile"
+                  ? "Shared contact details for all resumes"
+                  : section.destination.kind === "library-summary"
+                    ? "Shared bilingual summary"
+                    : `${section.entries.filter((entry) => !entry.archived).length} active · ${section.entries.filter((entry) => entry.archived).length} archived entries`}
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {locales.map((locale) => {
-                const items = queue.filter(
-                  (item) =>
-                    item.field.sectionId === section.id &&
-                    item.locale === locale,
-                );
-                return (
-                  <Button
-                    key={locale}
-                    variant="outline"
-                    className="justify-between"
-                    onClick={() => onReview(section.id, locale)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <LanguageFlag locale={locale} className="rounded-sm" />
-                      {locale === "en-US" ? "English" : "Portuguese"}
-                    </div>
-                    <Badge variant={items.length ? "attention" : "outline"}>
-                      <ListChecks data-icon="inline-start" />
-                      {items.length
-                        ? formatCount(items.length, "task", "tasks")
-                        : "No tasks"}
-                    </Badge>
-                  </Button>
-                );
-              })}
-            </CardContent>
-            <CardFooter>
+            {section.destination.kind !== "library-profile" && (
+              <CardContent className="flex flex-col gap-2">
+                {locales.map((locale) => {
+                  const items = queue.filter(
+                    (item) =>
+                      item.field.sectionId === section.reviewSectionId &&
+                      item.locale === locale,
+                  );
+                  return (
+                    <Button
+                      key={locale}
+                      variant="outline"
+                      className="justify-between"
+                      onClick={() => {
+                        if (section.destination.kind !== "library-profile")
+                          onReview(
+                            { ...section.destination, tab: "review" },
+                            locale,
+                          );
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <LanguageFlag locale={locale} className="rounded-sm" />
+                        {locale === "en-US" ? "English" : "Portuguese"}
+                      </div>
+                      <Badge variant={items.length ? "attention" : "outline"}>
+                        <ListChecks data-icon="inline-start" />
+                        {items.length
+                          ? formatCount(items.length, "task", "tasks")
+                          : "No tasks"}
+                      </Badge>
+                    </Button>
+                  );
+                })}
+              </CardContent>
+            )}
+            <CardFooter className="mt-auto">
               <Button
                 variant="outline"
-                onClick={() =>
-                  open({
-                    kind: "library-section",
-                    sectionId: section.id,
-                    tab: "edit",
-                  })
-                }
+                onClick={() => open(section.destination)}
               >
                 <Pencil data-icon="inline-start" />
                 Edit content

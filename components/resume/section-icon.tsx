@@ -12,6 +12,7 @@ import type { Section } from "@/types-and-constants/resume";
 
 const sectionIcons = {
   profile: UserRound,
+  summary: FileText,
   experience: BriefcaseBusiness,
   projects: FolderKanban,
   education: GraduationCap,
@@ -24,7 +25,7 @@ export function SectionIcon({
   kind,
   ...props
 }: {
-  kind: Section["kind"] | "profile";
+  kind: Section["kind"] | "profile" | "summary";
   "data-icon"?: "inline-start";
 }) {
   const Icon = sectionIcons[kind];

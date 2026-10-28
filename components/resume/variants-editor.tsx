@@ -132,7 +132,7 @@ export function VariantsEditor({
           <Card>
             <CardHeader>
               <div className="flex items-center gap-1.5 text-lg">
-                <CardTitle size="section">Profile summary text</CardTitle>
+                <CardTitle size="section">Summary</CardTitle>
                 <InfoHint label="summary scope" size="lg">
                   Shared by default. Customizations belong to this resume and
                   language.

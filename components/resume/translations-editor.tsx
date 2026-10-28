@@ -190,7 +190,7 @@ export function TranslationsEditor({
             label: "Section",
             options: [
               ["all", "All sections"],
-              ["profile", "Profile & summary"],
+              ["profile", "Summary"],
               ...document.sections.map((section) => [
                 section.id,
                 section.heading["en-US"].spans
@@ -338,7 +338,7 @@ export function TranslationsEditor({
             {filters.section !== "all" &&
               ` · ${
                 filters.section === "profile"
-                  ? "Profile"
+                  ? "Summary"
                   : document.sections
                       .find((section) => section.id === filters.section)
                       ?.heading["en-US"].spans.map((span) => span.text)
@@ -605,7 +605,7 @@ function ReviewItemBadges({
   return (
     <span className="flex max-w-full min-w-0 flex-wrap items-center gap-1.5">
       <SectionBadge
-        section={item.field.sectionId === "profile" ? "profile" : section}
+        section={item.path === "profile.summary" ? "summary" : section}
       />
       <span className="inline-flex shrink-0" title={languageNames[item.locale]}>
         <LanguageFlag locale={item.locale} ratio="1x1" rounded />

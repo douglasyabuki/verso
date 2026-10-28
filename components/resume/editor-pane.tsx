@@ -4,7 +4,9 @@ import { cn } from "cn";
 import { ChevronRight, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { ContentEditor } from "@/components/resume/content-editor";
+import { ProfileEditor } from "@/components/resume/profile-editor";
 import { ResumeCollection } from "@/components/resume/resume-collection";
+import { SummaryEditor } from "@/components/resume/summary-editor";
 import { CompilerSettings } from "@/components/resume/template-editor";
 import { SettingsEditor } from "@/components/resume/template-editor";
 import { TranslationsEditor } from "@/components/resume/translations-editor";
@@ -38,7 +40,6 @@ export function EditorPane({
   document,
   view,
   sectionId,
-  setSectionId,
   locale,
   variant,
   update,
@@ -56,7 +57,6 @@ export function EditorPane({
   document: ResumeDocument;
   view: ReturnType<typeof useWorkspaceNavigation>["view"];
   sectionId: string;
-  setSectionId: (id: string) => void;
   locale: Locale;
   variant: ResumeDocument["variants"][number];
   update: WorkspaceEdit;
@@ -76,7 +76,12 @@ export function EditorPane({
     disabled,
     onFocused: onIssueFocused,
   });
-  const reviewKey = view === "library-translations" ? sectionId : variant.id;
+  const summary = navigation.destination.kind === "library-summary";
+  const library =
+    summary ||
+    navigation.destination.kind === "library-profile" ||
+    navigation.destination.kind === "library-section";
+  const reviewKey = library ? sectionId : variant.id;
   const defaultContext: ReviewReturnContext = {
     outputResumeId: variant.id,
     current: null,
@@ -136,7 +141,10 @@ export function EditorPane({
         }));
     }
   };
-  const section = document.sections.find((item) => item.id === sectionId);
+  const section =
+    navigation.destination.kind === "library-section"
+      ? document.sections.find((item) => item.id === sectionId)
+      : undefined;
   return (
     <div
       className={cn(
@@ -173,36 +181,34 @@ export function EditorPane({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1 basis-48">
             <h1>
-              {view === "content" || view === "library-translations"
-                ? sectionId === "profile"
-                  ? "Profile & summary"
-                  : section
-                    ? librarySectionLabel(section)
-                    : "Career details"
-                : view === "variants"
-                  ? `${variant.name || "Untitled resume"} · Content & order`
-                  : view === "resume-translations"
-                    ? `${variant.name || "Untitled resume"} · Text to review`
-                    : (
-                        {
-                          "library-overview": "Career details · Overview",
-                          resumes: "All resumes",
-                          review: "Text to review",
-                          data: "Backups & settings",
-                          template: "Layout",
-                          "shared-defaults": "Default layout",
-                        } as Record<string, string>
-                      )[view]}
+              {view === "profile"
+                ? "Profile"
+                : summary
+                  ? "Summary"
+                  : view === "content" || view === "library-translations"
+                    ? section
+                      ? librarySectionLabel(section)
+                      : "Career details"
+                    : view === "variants"
+                      ? `${variant.name || "Untitled resume"} · Content & order`
+                      : view === "resume-translations"
+                        ? `${variant.name || "Untitled resume"} · Text to review`
+                        : (
+                            {
+                              "library-overview": "Career details · Overview",
+                              resumes: "All resumes",
+                              review: "Text to review",
+                              data: "Backups & settings",
+                              template: "Layout",
+                              "shared-defaults": "Default layout",
+                            } as Record<string, string>
+                          )[view]}
             </h1>
             {navigation.destination.kind !== "resume" && (
               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                <span>
-                  {navigation.destination.kind === "library-section"
-                    ? "Career details"
-                    : "Workspace"}
-                </span>
+                <span>{library ? "Career details" : "Workspace"}</span>
                 <InfoHint label="this workspace view" size="sm">
-                  {view === "content" ||
+                  {library ||
                   view === "library-translations" ||
                   view === "library-overview"
                     ? "Edits update shared career details used by your resumes. Add new content to each resume in Content & order."
@@ -252,7 +258,7 @@ export function EditorPane({
                         );
                       });
                     });
-                    setSectionId("profile");
+                    navigation.open({ kind: "library-profile" });
                   },
                 )
               }
@@ -295,24 +301,27 @@ export function EditorPane({
               remaining work.
             </p>
           )}
-        {navigation.destination.kind === "library-section" && (
+        {(navigation.destination.kind === "library-section" ||
+          navigation.destination.kind === "library-summary") && (
           <ToggleGroup
             value={[navigation.destination.tab]}
             onValueChange={(values) => {
               if (
                 values[0] &&
-                navigation.destination.kind === "library-section"
+                (navigation.destination.kind === "library-section" ||
+                  navigation.destination.kind === "library-summary")
               ) {
                 if (
                   values[0] === "review" &&
                   !navigation.reviewContext &&
                   !navigation.scopedReviews[sectionId]
                 ) {
-                  const entry =
-                    navigation.libraryContexts[sectionId]?.entryId ||
-                    document.sections
-                      .find((section) => section.id === sectionId)
-                      ?.entries.find((entry) => !entry.archived)?.id;
+                  const entry = summary
+                    ? undefined
+                    : navigation.libraryContexts[sectionId]?.entryId ||
+                      document.sections
+                        .find((section) => section.id === sectionId)
+                        ?.entries.find((entry) => !entry.archived)?.id;
                   navigation.setScopedReviews((current) => ({
                     ...current,
                     [sectionId]: {
@@ -320,7 +329,7 @@ export function EditorPane({
                       current: {
                         path: entry
                           ? `entries.${entry}.title`
-                          : sectionId === "profile"
+                          : summary
                             ? "profile.summary"
                             : `sections.${sectionId}.heading`,
                         locale,
@@ -358,13 +367,13 @@ export function EditorPane({
           <LibraryOverview
             document={document}
             open={navigation.open}
-            addSection={navigation.addSection}
-            onReview={(sectionId, locale) => {
-              navigation.open({
-                kind: "library-section",
-                sectionId,
-                tab: "review",
-              });
+            onReview={(destination, locale) => {
+              const sectionId =
+                destination.kind === "library-summary"
+                  ? "profile"
+                  : destination.sectionId;
+              navigation.setLibraryLocale(locale);
+              navigation.open(destination);
               navigation.setScopedReviews((current) => ({
                 ...current,
                 [sectionId]: {
@@ -426,6 +435,22 @@ export function EditorPane({
           >
             Edit default layout
           </Button>
+        )}
+        {view === "profile" && (
+          <ProfileEditor
+            document={document}
+            update={update}
+            confirm={confirm}
+            errors={validation.errors}
+          />
+        )}
+        {view === "summary" && (
+          <SummaryEditor
+            document={document}
+            locale={locale}
+            update={update}
+            errors={validation.errors}
+          />
         )}
         {view === "content" && (
           <ContentEditor
