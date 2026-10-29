@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { EntryFields } from "@/components/content/entry-fields";
 import { EntrySearch } from "@/components/content/entry-search";
 import { LinksEditor } from "@/components/content/links-editor";
+import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
 import { SortableList, SortableRow } from "@/components/editor/sortable-list";
 import { ContentStatusBadge } from "@/components/shared/semantic-badges/content-status-badge";
 import { Button } from "@/components/ui/button";
@@ -236,20 +237,19 @@ export function ContentEditor({
                         label={entryLabel(item, section.kind, locale)}
                         as="li"
                         className={cn(
-                          "flex flex-col gap-2 rounded-lg border border-l-2 p-2",
-                          entry?.id === item.id &&
-                            "border-l-foreground bg-muted",
+                          "list-item-surface flex flex-col gap-2 rounded-lg border border-s-2 py-2",
+                          entry?.id === item.id && "list-item-surface-selected",
                         )}
                       >
                         {({ dragHandle, orderButtons }) => (
-                          <>
+                          <SortableItemLayout
+                            dragHandle={dragHandle}
+                            handleClassName="mt-2"
+                          >
                             <div className="flex items-center gap-2">
-                              {dragHandle}
                               <Button
-                                className="h-auto min-w-0 flex-1 justify-start py-2 text-left whitespace-normal"
-                                variant={
-                                  entry?.id === item.id ? "secondary" : "ghost"
-                                }
+                                className="h-auto min-w-0 flex-1 justify-start bg-transparent py-2 text-left whitespace-normal hover:bg-transparent dark:hover:bg-transparent"
+                                variant="ghost"
                                 onClick={() => {
                                   setEntryId(item.id);
                                   setEditRequest((request) => request + 1);
@@ -287,7 +287,7 @@ export function ContentEditor({
                               </Button>
                               {orderButtons}
                             </div>
-                          </>
+                          </SortableItemLayout>
                         )}
                       </SortableRow>
                     );
@@ -479,12 +479,11 @@ export function ContentEditor({
                         key={bullet.id}
                         id={bullet.id}
                         label={`${terms.item.toLowerCase()} ${index + 1}`}
-                        className="flex flex-col gap-3 rounded-lg border border-field-filled p-3"
+                        className="list-item-surface flex flex-col gap-3 rounded-lg border py-3"
                       >
                         {({ dragHandle, orderButtons }) => (
-                          <>
+                          <SortableItemLayout dragHandle={dragHandle}>
                             <div className="flex items-center gap-2">
-                              {dragHandle}
                               <span className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">
                                 {terms.item.toUpperCase()} {index + 1}
                               </span>
@@ -544,7 +543,7 @@ export function ContentEditor({
                               required
                               errors={errors}
                             />
-                          </>
+                          </SortableItemLayout>
                         )}
                       </SortableRow>
                     ))}

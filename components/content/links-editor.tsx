@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 
 import { TextField } from "@/components/editor/fields";
+import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
 import { SortableList, SortableRow } from "@/components/editor/sortable-list";
 import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
@@ -52,68 +53,69 @@ export function LinksEditor({
               key={link.id}
               id={link.id}
               label={link.label.trim() || `link ${index + 1}`}
-              className="flex flex-col gap-3 rounded-lg border border-field-filled p-3"
+              className="list-item-surface flex flex-col gap-3 rounded-lg border py-3"
             >
               {({ dragHandle, orderButtons }) => (
-                <FieldGroup className="gap-3">
-                  <div className="flex items-center gap-2">
-                    {dragHandle}
-                    <span className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">
-                      LINK {index + 1}
-                    </span>
-                    <div className="flex gap-1">
-                      {orderButtons}
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Remove link ${index + 1}`}
-                        onClick={() =>
-                          confirm(
-                            "Remove this link?",
-                            "This removes the shared link from every draft that uses it.",
-                            () =>
-                              onChange(
-                                links.filter((item) => item.id !== link.id),
-                              ),
-                          )
-                        }
-                      >
-                        <Trash2 />
-                      </Button>
+                <SortableItemLayout dragHandle={dragHandle}>
+                  <FieldGroup className="gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">
+                        LINK {index + 1}
+                      </span>
+                      <div className="flex gap-1">
+                        {orderButtons}
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Remove link ${index + 1}`}
+                          onClick={() =>
+                            confirm(
+                              "Remove this link?",
+                              "This removes the shared link from every draft that uses it.",
+                              () =>
+                                onChange(
+                                  links.filter((item) => item.id !== link.id),
+                                ),
+                            )
+                          }
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <TextField
-                    fieldKey={`links.${link.id}.label`}
-                    label="Link label"
-                    value={link.label}
-                    maxLength={200}
-                    onChange={(label, group) =>
-                      onChange(
-                        links.map((item) =>
-                          item.id === link.id ? { ...item, label } : item,
-                        ),
-                        group,
-                      )
-                    }
-                    placeholder="My website"
-                  />
-                  <TextField
-                    fieldKey={`links.${link.id}.url`}
-                    label="Link address"
-                    value={link.url}
-                    maxLength={2_000}
-                    onChange={(url, group) =>
-                      onChange(
-                        links.map((item) =>
-                          item.id === link.id ? { ...item, url } : item,
-                        ),
-                        group,
-                      )
-                    }
-                    error={urlError(link.url)}
-                    placeholder="https://example.com"
-                  />
-                </FieldGroup>
+                    <TextField
+                      fieldKey={`links.${link.id}.label`}
+                      label="Link label"
+                      value={link.label}
+                      maxLength={200}
+                      onChange={(label, group) =>
+                        onChange(
+                          links.map((item) =>
+                            item.id === link.id ? { ...item, label } : item,
+                          ),
+                          group,
+                        )
+                      }
+                      placeholder="My website"
+                    />
+                    <TextField
+                      fieldKey={`links.${link.id}.url`}
+                      label="Link address"
+                      value={link.url}
+                      maxLength={2_000}
+                      onChange={(url, group) =>
+                        onChange(
+                          links.map((item) =>
+                            item.id === link.id ? { ...item, url } : item,
+                          ),
+                          group,
+                        )
+                      }
+                      error={urlError(link.url)}
+                      placeholder="https://example.com"
+                    />
+                  </FieldGroup>
+                </SortableItemLayout>
               )}
             </SortableRow>
           ))}

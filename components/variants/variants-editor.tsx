@@ -6,6 +6,7 @@ import { useState } from "react";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { EntrySearch } from "@/components/content/entry-search";
 import { TextField } from "@/components/editor/fields";
+import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
 import { SortableList, SortableRow } from "@/components/editor/sortable-list";
 import { Button } from "@/components/ui/button";
 import {
@@ -310,274 +311,294 @@ function VariantCareerSection({
           tabIndex={-1}
           data-issue-field={`variants.${variant.id}.sections.${sectionId}`}
         >
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              {dragHandle}
-              <CardTitle
-                className="flex min-w-0 flex-1 items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
-                size="section"
-              >
-                <CareerSectionIcon kind={section.kind} icon={section.icon} />
-                <span className="min-w-0 wrap-anywhere">{heading}</span>
-              </CardTitle>
-              <VisibilityToggle
-                label={`${heading} section`}
-                visible={selected.visible}
-                onChange={(visible) =>
-                  change((target) => {
-                    target.visible = visible;
-                  })
-                }
-              />
-              {orderButtons}
-            </div>
-          </CardHeader>
-
-          <CareerSectionVisibilityHint hidden={!selected.visible}>
-            <CardContent
-              data-section-hidden={!selected.visible || undefined}
-              className="transition-opacity data-[section-hidden]:opacity-60"
-            >
-              <FieldSet>
-                <FieldLegend className="sr-only">Section selection</FieldLegend>
-                {!ordered.length && (
-                  <p className="text-xs leading-normal text-muted-foreground">
-                    {section.entries.length
-                      ? "No matching entries in this section."
-                      : `Add ${terms.singular} entries to this section in the career details.`}
-                  </p>
-                )}
-                <SortableList
-                  scope={`variant:${variant.id}:${sectionId}:entries`}
-                  revision={document}
-                  contextKey={JSON.stringify([query, showArchived, locale])}
-                  items={sortableEntries.map((entry) => ({
-                    id: entry.id,
-                    label: entryLabel(entry, section.kind, locale),
-                  }))}
-                  onReorder={(source, target) =>
-                    change((selected) =>
-                      reorderVisible(
-                        selected.entries,
-                        sortableEntries.map((entry) => entry.id),
-                        source,
-                        target,
-                        (item) => item.entryId,
-                      ),
-                    )
-                  }
+          <SortableItemLayout
+            dragHandle={dragHandle}
+            contentClassName="gap-(--card-spacing)"
+          >
+            <CardHeader className="px-0">
+              <div className="flex items-center gap-2">
+                <CardTitle
+                  className="flex min-w-0 flex-1 items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
+                  size="section"
                 >
-                  <div className="flex flex-col gap-3 pl-6">
-                    {ordered.map((entry) => {
-                      const selection = selected.entries.find(
-                        (item) => item.entryId === entry.id,
-                      );
-                      const bulletIds = selection?.bulletIds ?? [];
-                      const bullets = [
-                        ...bulletIds.flatMap((id) =>
-                          entry.bullets.filter((bullet) => bullet.id === id),
+                  <CareerSectionIcon kind={section.kind} icon={section.icon} />
+                  <span className="min-w-0 wrap-anywhere">{heading}</span>
+                </CardTitle>
+                <VisibilityToggle
+                  label={`${heading} section`}
+                  visible={selected.visible}
+                  onChange={(visible) =>
+                    change((target) => {
+                      target.visible = visible;
+                    })
+                  }
+                />
+                {orderButtons}
+              </div>
+            </CardHeader>
+
+            <CareerSectionVisibilityHint hidden={!selected.visible}>
+              <CardContent
+                data-section-hidden={!selected.visible || undefined}
+                className="px-0 transition-opacity data-[section-hidden]:opacity-60"
+              >
+                <FieldSet>
+                  <FieldLegend className="sr-only">
+                    Section selection
+                  </FieldLegend>
+                  {!ordered.length && (
+                    <p className="text-xs leading-normal text-muted-foreground">
+                      {section.entries.length
+                        ? "No matching entries in this section."
+                        : `Add ${terms.singular} entries to this section in the career details.`}
+                    </p>
+                  )}
+                  <SortableList
+                    scope={`variant:${variant.id}:${sectionId}:entries`}
+                    revision={document}
+                    contextKey={JSON.stringify([query, showArchived, locale])}
+                    items={sortableEntries.map((entry) => ({
+                      id: entry.id,
+                      label: entryLabel(entry, section.kind, locale),
+                    }))}
+                    onReorder={(source, target) =>
+                      change((selected) =>
+                        reorderVisible(
+                          selected.entries,
+                          sortableEntries.map((entry) => entry.id),
+                          source,
+                          target,
+                          (item) => item.entryId,
                         ),
-                        ...entry.bullets.filter(
-                          (bullet) => !bulletIds.includes(bullet.id),
-                        ),
-                      ];
-                      const changeBullets = (
-                        changeIds: (ids: string[]) => string[],
-                      ) =>
-                        change((selected) => {
-                          const target = selected.entries.find(
-                            (item) => item.entryId === entry.id,
-                          );
-                          if (target && !entry.archived)
-                            target.bulletIds = changeIds(target.bulletIds);
-                        });
-                      const label = entryLabel(entry, section.kind, locale);
-                      return (
-                        <SortableRow
-                          key={entry.id}
-                          id={entry.id}
-                          label={label}
-                          className="flex flex-col gap-3 rounded-lg border border-field-filled p-3"
-                        >
-                          {({ dragHandle, orderButtons }) => (
-                            <>
-                              <div className="flex items-start gap-2">
-                                {dragHandle}
-                                <span
-                                  tabIndex={-1}
-                                  data-issue-field={`variants.${variant.id}.entries.${entry.id}`}
-                                  className="min-w-0 flex-1 py-1 text-sm leading-snug font-medium"
-                                >
-                                  {label}
-                                </span>
-                                <InclusionToggle
-                                  label={label}
-                                  visible={!!selection}
-                                  disabled={entry.archived && !selection}
-                                  onChange={(visible) =>
-                                    change((target) => {
-                                      target.entries = visible
-                                        ? target.entries.some(
-                                            (item) => item.entryId === entry.id,
-                                          )
-                                          ? target.entries
-                                          : [
-                                              ...target.entries,
-                                              {
-                                                entryId: entry.id,
-                                                bulletIds: entry.bullets.map(
-                                                  (bullet) => bullet.id,
-                                                ),
-                                              },
-                                            ]
-                                        : target.entries.filter(
-                                            (item) => item.entryId !== entry.id,
-                                          );
+                      )
+                    }
+                  >
+                    <div className="flex flex-col gap-3">
+                      {ordered.map((entry) => {
+                        const selection = selected.entries.find(
+                          (item) => item.entryId === entry.id,
+                        );
+                        const bulletIds = selection?.bulletIds ?? [];
+                        const bullets = [
+                          ...bulletIds.flatMap((id) =>
+                            entry.bullets.filter((bullet) => bullet.id === id),
+                          ),
+                          ...entry.bullets.filter(
+                            (bullet) => !bulletIds.includes(bullet.id),
+                          ),
+                        ];
+                        const changeBullets = (
+                          changeIds: (ids: string[]) => string[],
+                        ) =>
+                          change((selected) => {
+                            const target = selected.entries.find(
+                              (item) => item.entryId === entry.id,
+                            );
+                            if (target && !entry.archived)
+                              target.bulletIds = changeIds(target.bulletIds);
+                          });
+                        const label = entryLabel(entry, section.kind, locale);
+                        return (
+                          <SortableRow
+                            key={entry.id}
+                            id={entry.id}
+                            label={label}
+                            className="list-item-surface flex flex-col gap-3 rounded-lg border py-3"
+                          >
+                            {({ dragHandle, orderButtons }) => (
+                              <SortableItemLayout dragHandle={dragHandle}>
+                                <div className="flex items-start gap-2">
+                                  <span
+                                    tabIndex={-1}
+                                    data-issue-field={`variants.${variant.id}.entries.${entry.id}`}
+                                    className="min-w-0 flex-1 py-1 text-sm leading-snug font-medium"
+                                  >
+                                    {label}
+                                  </span>
+                                  <div className="flex h-7 shrink-0 items-center gap-2">
+                                    <InclusionToggle
+                                      label={label}
+                                      visible={!!selection}
+                                      disabled={entry.archived && !selection}
+                                      onChange={(visible) =>
+                                        change((target) => {
+                                          target.entries = visible
+                                            ? target.entries.some(
+                                                (item) =>
+                                                  item.entryId === entry.id,
+                                              )
+                                              ? target.entries
+                                              : [
+                                                  ...target.entries,
+                                                  {
+                                                    entryId: entry.id,
+                                                    bulletIds:
+                                                      entry.bullets.map(
+                                                        (bullet) => bullet.id,
+                                                      ),
+                                                  },
+                                                ]
+                                            : target.entries.filter(
+                                                (item) =>
+                                                  item.entryId !== entry.id,
+                                              );
+                                        })
+                                      }
+                                    />
+                                    {orderButtons}
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                  <InclusionStatus
+                                    selected={!!selection}
+                                    archived={entry.archived}
+                                    sectionVisible={selected.visible}
+                                    count={bulletIds.length}
+                                    total={entry.bullets.length}
+                                    variantName={variant.name || "this resume"}
+                                  />
+                                  {entry.bullets.length > 1 && (
+                                    <AchievementSelectionActions
+                                      label={`${label} ${terms.items}`}
+                                      selected={bulletIds.length}
+                                      total={entry.bullets.length}
+                                      disabled={!selection || entry.archived}
+                                      showCount={false}
+                                      onSelectAll={() =>
+                                        changeBullets((ids) =>
+                                          selectAllAchievements(ids, entry),
+                                        )
+                                      }
+                                      onClearAll={() => changeBullets(() => [])}
+                                    />
+                                  )}
+                                </div>
+                                <SortableList
+                                  scope={`variant:${variant.id}:${sectionId}:${entry.id}:bullets`}
+                                  revision={document}
+                                  contextKey={locale}
+                                  items={bulletIds.map((id) => ({
+                                    id,
+                                    label:
+                                      plain(
+                                        entry.bullets.find(
+                                          (bullet) => bullet.id === id,
+                                        )!.body,
+                                        locale,
+                                      ).slice(0, 100) || terms.item,
+                                  }))}
+                                  onReorder={(source, target) =>
+                                    change((selected) => {
+                                      const targetEntry = selected.entries.find(
+                                        (item) => item.entryId === entry.id,
+                                      );
+                                      if (targetEntry)
+                                        reorderVisible(
+                                          targetEntry.bulletIds,
+                                          bulletIds,
+                                          source,
+                                          target,
+                                          (id) => id,
+                                        );
                                     })
                                   }
-                                />
-                                {orderButtons}
-                              </div>
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pl-6">
-                                <InclusionStatus
-                                  selected={!!selection}
-                                  archived={entry.archived}
-                                  sectionVisible={selected.visible}
-                                  count={bulletIds.length}
-                                  total={entry.bullets.length}
-                                  variantName={variant.name || "this resume"}
-                                />
-                                {entry.bullets.length > 1 && (
-                                  <AchievementSelectionActions
-                                    label={`${label} ${terms.items}`}
-                                    selected={bulletIds.length}
-                                    total={entry.bullets.length}
-                                    disabled={!selection || entry.archived}
-                                    showCount={false}
-                                    onSelectAll={() =>
-                                      changeBullets((ids) =>
-                                        selectAllAchievements(ids, entry),
-                                      )
-                                    }
-                                    onClearAll={() => changeBullets(() => [])}
-                                  />
-                                )}
-                              </div>
-                              <SortableList
-                                scope={`variant:${variant.id}:${sectionId}:${entry.id}:bullets`}
-                                revision={document}
-                                contextKey={locale}
-                                items={bulletIds.map((id) => ({
-                                  id,
-                                  label:
-                                    plain(
-                                      entry.bullets.find(
-                                        (bullet) => bullet.id === id,
-                                      )!.body,
-                                      locale,
-                                    ).slice(0, 100) || terms.item,
-                                }))}
-                                onReorder={(source, target) =>
-                                  change((selected) => {
-                                    const targetEntry = selected.entries.find(
-                                      (item) => item.entryId === entry.id,
-                                    );
-                                    if (targetEntry)
-                                      reorderVisible(
-                                        targetEntry.bulletIds,
-                                        bulletIds,
-                                        source,
-                                        target,
-                                        (id) => id,
-                                      );
-                                  })
-                                }
-                              >
-                                <div className="flex flex-col gap-3">
-                                  {bullets.map((bullet, index) => {
-                                    const label =
-                                      plain(
-                                        effectiveWording(
-                                          bullet.body,
-                                          variant,
-                                          `bullets.${bullet.id}.body`,
-                                        ),
-                                        locale,
-                                      ).slice(0, 100) ||
-                                      `Missing ${terms.item.toLowerCase()} text`;
-                                    return (
-                                      <SortableRow
-                                        key={bullet.id}
-                                        id={bullet.id}
-                                        label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
-                                        className="flex flex-col gap-3 pl-6"
-                                      >
-                                        {({ dragHandle, orderButtons }) => (
-                                          <>
-                                            <div className="flex items-start gap-2">
-                                              {dragHandle}
-                                              <span className="min-w-0 flex-1 py-1 text-sm leading-snug">
-                                                {label}
-                                              </span>
-                                              <InclusionToggle
-                                                label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
-                                                visible={bulletIds.includes(
-                                                  bullet.id,
-                                                )}
-                                                disabled={
-                                                  !selection || entry.archived
+                                >
+                                  <div className="flex flex-col gap-3">
+                                    {bullets.map((bullet, index) => {
+                                      const label =
+                                        plain(
+                                          effectiveWording(
+                                            bullet.body,
+                                            variant,
+                                            `bullets.${bullet.id}.body`,
+                                          ),
+                                          locale,
+                                        ).slice(0, 100) ||
+                                        `Missing ${terms.item.toLowerCase()} text`;
+                                      return (
+                                        <SortableRow
+                                          key={bullet.id}
+                                          id={bullet.id}
+                                          label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
+                                          className="list-item-surface-nested flex flex-col gap-3 rounded-lg py-2"
+                                        >
+                                          {({ dragHandle, orderButtons }) => (
+                                            <SortableItemLayout
+                                              dragHandle={dragHandle}
+                                            >
+                                              <div className="flex items-start gap-2">
+                                                <span className="min-w-0 flex-1 py-1 text-sm leading-snug">
+                                                  {label}
+                                                </span>
+                                                <div className="flex h-7 shrink-0 items-center gap-2">
+                                                  <InclusionToggle
+                                                    label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
+                                                    visible={bulletIds.includes(
+                                                      bullet.id,
+                                                    )}
+                                                    disabled={
+                                                      !selection ||
+                                                      entry.archived
+                                                    }
+                                                    onChange={(visible) =>
+                                                      changeBullets((ids) =>
+                                                        visible
+                                                          ? ids.includes(
+                                                              bullet.id,
+                                                            )
+                                                            ? ids
+                                                            : [
+                                                                ...ids,
+                                                                bullet.id,
+                                                              ]
+                                                          : ids.filter(
+                                                              (id) =>
+                                                                id !==
+                                                                bullet.id,
+                                                            ),
+                                                      )
+                                                    }
+                                                  />
+                                                  {orderButtons}
+                                                </div>
+                                              </div>
+                                              <VariantWordingDetails
+                                                document={document}
+                                                variant={variant}
+                                                path={`bullets.${bullet.id}.body`}
+                                                locale={locale}
+                                                update={update}
+                                                confirm={confirm}
+                                                errors={errors}
+                                                label={terms.item}
+                                                required
+                                                multiline={
+                                                  section.kind !== "skills"
                                                 }
-                                                onChange={(visible) =>
-                                                  changeBullets((ids) =>
-                                                    visible
-                                                      ? ids.includes(bullet.id)
-                                                        ? ids
-                                                        : [...ids, bullet.id]
-                                                      : ids.filter(
-                                                          (id) =>
-                                                            id !== bullet.id,
-                                                        ),
-                                                  )
+                                                initiallyOpen={
+                                                  issueNavigation?.issue.target
+                                                    ?.wordingPath ===
+                                                  `bullets.${bullet.id}.body`
                                                 }
                                               />
-                                              {orderButtons}
-                                            </div>
-                                            <VariantWordingDetails
-                                              document={document}
-                                              variant={variant}
-                                              path={`bullets.${bullet.id}.body`}
-                                              locale={locale}
-                                              update={update}
-                                              confirm={confirm}
-                                              errors={errors}
-                                              label={terms.item}
-                                              required
-                                              multiline={
-                                                section.kind !== "skills"
-                                              }
-                                              initiallyOpen={
-                                                issueNavigation?.issue.target
-                                                  ?.wordingPath ===
-                                                `bullets.${bullet.id}.body`
-                                              }
-                                            />
-                                          </>
-                                        )}
-                                      </SortableRow>
-                                    );
-                                  })}
-                                </div>
-                              </SortableList>
-                            </>
-                          )}
-                        </SortableRow>
-                      );
-                    })}
-                  </div>
-                </SortableList>
-              </FieldSet>
-            </CardContent>
-          </CareerSectionVisibilityHint>
+                                            </SortableItemLayout>
+                                          )}
+                                        </SortableRow>
+                                      );
+                                    })}
+                                  </div>
+                                </SortableList>
+                              </SortableItemLayout>
+                            )}
+                          </SortableRow>
+                        );
+                      })}
+                    </div>
+                  </SortableList>
+                </FieldSet>
+              </CardContent>
+            </CareerSectionVisibilityHint>
+          </SortableItemLayout>
         </Card>
       )}
     </SortableRow>

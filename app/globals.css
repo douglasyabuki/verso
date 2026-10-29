@@ -11,6 +11,23 @@
 }
 
 @layer components {
+  /* List items need stronger boundaries than filled form controls. */
+  .list-item-surface {
+    border-color: var(--border);
+    background-color: var(--list-item-surface);
+  }
+
+  .list-item-surface-selected {
+    border-inline-start-color: var(--primary);
+  }
+
+  /* An inset outline preserves the dimensions of previously borderless rows. */
+  .list-item-surface-nested {
+    background-color: var(--list-item-surface-nested);
+    outline: 1px solid var(--border);
+    outline-offset: -1px;
+  }
+
   .quick-actions-dropdown {
     width: 14rem !important;
     max-width: var(--available-width) !important;
@@ -150,6 +167,8 @@
   --resume-violet: oklch(0.52 0.17 307);
   --primary-hover: #174c44;
   --preview-surface: #e2e7e5;
+  --list-item-surface: #e9efec;
+  --list-item-surface-nested: #ffffff;
 }
 
 .dark {
@@ -200,6 +219,8 @@
   color-scheme: dark;
   --primary-hover: #a7ddcf;
   --preview-surface: #121617;
+  --list-item-surface: #111617;
+  --list-item-surface-nested: #293331;
 }
 
 [data-resume-color="indigo"] {
