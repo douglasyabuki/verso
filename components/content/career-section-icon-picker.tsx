@@ -56,14 +56,14 @@ export function CareerSectionIconPicker({
                 <Button variant="ghost" size="icon" disabled={disabled} />
               }
               aria-label="Change section icon"
-              className="size-6"
+              className="size-8 border-0 p-0"
             />
           }
         >
           <CareerSectionIcon
             kind={section.kind}
             icon={section.icon}
-            className="size-6"
+            className="size-8"
           />
         </TooltipTrigger>
         <TooltipContent>

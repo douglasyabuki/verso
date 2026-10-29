@@ -28,6 +28,7 @@ import { FieldSet } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ResumeCollection } from "@/components/variants/resume-collection";
+import { ResumeIcon } from "@/components/variants/resume-icon";
 import { VariantsEditor } from "@/components/variants/variants-editor";
 import { TranslationsEditor } from "@/components/wording/translations-editor";
 import { useIssueFocus } from "@/hooks/review/use-issue-focus";
@@ -203,7 +204,7 @@ export function EditorPane({
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1 basis-48">
-            <div className="flex items-center gap-2 [&>svg]:size-6 [&>svg]:shrink-0">
+            <div className="flex items-center gap-2 [&>svg]:size-8 [&>svg]:shrink-0">
               {navigation.destination.kind === "career-profile" ? (
                 <CareerSectionIcon kind="profile" />
               ) : summary ? (
@@ -219,6 +220,8 @@ export function EditorPane({
                 ) : (
                   <CareerSectionIcon kind={section.kind} icon={section.icon} />
                 )
+              ) : navigation.destination.kind === "resume" ? (
+                <ResumeIcon color={variant.color} />
               ) : null}
               <h1 tabIndex={-1} data-workspace-heading>
                 {view === "profile"

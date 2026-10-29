@@ -83,8 +83,12 @@ export function WorkspaceResumeControls({
             id="variant-picker"
             className="w-48 max-w-full min-w-0"
           >
-            <ResumeIcon color={variant.color} />
-            <SelectValue className="min-w-0 truncate" />
+            <SelectValue className="min-w-0">
+              <ResumeIcon color={variant.color} />
+              <span className="truncate">
+                {variant.name || "Untitled resume"}
+              </span>
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
