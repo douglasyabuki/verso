@@ -19,7 +19,7 @@ import {
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
 import { BrandLockup } from "@/components/brand/brand";
-import { SectionIcon } from "@/components/resume/section-icon";
+import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -48,9 +48,9 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { librarySectionLabel } from "@/components/workspace/navigation";
 import type { useCareerActions } from "@/hooks/workspace/use-career-actions";
 import type { useResumeActions } from "@/hooks/workspace/use-resume-actions";
+import { careerSectionLabel } from "@/lib/content/section-fields";
 import { formatCount } from "@/lib/format-count";
 import type { WorkspaceDestination } from "@/types-and-constants/navigation";
 import type {
@@ -158,8 +158,8 @@ export function WorkspaceSidebar({
         >
           <SidebarCollection
             label="Career details"
-            active={destination.kind === "library-overview"}
-            onOpen={() => go({ kind: "library-overview" })}
+            active={destination.kind === "career-overview"}
+            onOpen={() => go({ kind: "career-overview" })}
             onCreate={() => {
               addSection();
               setOpenMobile(false);
@@ -172,21 +172,19 @@ export function WorkspaceSidebar({
                 <SidebarMenuItem key={kind}>
                   <SidebarMenuButton
                     className="pr-9"
-                    isActive={destination.kind === `library-${kind}`}
+                    isActive={destination.kind === `career-${kind}`}
                     aria-current={
-                      destination.kind === `library-${kind}`
-                        ? "page"
-                        : undefined
+                      destination.kind === `career-${kind}` ? "page" : undefined
                     }
                     onClick={() =>
                       go(
                         kind === "profile"
-                          ? { kind: "library-profile" }
-                          : { kind: "library-summary", tab: "edit" },
+                          ? { kind: "career-profile" }
+                          : { kind: "career-summary", tab: "edit" },
                       )
                     }
                   >
-                    <SectionIcon kind={kind} />
+                    <CareerSectionIcon kind={kind} />
                     <span>{kind === "profile" ? "Profile" : "Summary"}</span>
                   </SidebarMenuButton>
                   <CareerMenu
@@ -197,13 +195,13 @@ export function WorkspaceSidebar({
                     edit={() =>
                       go(
                         kind === "profile"
-                          ? { kind: "library-profile" }
-                          : { kind: "library-summary", tab: "edit" },
+                          ? { kind: "career-profile" }
+                          : { kind: "career-summary", tab: "edit" },
                       )
                     }
                     review={
                       kind === "summary"
-                        ? () => go({ kind: "library-summary", tab: "review" })
+                        ? () => go({ kind: "career-summary", tab: "review" })
                         : undefined
                     }
                   />
@@ -211,7 +209,7 @@ export function WorkspaceSidebar({
               ))}
               {document.sections.map((section) => {
                 const active =
-                  destination.kind === "library-section" &&
+                  destination.kind === "career-section" &&
                   destination.sectionId === section.id;
                 return (
                   <SidebarMenuItem key={section.id}>
@@ -221,14 +219,17 @@ export function WorkspaceSidebar({
                       aria-current={active ? "page" : undefined}
                       onClick={() =>
                         go({
-                          kind: "library-section",
+                          kind: "career-section",
                           sectionId: section.id,
                           tab: "edit",
                         })
                       }
                     >
-                      <SectionIcon kind={section.kind} icon={section.icon} />
-                      <span>{librarySectionLabel(section)}</span>
+                      <CareerSectionIcon
+                        kind={section.kind}
+                        icon={section.icon}
+                      />
+                      <span>{careerSectionLabel(section)}</span>
                     </SidebarMenuButton>
                     <SidebarMenuBadge className="right-8">
                       {
@@ -238,19 +239,19 @@ export function WorkspaceSidebar({
                     </SidebarMenuBadge>
                     <CareerMenu
                       target={{ kind: "section", sectionId: section.id }}
-                      name={librarySectionLabel(section)}
+                      name={careerSectionLabel(section)}
                       actions={careerActions}
                       blocked={blocked}
                       edit={() =>
                         go({
-                          kind: "library-section",
+                          kind: "career-section",
                           sectionId: section.id,
                           tab: "edit",
                         })
                       }
                       review={() =>
                         go({
-                          kind: "library-section",
+                          kind: "career-section",
                           sectionId: section.id,
                           tab: "review",
                         })

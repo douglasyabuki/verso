@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-import { localized } from "@/lib/resume/localization";
+import { localized } from "@/lib/wording/localization";
 import type { WorkspaceController } from "@/stores/workspace/controller";
 import type { Locale } from "@/types-and-constants/languages";
 import type {
-  LibraryEditorContext,
+  CareerEditorContext,
   WorkspaceDestination,
 } from "@/types-and-constants/navigation";
 import type {
@@ -34,14 +34,14 @@ export function useWorkspaceNavigation({
   blocked,
 }: WorkspaceNavigationOptions) {
   const [selected, setSelected] = useState<WorkspaceDestination>({
-    kind: "library-overview",
+    kind: "career-overview",
   });
   const [variantId, selectVariant] = useState(document.variants[0].id);
   const [locale, setLocale] = useState<Locale>("en-US");
-  const [libraryLocale, setLibraryLocale] = useState<Locale>("en-US");
+  const [careerLocale, setCareerLocale] = useState<Locale>("en-US");
   const [mobilePanel, setMobilePanel] = useState("editor");
-  const [libraryContexts, setLibraryContexts] = useState<
-    Record<string, LibraryEditorContext>
+  const [careerContexts, setCareerContexts] = useState<
+    Record<string, CareerEditorContext>
   >({});
   const [reviewContext, setReviewContext] =
     useState<ReviewReturnContext | null>(null);
@@ -56,9 +56,9 @@ export function useWorkspaceNavigation({
     selected.kind === "resume" &&
     !document.variants.some((item) => item.id === selected.resumeId)
       ? { kind: "resumes" }
-      : selected.kind === "library-section" &&
+      : selected.kind === "career-section" &&
           !document.sections.some((item) => item.id === selected.sectionId)
-        ? { kind: "library-overview" }
+        ? { kind: "career-overview" }
         : selected;
   const variant =
     document.variants.find(
@@ -68,7 +68,7 @@ export function useWorkspaceNavigation({
     ) ?? document.variants[0];
   useEffect(() => {
     controller.endEditGroup();
-  }, [controller, selected, locale, libraryLocale]);
+  }, [controller, selected, locale, careerLocale]);
   const open = (next: WorkspaceDestination, excursion = false) => {
     if (blocked || !controller.commitEditorDrafts()) return focusToken;
     const token = crypto.randomUUID();
@@ -102,18 +102,18 @@ export function useWorkspaceNavigation({
     return token;
   };
   const activeSectionId =
-    destination.kind === "library-section" ? destination.sectionId : "profile";
+    destination.kind === "career-section" ? destination.sectionId : "profile";
   const view =
-    destination.kind === "library-profile"
+    destination.kind === "career-profile"
       ? "profile"
-      : destination.kind === "library-summary"
+      : destination.kind === "career-summary"
         ? destination.tab === "edit"
           ? "summary"
-          : "library-translations"
-        : destination.kind === "library-section"
+          : "career-translations"
+        : destination.kind === "career-section"
           ? destination.tab === "edit"
             ? "content"
-            : "library-translations"
+            : "career-translations"
           : destination.kind === "resume"
             ? (
                 {
@@ -144,7 +144,7 @@ export function useWorkspaceNavigation({
         variant.sections.push({ sectionId: id, visible: true, entries: [] }),
       );
     });
-    open({ kind: "library-section", sectionId: id, tab: "edit" });
+    open({ kind: "career-section", sectionId: id, tab: "edit" });
   };
   useEffect(() => {
     if (
@@ -215,16 +215,16 @@ export function useWorkspaceNavigation({
     setLocale: (next: Locale | ((current: Locale) => Locale)) => {
       if (!blocked && controller.commitEditorDrafts()) setLocale(next);
     },
-    libraryLocale,
-    setLibraryLocale: (next: Locale | ((current: Locale) => Locale)) => {
-      if (!blocked && controller.commitEditorDrafts()) setLibraryLocale(next);
+    careerLocale,
+    setCareerLocale: (next: Locale | ((current: Locale) => Locale)) => {
+      if (!blocked && controller.commitEditorDrafts()) setCareerLocale(next);
     },
     mobilePanel,
     setMobilePanel: (next: string) => {
       if (!blocked && controller.commitEditorDrafts()) setMobilePanel(next);
     },
-    libraryContexts,
-    setLibraryContexts,
+    careerContexts,
+    setCareerContexts,
     reviewContext,
     setReviewContext,
     scopedReviews,

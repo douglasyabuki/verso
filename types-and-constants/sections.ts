@@ -154,7 +154,7 @@ export const entryTerminology = {
   },
 } as const;
 
-export const librarySectionLabels: Record<Section["kind"], string> = {
+export const careerSectionLabels: Record<Section["kind"], string> = {
   experience: "Experience",
   projects: "Projects",
   education: "Education",

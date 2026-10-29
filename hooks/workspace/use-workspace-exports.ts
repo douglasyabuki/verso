@@ -3,14 +3,14 @@
 import { useState } from "react";
 
 import { toast } from "@/components/ui/toast";
-import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
+import { useResumeCompiler } from "@/hooks/output/use-resume-compiler";
 import {
   bilingualZip,
   downloadFile,
   fileSlug,
   latexZip,
-} from "@/lib/resume/files";
-import { validateOutput } from "@/lib/resume/validation";
+} from "@/lib/output/files";
+import { validateOutput } from "@/lib/review/validation";
 import type { Locale } from "@/types-and-constants/languages";
 import { languageNames } from "@/types-and-constants/languages";
 import { locales } from "@/types-and-constants/languages";

@@ -1,6 +1,6 @@
-import { serializeBackup } from "@/lib/resume/backup";
 import { createEmptyDocument } from "@/lib/resume/factories";
-import { reconcileVariantWording } from "@/lib/resume/wording";
+import { reconcileVariantWording } from "@/lib/wording/wording";
+import { serializeBackup } from "@/lib/workspace/backup";
 import {
   canCoordinate,
   commitWorkspace,

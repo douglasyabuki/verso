@@ -9,8 +9,7 @@ import {
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
-import { LanguageFlag } from "@/components/resume/language-flag";
-import { ResumeIcon } from "@/components/resume/resume-icon";
+import { LanguageFlag } from "@/components/shared/language-flag";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ResumeIcon } from "@/components/variants/resume-icon";
 import { WorkspaceToolbar } from "@/components/workspace/workspace-toolbar";
 import type { useWorkspaceExports } from "@/hooks/workspace/use-workspace-exports";
 import type { Locale } from "@/types-and-constants/languages";

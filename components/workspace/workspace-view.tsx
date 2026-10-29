@@ -3,11 +3,9 @@
 import { FileText } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
-import { EditorPane } from "@/components/resume/editor-pane";
-import { IssuesPanel } from "@/components/resume/issues-panel";
-import { LanguageFlag } from "@/components/resume/language-flag";
-import { PreviewPane } from "@/components/resume/preview-pane";
-import { ResumeIdentityDialog } from "@/components/resume/resume-identity-dialog";
+import { PreviewPane } from "@/components/output/preview-pane";
+import { IssuesPanel } from "@/components/review/issues-panel";
+import { LanguageFlag } from "@/components/shared/language-flag";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ResumeIdentityDialog } from "@/components/variants/resume-identity-dialog";
+import { EditorPane } from "@/components/workspace/editor-pane";
 import { WorkspaceDataMenu } from "@/components/workspace/workspace-data-menu";
 import { WorkspaceFeedback } from "@/components/workspace/workspace-feedback";
 import {
@@ -35,7 +35,7 @@ import { WorkspaceOverlays } from "@/components/workspace/workspace-overlays";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { AppearanceControl } from "@/components/workspace/workspace-utility-rail";
-import { useResumeCompiler } from "@/hooks/resume/use-resume-compiler";
+import { useResumeCompiler } from "@/hooks/output/use-resume-compiler";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useCareerActions } from "@/hooks/workspace/use-career-actions";
 import { useResumeActions } from "@/hooks/workspace/use-resume-actions";
@@ -46,14 +46,14 @@ import { useWorkspaceExports } from "@/hooks/workspace/use-workspace-exports";
 import { useWorkspaceHistory } from "@/hooks/workspace/use-workspace-history";
 import { useWorkspaceLayout } from "@/hooks/workspace/use-workspace-layout";
 import { useWorkspaceNavigation } from "@/hooks/workspace/use-workspace-navigation";
+import { createExampleDocument } from "@/lib/resume/example";
+import { reviewItems } from "@/lib/review/review-queue";
+import { validateOutput } from "@/lib/review/validation";
+import { localizedFields } from "@/lib/wording/localization";
 import {
   resolveIssueDestination,
   resolveOwnerDestination,
-} from "@/lib/resume/destinations";
-import { createExampleDocument } from "@/lib/resume/example";
-import { localizedFields } from "@/lib/resume/localization";
-import { reviewItems } from "@/lib/resume/review-queue";
-import { validateOutput } from "@/lib/resume/validation";
+} from "@/lib/workspace/destinations";
 import type { Confirmation } from "@/types-and-constants/editor";
 import { languageNames } from "@/types-and-constants/languages";
 import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
@@ -137,14 +137,14 @@ export function WorkspaceView() {
     const destination = resolveIssueDestination(document, issue, variant.id);
     if (!destination) return;
     if (
-      destination.kind === "library-section" ||
-      destination.kind === "library-summary"
+      destination.kind === "career-section" ||
+      destination.kind === "career-summary"
     )
-      navigation.setLibraryLocale(issue.locale);
+      navigation.setCareerLocale(issue.locale);
     else if (destination.kind === "resume") changeLocale(issue.locale);
     const navigationToken = navigation.open(destination);
-    if (destination.kind === "library-section") {
-      navigation.setLibraryContexts((current) => ({
+    if (destination.kind === "career-section") {
+      navigation.setCareerContexts((current) => ({
         ...current,
         [destination.sectionId]: {
           entryId: issue.target?.entryId ?? "",
@@ -183,7 +183,7 @@ export function WorkspaceView() {
     !state.backupFingerprint ||
     state.currentFingerprint !== state.backupFingerprint;
   const reviewCount = reviewItems(document).length;
-  const fullWidth = ["library-overview", "resumes", "review", "data"].includes(
+  const fullWidth = ["career-overview", "resumes", "review", "data"].includes(
     view,
   );
   const resumeWorkspace = navigation.destination.kind === "resume";
@@ -198,7 +198,7 @@ export function WorkspaceView() {
       return;
     }
     const currentDestination = navigation.destination;
-    if (!target.resumeId) navigation.setLibraryLocale(target.locale);
+    if (!target.resumeId) navigation.setCareerLocale(target.locale);
     const entry = document.sections
       .flatMap((section) => section.entries)
       .find(
@@ -209,7 +209,7 @@ export function WorkspaceView() {
           ),
       );
     if (!target.resumeId)
-      navigation.setLibraryContexts((current) => ({
+      navigation.setCareerContexts((current) => ({
         ...current,
         [field.sectionId]: {
           entryId: entry?.id ?? "",
@@ -271,7 +271,7 @@ export function WorkspaceView() {
   const editor = (
     <WorkflowLinksContext.Provider
       value={{
-        editLibrary: (path, targetLocale) => {
+        editCareer: (path, targetLocale) => {
           const field = localizedFields(document).find(
             (field) => field.path === path,
           );
@@ -284,7 +284,7 @@ export function WorkspaceView() {
               ),
             );
           const back = navigation.destination;
-          navigation.setLibraryContexts((current) => ({
+          navigation.setCareerContexts((current) => ({
             ...current,
             [field.sectionId]: {
               entryId: entry?.id ?? "",
@@ -292,7 +292,7 @@ export function WorkspaceView() {
               showArchived: !!entry?.archived,
             },
           }));
-          navigation.setLibraryLocale(targetLocale);
+          navigation.setCareerLocale(targetLocale);
           const destination = resolveOwnerDestination(
             document,
             { path, locale: targetLocale },
@@ -335,10 +335,10 @@ export function WorkspaceView() {
         view={view}
         sectionId={activeSectionId}
         locale={
-          navigation.destination.kind === "library-section" ||
-          navigation.destination.kind === "library-summary" ||
-          navigation.destination.kind === "library-profile"
-            ? navigation.libraryLocale
+          navigation.destination.kind === "career-section" ||
+          navigation.destination.kind === "career-summary" ||
+          navigation.destination.kind === "career-profile"
+            ? navigation.careerLocale
             : locale
         }
         variant={variant}
@@ -347,10 +347,10 @@ export function WorkspaceView() {
           setConfirmation({ title, description, action })
         }
         validation={
-          navigation.destination.kind === "library-section" ||
-          navigation.destination.kind === "library-summary" ||
-          navigation.destination.kind === "library-profile"
-            ? validations[navigation.libraryLocale]
+          navigation.destination.kind === "career-section" ||
+          navigation.destination.kind === "career-summary" ||
+          navigation.destination.kind === "career-profile"
+            ? validations[navigation.careerLocale]
             : validation
         }
         disabled={state.replacing || !!state.pending}
@@ -470,9 +470,9 @@ export function WorkspaceView() {
                     : "No changes since your last backup"}
                 </span>
                 {!fullWidth &&
-                  navigation.destination.kind !== "library-profile" && (
+                  navigation.destination.kind !== "career-profile" && (
                     <div className="flex max-w-full flex-wrap items-center gap-2 text-sm">
-                      <Label htmlFor="library-language">
+                      <Label htmlFor="career-language">
                         {view === "shared-defaults"
                           ? "Defaults language"
                           : "Editing language"}
@@ -482,7 +482,7 @@ export function WorkspaceView() {
                         value={
                           view === "shared-defaults"
                             ? locale
-                            : navigation.libraryLocale
+                            : navigation.careerLocale
                         }
                         disabled={state.replacing || !!state.pending}
                         onValueChange={(value) => {
@@ -495,18 +495,18 @@ export function WorkspaceView() {
                           if (view === "shared-defaults")
                             setLocale(value as typeof locale);
                           else
-                            navigation.setLibraryLocale(value as typeof locale);
+                            navigation.setCareerLocale(value as typeof locale);
                         }}
                       >
                         <SelectTrigger
                           appearance="utility"
-                          id="library-language"
+                          id="career-language"
                         >
                           <LanguageFlag
                             locale={
                               view === "shared-defaults"
                                 ? locale
-                                : navigation.libraryLocale
+                                : navigation.careerLocale
                             }
                           />
                           <SelectValue />
@@ -563,13 +563,13 @@ export function WorkspaceView() {
           title={
             navigation.destination.kind === "resume"
               ? variant.name || "Untitled resume"
-              : navigation.destination.kind === "library-section" ||
-                  navigation.destination.kind === "library-summary" ||
-                  navigation.destination.kind === "library-profile"
+              : navigation.destination.kind === "career-section" ||
+                  navigation.destination.kind === "career-summary" ||
+                  navigation.destination.kind === "career-profile"
                 ? "Career details"
                 : (
                     {
-                      "library-overview": "Career details",
+                      "career-overview": "Career details",
                       resumes: "All resumes",
                       review: "Text to review",
                       data: "Backups & settings",

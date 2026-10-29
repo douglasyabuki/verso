@@ -1,7 +1,7 @@
 import type { z } from "zod";
 
+import type { renderLatex } from "@/lib/output/render";
 import type { settingsSchema } from "@/lib/resume/model";
-import type { renderLatex } from "@/lib/resume/render";
 import type { CompileResult } from "@/tools/compiler-proof/compiler.mjs";
 import type { Locale } from "@/types-and-constants/languages";
 

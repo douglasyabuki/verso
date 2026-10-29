@@ -1,4 +1,4 @@
-﻿# Verso
+# Verso
 
 A locally saved bilingual resume workspace built with Next.js 16.4.2, React 19.3,
 TypeScript, Tailwind CSS 4, and Base UI shadcn components. Edit structured career
@@ -27,17 +27,36 @@ the workspace data menu after preparing the compiler assets.
 
 ## Code organization
 
-| Directory               | Responsibility                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------ |
-| `app/`                  | Routes, layouts, and global styles                                                         |
-| `components/workspace/` | Workspace composition, readiness, navigation UI, shell, and controls                       |
-| `components/resume/`    | Resume editors and PDF preview                                                             |
-| `components/ui/`        | Shared UI primitives                                                                       |
-| `hooks/`                | Reusable hooks and feature interaction coordination                                        |
-| `stores/workspace/`     | Observable controller, persistence, and React lifecycle adapter                            |
-| `types-and-constants/`  | Shared domain contracts and declarative defaults                                           |
-| `lib/resume/`           | Schemas, localization, factories, operations, settings, validation, backups, and rendering |
-| `types/`                | External-library declarations                                                              |
+| Directory               | Responsibility                                                                                |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `app/`                  | Routes, layouts, and global styles                                                            |
+| `components/workspace/` | Workspace composition, readiness, navigation UI, shell, and controls                          |
+| `components/content/`   | Career overview and shared content editors                                                    |
+| `components/variants/`  | Resume collection, identity, selection, and comparison                                        |
+| `components/wording/`   | Shared and variant wording, translation comparison, and review editing                        |
+| `components/output/`    | Template settings, layout controls, and PDF preview                                           |
+| `components/review/`    | Output issues and navigation into their editors                                               |
+| `components/editor/`    | Shared editing fields, sorting, and rich-text editor modules                                  |
+| `components/shared/`    | Language indicators and semantic badges shared across features                                |
+| `components/ui/`        | Shared UI primitives                                                                          |
+| `hooks/`                | Reusable hooks and feature interaction coordination in `workspace/`, `output/`, and `review/` |
+| `stores/workspace/`     | Observable controller, persistence, and React lifecycle adapter                               |
+| `types-and-constants/`  | Shared domain contracts and declarative defaults                                              |
+| `lib/resume/`           | Canonical document schemas, factories, and fictional example                                  |
+| `lib/content/`          | Career content, resume selection, certification dates, and entry labels                       |
+| `lib/wording/`          | Localization, structured spans, and variant wording rules                                     |
+| `lib/review/`           | Validation, issue descriptions, and review queue derivation                                   |
+| `lib/output/`           | Deterministic LaTeX rendering, resolved settings, and browser downloads                       |
+| `lib/workspace/`        | Portable backup validation/migrations and editor destinations                                 |
+| `lib/ordering.ts`       | Generic array ordering, including filtered-list moves                                         |
+| `types/`                | External-library declarations                                                                 |
+
+Use `career` for shared profile, summary, sections, and entries; the interface calls
+this area **Career details**. Use `shared` for wording inheritance and
+`shared-wording` for the review reason. Resume selection, visibility, and output
+order belong to the variants feature. In `lib/content/`, `career.ts` owns clearing
+and deletion, `entries.ts` owns search and duplication, `section-fields.ts` owns
+labels, and `selection.ts` owns achievement selection.
 
 Domain logic does not depend on React or storage. Shared contracts use type-only
 schema imports, and stores keep their React adapter separate from controller and
@@ -52,7 +71,7 @@ persistence invariants.
 ## Working with drafts
 
 Start empty or explicitly load the fictional example in **Data & backups**.
-**Career library** opens Overview; each section has **Edit content** and
+**Career details** opens Overview; each section has **Edit content** and
 **Review translations** tabs. Shared edits affect every resume using that content.
 New entries and achievements stay outside all resumes until explicitly included.
 **Resumes** opens All resumes for creation, duplication, opening, and deletion.
@@ -60,7 +79,7 @@ Each resume owns **Content & order**, **Translations**, and **Layout**.
 Layout starts with Resume and Resume-language scopes; **Edit shared defaults**
 opens workspace/language defaults separately. Compiler timeouts live in Data & backups.
 Desktop has a resizable editor/PDF split; narrow screens switch between panels.
-Career library navigation stays in English while resume wording follows the
+Career details navigation stays in English while resume wording follows the
 selected language. Section-specific forms show relevant fields, with retained
 extra fields available under Additional details. Certifications support a
 credential ID and optional issue/expiration dates; date setup saves as one edit
@@ -72,12 +91,12 @@ edit its destination. Ctrl/Command+I toggles emphasis and Ctrl/Command+K opens
 link editing. Paste inserts plain text; HTML, Markdown, and LaTeX syntax remain
 literal text. Links accept only validated http, https, mailto, and tel destinations.
 
-Search the library within the current section or Content & order across sections, matching
+Search career entries within the current section or Content & order across sections, matching
 shared facts and wording in both languages without case or accent differences.
 Archived entries are hidden until Include archived entries is enabled. Duplicate
 an entry to create an independent copy outside every resume. Use drag handles,
 keyboard sorting, or move buttons to reorder content; Escape cancels a drag.
-Library order and each resume's output order remain independent. In Content & order,
+Career content order and each resume's output order remain independent. In Content & order,
 Select all appends missing achievements to the existing selection order; Clear
 all removes achievement selections while keeping the entry included.
 
@@ -167,12 +186,12 @@ and a standalone local compilation launcher.
 
 ### Resume wording and comparison
 
-Resumes inherit shared library wording until you explicitly choose **Customize for this resume**
+Resumes inherit shared career wording until you explicitly choose **Customize for this resume**
 for a summary or achievement in a particular language. The other language keeps
 inheriting. The editor labels each source and explains its scope before editing.
 **Reset to shared** removes that language's override, with confirmation and workspace
 undo. Facts and achievement IDs stay shared. Hidden, unselected, and archived content
-retains overrides; permanent library deletion removes them.
+retains overrides; permanent career entry deletion removes them.
 
 Resume translation review compares its effective bilingual pair. If English has
 an override and Portuguese inherits, editing shared Portuguese flags the English
@@ -187,7 +206,7 @@ open the corresponding resume and field. JSON backups preserve all overrides and
 review metadata.
 
 **Translation review** is the global unresolved queue. Its badge counts distinct
-owner/field/language items across both languages, including archived library content
+owner/field/language items across both languages, including archived career content
 and excluded resume customizations. Resolving an opened item keeps it in a labeled
 current-item area until another item is opened or its review context is left.
 Filters and focus changes do not dismiss it. Owner-editor return links preserve

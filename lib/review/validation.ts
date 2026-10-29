@@ -1,0 +1,306 @@
+import { z } from "zod";
+
+import { certificationDateErrors } from "@/lib/content/certification";
+import { outputIssue } from "@/lib/review/issues";
+import { plain } from "@/lib/wording/localization";
+import {
+  effectiveWording,
+  sharedWording,
+  sharedWordingChanged,
+  variantWording,
+} from "@/lib/wording/wording";
+import type { Locale } from "@/types-and-constants/languages";
+import { languageNames } from "@/types-and-constants/languages";
+import type {
+  Entry,
+  LocalizedText,
+  ResumeDocument,
+  ResumeLink,
+  Variant,
+} from "@/types-and-constants/resume";
+import type { Issue } from "@/types-and-constants/review";
+import { entryTerminology } from "@/types-and-constants/sections";
+
+/**
+ * Validate supported clickable links.
+ * @param value URL.
+ * @returns {string | undefined} An error or undefined, including for an empty optional value.
+ * @example urlError("javascript:alert(1)")
+ */
+export function urlError(value: string): string | undefined {
+  if (!value) return;
+  if (/[\u0000-\u0020\\]/.test(value))
+    return "Enter a link without spaces, line breaks, or backslashes.";
+  try {
+    const url = new URL(value);
+    if (!["https:", "http:", "mailto:", "tel:"].includes(url.protocol))
+      return "Use https, http, mailto, or tel links.";
+    if (
+      (url.protocol === "mailto:" || url.protocol === "tel:") &&
+      !url.pathname
+    )
+      return "Add an email address or phone number.";
+    if (url.username || url.password)
+      return "Remove the username or password from this link.";
+  } catch {
+    return "Enter a complete link, such as https://example.com.";
+  }
+}
+
+/**
+ * Validate each shared date field using the original supported ranges and ordering.
+ * @param entry Draft entry.
+ * @returns {{ start?: string; end?: string }} Optional start and end messages for invalid fields; an empty object when valid. Ordering errors belong to end.
+ * @example dateErrors(entry)
+ */
+export function dateErrors(entry: Entry): { start?: string; end?: string } {
+  const pattern = /^(19|20|21|22)\d{2}(-(0[1-9]|1[0-2]))?$/;
+  const errors: { start?: string; end?: string } = {};
+  for (const field of ["start", "end"] as const)
+    if (entry[field] && !pattern.test(entry[field]))
+      errors[field] =
+        "Enter a year or a year and month, such as 2024 or 2024-06, between 1900 and 2299.";
+  if (
+    !errors.start &&
+    !errors.end &&
+    !entry.ongoing &&
+    entry.start &&
+    entry.end
+  ) {
+    const end = entry.end.length === 4 ? entry.end + "-12" : entry.end;
+    const start = entry.start.length === 4 ? entry.start + "-01" : entry.start;
+    if (start > end)
+      errors.end = "End date must be on or after the start date.";
+  }
+  return errors;
+}
+
+/**
+ * Validate shared date facts.
+ * @param entry Draft entry.
+ * @returns {string | undefined} The first error or undefined.
+ * @example dateError(entry)
+ */
+export function dateError(entry: Entry): string | undefined {
+  const errors = dateErrors(entry);
+  return errors.start ?? errors.end;
+}
+
+/**
+ * Validate only the selected output; counterpart translations never block it.
+ * @param doc Workspace.
+ * @param variant Variant.
+ * @param locale Language.
+ * @returns {{ errors: Issue[]; warnings: Issue[] }} errors contains blocking issues; warnings contains nonblocking translation and shared-wording review issues for the selected output.
+ * @example validateOutput(doc, variant, "en-US")
+ */
+export function validateOutput(
+  doc: ResumeDocument,
+  variant: Variant,
+  locale: Locale,
+): { errors: Issue[]; warnings: Issue[] } {
+  const errors: Pick<Issue, "path" | "message">[] = [];
+  const warnings: Pick<Issue, "path" | "message">[] = [];
+  const sharedWarnings: Pick<Issue, "path" | "message">[] = [];
+
+  /**
+   * Record a missing required field in the selected output language.
+   * @param value Bilingual wording to inspect.
+   * @param path Stable field path for the issue.
+   * @param label Human-readable field name.
+   * @returns {void} Appends a blocking error when the selected wording is blank; otherwise leaves errors unchanged.
+   * @example required(entry.title, `entries.${entry.id}.title`, "Title");
+   */
+  const required = (value: LocalizedText, path: string, label: string) => {
+    if (!plain(value, locale).trim())
+      errors.push({
+        path,
+        message: `${label} is missing in ${languageNames[locale]}. Add text for this language or remove the unfinished content from this resume.`,
+      });
+  };
+
+  /**
+   * Collect link errors and independent wording review warnings.
+   * @param value Effective bilingual wording.
+   * @param path Stable summary, heading, title, or achievement path.
+   * @returns {void} Appends unsafe-link errors and applicable translation or shared-wording warnings to the current output issues.
+   * @example wording(doc.profile.summary, "profile.summary");
+   */
+  const wording = (value: LocalizedText, path: string) => {
+    const shared = sharedWording(doc, path);
+    if (shared && sharedWordingChanged(shared, variant, path, locale))
+      sharedWarnings.push({
+        path,
+        message:
+          "The shared text changed since you customized this resume. Compare the texts, then keep your custom text or use the shared text. Editing alone does not clear this reminder. You can still download this resume.",
+      });
+    if (value[locale].needsReview && plain(value, locale).trim())
+      warnings.push({
+        path,
+        message: `Check whether ${languageNames[locale]} still conveys the same information as ${languageNames[locale === "en-US" ? "pt-BR" : "en-US"]}, then confirm that both languages mean the same. You can still download this resume.`,
+      });
+    for (const span of value[locale].spans) {
+      const error = urlError(span.href);
+      if (error)
+        errors.push({
+          path,
+          message: `${error} Select the linked text to edit or remove its link.`,
+        });
+    }
+  };
+
+  /**
+   * Collect invalid URLs from shared links.
+   * @param values Links belonging to the selected profile or entry.
+   * @param path Stable owner path to prefix link identifiers.
+   * @returns {void} Appends a blocking issue for each invalid URL; empty optional URLs are accepted.
+   * @example links(doc.profile.links, "profile.links");
+   */
+  const links = (values: ResumeLink[], path: string) =>
+    values.forEach((link) => {
+      const error = urlError(link.url);
+      if (error) errors.push({ path: `${path}.${link.id}`, message: error });
+    });
+  if (!doc.profile.name.trim())
+    errors.push({
+      path: "profile.name",
+      message: "Add your name to generate a PDF.",
+    });
+  if (doc.profile.email && !z.email().safeParse(doc.profile.email).success)
+    errors.push({
+      path: "profile.email",
+      message: "Enter a valid email address.",
+    });
+  if (doc.profile.phone && !/\d/.test(doc.profile.phone))
+    errors.push({
+      path: "profile.phone",
+      message: "Include a phone number with digits.",
+    });
+  if (doc.profile.country && !/^[A-Z]{2}$/.test(doc.profile.country))
+    errors.push({
+      path: "profile.country",
+      message: "Use a two-letter country code, for example BR.",
+    });
+  const summary = effectiveWording(
+    doc.profile.summary,
+    variant,
+    "profile.summary",
+  );
+  if (plain(summary, locale).trim()) wording(summary, "profile.summary");
+  links(doc.profile.links, "profile.links");
+  for (const selected of variant.sections.filter(
+    (section) => section.visible,
+  )) {
+    const section = doc.sections.find(
+      (section) => section.id === selected.sectionId,
+    );
+    if (!section) continue;
+    const entries = selected.entries
+      .map((selection) => ({
+        selection,
+        entry: section.entries.find((entry) => entry.id === selection.entryId),
+      }))
+      .filter((item) => item.entry && !item.entry.archived);
+    if (!entries.length) continue;
+    required(
+      section.heading,
+      `sections.${section.id}.heading`,
+      "Section heading",
+    );
+    wording(section.heading, `sections.${section.id}.heading`);
+    for (const { selection, entry } of entries) {
+      if (!entry) continue;
+      if (entry.country && !/^[A-Z]{2}$/.test(entry.country))
+        errors.push({
+          path: `entries.${entry.id}.country`,
+          message: "Use a two-letter country code, for example BR.",
+        });
+      required(
+        entry.title,
+        `entries.${entry.id}.title`,
+        entryTerminology[section.kind].title,
+      );
+      const dates =
+        section.kind === "certifications"
+          ? entry.certification?.dates
+          : undefined;
+      if (dates) {
+        const issues = certificationDateErrors(
+          dates.issued,
+          dates.expiration.kind,
+          dates.expiration.kind === "date" ? dates.expiration.date : "",
+        );
+        for (const [field, message] of Object.entries(issues))
+          errors.push({
+            path: `entries.${entry.id}.certification.${field}`,
+            message,
+          });
+      }
+      wording(entry.title, `entries.${entry.id}.title`);
+      for (const [field, message] of Object.entries(dateErrors(entry)))
+        errors.push({ path: `entries.${entry.id}.${field}`, message });
+      links(entry.links, `entries.${entry.id}.links`);
+      for (const bulletId of selection.bulletIds) {
+        const bullet = entry.bullets.find((bullet) => bullet.id === bulletId);
+        if (!bullet) continue;
+        const body = effectiveWording(
+          bullet.body,
+          variant,
+          `bullets.${bullet.id}.body`,
+        );
+        required(
+          body,
+          `bullets.${bullet.id}.body`,
+          `Selected ${entryTerminology[section.kind].item.toLowerCase()}`,
+        );
+        wording(body, `bullets.${bullet.id}.body`);
+      }
+    }
+  }
+
+  /**
+   * Attach editor targets and deduplicate collected output issues.
+   * @param values Collected field paths and messages.
+   * @param category Blocking error or independent review-warning category.
+   * @returns {Issue[]} Issues deduplicated by identity, with variant-owned wording directed to its resume editor.
+   * @example describe(errors, "error");
+   */
+  const describe = (
+    values: Pick<Issue, "path" | "message">[],
+    category: "error" | "translation" | "shared-wording",
+  ) =>
+    Array.from(
+      new Map(
+        values.map((issue) => {
+          const described = outputIssue(
+            doc,
+            locale,
+            issue.path,
+            issue.message,
+            category,
+          );
+          if (
+            variantWording(variant, issue.path) &&
+            sharedWording(doc, issue.path)
+          ) {
+            described.target = {
+              ...described.target!,
+              variantId: variant.id,
+              scope: "variant",
+              wordingPath: issue.path,
+              fieldKey: `variants.${variant.id}.${issue.path}.${locale}`,
+            };
+            described.id = `${variant.id}:${described.id}`;
+          }
+          return [described.id, described];
+        }),
+      ).values(),
+    );
+  return {
+    errors: describe(errors, "error"),
+    warnings: [
+      ...describe(warnings, "translation"),
+      ...describe(sharedWarnings, "shared-wording"),
+    ],
+  };
+}

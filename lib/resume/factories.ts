@@ -1,10 +1,14 @@
-import { localized } from "@/lib/resume/localization";
 import { templateIdentity } from "@/lib/resume/model";
+import { localized } from "@/lib/wording/localization";
 import { defaultSettings } from "@/types-and-constants/output";
 import { type Entry, type ResumeDocument } from "@/types-and-constants/resume";
 import { defaultSectionIcons } from "@/types-and-constants/sections";
 
-/** Create the deterministic empty workspace used during hydration. @returns An editable draft. @example createEmptyDocument() */
+/**
+ * Create the deterministic empty workspace used during hydration.
+ * @returns {ResumeDocument} An editable draft.
+ * @example createEmptyDocument()
+ */
 export function createEmptyDocument(): ResumeDocument {
   const headings = [
     ["experience", "Experience", "Experiência"],
@@ -58,7 +62,11 @@ export function createEmptyDocument(): ResumeDocument {
   };
 }
 
-/** Create a library entry outside reducer execution. @returns An empty entry with a stable ID. @example const entry = createEntry() */
+/**
+ * Create a career entry outside reducer execution.
+ * @returns {Entry} An empty entry with a stable ID.
+ * @example const entry = createEntry()
+ */
 export function createEntry(): Entry {
   return {
     id: crypto.randomUUID(),

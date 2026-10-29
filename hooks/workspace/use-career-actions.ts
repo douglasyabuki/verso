@@ -5,8 +5,8 @@ import {
   clearCareerContent,
   deleteCareerSection,
   hasCareerContent,
-} from "@/lib/resume/career";
-import { plain } from "@/lib/resume/localization";
+} from "@/lib/content/career";
+import { plain } from "@/lib/wording/localization";
 import type { WorkspaceController } from "@/stores/workspace/controller";
 import type { ConfirmAction } from "@/types-and-constants/editor";
 import type { CareerTarget } from "@/types-and-constants/resume";
@@ -31,7 +31,7 @@ export function useCareerActions({
 }: CareerActionsOptions) {
   const resetContext = (target: CareerTarget) => {
     const key = target.kind === "section" ? target.sectionId : "profile";
-    navigation.setLibraryContexts((current) => {
+    navigation.setCareerContexts((current) => {
       const next = { ...current };
       if (target.kind === "section") delete next[key];
       return next;
@@ -102,10 +102,10 @@ export function useCareerActions({
         if (
           deleting &&
           target.kind === "section" &&
-          navigation.destination.kind === "library-section" &&
+          navigation.destination.kind === "career-section" &&
           navigation.destination.sectionId === target.sectionId
         )
-          navigation.open({ kind: "library-overview" });
+          navigation.open({ kind: "career-overview" });
       },
       returnFocus,
     );

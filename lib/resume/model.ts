@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { certificationDateErrors } from "@/lib/resume/certification";
+import { certificationDateErrors } from "@/lib/content/certification";
 import { locales } from "@/types-and-constants/languages";
 import {
   bodyColors,
@@ -298,9 +298,11 @@ export const schema6DocumentSchema = schema5DocumentSchema.extend({
     .max(30),
 });
 
-/** Validate an explicit dimension or the original template behavior.
- * @param min Inclusive numeric lower bound. @param max Inclusive numeric upper bound.
- * @returns A schema preserving the sentinel or an unrounded numeric value.
+/**
+ * Validate an explicit dimension or the original template behavior.
+ * @param min Inclusive numeric lower bound.
+ * @param max Inclusive numeric upper bound.
+ * @returns {z.ZodUnion<[z.ZodLiteral<"template-default">, z.ZodNumber]>} A schema preserving the sentinel or an unrounded numeric value.
  * @example templateDimension(14, 36)
  */
 const templateDimension = (min: number, max: number) =>

@@ -1,15 +1,15 @@
 import type { Locale } from "@/types-and-constants/languages";
 import type { Issue } from "@/types-and-constants/review";
 
-type LibraryTab = "edit" | "review";
+type CareerTab = "edit" | "review";
 
 type ResumePage = "content" | "translations" | "layout";
 
 export type WorkspaceDestination =
-  | { kind: "library-overview" }
-  | { kind: "library-profile" }
-  | { kind: "library-summary"; tab: LibraryTab }
-  | { kind: "library-section"; sectionId: string; tab: LibraryTab }
+  | { kind: "career-overview" }
+  | { kind: "career-profile" }
+  | { kind: "career-summary"; tab: CareerTab }
+  | { kind: "career-section"; sectionId: string; tab: CareerTab }
   | { kind: "resumes" }
   | { kind: "resume"; resumeId: string; page: ResumePage }
   | { kind: "review" }
@@ -28,7 +28,7 @@ export type IssueNavigation = {
   pending: boolean;
 };
 
-export type LibraryEditorContext = {
+export type CareerEditorContext = {
   entryId: string;
   query: string;
   showArchived: boolean;

@@ -6,7 +6,7 @@ description: Adapt or maintain Verso's supported LaTeX resume template, pinned b
 # Verso LaTeX maintenance
 
 Read `docs/compilation-proof.md` before changing the compiler or bundle and
-`lib/resume/render.ts` before changing generated source. The reference is the
+`lib/output/render.ts` before changing generated source. The reference is the
 owner's Overleaf project/PDF pairs under `temp/`, not a newly designed template.
 
 - Structured schema-1 data is the source of truth. Preserve IDs, shared facts,

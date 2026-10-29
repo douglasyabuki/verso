@@ -1,5 +1,5 @@
 import { createEmptyDocument } from "@/lib/resume/factories";
-import { localized } from "@/lib/resume/localization";
+import { localized } from "@/lib/wording/localization";
 import type { Entry, ResumeDocument } from "@/types-and-constants/resume";
 import { defaultSectionIcons } from "@/types-and-constants/sections";
 
@@ -28,6 +28,13 @@ export function createExampleDocument(): ResumeDocument {
       "Engenheiro de software criando experiências acessíveis para a web. Transformo problemas complexos em produtos claros e confiáveis.",
     ),
   };
+
+  /**
+   * Create an independent initial wording record for one language.
+   * @param value Plain text for the language.
+   * @returns {LocalizedText[Locale]} One plain span with revision zero, no review flag, and no counterpart baseline.
+   * @example make("Projects");
+   */
   const make = (
     id: string,
     organization: string,

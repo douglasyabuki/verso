@@ -3,8 +3,8 @@
 import { useRef } from "react";
 
 import { toast } from "@/components/ui/toast";
-import { parseBackup, serializeBackup } from "@/lib/resume/backup";
-import { downloadFile, fileSlug } from "@/lib/resume/files";
+import { downloadFile, fileSlug } from "@/lib/output/files";
+import { parseBackup, serializeBackup } from "@/lib/workspace/backup";
 import type { WorkspaceController } from "@/stores/workspace/controller";
 import { fingerprint } from "@/stores/workspace/persistence";
 import type { ResumeDocument } from "@/types-and-constants/resume";

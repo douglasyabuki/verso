@@ -3,8 +3,8 @@
 - Group files by cohesive responsibility, keeping related types and constants together. Add a file only for a distinct responsibility with real consumers; do not create files for individual nested document types.
 - `languages.ts` owns the ordered locales, locale type, language names, and flag mappings. Keep it independent of resume contracts.
 - `resume.ts` owns schema-derived document and wording contracts, localized field descriptors, document updates, and resume colors. Keep nested document types together here.
-- `sections.ts` owns section kinds, entry terminology, and library section labels. `output.ts` owns template settings, defaults and labels, compilation results, and output layout contracts.
-- `review.ts` owns issues, review items, categories, filters, and return context. `navigation.ts` owns destinations, tabs/pages, focus targets, issue navigation, and library editor context.
+- `sections.ts` owns section kinds, entry terminology, and career section labels. `output.ts` owns template settings, defaults and labels, compilation results, and output layout contracts.
+- `review.ts` owns issues, review items, categories, filters, and return context. `navigation.ts` owns destinations, tabs/pages, focus targets, issue navigation, and career editor context.
 - `editor.ts` owns shared editor props and confirmation contracts. `workspace.ts` owns observable state, snapshots, persistence outcomes, and edit grouping.
 - Include types consumed across modules and stable declarative values such as supported locales, section kinds, and shared defaults. Import named exports directly from their owning file; do not add compatibility re-exports or barrel modules.
 - Export only types and constants consumed outside their owning file. Keep file-local helpers private and remove declarations with no consumers.

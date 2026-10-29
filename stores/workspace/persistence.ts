@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseBackup, serializeBackup } from "@/lib/resume/backup";
+import { parseBackup, serializeBackup } from "@/lib/workspace/backup";
 import type {
   CommitResult,
   StorageReview,
