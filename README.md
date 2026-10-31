@@ -40,6 +40,7 @@ the workspace data menu after preparing the compiler assets.
 | `components/shared/`    | Language indicators and semantic badges shared across features                                |
 | `components/ui/`        | Shared UI primitives                                                                          |
 | `hooks/`                | Reusable hooks and feature interaction coordination in `workspace/`, `output/`, and `review/` |
+| `contexts/`             | Mounted workflow, output, backup coordination, and narrow owner-editor links                  |
 | `stores/workspace/`     | Observable controller, persistence, and React lifecycle adapter                               |
 | `types-and-constants/`  | Shared domain contracts and declarative defaults                                              |
 | `lib/resume/`           | Canonical document schemas, factories, and fictional example                                  |
@@ -63,6 +64,23 @@ schema imports, and stores keep their React adapter separate from controller and
 persistence code. Hooks connect those layers to presentation. The workspace
 controller is the single writable owner of resume state; navigation selections,
 compiler lifecycle, and local interaction state retain their existing owners.
+
+After readiness, the workspace mounts workflow, output, and backup providers in
+that order. They stay mounted across destination changes and preview visibility.
+The workflow provider composes navigation and career/resume actions, confirmations,
+and issue-focus coordination. Navigation alone owns review contexts and return
+destinations; the editor-review hook derives their effective context and coordinates
+updates without storing another copy. The output provider owns one compiler,
+validation, auto-sync, and exports. The backup provider owns one backup-hook instance
+and input ref shared by every menu and inline presentation; the workspace renders
+exactly one import input.
+
+`WorkspaceView` composes layout and connected controls. `EditorPane` composes the
+scrolling/disabled boundary, header, return navigation, and destination content.
+Their extracted components render controls, career tabs, review content, settings,
+preview/issues panels, and dialogs. Reusable controls retain explicit props, while
+connected workspace components consume the appropriate contexts. See
+[context guidance](contexts/AGENTS.md) for ownership and mounting constraints.
 
 See [store guidance](stores/AGENTS.md) and
 [contract guidance](types-and-constants/AGENTS.md) for dependency rules and

@@ -1,17 +1,15 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { useContext } from "react";
 
-import type { Locale } from "@/types-and-constants/languages";
+import { WorkflowLinksContext } from "@/contexts/workflow-links";
 
-export const WorkflowLinksContext = createContext<{
-  editCareer: (path: string, locale: Locale) => void;
-}>({ editCareer: () => {} });
-
-/** Access explicit owner-editor links without coupling wording controls to navigation state.
- * @returns Actions provided by the mounted workspace navigation owner.
+/** Access owner-editor links without subscribing to navigation state.
+ * @returns Shared career editing actions; throws without WorkspaceWorkflowProvider.
  * @example const { editCareer } = useWorkflowLinks();
  */
 export function useWorkflowLinks() {
-  return useContext(WorkflowLinksContext);
+  const links = useContext(WorkflowLinksContext);
+  if (!links) throw new Error("WorkspaceWorkflowProvider is required");
+  return links;
 }

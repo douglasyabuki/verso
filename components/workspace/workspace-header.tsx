@@ -172,7 +172,9 @@ export function WorkspaceHeader({
       aria-label="Workspace controls"
     >
       <WorkspaceToolbar {...toolbar} />
-      <div className="min-w-0 border-t px-4 py-3 md:px-6">{context}</div>
+      {context && (
+        <div className="min-w-0 border-t px-4 py-3 md:px-6">{context}</div>
+      )}
     </header>
   );
 }

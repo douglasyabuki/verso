@@ -2,6 +2,9 @@
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkspaceView } from "@/components/workspace/workspace-view";
+import { WorkspaceBackupsProvider } from "@/contexts/workspace-backups";
+import { WorkspaceOutputProvider } from "@/contexts/workspace-output";
+import { WorkspaceWorkflowProvider } from "@/contexts/workspace-workflow";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { WorkspaceProvider } from "@/stores/workspace/provider";
 
@@ -27,7 +30,13 @@ function WorkspaceReady() {
   }
   return (
     <TooltipProvider>
-      <WorkspaceView />
+      <WorkspaceWorkflowProvider>
+        <WorkspaceOutputProvider>
+          <WorkspaceBackupsProvider>
+            <WorkspaceView />
+          </WorkspaceBackupsProvider>
+        </WorkspaceOutputProvider>
+      </WorkspaceWorkflowProvider>
     </TooltipProvider>
   );
 }
