@@ -40,7 +40,6 @@ type WorkspaceHeaderProps = {
   setVariantId: (id: string) => void;
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  dirty: boolean;
   exporting: boolean;
   runExport: ReturnType<typeof useWorkspaceExports>["runExport"];
   hasErrors: boolean;
@@ -53,7 +52,6 @@ export function WorkspaceResumeControls({
   setVariantId,
   locale,
   setLocale,
-  dirty,
   exporting,
   runExport,
   hasErrors,
@@ -123,10 +121,7 @@ export function WorkspaceResumeControls({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground">
-          {dirty
-            ? "Changes since your last backup"
-            : "No changes since your last backup"}{" "}
-          · Draft version {document.revision}
+          Draft version {document.revision}
         </span>
         <DropdownMenu>
           <DropdownMenuTrigger

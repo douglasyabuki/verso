@@ -366,10 +366,17 @@ function LayoutInspector({
     return (
       <Field key={key} data-disabled={disabled}>
         <LayoutFieldHeader disabled={disabled} reset={reset(key)}>
-          <FieldLabel htmlFor={id + key}>
-            <Icon aria-hidden="true" className="size-4 shrink-0" />
-            {templateSettingLabels[key]}
-          </FieldLabel>
+          <div className="flex min-w-0 flex-1 basis-32 items-center gap-1.5">
+            <FieldLabel htmlFor={id + key}>
+              <Icon aria-hidden="true" className="size-4 shrink-0" />
+              {templateSettingLabels[key]}
+            </FieldLabel>
+            {key === "pageNumbering" && (
+              <InfoHint label={templateSettingLabels[key]}>
+                Page numbers use the selected output language.
+              </InfoHint>
+            )}
+          </div>
         </LayoutFieldHeader>
         <Select
           items={items}
@@ -541,17 +548,23 @@ function LayoutInspector({
             <div className="grid min-w-0 items-start gap-4 @min-[40rem]/layout-margins:grid-cols-[minmax(0,1fr)_11rem]">
               <FieldGroup className="min-w-0 gap-4">
                 <Field>
-                  <FieldLabel id={id + "linked"}>
-                    <Link2 aria-hidden="true" className="size-4 shrink-0" />
-                    Link left and right margins
-                  </FieldLabel>
+                  <div className="flex items-center gap-1.5">
+                    <FieldLabel id={id + "linked"}>
+                      <Link2 aria-hidden="true" className="size-4 shrink-0" />
+                      Link left and right margins
+                    </FieldLabel>
+                    <InfoHint label="link left and right margins">
+                      Linking keeps current values. Your next left or right
+                      margin edit updates both. Use default resets only its
+                      field.
+                    </InfoHint>
+                  </div>
                   <ToggleGroup
                     multiple={false}
                     variant="outline"
                     value={[linkedMargins ? "linked" : "separate"]}
                     disabled={disabled}
                     aria-labelledby={id + "linked"}
-                    aria-describedby={id + "linked-description"}
                     onValueChange={(selection) => {
                       if (selection[0] && drafts.flush())
                         setLinkedMargins(selection[0] === "linked");
@@ -560,11 +573,6 @@ function LayoutInspector({
                     <ToggleGroupItem value="linked">Linked</ToggleGroupItem>
                     <ToggleGroupItem value="separate">Separate</ToggleGroupItem>
                   </ToggleGroup>
-                  <FieldDescription id={id + "linked-description"}>
-                    Linking changes no values. The next left or right margin
-                    commit updates both sides together. Use default affects one
-                    field.
-                  </FieldDescription>
                 </Field>
                 <LayoutFieldGrid layout="pair">
                   {numeric([
@@ -586,9 +594,6 @@ function LayoutInspector({
                 Body typography
               </span>
             </FieldLegend>
-            <FieldDescription>
-              Single column · Choose a font family and body spacing
-            </FieldDescription>
             <LayoutFieldGrid>
               {choice("fontFamily")}
               {numeric(["fontSize", "lineHeight"])}
@@ -612,55 +617,51 @@ function LayoutInspector({
                   );
               }}
             >
-              <CollapsibleTrigger className="group/layout-group grid w-full grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 rounded-md p-2 text-left transition-colors hover:bg-muted focus-visible:outline-ring data-panel-open:bg-muted/50 motion-reduce:transition-none">
-                <ChevronRight
-                  aria-hidden="true"
-                  className="size-4 text-muted-foreground transition-transform duration-200 group-data-panel-open/layout-group:rotate-90 motion-reduce:transition-none"
-                />
-                <span className="text-sm font-medium">{group.name}</span>
-                <span className="col-start-2 min-w-0 text-xs leading-relaxed text-muted-foreground group-data-panel-open/layout-group:hidden">
-                  {group.keys
-                    .slice(0, 3)
-                    .map((key) => {
-                      const control = numericLayoutControls.find(
-                        (control) => control.key === key,
-                      );
-                      const value = control
-                        ? numericLayoutValue(values, control.key)
-                        : values[key];
-                      const label = control
-                        ? value === undefined
-                          ? "Automatic"
-                          : `${value} ${control.unit}`
-                        : value === "template-default"
-                          ? "Template default"
-                          : value;
-                      return `${templateSettingLabels[key]}: ${label}`;
-                    })
-                    .join(" · ")}
-                </span>
-              </CollapsibleTrigger>
+              <div className="flex items-center gap-1.5">
+                <CollapsibleTrigger className="group/layout-group grid min-w-0 flex-1 grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 rounded-md p-2 text-left transition-colors hover:bg-muted focus-visible:outline-ring data-panel-open:bg-muted/50 motion-reduce:transition-none">
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="size-4 text-muted-foreground transition-transform duration-200 group-data-panel-open/layout-group:rotate-90 motion-reduce:transition-none"
+                  />
+                  <span className="text-sm font-medium">{group.name}</span>
+                  <span className="col-start-2 min-w-0 text-xs leading-relaxed text-muted-foreground group-data-panel-open/layout-group:hidden">
+                    {group.keys
+                      .slice(0, 3)
+                      .map((key) => {
+                        const control = numericLayoutControls.find(
+                          (control) => control.key === key,
+                        );
+                        const value = control
+                          ? numericLayoutValue(values, control.key)
+                          : values[key];
+                        const label = control
+                          ? value === undefined
+                            ? "Automatic"
+                            : `${value} ${control.unit}`
+                          : value === "template-default"
+                            ? "Template default"
+                            : value;
+                        return `${templateSettingLabels[key]}: ${label}`;
+                      })
+                      .join(" · ")}
+                  </span>
+                </CollapsibleTrigger>
+                {group.name === "Colors" && (
+                  <InfoHint label="colors">
+                    Named text colors meet 4.5:1 contrast against white.
+                    Template-default links use the section color; secondary text
+                    and icons use an explicit body color or the original grays.
+                    Explicit link colors also apply within headings and
+                    emphasis.
+                  </InfoHint>
+                )}
+              </div>
               <CollapsibleContent keepMounted>
                 <FieldSet
                   disabled={disabled}
                   className="ms-4 me-2 mt-3 mb-2 min-w-0 border-s py-1 ps-4"
                 >
                   <FieldLegend className="sr-only">{group.name}</FieldLegend>
-                  {group.name === "Colors" && (
-                    <FieldDescription>
-                      Named text colors meet 4.5:1 against white.
-                      Template-default links follow section color; secondary
-                      text and icons follow explicit body color, otherwise
-                      original grays. Explicit link colors win inside headings
-                      and emphasis.
-                    </FieldDescription>
-                  )}
-                  {group.name === "Page numbering" && (
-                    <FieldDescription>
-                      Localized at 9 pt, baseline 5 mm below the content box.
-                      Page target remains a warning only.
-                    </FieldDescription>
-                  )}
                   <LayoutFieldGrid
                     layout={
                       group.name === "Colors"

@@ -141,7 +141,7 @@ function TailoredFields({
             target.country = country.toUpperCase();
           }, group)
         }
-        description="Two letters. The PDF shows the country name in the selected language."
+        hint="Two letters, for example BR or US. The PDF shows the country name in the selected language."
       />
     </FieldGroup>
   );
@@ -158,11 +158,11 @@ function TailoredFields({
                 ? "Project dates"
                 : "Dates"}
       </FieldLegend>
-      <FieldDescription>
-        {certification
-          ? "These original facts are independent of certification dates. They remain visible in the PDF, and setup never changes them."
-          : "Optional shared facts. Enter a year or a year and month, for example 2024 or 2024-06."}
-      </FieldDescription>
+      {certification && (
+        <FieldDescription>
+          Original dates also appear in the PDF as Additional dates.
+        </FieldDescription>
+      )}
       <FieldGroup className="grid gap-4 sm:grid-cols-2">
         <TextField
           fieldKey={`entries.${entry.id}.start`}
@@ -284,8 +284,7 @@ function TailoredFields({
           <CollapsibleContent keepMounted>
             <FieldGroup className="mt-4">
               <FieldDescription>
-                Populated fields remain visible in the PDF. Clear a value
-                explicitly to remove it.
+                Filled fields appear in the PDF. Clear them to remove them.
               </FieldDescription>
               {skills && organization}
               {!locationInMain && location}

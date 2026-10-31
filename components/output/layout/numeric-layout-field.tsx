@@ -8,6 +8,7 @@ import {
   FieldError,
   FieldLabel,
 } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import {
   InputGroup,
   InputGroupAddon,
@@ -44,17 +45,9 @@ export function NumericLayoutField({
   const text = drafts.text(key);
   const error = drafts.errors[key];
   const Icon = layoutSettingIcons[key];
-  const description = [
-    source,
-    "description" in control ? control.description : undefined,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const hint = "description" in control ? control.description : undefined;
   const describedBy =
-    [
-      description ? `${id}-description` : undefined,
-      error ? `${id}-error` : undefined,
-    ]
+    [source ? `${id}-source` : undefined, error ? `${id}-error` : undefined]
       .filter(Boolean)
       .join(" ") || undefined;
   const adjust = (direction: number) => {
@@ -87,10 +80,13 @@ export function NumericLayoutField({
         reset={reset}
         templateDefault={templateDefault}
       >
-        <FieldLabel htmlFor={id}>
-          <Icon aria-hidden="true" className="size-4 shrink-0" />
-          {control.label}
-        </FieldLabel>
+        <div className="flex min-w-0 flex-1 basis-32 items-center gap-1.5">
+          <FieldLabel htmlFor={id}>
+            <Icon aria-hidden="true" className="size-4 shrink-0" />
+            {control.label}
+          </FieldLabel>
+          {hint && <InfoHint label={control.label}>{hint}</InfoHint>}
+        </div>
       </LayoutFieldHeader>
       <InputGroup data-disabled={disabled}>
         <InputGroupInput
@@ -185,10 +181,8 @@ export function NumericLayoutField({
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
-      {description && (
-        <FieldDescription id={`${id}-description`}>
-          {description}
-        </FieldDescription>
+      {source && (
+        <FieldDescription id={`${id}-source`}>{source}</FieldDescription>
       )}
       {error && <FieldError id={`${id}-error`}>{error}</FieldError>}
     </Field>

@@ -179,9 +179,13 @@ export function WorkspaceView() {
     ...document.compiler,
   });
   const exports = useWorkspaceExports({ document, variant, locale, compiler });
-  const dirty =
-    !state.backupFingerprint ||
-    state.currentFingerprint !== state.backupFingerprint;
+  const backupStatus = !state.backupFingerprint
+    ? "No JSON backup recorded"
+    : !state.currentFingerprint
+      ? "Checking JSON backup status…"
+      : state.currentFingerprint !== state.backupFingerprint
+        ? "JSON backup is out of date"
+        : "JSON backup is up to date";
   const reviewCount = reviewItems(document).length;
   const fullWidth = ["career-overview", "resumes", "review", "data"].includes(
     view,
@@ -245,7 +249,7 @@ export function WorkspaceView() {
   const dataActions = (inline = false) => (
     <WorkspaceDataMenu
       inline={inline}
-      dirty={dirty}
+      backupStatus={backupStatus}
       disabled={state.saving}
       importJson={requestImport}
       exportJson={exportJson}
@@ -477,7 +481,6 @@ export function WorkspaceView() {
                   setVariantId={setVariantId}
                   locale={locale}
                   setLocale={setLocale}
-                  dirty={dirty}
                   exporting={exports.exporting}
                   runExport={exports.runExport}
                   hasErrors={validation.errors.length > 0}
@@ -488,11 +491,6 @@ export function WorkspaceView() {
                 />
               ) : (
                 <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-                  <span className="text-xs text-muted-foreground">
-                    {dirty
-                      ? "Changes since your last backup"
-                      : "No changes since your last backup"}
-                  </span>
                   {!fullWidth &&
                     navigation.destination.kind !== "career-profile" && (
                       <div className="flex max-w-full flex-wrap items-center gap-2 text-sm">

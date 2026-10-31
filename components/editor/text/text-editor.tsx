@@ -94,7 +94,7 @@ export function TextEditor({
         "aria-label": label,
         "aria-multiline": "true",
         "aria-invalid": String(!!error),
-        "aria-describedby": `${id}-instructions${error ? ` ${id}-error` : ""}`,
+        "aria-describedby": error ? `${id}-error` : "",
         spellcheck: "true",
         class: `w-full whitespace-pre-wrap break-words rounded-b-md px-3 py-2 text-sm outline-none ${multiline ? "min-h-24" : "min-h-16"} [&_em]:italic [&_a]:text-primary [&_a]:underline`,
       },
@@ -515,10 +515,6 @@ export function TextEditor({
         </div>
         <EditorContent editor={editor} />
       </div>
-      <FieldDescription id={`${id}-instructions`}>
-        Select text to emphasize it or add a link. Pasted content uses plain
-        text.
-      </FieldDescription>
       <div role="status" aria-live="polite" aria-atomic="true">
         {rejections > 0 && (
           <FieldError>

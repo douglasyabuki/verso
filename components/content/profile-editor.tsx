@@ -112,7 +112,7 @@ export function ProfileEditor({
                 }, group)
               }
               placeholder="BR"
-              description="Two letters, for example BR or US. The PDF shows the country name in the selected language."
+              hint="Two letters, for example BR or US. The PDF shows the country name in the selected language."
             />
           </FieldGroup>
           <Separator />

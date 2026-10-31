@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/tooltip";
 
 export function WorkspaceDataMenu({
-  dirty,
+  backupStatus,
   importJson,
   exportJson,
   example,
@@ -36,7 +36,7 @@ export function WorkspaceDataMenu({
   disabled,
   inline = false,
 }: {
-  dirty: boolean;
+  backupStatus: string;
   importJson: () => void;
   exportJson: () => void;
   example: () => void;
@@ -49,10 +49,8 @@ export function WorkspaceDataMenu({
     return (
       <div className="flex flex-col gap-3">
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          {dirty
-            ? "Changes since your last backup"
-            : "No changes since your last backup"}
-          <InfoHint label="changes since your last backup" size="sm">
+          {backupStatus}
+          <InfoHint label="JSON backup status" size="sm">
             Saving in this browser is separate from downloading a backup. A
             backup (JSON) includes all editable career details, resumes, and
             settings.
@@ -118,9 +116,7 @@ export function WorkspaceDataMenu({
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <div className="px-2 py-2 text-xs text-muted-foreground">
-          {dirty
-            ? "Changes since your last backup"
-            : "No changes since your last backup"}
+          {backupStatus}
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
