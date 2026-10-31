@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResumeIdentityDialog } from "@/components/variants/resume-identity-dialog";
 import { EditorPane } from "@/components/workspace/editor-pane";
 import { WorkspaceDataMenu } from "@/components/workspace/workspace-data-menu";
@@ -414,251 +414,277 @@ export function WorkspaceView() {
     { value: "pt-BR", label: "Português" },
   ];
   return (
-    <WorkspaceShell
-      sidebarOpen={layout.sidebar}
-      onSidebarChange={(sidebar) => changeLayout({ sidebar })}
-      dataMenu={dataMenu}
-      sidebar={
-        <WorkspaceSidebar
-          actions={resumeActions}
-          careerActions={careerActions}
-          blocked={state.replacing || !!state.pending}
-          document={document}
-          destination={navigation.destination}
-          open={(destination) => {
-            setIssueNavigation(undefined);
-            navigation.open(destination);
-          }}
-          resumeId={variant.id}
-          createResume={navigation.createResume}
-          addSection={() => {
-            setIssueNavigation((current) =>
-              current ? { ...current, pending: false } : current,
-            );
-            createSection();
-          }}
-          reviewCount={reviewCount}
-          utilities={
-            <div className="flex items-center gap-2">
-              {dataMenu}
-              <AppearanceControl />
-              <span className="text-xs text-muted-foreground">
-                Data & appearance
-              </span>
-            </div>
-          }
-        />
-      }
-      toolbar={
-        <WorkspaceHeader
-          context={
-            resumeWorkspace ? (
-              <WorkspaceResumeControls
-                document={document}
-                variant={variant}
-                setVariantId={setVariantId}
-                locale={locale}
-                setLocale={setLocale}
-                dirty={dirty}
-                exporting={exports.exporting}
-                runExport={exports.runExport}
-                hasErrors={validation.errors.length > 0}
-                hasBilingualErrors={
-                  validations["en-US"].errors.length > 0 ||
-                  validations["pt-BR"].errors.length > 0
-                }
-              />
-            ) : (
-              <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-                <span className="text-xs text-muted-foreground">
-                  {dirty
-                    ? "Changes since your last backup"
-                    : "No changes since your last backup"}
-                </span>
-                {!fullWidth &&
-                  navigation.destination.kind !== "career-profile" && (
-                    <div className="flex max-w-full flex-wrap items-center gap-2 text-sm">
-                      <Label htmlFor="career-language">
-                        {view === "shared-defaults"
-                          ? "Defaults language"
-                          : "Editing language"}
-                      </Label>
-                      <Select
-                        items={languageItems}
-                        value={
-                          view === "shared-defaults"
-                            ? locale
-                            : navigation.careerLocale
-                        }
-                        disabled={state.replacing || !!state.pending}
-                        onValueChange={(value) => {
-                          if (
-                            value === null ||
-                            state.replacing ||
-                            state.pending
-                          )
-                            return;
-                          if (view === "shared-defaults")
-                            setLocale(value as typeof locale);
-                          else
-                            navigation.setCareerLocale(value as typeof locale);
-                        }}
-                      >
-                        <SelectTrigger
-                          appearance="utility"
-                          id="career-language"
-                        >
-                          <LanguageFlag
-                            locale={
-                              view === "shared-defaults"
-                                ? locale
-                                : navigation.careerLocale
-                            }
-                          />
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {languageItems.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                <span className="inline-flex items-center gap-2">
-                                  <LanguageFlag
-                                    locale={option.value as typeof locale}
-                                  />
-                                  {option.label}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-              </div>
-            )
-          }
-          shortcuts={shortcuts}
-          previewAvailable={!fullWidth}
-          mobilePreviewControls={
-            !desktop && (
-              <ToggleGroup
-                value={[mobilePanel]}
-                onValueChange={(values) => {
-                  if (values[0]) {
-                    setIssueNavigation((current) =>
-                      current ? { ...current, pending: false } : current,
-                    );
-                    setMobilePanel(values[0]);
-                  }
-                }}
-                variant="outline"
-                spacing={0}
-                aria-label="Workspace panel"
-              >
-                <ToggleGroupItem value="editor">
-                  <FileText data-icon="inline-start" />
-                  Editor
-                </ToggleGroupItem>
-                <ToggleGroupItem value="preview">PDF preview</ToggleGroupItem>
-              </ToggleGroup>
-            )
-          }
-          title={
-            navigation.destination.kind === "resume"
-              ? variant.name || "Untitled resume"
-              : navigation.destination.kind === "career-section" ||
-                  navigation.destination.kind === "career-summary" ||
-                  navigation.destination.kind === "career-profile"
-                ? "Career details"
-                : (
-                    {
-                      "career-overview": "Career details",
-                      resumes: "All resumes",
-                      review: "Text to review",
-                      data: "Backups & settings",
-                      "shared-defaults": "Default layout",
-                    } as Record<string, string>
-                  )[view]
-          }
-          preview={layout.preview}
-          togglePreview={() => {
-            if (controller.commitEditorDrafts())
-              changeLayout({ preview: !layout.preview });
-          }}
-        />
-      }
-      overlays={
-        <>
-          {resumeActions.editing && (
-            <ResumeIdentityDialog
-              key={resumeActions.editing.id}
-              resume={resumeActions.editing}
-              close={resumeActions.close}
-              returnFocus={resumeActions.returnFocus}
-              save={resumeActions.save}
-            />
-          )}
-          <WorkspaceOverlays
-            confirmation={confirmation}
-            dismiss={() => setConfirmation(undefined)}
-          />
-        </>
-      }
+    <Tabs
+      value={mobilePanel}
+      onValueChange={(value) => {
+        if (
+          (value !== "editor" && value !== "preview") ||
+          value === mobilePanel ||
+          state.replacing ||
+          state.pending ||
+          !controller.commitEditorDrafts()
+        )
+          return;
+        setIssueNavigation((current) =>
+          current ? { ...current, pending: false } : current,
+        );
+        setMobilePanel(value);
+      }}
+      className="h-dvh min-h-0 gap-0"
     >
-      <WorkspaceFeedback />
-      <div className="min-h-0 flex-1">
-        {fullWidth ? (
-          editor
-        ) : desktop && layout.preview ? (
-          <ResizablePanelGroup
-            orientation="horizontal"
-            defaultLayout={{
-              editor: layout.split,
-              preview: 100 - layout.split,
+      <WorkspaceShell
+        sidebarOpen={layout.sidebar}
+        onSidebarChange={(sidebar) => changeLayout({ sidebar })}
+        dataMenu={dataMenu}
+        sidebar={
+          <WorkspaceSidebar
+            actions={resumeActions}
+            careerActions={careerActions}
+            blocked={state.replacing || !!state.pending}
+            document={document}
+            destination={navigation.destination}
+            open={(destination) => {
+              setIssueNavigation(undefined);
+              navigation.open(destination);
             }}
-            resizeTargetMinimumSize={{
-              fine: 5,
-              coarse: 16,
+            resumeId={variant.id}
+            createResume={navigation.createResume}
+            addSection={() => {
+              setIssueNavigation((current) =>
+                current ? { ...current, pending: false } : current,
+              );
+              createSection();
             }}
-            onLayoutChanged={(sizes) => changeLayout({ split: sizes.editor })}
-          >
-            <ResizablePanel id="editor" minSize="30%">
-              {editor}
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel id="preview" minSize="30%">
-              {preview}
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : desktop || mobilePanel === "editor" ? (
-          editor
-        ) : (
-          preview
+            reviewCount={reviewCount}
+            utilities={
+              <div className="flex items-center gap-2">
+                {dataMenu}
+                <AppearanceControl />
+                <span className="text-xs text-muted-foreground">
+                  Data & appearance
+                </span>
+              </div>
+            }
+          />
+        }
+        toolbar={
+          <WorkspaceHeader
+            context={
+              resumeWorkspace ? (
+                <WorkspaceResumeControls
+                  document={document}
+                  variant={variant}
+                  setVariantId={setVariantId}
+                  locale={locale}
+                  setLocale={setLocale}
+                  dirty={dirty}
+                  exporting={exports.exporting}
+                  runExport={exports.runExport}
+                  hasErrors={validation.errors.length > 0}
+                  hasBilingualErrors={
+                    validations["en-US"].errors.length > 0 ||
+                    validations["pt-BR"].errors.length > 0
+                  }
+                />
+              ) : (
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    {dirty
+                      ? "Changes since your last backup"
+                      : "No changes since your last backup"}
+                  </span>
+                  {!fullWidth &&
+                    navigation.destination.kind !== "career-profile" && (
+                      <div className="flex max-w-full flex-wrap items-center gap-2 text-sm">
+                        <Label htmlFor="career-language">
+                          {view === "shared-defaults"
+                            ? "Defaults language"
+                            : "Editing language"}
+                        </Label>
+                        <Select
+                          items={languageItems}
+                          value={
+                            view === "shared-defaults"
+                              ? locale
+                              : navigation.careerLocale
+                          }
+                          disabled={state.replacing || !!state.pending}
+                          onValueChange={(value) => {
+                            if (
+                              value === null ||
+                              state.replacing ||
+                              state.pending
+                            )
+                              return;
+                            if (view === "shared-defaults")
+                              setLocale(value as typeof locale);
+                            else
+                              navigation.setCareerLocale(
+                                value as typeof locale,
+                              );
+                          }}
+                        >
+                          <SelectTrigger
+                            appearance="utility"
+                            id="career-language"
+                          >
+                            <LanguageFlag
+                              locale={
+                                view === "shared-defaults"
+                                  ? locale
+                                  : navigation.careerLocale
+                              }
+                            />
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {languageItems.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
+                                  <span className="inline-flex items-center gap-2">
+                                    <LanguageFlag
+                                      locale={option.value as typeof locale}
+                                    />
+                                    {option.label}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                </div>
+              )
+            }
+            shortcuts={shortcuts}
+            previewAvailable={!fullWidth}
+            mobilePreviewControls={
+              !desktop &&
+              !fullWidth && (
+                <div className="max-w-full min-w-0 overflow-x-auto px-1 pt-1 pb-2">
+                  <TabsList variant="line" aria-label="Workspace panel">
+                    <TabsTrigger
+                      value="editor"
+                      disabled={state.replacing || !!state.pending}
+                    >
+                      <FileText data-icon="inline-start" />
+                      Editor
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="preview"
+                      disabled={state.replacing || !!state.pending}
+                    >
+                      PDF preview
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              )
+            }
+            title={
+              navigation.destination.kind === "resume"
+                ? variant.name || "Untitled resume"
+                : navigation.destination.kind === "career-section" ||
+                    navigation.destination.kind === "career-summary" ||
+                    navigation.destination.kind === "career-profile"
+                  ? "Career details"
+                  : (
+                      {
+                        "career-overview": "Career details",
+                        resumes: "All resumes",
+                        review: "Text to review",
+                        data: "Backups & settings",
+                        "shared-defaults": "Default layout",
+                      } as Record<string, string>
+                    )[view]
+            }
+            preview={layout.preview}
+            togglePreview={() => {
+              if (controller.commitEditorDrafts())
+                changeLayout({ preview: !layout.preview });
+            }}
+          />
+        }
+        overlays={
+          <>
+            {resumeActions.editing && (
+              <ResumeIdentityDialog
+                key={resumeActions.editing.id}
+                resume={resumeActions.editing}
+                close={resumeActions.close}
+                returnFocus={resumeActions.returnFocus}
+                save={resumeActions.save}
+              />
+            )}
+            <WorkspaceOverlays
+              confirmation={confirmation}
+              dismiss={() => setConfirmation(undefined)}
+            />
+          </>
+        }
+      >
+        <WorkspaceFeedback />
+        <div className="min-h-0 flex-1">
+          {fullWidth ? (
+            editor
+          ) : desktop && layout.preview ? (
+            <ResizablePanelGroup
+              orientation="horizontal"
+              defaultLayout={{
+                editor: layout.split,
+                preview: 100 - layout.split,
+              }}
+              resizeTargetMinimumSize={{
+                fine: 5,
+                coarse: 16,
+              }}
+              onLayoutChanged={(sizes) => changeLayout({ split: sizes.editor })}
+            >
+              <ResizablePanel id="editor" minSize="30%">
+                {editor}
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel id="preview" minSize="30%">
+                {preview}
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : desktop ? (
+            editor
+          ) : (
+            <>
+              <TabsContent value="editor" className="h-full min-h-0">
+                {editor}
+              </TabsContent>
+              <TabsContent value="preview" className="h-full min-h-0">
+                {preview}
+              </TabsContent>
+            </>
+          )}
+        </div>
+        {!fullWidth && (
+          <IssuesPanel
+            document={document}
+            variant={variant}
+            validation={validations}
+            compiler={compiler}
+            open={issuesOpen}
+            setOpen={setIssuesOpen}
+            onIssue={onIssue}
+            disabled={state.replacing || !!state.pending}
+          />
         )}
-      </div>
-      {!fullWidth && (
-        <IssuesPanel
-          document={document}
-          variant={variant}
-          validation={validations}
-          compiler={compiler}
-          open={issuesOpen}
-          setOpen={setIssuesOpen}
-          onIssue={onIssue}
-          disabled={state.replacing || !!state.pending}
+        <Input
+          ref={input}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          aria-label="Restore from a JSON backup"
+          onChange={(event) => void importJson(event.target.files?.[0])}
         />
-      )}
-      <Input
-        ref={input}
-        type="file"
-        accept=".json,application/json"
-        className="hidden"
-        aria-label="Restore from a JSON backup"
-        onChange={(event) => void importJson(event.target.files?.[0])}
-      />
-    </WorkspaceShell>
+      </WorkspaceShell>
+    </Tabs>
   );
 }

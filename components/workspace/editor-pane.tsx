@@ -5,10 +5,12 @@ import {
   ChevronRight,
   Eraser,
   ListChecks,
+  MoreHorizontal,
   Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
+import { useRef } from "react";
 
 import { CareerOverview } from "@/components/content/career-overview";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
@@ -24,9 +26,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FieldSet } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResumeCollection } from "@/components/variants/resume-collection";
 import { ResumeIcon } from "@/components/variants/resume-icon";
 import { VariantsEditor } from "@/components/variants/variants-editor";
@@ -87,6 +97,8 @@ export function EditorPane({
   resumeActions: ReturnType<typeof useResumeActions>;
   careerActions: ReturnType<typeof useCareerActions>;
 }) {
+  const careerMenuTrigger = useRef<HTMLButtonElement>(null);
+
   useIssueFocus({
     navigation: issueNavigation,
     disabled,
@@ -169,6 +181,29 @@ export function EditorPane({
     navigation.destination.kind === "career-section"
       ? document.sections.find((item) => item.id === sectionId)
       : undefined;
+  const reviewEditor = (
+    <TranslationsEditor
+      document={document}
+      update={update}
+      variant={variant}
+      confirm={confirm}
+      scope={
+        view === "review"
+          ? "queue"
+          : view === "career-translations"
+            ? "career"
+            : "resume"
+      }
+      sectionId={sectionId}
+      context={reviewContext}
+      onContext={changeReviewContext}
+      onOwner={onOwner}
+      queueContext={
+        view !== "review" ? (navigation.reviewContext ?? undefined) : undefined
+      }
+    />
+  );
+
   return (
     <div
       className={cn(
@@ -283,32 +318,61 @@ export function EditorPane({
             </Button>
           )}
           {careerTarget && (
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!careerActions.canClear(careerTarget)}
-                onClick={(event) =>
-                  careerActions.clear(careerTarget, event.currentTarget)
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={disabled}
+                render={
+                  <Button
+                    ref={careerMenuTrigger}
+                    variant="ghost"
+                    size="icon-sm"
+                    className="ml-auto shrink-0"
+                    aria-label={`Actions for ${section ? careerSectionLabel(section) : summary ? "Summary" : "Profile"}`}
+                  />
                 }
               >
-                <Eraser data-icon="inline-start" />
-                Clear content
-              </Button>
-              {section?.kind === "custom" && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  aria-label="Delete custom section"
-                  onClick={(event) =>
-                    careerActions.remove(section.id, event.currentTarget)
-                  }
-                >
-                  <Trash2 data-icon="inline-start" />
-                  Delete section
-                </Button>
-              )}
-            </div>
+                <MoreHorizontal />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="quick-actions-dropdown"
+              >
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    disabled={disabled || !careerActions.canClear(careerTarget)}
+                    onClick={() =>
+                      careerActions.clear(
+                        careerTarget,
+                        careerMenuTrigger.current,
+                      )
+                    }
+                  >
+                    <Eraser />
+                    Clear content
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                {section?.kind === "custom" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        disabled={disabled}
+                        onClick={() =>
+                          careerActions.remove(
+                            section.id,
+                            careerMenuTrigger.current,
+                          )
+                        }
+                      >
+                        <Trash2 />
+                        Delete section
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
         {(navigation.returnDestination ||
@@ -347,16 +411,26 @@ export function EditorPane({
           )}
         {(navigation.destination.kind === "career-section" ||
           navigation.destination.kind === "career-summary") && (
-          <ToggleGroup
-            value={[navigation.destination.tab]}
-            onValueChange={(values) => {
+          <Tabs
+            value={navigation.destination.tab}
+            onValueChange={(value) => {
               if (
-                values[0] &&
+                !disabled &&
+                (value === "edit" || value === "review") &&
                 (navigation.destination.kind === "career-section" ||
-                  navigation.destination.kind === "career-summary")
+                  navigation.destination.kind === "career-summary") &&
+                value !== navigation.destination.tab
               ) {
+                const token = navigation.open(
+                  {
+                    ...navigation.destination,
+                    tab: value,
+                  },
+                  true,
+                );
+                if (token === navigation.focusToken) return;
                 if (
-                  values[0] === "review" &&
+                  value === "review" &&
                   !navigation.reviewContext &&
                   !navigation.scopedReviews[sectionId]
                 ) {
@@ -381,31 +455,67 @@ export function EditorPane({
                     },
                   }));
                 }
-                navigation.open(
-                  {
-                    ...navigation.destination,
-                    tab: values[0] as "edit" | "review",
-                  },
-                  true,
-                );
-                if (values[0] === "edit" && reviewContext.current)
+                if (value === "edit" && reviewContext.current)
                   navigation.setCareerLocale(reviewContext.current.locale);
               }
             }}
-            variant="segmented"
-            aria-label="Career details section tab"
-            spacing={0}
-            multiple={false}
+            className="min-w-0 gap-6"
           >
-            <ToggleGroupItem value="edit">
-              <Pencil data-icon="inline-start" />
-              Edit content
-            </ToggleGroupItem>
-            <ToggleGroupItem value="review">
-              <ListChecks data-icon="inline-start" />
-              Text to review
-            </ToggleGroupItem>
-          </ToggleGroup>
+            <div className="max-w-full overflow-x-auto px-1 pt-1 pb-2">
+              <TabsList variant="line" aria-label="Career details section tab">
+                <TabsTrigger value="edit" disabled={disabled}>
+                  <Pencil data-icon="inline-start" />
+                  Edit content
+                </TabsTrigger>
+                <TabsTrigger value="review" disabled={disabled}>
+                  <ListChecks data-icon="inline-start" />
+                  Text to review
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="edit" className="min-w-0">
+              {view === "summary" && (
+                <SummaryEditor
+                  document={document}
+                  locale={locale}
+                  update={update}
+                  errors={validation.errors}
+                />
+              )}
+              {view === "content" && (
+                <ContentEditor
+                  key={`${sectionId}:${issueNavigation?.id ?? ""}`}
+                  context={
+                    navigation.careerContexts[sectionId] ?? {
+                      entryId: issueNavigation?.issue.target?.entryId ?? "",
+                      query: "",
+                      showArchived: !!issueNavigation?.issue.target?.entryId,
+                    }
+                  }
+                  onContext={(context) =>
+                    navigation.setCareerContexts((current) => ({
+                      ...current,
+                      [sectionId]: context,
+                    }))
+                  }
+                  issueTarget={
+                    issueNavigation?.pending
+                      ? issueNavigation.issue.target
+                      : undefined
+                  }
+                  document={document}
+                  locale={locale}
+                  update={update}
+                  confirm={confirm}
+                  sectionId={sectionId}
+                  errors={validation.errors}
+                />
+              )}
+            </TabsContent>
+            <TabsContent value="review" className="min-w-0">
+              {reviewEditor}
+            </TabsContent>
+          </Tabs>
         )}
         {view === "career-overview" && (
           <CareerOverview
@@ -488,69 +598,7 @@ export function EditorPane({
             errors={validation.errors}
           />
         )}
-        {view === "summary" && (
-          <SummaryEditor
-            document={document}
-            locale={locale}
-            update={update}
-            errors={validation.errors}
-          />
-        )}
-        {view === "content" && (
-          <ContentEditor
-            key={`${sectionId}:${issueNavigation?.id ?? ""}`}
-            context={
-              navigation.careerContexts[sectionId] ?? {
-                entryId: issueNavigation?.issue.target?.entryId ?? "",
-                query: "",
-                showArchived: !!issueNavigation?.issue.target?.entryId,
-              }
-            }
-            onContext={(context) =>
-              navigation.setCareerContexts((current) => ({
-                ...current,
-                [sectionId]: context,
-              }))
-            }
-            issueTarget={
-              issueNavigation?.pending
-                ? issueNavigation.issue.target
-                : undefined
-            }
-            document={document}
-            locale={locale}
-            update={update}
-            confirm={confirm}
-            sectionId={sectionId}
-            errors={validation.errors}
-          />
-        )}
-        {["review", "career-translations", "resume-translations"].includes(
-          view,
-        ) && (
-          <TranslationsEditor
-            document={document}
-            update={update}
-            variant={variant}
-            confirm={confirm}
-            scope={
-              view === "review"
-                ? "queue"
-                : view === "career-translations"
-                  ? "career"
-                  : "resume"
-            }
-            sectionId={sectionId}
-            context={reviewContext}
-            onContext={changeReviewContext}
-            onOwner={onOwner}
-            queueContext={
-              view !== "review"
-                ? (navigation.reviewContext ?? undefined)
-                : undefined
-            }
-          />
-        )}
+        {["review", "resume-translations"].includes(view) && reviewEditor}
         {view === "variants" && (
           <VariantsEditor
             key={`${variant.id}:${issueNavigation?.id ?? ""}`}
