@@ -237,7 +237,7 @@ function DateSetup({
         </DialogContent>
       </Dialog>
       {committed && (
-        <Button variant="outline" onClick={() => onSave(null)}>
+        <Button variant="destructive" onClick={() => onSave(null)}>
           Use original dates only
         </Button>
       )}

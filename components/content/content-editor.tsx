@@ -23,6 +23,7 @@ import { ContentStatusBadge } from "@/components/shared/semantic-badges/content-
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -146,20 +147,20 @@ export function ContentEditor({
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-lg">
-              <CardTitle size="section">Entries</CardTitle>
-              <InfoHint label="career entries" size="lg">
-                Changes here update every resume that uses this content. Add new
-                entries to each resume in Content & order. Changing their order
-                here does not change their order in resumes.
-              </InfoHint>
-            </div>
+          <div className="flex min-w-0 items-center gap-1.5 text-lg">
+            <CardTitle size="section">Entries</CardTitle>
+            <InfoHint label="career entries" size="lg">
+              Changes here update every resume that uses this content. Add new
+              entries to each resume in Content & order. Changing their order
+              here does not change their order in resumes.
+            </InfoHint>
+          </div>
+          <CardAction>
             <Button onClick={addEntry} disabled={section.entries.length >= 300}>
               <Plus data-icon="inline-start" />
               Add {terms.singular}
             </Button>
-          </div>
+          </CardAction>
         </CardHeader>
         <CardContent>
           <FieldGroup>
@@ -320,8 +321,10 @@ export function ContentEditor({
       {entry && (
         <Card key={entry.id} ref={entryForm} className="scroll-mt-4">
           <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>{entryLabel(entry, section.kind, locale)}</CardTitle>
+            <CardTitle className="min-w-0 break-words">
+              {entryLabel(entry, section.kind, locale)}
+            </CardTitle>
+            <CardAction>
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
@@ -409,7 +412,7 @@ export function ContentEditor({
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
+            </CardAction>
             <CardDescription className="flex items-center gap-1.5">
               {entry.archived ? (
                 "Archived entries stay editable and are hidden from all resumes."
@@ -438,12 +441,36 @@ export function ContentEditor({
               />
               <Separator />
               <FieldSet>
-                <FieldLegend>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span>{terms.items}</span>
-                    <InfoHint label="achievement inclusion">
-                      Choose achievements in each resume’s Content &amp; order.
-                    </InfoHint>
+                <FieldLegend className="w-full">
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>{terms.items}</span>
+                      <InfoHint label="achievement inclusion">
+                        Choose achievements in each resume’s Content &amp;
+                        order.
+                      </InfoHint>
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-auto shrink-0"
+                      disabled={entry.bullets.length >= 100}
+                      onClick={() => {
+                        const bullet = {
+                          id: crypto.randomUUID(),
+                          body: localized(),
+                        };
+                        update((draft) => {
+                          draft.sections
+                            .find((section) => section.id === sectionId)!
+                            .entries.find((item) => item.id === entry.id)!
+                            .bullets.push(bullet);
+                        });
+                      }}
+                    >
+                      <Plus data-icon="inline-start" />
+                      Add {terms.item.toLowerCase()}
+                    </Button>
                   </span>
                 </FieldLegend>
                 {!entry.bullets.length && (
@@ -490,7 +517,7 @@ export function ContentEditor({
                               <div className="flex gap-1">
                                 {orderButtons}
                                 <Button
-                                  variant="ghost"
+                                  variant="destructive"
                                   size="icon-sm"
                                   aria-label={`Delete ${terms.item.toLowerCase()} ${index + 1}`}
                                   onClick={() =>
@@ -549,48 +576,26 @@ export function ContentEditor({
                     ))}
                   </div>
                 </SortableList>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={entry.bullets.length >= 100}
-                  onClick={() => {
-                    const bullet = {
-                      id: crypto.randomUUID(),
-                      body: localized(),
-                    };
-                    update((draft) => {
-                      draft.sections
-                        .find((section) => section.id === sectionId)!
-                        .entries.find((item) => item.id === entry.id)!
-                        .bullets.push(bullet);
-                    });
-                  }}
-                >
-                  <Plus data-icon="inline-start" />
-                  Add {terms.item.toLowerCase()}
-                </Button>
               </FieldSet>
               <Separator />
-              <FieldSet>
-                <FieldLegend>
-                  {section.kind === "certifications"
+              <LinksEditor
+                title={
+                  section.kind === "certifications"
                     ? "Verification links"
                     : section.kind === "projects"
                       ? "Project links"
-                      : "Links"}
-                </FieldLegend>
-                <LinksEditor
-                  document={document}
-                  scope={`career:${section.id}:${entry.id}:links`}
-                  links={entry.links}
-                  onChange={(links, group) =>
-                    changeEntry((target) => {
-                      target.links = links;
-                    }, group)
-                  }
-                  confirm={confirm}
-                />
-              </FieldSet>
+                      : "Links"
+                }
+                document={document}
+                scope={`career:${section.id}:${entry.id}:links`}
+                links={entry.links}
+                onChange={(links, group) =>
+                  changeEntry((target) => {
+                    target.links = links;
+                  }, group)
+                }
+                confirm={confirm}
+              />
             </FieldGroup>
           </CardContent>
 

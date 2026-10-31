@@ -144,7 +144,7 @@ export function VariantWordingField({
       )}
       {override && (
         <Button
-          variant="outline"
+          variant="destructive"
           size="sm"
           className="self-start"
           onClick={() =>

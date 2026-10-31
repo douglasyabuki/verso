@@ -586,7 +586,6 @@ function CareerMenu({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem
-            variant="destructive"
             disabled={!actions.canClear(target)}
             onClick={() => actions.clear(target, trigger.current)}
           >

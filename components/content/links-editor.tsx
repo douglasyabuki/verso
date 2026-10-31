@@ -6,7 +6,7 @@ import { TextField } from "@/components/editor/fields";
 import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
 import { SortableList, SortableRow } from "@/components/editor/sortable-list";
 import { Button } from "@/components/ui/button";
-import { FieldGroup } from "@/components/ui/field";
+import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
 import { reorderVisible } from "@/lib/ordering";
 import { urlError } from "@/lib/review/validation";
 import type { ConfirmAction } from "@/types-and-constants/editor";
@@ -15,19 +15,41 @@ import type { EditGroup } from "@/types-and-constants/workspace";
 
 export function LinksEditor({
   links,
+  title,
   document,
   scope,
   onChange,
   confirm,
 }: {
   links: ResumeLink[];
+  title: string;
   document: ResumeDocument;
   scope: string;
   onChange: (links: ResumeLink[], group?: EditGroup) => void;
   confirm: ConfirmAction;
 }) {
   return (
-    <FieldGroup className="gap-4">
+    <FieldSet>
+      <FieldLegend className="w-full">
+        <span className="flex items-center justify-between gap-3">
+          <span>{title}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto shrink-0"
+            disabled={links.length >= 30}
+            onClick={() =>
+              onChange([
+                ...links,
+                { id: crypto.randomUUID(), label: "", url: "" },
+              ])
+            }
+          >
+            <Plus data-icon="inline-start" />
+            Add link
+          </Button>
+        </span>
+      </FieldLegend>
       <SortableList
         scope={scope}
         revision={document}
@@ -76,6 +98,8 @@ export function LinksEditor({
                                 onChange(
                                   links.filter((item) => item.id !== link.id),
                                 ),
+                              undefined,
+                              false,
                             )
                           }
                         >
@@ -121,17 +145,6 @@ export function LinksEditor({
           ))}
         </div>
       </SortableList>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={links.length >= 30}
-        onClick={() =>
-          onChange([...links, { id: crypto.randomUUID(), label: "", url: "" }])
-        }
-      >
-        <Plus data-icon="inline-start" />
-        Add link
-      </Button>
-    </FieldGroup>
+    </FieldSet>
   );
 }

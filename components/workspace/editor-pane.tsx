@@ -283,7 +283,7 @@ export function EditorPane({
             </Button>
           )}
           {careerTarget && (
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -297,14 +297,15 @@ export function EditorPane({
               </Button>
               {section?.kind === "custom" && (
                 <Button
-                  variant="ghost"
-                  size="icon-sm"
+                  variant="destructive"
+                  size="sm"
                   aria-label="Delete custom section"
                   onClick={(event) =>
                     careerActions.remove(section.id, event.currentTarget)
                   }
                 >
-                  <Trash2 />
+                  <Trash2 data-icon="inline-start" />
+                  Delete section
                 </Button>
               )}
             </div>

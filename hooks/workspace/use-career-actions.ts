@@ -108,6 +108,7 @@ export function useCareerActions({
           navigation.open({ kind: "career-overview" });
       },
       returnFocus,
+      deleting,
     );
   };
 

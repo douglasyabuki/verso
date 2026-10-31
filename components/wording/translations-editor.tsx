@@ -604,7 +604,7 @@ export function TranslationsEditor({
                       />
                     )}
                   </CardContent>
-                  <CardFooter className="flex flex-wrap gap-2">
+                  <CardFooter className="flex flex-wrap justify-end gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -634,7 +634,7 @@ export function TranslationsEditor({
                 </>
               )}
               {!currentItem && (
-                <CardFooter>
+                <CardFooter className="justify-end">
                   <Button variant="outline" onClick={() => onOwner(current)}>
                     Return to text reviews
                   </Button>

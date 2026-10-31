@@ -117,8 +117,8 @@ export function WorkspaceView() {
   const careerActions = useCareerActions({
     controller,
     navigation,
-    confirm: (title, description, action, returnFocus) =>
-      setConfirmation({ title, description, action, returnFocus }),
+    confirm: (title, description, action, returnFocus, destructive) =>
+      setConfirmation({ title, description, action, returnFocus, destructive }),
     onChanged: () => setIssueNavigation(undefined),
   });
   const onIssueFocused = useCallback((id: string) => {
@@ -343,8 +343,14 @@ export function WorkspaceView() {
         }
         variant={variant}
         update={controller.edit}
-        confirm={(title, description, action) =>
-          setConfirmation({ title, description, action })
+        confirm={(title, description, action, returnFocus, destructive) =>
+          setConfirmation({
+            title,
+            description,
+            action,
+            returnFocus,
+            destructive,
+          })
         }
         validation={
           navigation.destination.kind === "career-section" ||

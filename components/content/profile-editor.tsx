@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
+import { FieldGroup } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
 import { Separator } from "@/components/ui/separator";
 import type { EditorProps } from "@/types-and-constants/editor";
@@ -116,20 +116,18 @@ export function ProfileEditor({
             />
           </FieldGroup>
           <Separator />
-          <FieldSet>
-            <FieldLegend>Social & website links</FieldLegend>
-            <LinksEditor
-              document={document}
-              scope="career:profile:links"
-              links={document.profile.links}
-              onChange={(links, group) =>
-                update((draft) => {
-                  draft.profile.links = links;
-                }, group)
-              }
-              confirm={confirm}
-            />
-          </FieldSet>
+          <LinksEditor
+            title="Social & website links"
+            document={document}
+            scope="career:profile:links"
+            links={document.profile.links}
+            onChange={(links, group) =>
+              update((draft) => {
+                draft.profile.links = links;
+              }, group)
+            }
+            confirm={confirm}
+          />
         </FieldGroup>
       </CardContent>
     </Card>

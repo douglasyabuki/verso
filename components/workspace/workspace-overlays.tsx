@@ -58,6 +58,9 @@ export function WorkspaceOverlays({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              variant={
+                confirmation?.destructive === false ? "default" : "destructive"
+              }
               onClick={() => {
                 const action = confirmation?.action;
                 dismiss();
@@ -128,6 +131,7 @@ export function WorkspaceOverlays({
               </>
             )}
             <Button
+              variant="destructive"
               disabled={state.saving}
               onClick={() => void controller.confirmReplacement()}
             >

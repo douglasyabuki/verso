@@ -133,7 +133,7 @@ export function CareerOverview({
                 })}
               </CardContent>
             )}
-            <CardFooter className="mt-auto">
+            <CardFooter className="mt-auto justify-end">
               <Button
                 variant="outline"
                 onClick={() => open(section.destination)}

@@ -7,6 +7,7 @@ export type ConfirmAction = (
   description: string,
   action: () => void,
   returnFocus?: HTMLElement | null,
+  destructive?: boolean,
 ) => void;
 
 export type Confirmation = {
@@ -14,6 +15,7 @@ export type Confirmation = {
   description: string;
   action: () => void;
   returnFocus?: HTMLElement | null;
+  destructive?: boolean;
 };
 
 export type EditorProps = {
