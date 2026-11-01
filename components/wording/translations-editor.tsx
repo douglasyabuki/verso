@@ -1,14 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import {
-  ArrowLeft,
-  ArrowRight,
-  ChevronRight,
-  Filter,
-  Globe,
-  ListChecks,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Filter, Globe, ListChecks } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
@@ -32,6 +25,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  disclosureGuideClassName,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import {
   Empty,
   EmptyDescription,
@@ -366,17 +365,16 @@ export function TranslationsEditor({
         <div className="flex flex-wrap items-center gap-2">
           <CollapsibleTrigger
             render={<Button variant="outline" size="sm" />}
-            className="group"
+            className={disclosureTriggerClassName}
           >
-            <Filter data-icon="inline-start" />
-            Filters{" "}
-            {advancedCount > 0 && (
-              <Badge variant="secondary">{advancedCount}</Badge>
-            )}
-            <ChevronRight
-              data-icon="inline-end"
-              className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
-            />
+            <DisclosureChevron />
+            <Filter aria-hidden="true" />
+            <DisclosureLabel>
+              Filters{" "}
+              {advancedCount > 0 && (
+                <Badge variant="secondary">{advancedCount}</Badge>
+              )}
+            </DisclosureLabel>
           </CollapsibleTrigger>
           <span className="text-xs text-muted-foreground">
             {filters.output === "selected"
@@ -429,7 +427,12 @@ export function TranslationsEditor({
           </InfoHint>
         </div>
         <CollapsibleContent>
-          <FieldGroup className="mt-3 grid gap-3 @sm:grid-cols-2">
+          <FieldGroup
+            className={cn(
+              disclosureGuideClassName,
+              "grid gap-3 @sm:grid-cols-2",
+            )}
+          >
             {filterControls
               .filter(({ key }) => key !== "language" && key !== "reason")
               .map(({ element }) => element)}

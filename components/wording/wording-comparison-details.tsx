@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Languages } from "lucide-react";
+import { Languages } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  DisclosureGuide,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 
 export function WordingComparisonDetails({
   expanded = false,
@@ -21,17 +27,14 @@ export function WordingComparisonDetails({
     <Collapsible defaultOpen={expanded}>
       <CollapsibleTrigger
         render={<Button variant="ghost" size="sm" />}
-        className="group"
+        className={disclosureTriggerClassName}
       >
-        <Languages data-icon="inline-start" />
-        Compare languages
-        <ChevronRight
-          data-icon="inline-end"
-          className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
-        />
+        <DisclosureChevron />
+        <Languages aria-hidden="true" />
+        <DisclosureLabel>Compare languages</DisclosureLabel>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="mt-3 border-l-2 pl-4">{children}</div>
+        <DisclosureGuide>{children}</DisclosureGuide>
       </CollapsibleContent>
     </Collapsible>
   );

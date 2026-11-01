@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  ChevronRight,
-  FileText,
-  Search,
-} from "lucide-react";
+import { cn } from "cn";
+import { ArrowLeft, ArrowRight, FileText, Search } from "lucide-react";
 import type { EventBus, PDFViewer } from "pdfjs-dist/web/pdf_viewer.mjs";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -17,6 +12,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import {
   Empty,
   EmptyDescription,
@@ -321,13 +321,10 @@ export default function PdfPreview({ output }: { output?: ResumeOutput }) {
       <Collapsible className="min-w-0 shrink-0 border-t bg-background px-3 py-2">
         <CollapsibleTrigger
           render={<Button variant="ghost" size="xs" />}
-          className="group"
+          className={cn(disclosureTriggerClassName, "min-h-6 py-0.5")}
         >
-          <ChevronRight
-            data-icon="inline-start"
-            className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
-          />
-          PDF text & technical details
+          <DisclosureChevron />
+          <DisclosureLabel>PDF text & technical details</DisclosureLabel>
         </CollapsibleTrigger>
         <CollapsibleContent>
           <ScrollArea

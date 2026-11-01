@@ -1,18 +1,17 @@
 "use client";
 
-import {
-  ChevronRight,
-  CircleAlert,
-  Languages,
-  Library,
-  ListChecks,
-} from "lucide-react";
+import { CircleAlert, Languages, Library, ListChecks } from "lucide-react";
 import { useId, useState } from "react";
 
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { ExportStatusBadge } from "@/components/shared/semantic-badges/export-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DisclosureChevron,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import { InfoHint } from "@/components/ui/info-hint";
 import type { useResumeCompiler } from "@/hooks/output/use-resume-compiler";
 import { formatCount } from "@/lib/format-count";
@@ -134,17 +133,16 @@ export function IssuesPanel({
         <Button
           variant="ghost"
           size="sm"
-          className="group/issues"
+          className={disclosureTriggerClassName}
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen(!open)}
         >
-          <ListChecks data-icon="inline-start" />
-          Issues ({errors + reviews + sharedReviews + layouts})
-          <ChevronRight
-            data-icon="inline-end"
-            className="transition-transform duration-200 group-aria-expanded/issues:rotate-90 motion-reduce:transition-none"
-          />
+          <DisclosureChevron />
+          <ListChecks aria-hidden="true" />
+          <DisclosureLabel>
+            Issues ({errors + reviews + sharedReviews + layouts})
+          </DisclosureLabel>
         </Button>
         <div
           className="flex flex-wrap items-center gap-2"

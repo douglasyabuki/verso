@@ -1,7 +1,7 @@
 "use client";
 
+import { cn } from "cn";
 import {
-  ChevronRight,
   Files,
   Layers,
   Link2,
@@ -34,6 +34,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  disclosureChevronTriggerClassName,
+  disclosureGuideClassName,
+} from "@/components/ui/disclosure";
 import {
   Field,
   FieldDescription,
@@ -618,12 +623,16 @@ function LayoutInspector({
               }}
             >
               <div className="flex items-center gap-1.5">
-                <CollapsibleTrigger className="group/layout-group grid min-w-0 flex-1 grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 rounded-md p-2 text-left transition-colors hover:bg-muted focus-visible:outline-ring data-panel-open:bg-muted/50 motion-reduce:transition-none">
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="size-4 text-muted-foreground transition-transform duration-200 group-data-panel-open/layout-group:rotate-90 motion-reduce:transition-none"
-                  />
-                  <span className="text-sm font-medium">{group.name}</span>
+                <CollapsibleTrigger
+                  className={cn(
+                    disclosureChevronTriggerClassName,
+                    "group/layout-group grid min-w-0 flex-1 grid-cols-[1rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 rounded-md p-2 text-start transition-colors hover:bg-muted focus-visible:outline-ring data-panel-open:bg-muted/50 motion-reduce:transition-none [&>[data-slot=disclosure-chevron]]:mt-0.5",
+                  )}
+                >
+                  <DisclosureChevron />
+                  <span className="min-w-0 text-sm leading-5 font-medium wrap-anywhere">
+                    {group.name}
+                  </span>
                   <span className="col-start-2 min-w-0 text-xs leading-relaxed text-muted-foreground group-data-panel-open/layout-group:hidden">
                     {group.keys
                       .slice(0, 3)
@@ -659,7 +668,7 @@ function LayoutInspector({
               <CollapsibleContent keepMounted>
                 <FieldSet
                   disabled={disabled}
-                  className="ms-4 me-2 mt-3 mb-2 min-w-0 border-s py-1 ps-4"
+                  className={cn(disclosureGuideClassName, "me-2 mb-2 py-1")}
                 >
                   <FieldLegend className="sr-only">{group.name}</FieldLegend>
                   <LayoutFieldGrid

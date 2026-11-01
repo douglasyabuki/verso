@@ -1,13 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import {
-  ChevronRight,
-  CircleAlert,
-  FileText,
-  ListChecks,
-  RefreshCw,
-} from "lucide-react";
+import { CircleAlert, FileText, ListChecks, RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
 
 import { PreviewStatusBadge } from "@/components/shared/semantic-badges/preview-status-badge";
@@ -26,6 +20,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -190,13 +189,10 @@ export function PreviewPane({
         <Collapsible className="min-w-0 shrink-0 border-t bg-background px-3 py-2">
           <CollapsibleTrigger
             render={<Button variant="ghost" size="xs" />}
-            className="group"
+            className={cn(disclosureTriggerClassName, "min-h-6 py-0.5")}
           >
-            <ChevronRight
-              data-icon="inline-start"
-              className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
-            />
-            PDF generation details
+            <DisclosureChevron />
+            <DisclosureLabel>PDF generation details</DisclosureLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CodeBlock size="sm" className="mt-2">

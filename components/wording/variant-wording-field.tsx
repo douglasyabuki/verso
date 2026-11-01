@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Pencil, RotateCcw } from "lucide-react";
+import { Check, Pencil, RotateCcw } from "lucide-react";
 import { type ComponentProps, useState } from "react";
 
 import { LocalizedField } from "@/components/editor/fields";
@@ -12,6 +12,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  DisclosureGuide,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import { InfoHint } from "@/components/ui/info-hint";
 import { TranslationComparison } from "@/components/wording/translation-comparison";
 import { WordingComparisonDetails } from "@/components/wording/wording-comparison-details";
@@ -195,74 +201,73 @@ export function VariantWordingField({
         <Collapsible defaultOpen={showReference}>
           <CollapsibleTrigger
             render={<Button variant="outline" size="sm" />}
-            className="group"
+            className={disclosureTriggerClassName}
           >
-            <ChevronRight
-              data-icon="inline-start"
-              className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
-            />
-            Review shared text changes
+            <DisclosureChevron />
+            <DisclosureLabel>Review shared text changes</DisclosureLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-3 flex flex-col gap-3 rounded-lg border border-transparent bg-field-readonly p-3">
-              <p className="text-xs leading-normal text-muted-foreground">
-                The shared text changed. Compare it with your custom text, then
-                keep your text or switch to the shared text.
-                <InfoHint label="shared text review">
-                  Editing alone does not clear this reminder. Keeping your
-                  custom text affects only this resume. Translation reminders
-                  stay separate.
-                </InfoHint>
-              </p>
-              <p
-                lang={locale}
-                className="text-sm wrap-anywhere whitespace-pre-wrap"
-              >
-                Previous shared text · read only:{" "}
-                {override.sharedBaseline.spans
-                  .map((span) => span.text)
-                  .join("") || "(empty)"}
-              </p>
-              <p
-                lang={locale}
-                className="text-sm wrap-anywhere whitespace-pre-wrap"
-              >
-                Current shared text · read only:{" "}
-                {plain(shared, locale) || "(empty)"}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-auto self-start whitespace-normal"
-                onClick={() => {
-                  let accepted = false;
-                  update((draft) => {
-                    accepted = acknowledgeSharedWording(
-                      draft,
-                      variant.id,
-                      path,
-                      displayedShared,
-                      target,
-                    );
-                  });
-                  setFeedback({
-                    identity: accepted
-                      ? JSON.stringify([
-                          target,
-                          displayedShared,
-                          displayedShared,
-                        ])
-                      : feedbackIdentity,
-                    message: accepted
-                      ? `Custom text kept for ${variant.name || "this resume"}.`
-                      : "The shared or custom text changed. Compare the latest versions and try again.",
-                  });
-                }}
-              >
-                <Check data-icon="inline-start" />
-                Keep my custom text
-              </Button>
-            </div>
+            <DisclosureGuide>
+              <div className="flex flex-col gap-3 rounded-lg border border-transparent bg-field-readonly p-3">
+                <p className="text-xs leading-normal text-muted-foreground">
+                  The shared text changed. Compare it with your custom text,
+                  then keep your text or switch to the shared text.
+                  <InfoHint label="shared text review">
+                    Editing alone does not clear this reminder. Keeping your
+                    custom text affects only this resume. Translation reminders
+                    stay separate.
+                  </InfoHint>
+                </p>
+                <p
+                  lang={locale}
+                  className="text-sm wrap-anywhere whitespace-pre-wrap"
+                >
+                  Previous shared text · read only:{" "}
+                  {override.sharedBaseline.spans
+                    .map((span) => span.text)
+                    .join("") || "(empty)"}
+                </p>
+                <p
+                  lang={locale}
+                  className="text-sm wrap-anywhere whitespace-pre-wrap"
+                >
+                  Current shared text · read only:{" "}
+                  {plain(shared, locale) || "(empty)"}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-auto self-start whitespace-normal"
+                  onClick={() => {
+                    let accepted = false;
+                    update((draft) => {
+                      accepted = acknowledgeSharedWording(
+                        draft,
+                        variant.id,
+                        path,
+                        displayedShared,
+                        target,
+                      );
+                    });
+                    setFeedback({
+                      identity: accepted
+                        ? JSON.stringify([
+                            target,
+                            displayedShared,
+                            displayedShared,
+                          ])
+                        : feedbackIdentity,
+                      message: accepted
+                        ? `Custom text kept for ${variant.name || "this resume"}.`
+                        : "The shared or custom text changed. Compare the latest versions and try again.",
+                    });
+                  }}
+                >
+                  <Check data-icon="inline-start" />
+                  Keep my custom text
+                </Button>
+              </div>
+            </DisclosureGuide>
           </CollapsibleContent>
         </Collapsible>
       )}
@@ -300,16 +305,15 @@ export function VariantWordingDetails({
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger
         render={<Button variant="ghost" size="sm" />}
-        className="group h-auto flex-wrap justify-start whitespace-normal"
+        className={disclosureTriggerClassName}
       >
+        <DisclosureChevron />
         <LanguageFlag locale={locale} />
-        {variantWording(variant, path)?.overrides[locale]
-          ? "Custom text"
-          : "Shared text"}
-        <ChevronRight
-          data-icon="inline-end"
-          className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
-        />
+        <DisclosureLabel>
+          {variantWording(variant, path)?.overrides[locale]
+            ? "Custom text"
+            : "Shared text"}
+        </DisclosureLabel>
       </CollapsibleTrigger>
       {!open && (
         <WordingStatus
@@ -320,9 +324,9 @@ export function VariantWordingDetails({
       )}
       <CollapsibleContent>
         {open && (
-          <div className="pt-3">
+          <DisclosureGuide>
             <VariantWordingField {...props} />
-          </div>
+          </DisclosureGuide>
         )}
       </CollapsibleContent>
     </Collapsible>

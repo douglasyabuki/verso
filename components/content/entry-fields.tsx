@@ -11,6 +11,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  DisclosureChevron,
+  disclosureGuideClassName,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
+import {
   FieldDescription,
   FieldGroup,
   FieldLegend,
@@ -278,11 +284,15 @@ function TailoredFields({
           open={additionalOpen || additionalHasErrors}
           onOpenChange={setAdditionalOpen}
         >
-          <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
-            Additional details
+          <CollapsibleTrigger
+            render={<Button variant="ghost" size="sm" />}
+            className={disclosureTriggerClassName}
+          >
+            <DisclosureChevron />
+            <DisclosureLabel>Additional details</DisclosureLabel>
           </CollapsibleTrigger>
           <CollapsibleContent keepMounted>
-            <FieldGroup className="mt-4">
+            <FieldGroup className={disclosureGuideClassName}>
               <FieldDescription>
                 Filled fields appear in the PDF. Clear them to remove them.
               </FieldDescription>

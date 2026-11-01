@@ -22,11 +22,12 @@ Active configurations and agent skills live at the application root. Product req
 
 ## Code organization and conventions
 
+- Before working in a folder, read and follow its applicable `AGENTS.md` instructions, including those in parent folders. Root guidance applies throughout the repository; more specific folder guidance applies within its scope.
 - Keep routes and layouts in `app/` or `src/app/`, following the existing layout. Keep domain rules independent of React, transport, and persistence. Keep credentials, auth configuration, and database clients in server-only modules. Put only necessary interactive code behind client boundaries.
 - Keep reusable hooks directly in `hooks/` and feature-specific hooks in feature subfolders. Name a hook's options type `<HookWithoutUse>Options`.
 - Leave a blank line after imports and between declarations. Use the formatter and import-sort rules rather than manual formatting conventions that conflict with tooling.
-- Document custom hooks and library functions with one JSDoc block describing purpose, parameters, meaningful return values/alternatives, and a useful example. Keep TypeScript types in signatures. Follow the scoped instructions in `hooks/AGENTS.md` and `lib/AGENTS.md`.
-- Keep observable application state and persistence in `stores/`, shared contracts and declarative defaults in `types-and-constants/`, and external-library declarations in `types/`. Follow `stores/AGENTS.md` and `types-and-constants/AGENTS.md`. Keep private implementation types local and avoid runtime cycles through schema-derived contracts.
+- Document custom hooks and library functions with one JSDoc block describing purpose, parameters, meaningful return values/alternatives, and a useful example. Keep TypeScript types in signatures.
+- Keep observable application state and persistence in `stores/`, shared contracts and declarative defaults in `types-and-constants/`, and external-library declarations in `types/`. Keep private implementation types local and avoid runtime cycles through schema-derived contracts.
 - Preserve existing UI primitives and accessible interactions. Choose client state tools based on coordination and subscription needs; persistence alone does not justify a global store.
 
 ## Validation

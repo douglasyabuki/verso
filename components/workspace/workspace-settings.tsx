@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import { cn } from "cn";
 
 import { CompilerSettings } from "@/components/output/template-editor";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  DisclosureGuide,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import { InfoHint } from "@/components/ui/info-hint";
 import { WorkspaceBackupControls } from "@/components/workspace/workspace-backup-controls";
 import { useWorkspaceEditor } from "@/hooks/workspace/use-workspace-editor";
@@ -30,18 +36,15 @@ export function WorkspaceSettings() {
       <Collapsible>
         <CollapsibleTrigger
           render={<Button variant="outline" />}
-          className="group"
+          className={cn(disclosureTriggerClassName, "min-h-8")}
         >
-          <ChevronRight
-            data-icon="inline-start"
-            className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
-          />
-          Advanced PDF settings
+          <DisclosureChevron />
+          <DisclosureLabel>Advanced PDF settings</DisclosureLabel>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="mt-4">
+          <DisclosureGuide>
             <CompilerSettings document={document} update={update} />
-          </div>
+          </DisclosureGuide>
         </CollapsibleContent>
       </Collapsible>
     </>

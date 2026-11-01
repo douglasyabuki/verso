@@ -1,7 +1,7 @@
 "use client";
 
+import { cn } from "cn";
 import {
-  ChevronRight,
   Copy,
   Eraser,
   FileText,
@@ -21,6 +21,10 @@ import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { BrandLockup } from "@/components/brand/brand";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { Button } from "@/components/ui/button";
+import {
+  DisclosureChevron,
+  disclosureChevronTriggerClassName,
+} from "@/components/ui/disclosure";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -317,7 +321,7 @@ export function WorkspaceSidebar({
                     <div className="relative">
                       <SidebarMenuButton
                         isActive={active}
-                        className="pr-14 pl-7"
+                        className="ps-7 pe-14"
                         title={name}
                         onClick={() => {
                           setExpansion({ destination, id: resume.id });
@@ -338,7 +342,10 @@ export function WorkspaceSidebar({
                         <span>{name}</span>
                       </SidebarMenuButton>
                       <SidebarMenuAction
-                        className="group/sidebar-expansion right-auto left-1"
+                        className={cn(
+                          disclosureChevronTriggerClassName,
+                          "start-1 end-auto",
+                        )}
                         aria-label={`${expanded ? "Collapse" : "Expand"} ${name} pages`}
                         aria-expanded={expanded}
                         aria-controls={`resume-pages-${resume.id}`}
@@ -349,10 +356,7 @@ export function WorkspaceSidebar({
                           })
                         }
                       >
-                        <ChevronRight
-                          aria-hidden="true"
-                          className="transition-transform duration-200 group-aria-expanded/sidebar-expansion:rotate-90 motion-reduce:transition-none"
-                        />
+                        <DisclosureChevron />
                       </SidebarMenuAction>
                       <DropdownMenu>
                         <DropdownMenuTrigger
@@ -416,7 +420,10 @@ export function WorkspaceSidebar({
                       </DropdownMenu>
                     </div>
                     {expanded && (
-                      <SidebarMenuSub id={`resume-pages-${resume.id}`}>
+                      <SidebarMenuSub
+                        id={`resume-pages-${resume.id}`}
+                        className="ms-3.5 me-3.5 border-border ps-4 pe-0"
+                      >
                         {(
                           [
                             ["content", "Content & Order", ListOrdered],

@@ -1,4 +1,3 @@
-import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { WordingSourceText } from "@/components/shared/semantic-badges/wording-source-badge";
@@ -8,6 +7,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  DisclosureGuide,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import { InfoHint } from "@/components/ui/info-hint";
 import { equivalentSpans } from "@/lib/wording/spans";
 import { languageNames } from "@/types-and-constants/languages";
@@ -102,21 +107,18 @@ export function TranslationReference({
         <Collapsible>
           <CollapsibleTrigger
             render={<Button variant="ghost" size="sm" />}
-            className="group"
+            className={disclosureTriggerClassName}
           >
-            <ChevronRight
-              data-icon="inline-start"
-              className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
-            />
-            Previous comparison
+            <DisclosureChevron />
+            <DisclosureLabel>Previous comparison</DisclosureLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-2">
+            <DisclosureGuide>
               <ReferenceWording
                 title="Historical reference · read only"
                 version={snapshot}
               />
-            </div>
+            </DisclosureGuide>
           </CollapsibleContent>
         </Collapsible>
       ) : (

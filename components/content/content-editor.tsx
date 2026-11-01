@@ -3,7 +3,6 @@
 import {
   Archive,
   ArchiveRestore,
-  ChevronRight,
   Copy,
   FilePlus2,
   MoreHorizontal,
@@ -34,6 +33,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  DisclosureGuide,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -171,16 +176,13 @@ export function ContentEditor({
             >
               <CollapsibleTrigger
                 render={<Button variant="ghost" size="sm" />}
-                className="group"
+                className={disclosureTriggerClassName}
               >
-                <ChevronRight
-                  data-icon="inline-start"
-                  className="transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none"
-                />
-                Edit section heading
+                <DisclosureChevron />
+                <DisclosureLabel>Edit section heading</DisclosureLabel>
               </CollapsibleTrigger>
               <CollapsibleContent keepMounted>
-                <div className="mt-4">
+                <DisclosureGuide>
                   <WordingField
                     document={document}
                     path={`sections.${section.id}.heading`}
@@ -190,7 +192,7 @@ export function ContentEditor({
                     required
                     errors={errors}
                   />
-                </div>
+                </DisclosureGuide>
               </CollapsibleContent>
             </Collapsible>
             <EntrySearch
