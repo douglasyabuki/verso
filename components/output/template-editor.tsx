@@ -656,13 +656,15 @@ function LayoutInspector({
                   </span>
                 </CollapsibleTrigger>
                 {group.name === "Colors" && (
-                  <InfoHint label="colors">
-                    Named text colors meet 4.5:1 contrast against white.
-                    Template-default links use the section color; secondary text
-                    and icons use an explicit body color or the original grays.
-                    Explicit link colors also apply within headings and
-                    emphasis.
-                  </InfoHint>
+                  <span className="inline-flex h-9 shrink-0 items-center self-start">
+                    <InfoHint label="colors">
+                      Named text colors meet 4.5:1 contrast against white.
+                      Template-default links use the section color; secondary
+                      text and icons use an explicit body color or the original
+                      grays. Explicit link colors also apply within headings and
+                      emphasis.
+                    </InfoHint>
+                  </span>
                 )}
               </div>
               <CollapsibleContent keepMounted>

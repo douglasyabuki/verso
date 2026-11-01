@@ -192,9 +192,11 @@ export function IssuesPanel({
       >
         {open && (
           <>
-            <p className="mb-3 text-xs text-muted-foreground">
-              {variant.name || "Untitled resume"} / Only content used by this
-              resume is checked. Shared-field issues affect both languages.
+            <p className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>
+                {variant.name || "Untitled resume"} / Only content used by this
+                resume is checked. Shared-field issues affect both languages.
+              </span>
               <InfoHint label="issue severity" size="sm">
                 Review reminders do not prevent downloading. Fix the errors
                 listed below before creating or downloading a PDF.

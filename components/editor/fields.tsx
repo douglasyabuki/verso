@@ -164,14 +164,16 @@ export function LocalizedField({
     <FieldGroup className="gap-3">
       <Field data-invalid={!!error}>
         <div className="flex flex-wrap items-center gap-1.5">
-          <FieldLabel htmlFor={id}>
-            {label}{" "}
-            <span className="text-muted-foreground">
-              {languageNames[locale]}
-              {required ? " *" : ""}
-            </span>
-          </FieldLabel>
-          {hint && <InfoHint label={label}>{hint}</InfoHint>}
+          <div className="flex min-w-0 items-center gap-1.5">
+            <FieldLabel htmlFor={id}>
+              {label}{" "}
+              <span className="text-muted-foreground">
+                {languageNames[locale]}
+                {required ? " *" : ""}
+              </span>
+            </FieldLabel>
+            {hint && <InfoHint label={label}>{hint}</InfoHint>}
+          </div>
           {missing && !required ? (
             <ContentStatusBadge state="optional-empty" />
           ) : null}

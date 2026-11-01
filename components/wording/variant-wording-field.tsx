@@ -209,9 +209,11 @@ export function VariantWordingField({
           <CollapsibleContent>
             <DisclosureGuide>
               <div className="flex flex-col gap-3 rounded-lg border border-transparent bg-field-readonly p-3">
-                <p className="text-xs leading-normal text-muted-foreground">
-                  The shared text changed. Compare it with your custom text,
-                  then keep your text or switch to the shared text.
+                <p className="flex items-center gap-2 text-xs leading-normal text-muted-foreground">
+                  <span>
+                    The shared text changed. Compare it with your custom text,
+                    then keep your text or switch to the shared text.
+                  </span>
                   <InfoHint label="shared text review">
                     Editing alone does not clear this reminder. Keeping your
                     custom text affects only this resume. Translation reminders
