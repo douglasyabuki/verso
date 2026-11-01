@@ -353,9 +353,43 @@
 /* Field states share tokens, while utility controls retain a stronger boundary.
    Keep a real border in every state so interaction never shifts the layout. */
 @layer components {
+  /* Surface owners establish field fills locally, so the nearest card or
+     overlay wins even when regular and list cards are nested in either order. */
+  :where(
+    [data-slot="card"],
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"],
+    [data-slot="sheet-content"],
+    [data-slot="popover-content"]
+  ) {
+    --content-field-surface: color-mix(in oklab, var(--muted) 65%, var(--card));
+    --content-editor-surface: var(--content-field-surface);
+    --content-field-hover: color-mix(in oklab, var(--muted) 80%, var(--card));
+  }
+
+  :where([data-slot="animated-list-item"][data-surface="standard"]) {
+    --content-field-surface: color-mix(in oklab, var(--card) 45%, transparent);
+    --content-editor-surface: color-mix(in oklab, var(--card) 25%, transparent);
+    --content-field-hover: var(--field-hover);
+  }
+
+  :where([data-slot="animated-list-item"][data-surface="nested"]) {
+    --content-field-surface: color-mix(
+      in oklab,
+      var(--background) 60%,
+      var(--list-item-surface-nested)
+    );
+    --content-editor-surface: var(--content-field-surface);
+    --content-field-hover: color-mix(
+      in oklab,
+      var(--background) 75%,
+      var(--list-item-surface-nested)
+    );
+  }
+
   .form-control {
     border: 1px solid var(--field-filled);
-    background-color: var(--field-surface);
+    background-color: var(--content-field-surface, var(--field-surface));
     color: var(--foreground);
     outline: none;
     transition:
@@ -369,7 +403,10 @@
   .form-control:where([data-slot="text-editor"]) {
     --field-filled: color-mix(in oklab, var(--border) 30%, transparent);
     --field-empty: color-mix(in oklab, var(--border) 75%, transparent);
-    --field-surface: color-mix(in oklab, var(--card) 25%, transparent);
+    background-color: var(
+      --content-editor-surface,
+      color-mix(in oklab, var(--card) 25%, transparent)
+    );
   }
 
   .form-control::placeholder {
@@ -391,6 +428,7 @@
   }
 
   .form-control:where([data-appearance="utility"]) {
+    --content-field-hover: var(--field-hover);
     border-color: var(--field-hover-border);
     background-color: var(--card);
   }
@@ -406,7 +444,7 @@
       ):hover
     ) {
       border-color: var(--field-hover-border);
-      background-color: var(--field-hover);
+      background-color: var(--content-field-hover, var(--field-hover));
     }
   }
 
