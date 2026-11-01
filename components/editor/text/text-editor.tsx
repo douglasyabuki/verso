@@ -437,7 +437,7 @@ export function TextEditor({
                 returnFocus.current && editor ? editor.view.dom : false
               }
             >
-              <PopoverTitle>
+              <PopoverTitle className="text-sm">
                 {linkEdit?.linked ? "Edit link" : "Add link"}
               </PopoverTitle>
               <form

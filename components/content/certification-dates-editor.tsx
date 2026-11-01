@@ -147,93 +147,105 @@ function DateSetup({
               : undefined
           }
         >
-          <DialogHeader>
+          <DialogHeader className="place-items-start text-start">
             <DialogTitle>Certification dates</DialogTitle>
             <DialogDescription>
               Enter a year or a year and month, such as 2024 or 2024-06, between
               1900 and 2299. Your original date range stays unchanged.
             </DialogDescription>
           </DialogHeader>
-          <FieldGroup>
-            <Field data-invalid={!!errors.issued}>
-              <FieldLabel htmlFor={`${id}-issued`}>
-                Issue date (optional)
-              </FieldLabel>
-              <Input
-                id={`${id}-issued`}
-                data-issue-field={`entries.${entry.id}.certification.issued`}
-                value={issued}
-                maxLength={100}
-                placeholder="2024 or 2024-12"
-                onChange={(event) => setIssued(event.target.value)}
-                aria-invalid={!!errors.issued}
-                aria-describedby={
-                  errors.issued ? `${id}-issued-error` : undefined
-                }
-              />
-              {errors.issued && (
-                <FieldError id={`${id}-issued-error`}>
-                  {errors.issued}
-                </FieldError>
-              )}
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={id}>Expiration status</FieldLabel>
-              <Select
-                items={expirationItems}
-                value={expirationKind}
-                disabled={state.replacing || !!state.pending}
-                onValueChange={(value) => {
-                  if (value === null || state.replacing || state.pending)
-                    return;
-                  setExpirationKind(value as typeof expirationKind);
-                }}
-              >
-                <SelectTrigger id={id} className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {expirationItems.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-            {expirationKind === "date" && (
-              <Field data-invalid={!!errors.expiration}>
-                <FieldLabel htmlFor={`${id}-expires`}>
-                  Expiration date
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              save();
+            }}
+          >
+            <FieldGroup>
+              <Field data-invalid={!!errors.issued}>
+                <FieldLabel htmlFor={`${id}-issued`}>
+                  Issue date (optional)
                 </FieldLabel>
                 <Input
-                  id={`${id}-expires`}
-                  data-issue-field={`entries.${entry.id}.certification.expiration`}
-                  value={expires}
+                  id={`${id}-issued`}
+                  data-issue-field={`entries.${entry.id}.certification.issued`}
+                  value={issued}
                   maxLength={100}
-                  placeholder="2027 or 2027-12"
-                  onChange={(event) => setExpires(event.target.value)}
-                  aria-invalid={!!errors.expiration}
+                  placeholder="2024 or 2024-12"
+                  onChange={(event) => setIssued(event.target.value)}
+                  aria-invalid={!!errors.issued}
                   aria-describedby={
-                    errors.expiration ? `${id}-expires-error` : undefined
+                    errors.issued ? `${id}-issued-error` : undefined
                   }
                 />
-                {errors.expiration && (
-                  <FieldError id={`${id}-expires-error`}>
-                    {errors.expiration}
+                {errors.issued && (
+                  <FieldError id={`${id}-issued-error`}>
+                    {errors.issued}
                   </FieldError>
                 )}
               </Field>
-            )}
-          </FieldGroup>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={save}>Save dates</Button>
-          </DialogFooter>
+              <Field>
+                <FieldLabel htmlFor={id}>Expiration status</FieldLabel>
+                <Select
+                  items={expirationItems}
+                  value={expirationKind}
+                  disabled={state.replacing || !!state.pending}
+                  onValueChange={(value) => {
+                    if (value === null || state.replacing || state.pending)
+                      return;
+                    setExpirationKind(value as typeof expirationKind);
+                  }}
+                >
+                  <SelectTrigger id={id} className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {expirationItems.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+              {expirationKind === "date" && (
+                <Field data-invalid={!!errors.expiration}>
+                  <FieldLabel htmlFor={`${id}-expires`}>
+                    Expiration date
+                  </FieldLabel>
+                  <Input
+                    id={`${id}-expires`}
+                    data-issue-field={`entries.${entry.id}.certification.expiration`}
+                    value={expires}
+                    maxLength={100}
+                    placeholder="2027 or 2027-12"
+                    onChange={(event) => setExpires(event.target.value)}
+                    aria-invalid={!!errors.expiration}
+                    aria-describedby={
+                      errors.expiration ? `${id}-expires-error` : undefined
+                    }
+                  />
+                  {errors.expiration && (
+                    <FieldError id={`${id}-expires-error`}>
+                      {errors.expiration}
+                    </FieldError>
+                  )}
+                </Field>
+              )}
+            </FieldGroup>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Save dates</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
       {committed && (

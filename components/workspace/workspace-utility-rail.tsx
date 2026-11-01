@@ -59,7 +59,7 @@ export function AppearanceControl() {
         className="w-auto flex-row items-center"
       >
         <PopoverHeader>
-          <PopoverTitle>Appearance</PopoverTitle>
+          <PopoverTitle className="text-sm">Appearance</PopoverTitle>
           <PopoverDescription className="sr-only">
             Choose a theme for this browser.
           </PopoverDescription>

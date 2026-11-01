@@ -285,6 +285,11 @@
       "name": "source-serif-4.005R.zip",
       "url": "https://github.com/adobe-fonts/source-serif/releases/download/4.005R/source-serif-4.005_Desktop.zip",
       "sha256": "549fdb8f9a682bd06944298621404969f6de77c2e422ff3b8244a1dcd6a0c425"
+    },
+    {
+      "name": "fontawesome-free-6.7.2.zip",
+      "url": "https://codeload.github.com/FortAwesome/Font-Awesome/zip/refs/tags/6.7.2",
+      "sha256": "08b6e6b524dbb2cf489f761a228f053aed7ae1ad68879f12ba5feb1483789ed9"
     }
   ],
   "resources": [
@@ -1001,6 +1006,12 @@
       "archive": "source-serif-4.005R.zip",
       "member": "source-serif-4.005_Desktop/OTF/SourceSerif4-BlackIt.otf",
       "sha256": "22e74ee4d16b716e481af222899b3894bcd5223c57ba1758d303d2eff68810f8"
+    },
+    {
+      "name": "FontAwesome6Brands-Regular-400.otf",
+      "archive": "fontawesome-free-6.7.2.zip",
+      "member": "Font-Awesome-6.7.2/otfs/Font Awesome 6 Brands-Regular-400.otf",
+      "sha256": "858c3adca64714683b268895f25dd53c11e453984bbe438895883af473276434"
     }
   ]
 }

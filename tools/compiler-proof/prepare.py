@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 DEST = ROOT / '.cache/compiler-proof/assets'
 CACHE = ROOT / '.cache/compiler-proof/downloads'
-TEMPLATE = {'id': 'yabuki-reference', 'version': '1.0.0-proof.5'}
+TEMPLATE = {'id': 'yabuki-reference', 'version': '1.0.2'}
 
 
 def digest(data):
@@ -82,7 +82,7 @@ def refresh_manifests():
     manifests = []
     for directory in directories:
         manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf8'))
-        if manifest['id'] != TEMPLATE['id'] or manifest['version'] not in ['1.0.0-proof.4', TEMPLATE['version']]:
+        if manifest['id'] != TEMPLATE['id'] or manifest['version'] != TEMPLATE['version']:
             raise ValueError('Unsupported existing template manifest; run full preparation')
         for name, expected in manifest['assets'].items():
             if Path(name).name != name or '/' in name or "\\" in name or name in ['.', '..', 'manifest.json']:

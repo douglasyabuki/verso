@@ -17,6 +17,8 @@ export type ResumeDocument = z.infer<typeof documentSchema>;
 export type ProfileSelection =
   ResumeDocument["variants"][number]["profileSelection"];
 
+export type ProfileOrderItem = ProfileSelection["order"][number];
+
 export const profileContactFields = [
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
@@ -30,6 +32,12 @@ export const defaultProfileSelection: ProfileSelection = {
   city: true,
   country: true,
   hiddenLinkIds: [],
+  order: [
+    { kind: "field", field: "city" },
+    { kind: "field", field: "country" },
+    { kind: "field", field: "email" },
+    { kind: "field", field: "phone" },
+  ],
 };
 
 export type Section = ResumeDocument["sections"][number];
@@ -78,4 +86,36 @@ export type LocalizedFieldDescriptor = {
   value: LocalizedText;
   multiline: boolean;
   required: boolean;
+};
+
+export const linkTypes = [
+  "website",
+  "behance",
+  "dribbble",
+  "github",
+  "gitlab",
+  "google-scholar",
+  "instagram",
+  "linkedin",
+  "medium",
+  "tiktok",
+  "x-twitter",
+  "youtube",
+] as const;
+
+export type LinkType = ResumeLink["type"];
+
+export const linkTypeNames: Record<LinkType, string> = {
+  website: "Website / other",
+  behance: "Behance",
+  dribbble: "Dribbble",
+  github: "GitHub",
+  gitlab: "GitLab",
+  "google-scholar": "Google Scholar",
+  instagram: "Instagram",
+  linkedin: "LinkedIn",
+  medium: "Medium",
+  tiktok: "TikTok",
+  "x-twitter": "X (Twitter)",
+  youtube: "YouTube",
 };

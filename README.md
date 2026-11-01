@@ -48,7 +48,7 @@ the workspace data menu after preparing the compiler assets.
 | `lib/wording/`          | Localization, structured spans, and variant wording rules                                     |
 | `lib/review/`           | Validation, issue descriptions, and review queue derivation                                   |
 | `lib/output/`           | Deterministic LaTeX rendering, resolved settings, and browser downloads                       |
-| `lib/workspace/`        | Portable backup validation/migrations and editor destinations                                 |
+| `lib/workspace/`        | Portable backup validation and editor destinations                                            |
 | `lib/ordering.ts`       | Generic array ordering, including filtered-list moves                                         |
 | `types/`                | External-library declarations                                                                 |
 
@@ -153,16 +153,21 @@ completion of a browser save dialog cannot be confirmed. Saved work is specific
 to this browser profile and origin: changing the hostname or port opens a separate
 workspace. Use a JSON export/import to move drafts between them.
 
-JSON exports use resume schema 9. Compatible schema-1 through schema-8 backups migrate
-on import or browser restoration, preserving wording, IDs, revisions, and review
-flags. Missing historical review snapshots stay unknown until explicitly reviewed;
-schema-1 certification metadata starts unset. Older resumes receive an indigo navigation color and retain their original PDF colors. Unsupported schemas/templates are rejected.
+JSON exports use the initial resume schema 1 and the bundled
+`yabuki-reference@1.0.2` template. Import validates the complete document and its
+references before replacing any work. Unsupported formats and templates are rejected.
 
-Each resume has a Profile card in Content & order. Choose email, phone, city,
-country, and individual links for both languages without deleting shared Career
-details. The name is always included. All contacts and new links are included by
-default; duplicated resumes keep their selections. Older backups migrate with
-all contacts included. Hidden contact values do not block PDF or LaTeX exports.
+Each resume has sortable Profile cards in Content & order. Choose and order email,
+phone, city, country, and individual links for both languages without deleting
+shared Career details. Full name stays fixed and always included. New links are
+included automatically; duplicated resumes retain their order and selections.
+Hidden contact values do not block PDF or LaTeX exports. Adjacent city and country
+values share one location item in their chosen order.
+
+Career entries, links, achievements, highlights, skills, and details have optional
+internal names. Use Rename on a career list card to organize it independently of
+its resume wording. Names are shared across languages and resumes, searchable,
+and included in JSON backups; they never appear in generated resume content.
 
 Custom career sections have a shared icon selected from 25 career-related choices.
 Click the section heading icon to choose an icon, then Save or Cancel. Saved icons
@@ -271,3 +276,9 @@ bundle, standalone demonstration, and recorded compiler verification.
 [Product requirements](docs/requirements.md) describe a broader cloud-backed
 release roadmap; the current implementation is the local-only workspace described
 above.
+
+## Structured resume links
+
+Profile and career-entry links support independent editable labels, default
+addresses and icon types. Create separate links for different destinations and
+choose their inclusion per resume.

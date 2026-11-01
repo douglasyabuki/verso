@@ -39,7 +39,7 @@ import {
   VariantWordingField,
 } from "@/components/wording/variant-wording-field";
 import { matchesEntry } from "@/lib/content/entries";
-import { entryLabel } from "@/lib/content/section-fields";
+import { bulletLabel, entryLabel } from "@/lib/content/section-fields";
 import { selectAllAchievements } from "@/lib/content/selection";
 import { reorderVisible } from "@/lib/ordering";
 import { plain } from "@/lib/wording/localization";
@@ -422,6 +422,16 @@ function VariantCareerSection({
                                     className="min-w-0 flex-1 py-1 text-sm leading-snug font-medium"
                                   >
                                     {label}
+                                    {entry.internalName?.trim() && (
+                                      <span className="block text-xs font-normal text-muted-foreground">
+                                        {[
+                                          plain(entry.title, locale),
+                                          entry.organization,
+                                        ]
+                                          .filter(Boolean)
+                                          .join(" \u00b7 ")}
+                                      </span>
+                                    )}
                                   </span>
                                   <div className="flex h-7 shrink-0 items-center gap-2">
                                     <InclusionToggle
@@ -487,13 +497,15 @@ function VariantCareerSection({
                                   contextKey={locale}
                                   items={bulletIds.map((id) => ({
                                     id,
-                                    label:
-                                      plain(
-                                        entry.bullets.find(
-                                          (bullet) => bullet.id === id,
-                                        )!.body,
-                                        locale,
-                                      ).slice(0, 100) || terms.item,
+                                    label: bulletLabel(
+                                      entry.bullets.find(
+                                        (bullet) => bullet.id === id,
+                                      )!,
+                                      section.kind,
+                                      entry.bullets.findIndex(
+                                        (bullet) => bullet.id === id,
+                                      ),
+                                    ),
                                   }))}
                                   onReorder={(source, target) =>
                                     change((selected) => {
@@ -512,7 +524,7 @@ function VariantCareerSection({
                                   }
                                 >
                                   <div className="flex flex-col gap-3">
-                                    {bullets.map((bullet, index) => {
+                                    {bullets.map((bullet) => {
                                       const label =
                                         plain(
                                           effectiveWording(
@@ -523,11 +535,16 @@ function VariantCareerSection({
                                           locale,
                                         ).slice(0, 100) ||
                                         `Missing ${terms.item.toLowerCase()} text`;
+                                      const name = bulletLabel(
+                                        bullet,
+                                        section.kind,
+                                        entry.bullets.indexOf(bullet),
+                                      );
                                       return (
                                         <SortableRow
                                           key={bullet.id}
                                           id={bullet.id}
-                                          label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
+                                          label={name}
                                           surface="nested"
                                           className="flex flex-col gap-3 rounded-lg py-2"
                                         >
@@ -537,11 +554,16 @@ function VariantCareerSection({
                                             >
                                               <div className="flex items-start gap-2">
                                                 <span className="min-w-0 flex-1 py-1 text-sm leading-snug">
-                                                  {label}
+                                                  <span className="block font-medium">
+                                                    {name}
+                                                  </span>
+                                                  <span className="block text-xs text-muted-foreground">
+                                                    {label}
+                                                  </span>
                                                 </span>
                                                 <div className="flex h-7 shrink-0 items-center gap-2">
                                                   <InclusionToggle
-                                                    label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
+                                                    label={name}
                                                     visible={bulletIds.includes(
                                                       bullet.id,
                                                     )}

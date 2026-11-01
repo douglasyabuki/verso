@@ -1,21 +1,8 @@
 import { z } from "zod";
 
-import {
-  documentSchema,
-  legacyDocumentSchema,
-  schema2DocumentSchema,
-  schema3DocumentSchema,
-  schema4DocumentSchema,
-  schema5DocumentSchema,
-  schema6DocumentSchema,
-  schema7DocumentSchema,
-  schema8DocumentSchema,
-  templateIdentity,
-} from "@/lib/resume/model";
-import { defaultSettings } from "@/types-and-constants/output";
+import { defaultProfileOrder, profileItemId } from "@/lib/content/profile";
+import { documentSchema, templateIdentity } from "@/lib/resume/model";
 import type { ResumeDocument } from "@/types-and-constants/resume";
-import { defaultProfileSelection } from "@/types-and-constants/resume";
-import { defaultSectionIcons } from "@/types-and-constants/sections";
 
 /**
  * Serialize complete editable state, excluding interface/compiler state.
@@ -56,43 +43,18 @@ export function parseBackup(source: string): ResumeDocument {
     throw new Error(
       "This file is not a supported Verso backup. Choose a JSON backup downloaded from Verso.",
     );
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(header.data.schemaVersion))
+  if (header.data.schemaVersion !== 1)
     throw new Error(
-      `This backup uses an unsupported format (version ${header.data.schemaVersion}). Open it with a compatible version of Verso. Your current work has not changed.`,
+      "This backup uses an unsupported format. Your current work has not changed.",
     );
-  const template = header.data.template;
   if (
-    template.id !== templateIdentity.id ||
-    template.version !==
-      (header.data.schemaVersion === 1
-        ? "1.0.0-proof.2"
-        : header.data.schemaVersion < 6
-          ? "1.0.0-proof.3"
-          : header.data.schemaVersion === 6
-            ? "1.0.0-proof.4"
-            : templateIdentity.version)
+    header.data.template.id !== templateIdentity.id ||
+    header.data.template.version !== templateIdentity.version
   )
     throw new Error(
-      `This backup needs a resume template that is not available in this version of Verso. Open it with a compatible version. Your current work has not changed.`,
+      "This backup needs a resume template that is not available in this version of Verso. Your current work has not changed.",
     );
-  const result =
-    header.data.schemaVersion === 1
-      ? legacyDocumentSchema.safeParse(data)
-      : header.data.schemaVersion === 2
-        ? schema2DocumentSchema.safeParse(data)
-        : header.data.schemaVersion === 3
-          ? schema3DocumentSchema.safeParse(data)
-          : header.data.schemaVersion === 4
-            ? schema4DocumentSchema.safeParse(data)
-            : header.data.schemaVersion === 5
-              ? schema5DocumentSchema.safeParse(data)
-              : header.data.schemaVersion === 6
-                ? schema6DocumentSchema.safeParse(data)
-                : header.data.schemaVersion === 7
-                  ? schema7DocumentSchema.safeParse(data)
-                  : header.data.schemaVersion === 8
-                    ? schema8DocumentSchema.safeParse(data)
-                    : documentSchema.safeParse(data);
+  const result = documentSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue.path.join(".");
@@ -101,24 +63,7 @@ export function parseBackup(source: string): ResumeDocument {
       `${incompatible ? "This backup contains unsupported layout settings" : "This backup contains missing or invalid details"}. Choose another Verso backup. Your current work has not changed. Details: ${path}: ${issue.message}`,
     );
   }
-  const migrated =
-    result.data.schemaVersion === 1
-      ? migrateSchema4(
-          migrateSchema3(migrateSchema2(migrateSchema1(result.data))),
-        )
-      : result.data.schemaVersion === 2
-        ? migrateSchema4(migrateSchema3(migrateSchema2(result.data)))
-        : result.data.schemaVersion === 3
-          ? migrateSchema4(migrateSchema3(result.data))
-          : result.data.schemaVersion === 4
-            ? migrateSchema4(result.data)
-            : result.data;
-  const colored =
-    migrated.schemaVersion === 5 ? migrateSchema5(migrated) : migrated;
-  const layout =
-    colored.schemaVersion === 6 ? migrateSchema6(colored) : colored;
-  const icons = layout.schemaVersion === 7 ? migrateSchema7(layout) : layout;
-  const doc = icons.schemaVersion === 8 ? migrateSchema8(icons) : icons;
+  const doc = result.data;
   const seen = new Set<string>();
 
   /**
@@ -146,6 +91,18 @@ export function parseBackup(source: string): ResumeDocument {
   for (const variant of doc.variants) {
     unique(variant.id);
     const profileLinkIds = new Set(doc.profile.links.map((link) => link.id));
+    const orderIds = variant.profileSelection.order.map(profileItemId);
+    const expectedIds = new Set(
+      defaultProfileOrder(doc.profile).map(profileItemId),
+    );
+    if (
+      orderIds.length !== expectedIds.size ||
+      new Set(orderIds).size !== orderIds.length ||
+      orderIds.some((id) => !expectedIds.has(id))
+    )
+      throw new Error(
+        `Resume ${variant.name || "Untitled"} has missing, repeated, or invalid Profile order references. Your current work has not changed.`,
+      );
     const hiddenLinkIds = variant.profileSelection.hiddenLinkIds;
     if (
       new Set(hiddenLinkIds).size !== hiddenLinkIds.length ||
@@ -208,232 +165,4 @@ export function parseBackup(source: string): ResumeDocument {
     }
   }
   return doc;
-}
-
-/**
- * Upgrade validated schema-1 content without interpreting legacy facts or changing identifiers.
- * @param legacy Validated old document with its supported template identity.
- * @returns {z.infer<typeof schema2DocumentSchema>} A schema-2 document; the input remains untouched.
- * @example const current = migrateSchema1(legacyDocumentSchema.parse(data));
- */
-export function migrateSchema1(
-  legacy: z.infer<typeof legacyDocumentSchema>,
-): z.infer<typeof schema2DocumentSchema> {
-  if (
-    legacy.template.id !== templateIdentity.id ||
-    legacy.template.version !== "1.0.0-proof.2"
-  )
-    throw new Error(
-      "This older backup needs a different resume template. Open it with a compatible version of Verso.",
-    );
-  return schema2DocumentSchema.parse({
-    ...legacy,
-    schemaVersion: 2,
-    template: { id: templateIdentity.id, version: "1.0.0-proof.3" },
-    sections: legacy.sections.map((section) => ({
-      ...section,
-      entries: section.entries.map((entry) =>
-        section.kind === "certifications"
-          ? { ...entry, certification: { credentialId: "", dates: null } }
-          : entry,
-      ),
-    })),
-  });
-}
-
-/**
- * Add unknown review baselines without inventing history or changing existing flags.
- * @param legacy Validated schema-2 document.
- * @returns {z.infer<typeof schema3DocumentSchema>} A fresh schema-3 document with unchanged wording, identifiers, and revisions.
- * @example const current = migrateSchema2(schema2DocumentSchema.parse(data));
- */
-export function migrateSchema2(
-  legacy: z.infer<typeof schema2DocumentSchema>,
-): z.infer<typeof schema3DocumentSchema> {
-  /**
-   * Add unknown review baselines to both historical language records.
-   * @param value Validated schema-2 bilingual wording.
-   * @returns {z.infer<typeof schema3DocumentSchema>["profile"]["summary"]} Fresh language records with null counterpart baselines and unchanged wording.
-   * @example upgrade(legacy.profile.summary);
-   */
-  const upgrade = (
-    value: z.infer<typeof schema2DocumentSchema>["profile"]["summary"],
-  ) => ({
-    "en-US": { ...value["en-US"], reviewedCounterpart: null },
-    "pt-BR": { ...value["pt-BR"], reviewedCounterpart: null },
-  });
-  return schema3DocumentSchema.parse({
-    ...legacy,
-    schemaVersion: 3,
-    profile: { ...legacy.profile, summary: upgrade(legacy.profile.summary) },
-    sections: legacy.sections.map((section) => ({
-      ...section,
-      heading: upgrade(section.heading),
-      entries: section.entries.map((entry) => ({
-        ...entry,
-        title: upgrade(entry.title),
-        bullets: entry.bullets.map((bullet) => ({
-          ...bullet,
-          body: upgrade(bullet.body),
-        })),
-      })),
-    })),
-  });
-}
-
-/**
- * Add empty variant wording without copying career content or inventing review history.
- * @param legacy Validated schema-3 workspace.
- * @returns {z.infer<typeof schema4DocumentSchema>} A schema-4 workspace with unchanged facts, wording, IDs, and revisions.
- * @example migrateSchema3(schema3DocumentSchema.parse(data))
- */
-export function migrateSchema3(
-  legacy: z.infer<typeof schema3DocumentSchema>,
-): z.infer<typeof schema4DocumentSchema> {
-  return schema4DocumentSchema.parse({
-    ...legacy,
-    schemaVersion: 4,
-    variants: legacy.variants.map((variant) => ({
-      ...variant,
-      wording: { achievements: {} },
-    })),
-  });
-}
-
-/**
- * Add a default navigation color without changing content or review history.
- * @param legacy Validated schema-4 workspace.
- * @returns {z.infer<typeof schema5DocumentSchema>} A schema-5 workspace with indigo resume identities.
- * @example migrateSchema4(schema4DocumentSchema.parse(data))
- */
-export function migrateSchema4(
-  legacy: z.infer<typeof schema4DocumentSchema>,
-): z.infer<typeof schema5DocumentSchema> {
-  return schema5DocumentSchema.parse({
-    ...legacy,
-    schemaVersion: 5,
-    variants: legacy.variants.map((variant) => ({
-      ...variant,
-      color: "indigo",
-    })),
-  });
-}
-
-/**
- * Preserve original PDF styling while adding supported color settings.
- * @param legacy Validated schema-5 document with its supported template identity.
- * @returns {z.infer<typeof schema6DocumentSchema>} A schema-6 document with template-default colors and unchanged overrides, content, and revision.
- * @example migrateSchema5(schema5DocumentSchema.parse(data))
- */
-export function migrateSchema5(
-  legacy: z.infer<typeof schema5DocumentSchema>,
-): z.infer<typeof schema6DocumentSchema> {
-  return schema6DocumentSchema.parse({
-    ...legacy,
-    schemaVersion: 6,
-    template: { id: templateIdentity.id, version: "1.0.0-proof.4" },
-    settings: {
-      ...legacy.settings,
-      headingColor: "template-default",
-      bodyColor: "template-default",
-    },
-  });
-}
-
-/**
- * Split only present side-margin overrides and add compatibility values at base scope.
- * @param legacy Validated schema-6 workspace with the supported proof.4 identity.
- * @returns {z.infer<typeof schema7DocumentSchema>} A validated schema-7 copy preserving content, revisions and partial overrides.
- * @example migrateSchema6(schema6DocumentSchema.parse(data))
- */
-export function migrateSchema6(
-  legacy: z.infer<typeof schema6DocumentSchema>,
-): z.infer<typeof schema7DocumentSchema> {
-  const validated = schema6DocumentSchema.parse(legacy);
-  if (
-    validated.template.id !== templateIdentity.id ||
-    validated.template.version !== "1.0.0-proof.4"
-  )
-    throw new Error("Unsupported schema-6 template identity.");
-
-  /**
-   * Preserve partial scopes while replacing a present shared side margin.
-   * @param settings Validated historical settings or overrides.
-   * @returns {Partial<z.infer<typeof schema7DocumentSchema>["settings"]>} Settings with equal side margins only when marginSide existed.
-   * @example split({ marginSide: 20 })
-   */
-  const split = ({
-    marginSide,
-    ...settings
-  }: Partial<z.infer<typeof schema6DocumentSchema>["settings"]>) => ({
-    ...settings,
-    ...(marginSide === undefined
-      ? {}
-      : { marginLeft: marginSide, marginRight: marginSide }),
-  });
-
-  /**
-   * Migrate only the language overrides present in the historical workspace.
-   * @param settings Validated locale settings.
-   * @returns {Partial<Record<"en-US" | "pt-BR", Partial<z.infer<typeof schema7DocumentSchema>["settings"]>>>} Locale records preserving absent overrides and other settings.
-   * @example languages(legacy.localeSettings)
-   */
-  const languages = (
-    settings: z.infer<typeof schema6DocumentSchema>["localeSettings"],
-  ) =>
-    Object.fromEntries(
-      Object.entries(settings).map(([locale, value]) => [locale, split(value)]),
-    );
-  return schema7DocumentSchema.parse({
-    ...validated,
-    schemaVersion: 7,
-    template: { ...templateIdentity },
-    settings: { ...defaultSettings, ...split(validated.settings) },
-    localeSettings: languages(validated.localeSettings),
-    variants: validated.variants.map((variant) => ({
-      ...variant,
-      settings: split(variant.settings),
-      localeSettings: languages(variant.localeSettings),
-    })),
-  });
-}
-
-/**
- * Add the existing section icons to a legacy workspace without changing output.
- * @param legacy Validated schema-7 workspace.
- * @returns {z.infer<typeof schema8DocumentSchema>} A validated schema-8 copy with the current default icon on every section.
- * @example const document = migrateSchema7(schema7DocumentSchema.parse(data));
- */
-export function migrateSchema7(
-  legacy: z.infer<typeof schema7DocumentSchema>,
-): z.infer<typeof schema8DocumentSchema> {
-  const validated = schema7DocumentSchema.parse(legacy);
-  return schema8DocumentSchema.parse({
-    ...validated,
-    schemaVersion: 8,
-    sections: validated.sections.map((section) => ({
-      ...section,
-      icon: defaultSectionIcons[section.kind],
-    })),
-  });
-}
-
-/**
- * Preserve legacy output by including every contact field and link in each resume.
- * @param legacy Validated schema-8 workspace.
- * @returns {ResumeDocument} A schema-9 copy with independent Profile selections and unchanged shared facts.
- * @example migrateSchema8(schema8DocumentSchema.parse(data));
- */
-export function migrateSchema8(
-  legacy: z.infer<typeof schema8DocumentSchema>,
-): ResumeDocument {
-  const validated = schema8DocumentSchema.parse(legacy);
-  return documentSchema.parse({
-    ...validated,
-    schemaVersion: 9,
-    variants: validated.variants.map((variant) => ({
-      ...variant,
-      profileSelection: structuredClone(defaultProfileSelection),
-    })),
-  });
 }

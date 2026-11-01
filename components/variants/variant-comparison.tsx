@@ -27,8 +27,10 @@ import {
 } from "@/components/ui/select";
 import { ResumeIcon } from "@/components/variants/resume-icon";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
+import { linkLabel } from "@/lib/content/links";
+import { profileItemId } from "@/lib/content/profile";
 import { selectedProfile } from "@/lib/content/profile";
-import { entryLabel } from "@/lib/content/section-fields";
+import { bulletLabel, entryLabel } from "@/lib/content/section-fields";
 import { resolveSettings } from "@/lib/output/settings";
 import { plain } from "@/lib/wording/localization";
 import {
@@ -139,6 +141,28 @@ export function VariantComparison({
   const profiles = variants.map((item) =>
     selectedProfile(document.profile, item),
   );
+  rows.unshift({
+    id: "profile.order",
+    label: "Profile · Contact order",
+    sectionKind: "profile",
+    sectionId: "profile",
+    cells: variants.map((item) => ({
+      status: item.profileSelection.order
+        .map((reference) => {
+          if (reference.kind === "field")
+            return profileContactFields.find(
+              ({ key }) => key === reference.field,
+            )!.label;
+          const index = document.profile.links.findIndex(
+            (link) => link.id === reference.linkId,
+          );
+          return index < 0
+            ? profileItemId(reference)
+            : linkLabel(document.profile.links[index], index);
+        })
+        .join(" \u2192 "),
+    })),
+  });
   rows.unshift(
     ...profileContactFields.map(({ key, label }): Row => ({
       id: `profile.${key}`,
@@ -153,9 +177,9 @@ export function VariantComparison({
           : "Hidden from PDF",
       })),
     })),
-    ...document.profile.links.map((link): Row => ({
+    ...document.profile.links.map((link, index): Row => ({
       id: `profile.links.${link.id}`,
-      label: `Profile · ${link.label || link.url || "Untitled link"}`,
+      label: `Profile · ${linkLabel(link, index)}`,
       sectionKind: "profile",
       sectionId: "profile",
       cells: profiles.map((profile) => ({
@@ -204,7 +228,7 @@ export function VariantComparison({
         const path = `bullets.${bullet.id}.body`;
         rows.push({
           id: bullet.id,
-          label: `${label} · ${plain(bullet.body, locale).slice(0, 80) || "Achievement"}`,
+          label: `${label} · ${bulletLabel(bullet, section.kind, entry.bullets.indexOf(bullet))}`,
           sectionId: section.id,
           entryId: entry.id,
           path,

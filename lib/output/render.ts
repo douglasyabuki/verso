@@ -1,4 +1,5 @@
-import { selectedProfile } from "@/lib/content/profile";
+import { resolveLink } from "@/lib/content/links";
+import { profileItemIncluded, selectedProfile } from "@/lib/content/profile";
 import { resolveSettings } from "@/lib/output/settings";
 import { templateIdentity } from "@/lib/resume/model";
 import { validateOutput } from "@/lib/review/validation";
@@ -76,17 +77,23 @@ function linkLabel(value: string): string {
  * @example renderLink(link)
  */
 function renderLink(link: ResumeLink, icons = true): string {
-  if (!link.url.trim()) return "";
-  const icon = /^mailto:/i.test(link.url)
-    ? "\\faEnvelope[regular]"
-    : /^tel:/i.test(link.url)
-      ? "\\faIcon{mobile-alt}"
-      : /^https?:\/\/(www\.)?github\.com(?:\/|$)/i.test(link.url)
-        ? "\\faGithub"
-        : /^https?:\/\/(www\.)?linkedin\.com(?:\/|$)/i.test(link.url)
-          ? "\\faLinkedinIn"
-          : "\\faLink";
-  return `${icons ? `{\\color{icnclr}${icon}}~` : ""}\\href{${latexUrl(link.url)}}{${linkLabel(link.label.trim() || link.url)}}`;
+  const resolved = resolveLink(link);
+  if (!resolved.address.trim()) return "";
+  const icon = {
+    behance: "\\VersoBrand{F1B4}",
+    dribbble: "\\VersoBrand{F17D}",
+    github: "\\VersoBrand{F09B}",
+    gitlab: "\\VersoBrand{F296}",
+    "google-scholar": "\\VersoBrand{E63B}",
+    instagram: "\\VersoBrand{F16D}",
+    linkedin: "\\VersoBrand{F0E1}",
+    medium: "\\VersoBrand{F23A}",
+    tiktok: "\\VersoBrand{E07B}",
+    "x-twitter": "\\VersoBrand{E61B}",
+    youtube: "\\VersoBrand{F167}",
+    website: "\\faLink",
+  } satisfies Record<ResumeLink["type"], string>;
+  return `${icons ? `{\\color{icnclr}${icon[resolved.type]}}~` : ""}\\href{${latexUrl(resolved.address)}}{${linkLabel(resolved.label)}}`;
 }
 
 /**
@@ -201,34 +208,57 @@ export function renderLatex(
   const headingHex = pdfColorPresets[settings.headingColor].hex;
   const bodyHex = pdfColorPresets[settings.bodyColor].hex;
   const profile = selectedProfile(doc.profile, variant);
-  const contacts = [
-    profile.city || profile.country
-      ? `${settings.contactIcons === "on" ? "{\\color{icnclr}\\faMapMarker}~" : ""}${escapeLatex(displayLocation(profile.city, profile.country, locale))}`
-      : "",
-    profile.email
-      ? renderLink(
-          {
-            id: "email",
-            label: profile.email,
-            url: `mailto:${profile.email}`,
-          },
-          settings.contactIcons === "on",
-        )
-      : "",
-    profile.phone
-      ? renderLink(
-          {
-            id: "phone",
-            label: profile.phone,
-            url: `tel:${encodeURIComponent(profile.phone.replace(/[^+\d]/g, ""))}`,
-          },
-          settings.contactIcons === "on",
-        )
-      : "",
-    ...profile.links.map((link) =>
-      renderLink(link, settings.contactIcons === "on"),
-    ),
-  ].filter(Boolean);
+  const orderedContacts = variant.profileSelection.order.filter((item) => {
+    if (!profileItemIncluded(item, variant)) return false;
+    return item.kind === "field"
+      ? !!profile[item.field].trim()
+      : profile.links.some(
+          (link) => link.id === item.linkId && link.url.trim(),
+        );
+  });
+  const contacts: string[] = [];
+  for (let index = 0; index < orderedContacts.length; index++) {
+    const item = orderedContacts[index];
+    if (item.kind === "link") {
+      const link = profile.links.find((link) => link.id === item.linkId);
+      if (link) contacts.push(renderLink(link, settings.contactIcons === "on"));
+    } else if (item.field === "city" || item.field === "country") {
+      const location = [
+        item.field === "city"
+          ? profile.city.trim()
+          : displayLocation("", profile.country, locale),
+      ];
+      const next = orderedContacts[index + 1];
+      if (
+        next?.kind === "field" &&
+        (next.field === "city" || next.field === "country") &&
+        next.field !== item.field
+      ) {
+        location.push(
+          next.field === "city"
+            ? profile.city.trim()
+            : displayLocation("", profile.country, locale),
+        );
+        index++;
+      }
+      contacts.push(
+        `${settings.contactIcons === "on" ? "{\\color{icnclr}\\faMapMarker}~" : ""}${escapeLatex(location.join(", "))}`,
+      );
+    } else {
+      const value = profile[item.field];
+      const address =
+        item.field === "email"
+          ? `mailto:${value}`
+          : `tel:${encodeURIComponent(value.replace(/[^+\d]/g, ""))}`;
+      const icon =
+        item.field === "email"
+          ? "\\faEnvelope[regular]"
+          : "\\faIcon{mobile-alt}";
+      contacts.push(
+        `${settings.contactIcons === "on" ? `{\\color{icnclr}${icon}}~` : ""}\\href{${latexUrl(address)}}{${linkLabel(value)}}`,
+      );
+    }
+  }
   const defaultValue = "template-default";
 
   /**
@@ -558,6 +588,8 @@ ${color("iconColor", "icnclr", bodyHex ? "bodyclr" : "gray")}
 ${color("linkColor", "linkclr", "headingclr")}
 ${color("dividerColor", "dividerclr", "gray")}
 \usepackage{fontawesome5}
+\newfontfamily\versobrands{FontAwesome6Brands-Regular-400.otf}
+\newcommand{\VersoBrand}[1]{{\versobrands\symbol{"#1}}}
 \usepackage{titlesec}
 \usepackage{needspace}
 \titlespacing{\section}{0pt}{${settings.sectionGap}mm}{${dimension(settings.sectionBelow, "2mm", "mm")}}

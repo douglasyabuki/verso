@@ -41,7 +41,7 @@ export function ResumeIdentityDialog({
           returnFocus.current?.isConnected ? returnFocus.current : undefined
         }
       >
-        <DialogHeader>
+        <DialogHeader className="place-items-start text-start">
           <DialogTitle>Rename &amp; color</DialogTitle>
           <DialogDescription>
             Make this resume easy to recognize in your workspace.

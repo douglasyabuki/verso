@@ -15,6 +15,10 @@ import { useEffect, useRef, useState } from "react";
 import { EntryFields } from "@/components/content/entry-fields";
 import { EntrySearch } from "@/components/content/entry-search";
 import { LinksEditor } from "@/components/content/links-editor";
+import {
+  InternalNameDialog,
+  InternalNameEditor,
+} from "@/components/editor/internal-name-editor";
 import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
 import { SortableList, SortableRow } from "@/components/editor/sortable-list";
 import { ContentStatusBadge } from "@/components/shared/semantic-badges/content-status-badge";
@@ -63,7 +67,7 @@ import { InfoHint } from "@/components/ui/info-hint";
 import { Separator } from "@/components/ui/separator";
 import { WordingField } from "@/components/wording/wording-field";
 import { duplicateEntry, matchesEntry } from "@/lib/content/entries";
-import { entryLabel } from "@/lib/content/section-fields";
+import { bulletLabel, entryLabel } from "@/lib/content/section-fields";
 import { reorderVisible } from "@/lib/ordering";
 import { createEntry } from "@/lib/resume/factories";
 import { localized, plain } from "@/lib/wording/localization";
@@ -93,6 +97,8 @@ export function ContentEditor({
 }) {
   const entryForm = useRef<HTMLDivElement>(null);
   const [editRequest, setEditRequest] = useState(0);
+  const [renameEntryId, setRenameEntryId] = useState<string | null>(null);
+  const entryActions = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!editRequest) return;
@@ -248,7 +254,22 @@ export function ContentEditor({
                             dragHandle={dragHandle}
                             handleClassName="mt-2"
                           >
-                            <div className="flex items-center gap-2">
+                            <InternalNameEditor
+                              fieldKey={`entries.${item.id}.internalName`}
+                              value={item.internalName}
+                              label={entryLabel(item, section.kind, locale)}
+                              onChange={(internalName, group) =>
+                                update((draft) => {
+                                  const target = draft.sections
+                                    .find((target) => target.id === section.id)!
+                                    .entries.find(
+                                      (target) => target.id === item.id,
+                                    )!;
+                                  target.internalName = internalName;
+                                }, group)
+                              }
+                              actions={orderButtons}
+                            >
                               <Button
                                 className="h-auto min-w-0 flex-1 justify-start bg-transparent py-2 text-left whitespace-normal hover:bg-transparent dark:hover:bg-transparent"
                                 variant="ghost"
@@ -282,13 +303,11 @@ export function ContentEditor({
                                       .join(" · ")}
                                   </span>
                                 </span>
-                                <Pencil data-icon="inline-end" />
                                 {item.archived && (
                                   <ContentStatusBadge state="archived" />
                                 )}
                               </Button>
-                              {orderButtons}
-                            </div>
+                            </InternalNameEditor>
                           </SortableItemLayout>
                         )}
                       </SortableRow>
@@ -328,6 +347,7 @@ export function ContentEditor({
             <CardAction>
               <DropdownMenu>
                 <DropdownMenuTrigger
+                  ref={entryActions}
                   render={
                     <Button
                       variant="ghost"
@@ -340,6 +360,12 @@ export function ContentEditor({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      onClick={() => setRenameEntryId(entry.id)}
+                    >
+                      <Pencil data-icon="inline-start" />
+                      Rename
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       disabled={section.entries.length >= 300}
                       onClick={() => {
@@ -413,6 +439,21 @@ export function ContentEditor({
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {renameEntryId === entry.id && (
+                <InternalNameDialog
+                  key={entry.id}
+                  fieldKey={`entries.${entry.id}.internalName`}
+                  value={entry.internalName}
+                  label={entryLabel(entry, section.kind, locale)}
+                  onChange={(internalName, group) =>
+                    changeEntry((target) => {
+                      target.internalName = internalName;
+                    }, group)
+                  }
+                  close={() => setRenameEntryId(null)}
+                  returnFocus={entryActions}
+                />
+              )}
             </CardAction>
             <CardDescription className="flex items-center gap-1.5">
               {entry.archived ? (
@@ -487,7 +528,7 @@ export function ContentEditor({
                   contextKey={JSON.stringify([locale])}
                   items={entry.bullets.map((bullet, index) => ({
                     id: bullet.id,
-                    label: `${terms.item.toLowerCase()} ${index + 1}`,
+                    label: bulletLabel(bullet, section.kind, index),
                   }))}
                   onReorder={(source, target) =>
                     changeEntry((entry) =>
@@ -506,62 +547,75 @@ export function ContentEditor({
                       <SortableRow
                         key={bullet.id}
                         id={bullet.id}
-                        label={`${terms.item.toLowerCase()} ${index + 1}`}
+                        label={bulletLabel(bullet, section.kind, index)}
                         surface="standard"
                         className="flex flex-col gap-3 rounded-lg border py-3"
                       >
                         {({ dragHandle, orderButtons }) => (
                           <SortableItemLayout dragHandle={dragHandle}>
-                            <div className="flex items-center gap-2">
-                              <span className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">
-                                {terms.item.toUpperCase()} {index + 1}
-                              </span>
-                              <div className="flex gap-1">
-                                {orderButtons}
-                                <Button
-                                  variant="destructive"
-                                  size="icon-sm"
-                                  aria-label={`Delete ${terms.item.toLowerCase()} ${index + 1}`}
-                                  onClick={() =>
-                                    confirm(
-                                      `Delete this ${terms.item.toLowerCase()}?`,
-                                      "This removes it from every resume that references it.",
-                                      () =>
-                                        update((draft) => {
-                                          const target = draft.sections
-                                            .find(
-                                              (section) =>
-                                                section.id === sectionId,
-                                            )!
-                                            .entries.find(
-                                              (item) => item.id === entry.id,
-                                            )!;
-                                          target.bullets =
-                                            target.bullets.filter(
-                                              (item) => item.id !== bullet.id,
+                            <InternalNameEditor
+                              fieldKey={`bullets.${bullet.id}.internalName`}
+                              value={bullet.internalName}
+                              label={bulletLabel(bullet, section.kind, index)}
+                              onChange={(internalName, group) =>
+                                changeEntry((target) => {
+                                  target.bullets.find(
+                                    (item) => item.id === bullet.id,
+                                  )!.internalName = internalName;
+                                }, group)
+                              }
+                              actions={
+                                <div className="flex gap-1">
+                                  {orderButtons}
+                                  <Button
+                                    variant="destructive"
+                                    size="icon-sm"
+                                    aria-label={`Delete ${bulletLabel(bullet, section.kind, index)}`}
+                                    onClick={() =>
+                                      confirm(
+                                        `Delete this ${terms.item.toLowerCase()}?`,
+                                        "This removes it from every resume that references it.",
+                                        () =>
+                                          update((draft) => {
+                                            const target = draft.sections
+                                              .find(
+                                                (section) =>
+                                                  section.id === sectionId,
+                                              )!
+                                              .entries.find(
+                                                (item) => item.id === entry.id,
+                                              )!;
+                                            target.bullets =
+                                              target.bullets.filter(
+                                                (item) => item.id !== bullet.id,
+                                              );
+                                            draft.variants.forEach((variant) =>
+                                              variant.sections.forEach(
+                                                (section) =>
+                                                  section.entries.forEach(
+                                                    (item) => {
+                                                      item.bulletIds =
+                                                        item.bulletIds.filter(
+                                                          (id) =>
+                                                            id !== bullet.id,
+                                                        );
+                                                    },
+                                                  ),
+                                              ),
                                             );
-                                          draft.variants.forEach((variant) =>
-                                            variant.sections.forEach(
-                                              (section) =>
-                                                section.entries.forEach(
-                                                  (item) => {
-                                                    item.bulletIds =
-                                                      item.bulletIds.filter(
-                                                        (id) =>
-                                                          id !== bullet.id,
-                                                      );
-                                                  },
-                                                ),
-                                            ),
-                                          );
-                                        }),
-                                    )
-                                  }
-                                >
-                                  <Trash2 />
-                                </Button>
-                              </div>
-                            </div>
+                                          }),
+                                      )
+                                    }
+                                  >
+                                    <Trash2 />
+                                  </Button>
+                                </div>
+                              }
+                            >
+                              <span className="min-w-0 flex-1 text-xs font-medium wrap-anywhere text-muted-foreground">
+                                {bulletLabel(bullet, section.kind, index)}
+                              </span>
+                            </InternalNameEditor>
                             <WordingField
                               document={document}
                               path={`bullets.${bullet.id}.body`}

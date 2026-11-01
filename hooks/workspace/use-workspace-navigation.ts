@@ -1,7 +1,7 @@
 "use client";
-
 import { useEffect, useState } from "react";
 
+import { defaultProfileOrder } from "@/lib/content/profile";
 import { localized } from "@/lib/wording/localization";
 import type { WorkspaceController } from "@/stores/workspace/controller";
 import type { Locale } from "@/types-and-constants/languages";
@@ -183,7 +183,10 @@ export function useWorkspaceNavigation({
           id,
           name: "New resume",
           color: "indigo",
-          profileSelection: structuredClone(defaultProfileSelection),
+          profileSelection: {
+            ...structuredClone(defaultProfileSelection),
+            order: defaultProfileOrder(document.profile),
+          },
           sections: document.sections.map((section) => ({
             sectionId: section.id,
             visible: true,

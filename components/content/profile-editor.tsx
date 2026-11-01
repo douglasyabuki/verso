@@ -19,7 +19,9 @@ export function ProfileEditor({
   update,
   confirm,
   errors,
-}: Pick<EditorProps, "document" | "update" | "confirm"> & { errors: Issue[] }) {
+}: Pick<EditorProps, "document" | "update" | "confirm"> & {
+  errors: Issue[];
+}) {
   return (
     <Card>
       <CardHeader>

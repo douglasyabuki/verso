@@ -1,3 +1,4 @@
+import { reconcileProfileSelection } from "@/lib/content/profile";
 import { createEmptyDocument } from "@/lib/resume/factories";
 import { localized } from "@/lib/wording/localization";
 import type { Entry, ResumeDocument } from "@/types-and-constants/resume";
@@ -13,14 +14,27 @@ export function createExampleDocument(): ResumeDocument {
   doc.profile = {
     name: "Alex Morgan",
     email: "alex@example.com",
-    phone: "",
+    phone: "+1 202-555-0156",
     city: "Curitiba",
     country: "BR",
     links: [
       {
         id: "example-site",
         label: "alexmorgan.dev",
+        type: "website",
         url: "https://example.com",
+      },
+      {
+        id: "example-github",
+        label: "github.com/alex-morgan-example",
+        type: "github",
+        url: "https://github.com/alex-morgan-example",
+      },
+      {
+        id: "example-linkedin",
+        label: "in/alex-morgan-example",
+        type: "linkedin",
+        url: "https://www.linkedin.com/in/alex-morgan-example",
       },
     ],
     summary: localized(
@@ -134,6 +148,7 @@ export function createExampleDocument(): ResumeDocument {
   project.links.push({
     id: "example-project-link",
     label: "example.com/project",
+    type: "website",
     url: "https://example.com/project",
   });
   doc.sections[1].entries.push(
@@ -285,6 +300,7 @@ export function createExampleDocument(): ResumeDocument {
   certification.links.push({
     id: "example-credential-link",
     label: "Verify credential",
+    type: "website",
     url: "https://example.com/credential",
   });
   const accessibilityCertification = make(
@@ -362,5 +378,6 @@ export function createExampleDocument(): ResumeDocument {
     })),
   }));
   doc.revision = 1;
+  reconcileProfileSelection(doc);
   return doc;
 }

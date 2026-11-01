@@ -129,21 +129,3 @@ export async function fingerprint(document: unknown): Promise<string> {
     byte.toString(16).padStart(2, "0"),
   ).join("");
 }
-
-/** Translate a proven legacy backup baseline through the validated migration.
- * @param review Exact stored bytes and their already validated migrated snapshot.
- * @returns The migrated baseline only when the original document matches its stored backup digest; otherwise the existing baseline.
- * @example const baseline = await migratedBackupFingerprint(review);
- */
-export async function migratedBackupFingerprint(
-  review: StorageReview,
-): Promise<string | null> {
-  const baseline = review.snapshot?.backupFingerprint ?? null;
-  if (!baseline || !review.raw || !review.snapshot) return baseline;
-  const record = JSON.parse(review.raw) as {
-    document: { schemaVersion: number };
-  };
-  if (record.document.schemaVersion >= 9) return baseline;
-  if ((await fingerprint(record.document)) !== baseline) return baseline;
-  return fingerprint(review.snapshot.document);
-}

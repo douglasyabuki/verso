@@ -2,13 +2,14 @@
 
 import { Plus, Trash2 } from "lucide-react";
 
-import { TextField } from "@/components/editor/fields";
+import { LinkFields } from "@/components/content/link-fields";
+import { InternalNameEditor } from "@/components/editor/internal-name-editor";
 import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
 import { SortableList, SortableRow } from "@/components/editor/sortable-list";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
+import { linkLabel } from "@/lib/content/links";
 import { reorderVisible } from "@/lib/ordering";
-import { urlError } from "@/lib/review/validation";
 import type { ConfirmAction } from "@/types-and-constants/editor";
 import type { ResumeDocument, ResumeLink } from "@/types-and-constants/resume";
 import type { EditGroup } from "@/types-and-constants/workspace";
@@ -41,7 +42,12 @@ export function LinksEditor({
             onClick={() =>
               onChange([
                 ...links,
-                { id: crypto.randomUUID(), label: "", url: "" },
+                {
+                  id: crypto.randomUUID(),
+                  label: "",
+                  url: "",
+                  type: "website",
+                },
               ])
             }
           >
@@ -55,7 +61,7 @@ export function LinksEditor({
         revision={document}
         items={links.map((link, index) => ({
           id: link.id,
-          label: link.label.trim() || `link ${index + 1}`,
+          label: linkLabel(link, index),
         }))}
         onReorder={(source, target) => {
           const reordered = [...links];
@@ -74,70 +80,66 @@ export function LinksEditor({
             <SortableRow
               key={link.id}
               id={link.id}
-              label={link.label.trim() || `link ${index + 1}`}
+              label={linkLabel(link, index)}
               surface="standard"
               className="flex flex-col gap-3 rounded-lg border py-3"
             >
               {({ dragHandle, orderButtons }) => (
                 <SortableItemLayout dragHandle={dragHandle}>
                   <FieldGroup className="gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 text-xs font-medium text-muted-foreground">
-                        LINK {index + 1}
-                      </span>
-                      <div className="flex gap-1">
-                        {orderButtons}
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Remove link ${index + 1}`}
-                          onClick={() =>
-                            confirm(
-                              "Remove this link?",
-                              "This removes the shared link from every draft that uses it.",
-                              () =>
-                                onChange(
-                                  links.filter((item) => item.id !== link.id),
-                                ),
-                              undefined,
-                              false,
-                            )
-                          }
-                        >
-                          <Trash2 />
-                        </Button>
-                      </div>
-                    </div>
-                    <TextField
-                      fieldKey={`links.${link.id}.label`}
-                      label="Link label"
-                      value={link.label}
-                      maxLength={200}
-                      onChange={(label, group) =>
+                    <InternalNameEditor
+                      fieldKey={`${scope}.${link.id}.internalName`}
+                      value={link.internalName}
+                      label={linkLabel(link, index)}
+                      onChange={(internalName, group) =>
                         onChange(
                           links.map((item) =>
-                            item.id === link.id ? { ...item, label } : item,
+                            item.id === link.id
+                              ? { ...item, internalName }
+                              : item,
                           ),
                           group,
                         )
                       }
-                      placeholder="My website"
-                    />
-                    <TextField
-                      fieldKey={`links.${link.id}.url`}
-                      label="Link address"
-                      value={link.url}
-                      maxLength={2_000}
-                      onChange={(url, group) =>
+                      actions={
+                        <div className="flex shrink-0 gap-1">
+                          {orderButtons}
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Remove ${linkLabel(link, index)}`}
+                            onClick={() =>
+                              confirm(
+                                "Remove this link?",
+                                "This removes the shared link from every draft that uses it.",
+                                () =>
+                                  onChange(
+                                    links.filter((item) => item.id !== link.id),
+                                  ),
+                                undefined,
+                                false,
+                              )
+                            }
+                          >
+                            <Trash2 />
+                          </Button>
+                        </div>
+                      }
+                    >
+                      <h3 className="min-w-0 flex-1 text-xs font-medium wrap-anywhere text-muted-foreground">
+                        {linkLabel(link, index)}
+                      </h3>
+                    </InternalNameEditor>
+                    <LinkFields
+                      link={link}
+                      onChange={(next, group) =>
                         onChange(
                           links.map((item) =>
-                            item.id === link.id ? { ...item, url } : item,
+                            item.id === link.id ? next : item,
                           ),
                           group,
                         )
                       }
-                      error={urlError(link.url)}
-                      placeholder="https://example.com"
                     />
                   </FieldGroup>
                 </SortableItemLayout>

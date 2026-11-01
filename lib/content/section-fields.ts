@@ -19,11 +19,11 @@ export function careerSectionLabel(section: Section): string {
 }
 
 /**
- * Name an entry using the same section-aware heading priority as its output.
+ * Name an entry for organization, falling back to its section-aware output heading.
  * @param entry Career record.
  * @param kind Section kind.
  * @param locale Wording language.
- * @returns {string} Nonempty heading or a section-specific placeholder.
+ * @returns {string} Internal name, output heading, or a section-specific placeholder.
  * @example entryLabel(entry, "projects", "en-US")
  */
 export function entryLabel(
@@ -31,6 +31,7 @@ export function entryLabel(
   kind: Section["kind"],
   locale: Locale,
 ): string {
+  if (entry.internalName?.trim()) return entry.internalName.trim();
   const title = entry.title[locale].spans
     .map((span) => span.text)
     .join("")
@@ -40,5 +41,23 @@ export function entryLabel(
     (kind === "experience" || kind === "education"
       ? organization || title
       : title || organization) || `Untitled ${entryTerminology[kind].singular}`
+  );
+}
+
+/**
+ * Name a nested career item independently of its output wording.
+ * @param bullet Nested achievement, highlight, skill, or detail.
+ * @param kind Owning section kind supplying interface terminology.
+ * @param index Zero-based library position for the unnamed fallback.
+ * @returns {string} Internal name or a numbered section-specific item label.
+ * @example bulletLabel(entry.bullets[0], "experience", 0);
+ */
+export function bulletLabel(
+  bullet: Entry["bullets"][number],
+  kind: Section["kind"],
+  index: number,
+): string {
+  return (
+    bullet.internalName?.trim() || `${entryTerminology[kind].item} ${index + 1}`
   );
 }

@@ -31,7 +31,7 @@ Working defaults: Next.js with TypeScript; managed authentication and a cloud da
 - [ ] Dates are stored independently of their displayed language and support ongoing roles and projects.
 - [ ] Entries can be created, edited, reordered, archived, and restored. Permanent deletion explains its effect on resume variants before confirmation.
 - [ ] Required fields, date ranges, and URLs are validated with useful messages beside the relevant inputs.
-- [ ] Structured content and template configuration have an explicit schema version and a migration path for future changes.
+- [ ] Structured content and template configuration have an explicit schema version and validated import/export.
 
 ## 4. Editing without LaTeX syntax
 
@@ -156,7 +156,7 @@ Direct LinkedIn account integration and automatic posting/profile updates are ou
 ## 14. Reliability, privacy, and deployment
 
 - [ ] The app, database, asset storage, and chosen compiler are deployed and reachable through production HTTPS URLs.
-- [ ] Database migrations, environment configuration, and deployment steps are documented and repeatable.
+- [ ] Database setup, environment configuration, and deployment steps are documented and repeatable.
 - [ ] Secrets remain server-side; database and storage permissions are verified using unauthenticated and unauthorized requests.
 - [ ] Uploaded files, imported backups, and compilation inputs have validated types and size limits. Displayed links accept only intended URL schemes.
 - [ ] Compilation and mutation endpoints have appropriate abuse controls and request limits, and authenticated browser mutations have protections appropriate to the selected session model.
@@ -181,7 +181,7 @@ Direct LinkedIn account integration and automatic posting/profile updates are ou
 
 Check these only against the deployed application and integrated portfolio.
 
-- [ ] **Initial setup:** Sign in, enter or migrate the existing resume content, review both translations, and generate PDFs matching the required template behavior.
+- [ ] **Initial setup:** Sign in, enter resume content, review both translations, and generate PDFs matching the required template behavior.
 - [ ] **One edit, multiple outputs:** Add a project once, enter its English and Portuguese wording, select it in a variant, and generate both PDFs without editing LaTeX.
 - [ ] **Translation maintenance:** Change an English bullet, see the Portuguese review flag, update that translation, and clear the flag without changing shared facts twice.
 - [ ] **Cross-device use:** Save an edit on computer A, open computer B, and find the latest saved content and working preview.

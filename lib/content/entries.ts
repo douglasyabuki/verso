@@ -23,11 +23,18 @@ export function matchesEntry(entry: Entry, query: string): boolean {
   if (!terms.length) return true;
   const content = normalizeSearch(
     [
+      entry.internalName ?? "",
       entry.organization,
+      ...entry.links.flatMap((link) => [
+        link.internalName ?? "",
+        link.label,
+        link.url,
+      ]),
       ...entry.technologies,
       plain(entry.title, "en-US"),
       plain(entry.title, "pt-BR"),
       ...entry.bullets.flatMap((bullet) => [
+        bullet.internalName ?? "",
         plain(bullet.body, "en-US"),
         plain(bullet.body, "pt-BR"),
       ]),

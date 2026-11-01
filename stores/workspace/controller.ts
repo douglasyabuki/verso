@@ -7,7 +7,6 @@ import {
   commitWorkspace,
   fingerprint,
   loadWorkspace,
-  migratedBackupFingerprint,
   subscribeWorkspace,
 } from "@/stores/workspace/persistence";
 import { type ResumeDocument } from "@/types-and-constants/resume";
@@ -110,25 +109,9 @@ export class WorkspaceController {
    */
   private async identify() {
     const document = this.state.document;
-    const review = this.review;
-    const backupGeneration = this.backupGeneration;
-    const [currentFingerprint, migratedBaseline] = await Promise.all([
-      fingerprint(document),
-      review ? migratedBackupFingerprint(review) : Promise.resolve(null),
-    ]);
+    const currentFingerprint = await fingerprint(document);
     if (this.state.document !== document) return;
-    const translated =
-      review === this.review &&
-      backupGeneration === this.backupGeneration &&
-      !this.state.pending &&
-      !this.state.replacing &&
-      this.state.backupFingerprint === review?.snapshot?.backupFingerprint &&
-      migratedBaseline !== this.state.backupFingerprint;
-    this.patch({
-      currentFingerprint,
-      ...(translated ? { backupFingerprint: migratedBaseline } : {}),
-    });
-    if (translated) this.schedule();
+    this.patch({ currentFingerprint });
   }
 
   /** Read stored state before editing and install cross-tab observation.
@@ -311,8 +294,6 @@ export class WorkspaceController {
    */
   flush = async () => {
     clearTimeout(this.timer);
-    // Finish translating a legacy backup baseline before its original bytes are
-    // replaced by the current schema. A late digest cannot recover them after that write.
     const document = this.state.document;
     await this.identify();
     if (this.state.document !== document) {
