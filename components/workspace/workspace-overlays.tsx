@@ -82,18 +82,25 @@ export function WorkspaceOverlays({
           <AlertDialogHeader>
             <AlertDialogTitle>{pending?.title}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pending?.sessionOnly
-                ? "This replaces your work in this tab only. It will not be saved in this browser and can be lost when you close the tab. Download a backup to keep it. The version already saved in this browser stays unchanged."
-                : "This replaces your current work and the version saved in this browser shown below. If the saved version changes again, you must review it before replacing it."}{" "}
+              {pending?.description && <>{pending.description} </>}
+              {pending?.kind === "clear"
+                ? pending.sessionOnly
+                  ? "This clears work in this tab only. Data already saved in this browser stays unchanged."
+                  : "This clears your current work and the saved browser version shown below. If the saved version changes, you must review it again before clearing it."
+                : pending?.sessionOnly
+                  ? "This replaces your work in this tab only. It will not be saved in this browser and can be lost when you close the tab. Download a backup to keep it. The version already saved in this browser stays unchanged."
+                  : "This replaces your current work and the version saved in this browser shown below. If the saved version changes again, you must review it before replacing it."}{" "}
               You can restore one previous version while this tab stays open.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2 text-sm">
-            <p>
-              Version to load:{" "}
-              {pending?.snapshot.document.profile.name || "Untitled profile"} ·
-              revision {pending?.snapshot.document.revision}
-            </p>
+            {pending?.kind !== "clear" && (
+              <p>
+                Version to load:{" "}
+                {pending?.snapshot.document.profile.name || "Untitled profile"}{" "}
+                · revision {pending?.snapshot.document.revision}
+              </p>
+            )}
             {!pending?.sessionOnly && (
               <p className="text-muted-foreground">
                 Currently saved in this browser:{" "}
@@ -136,10 +143,13 @@ export function WorkspaceOverlays({
               onClick={() => void controller.confirmReplacement()}
             >
               {state.saving
-                ? "Saving…"
-                : pending?.sessionOnly
-                  ? "Replace in this tab"
-                  : "Confirm replacement"}
+                ? pending?.kind === "clear"
+                  ? "Clearing…"
+                  : "Saving…"
+                : (pending?.confirmLabel ??
+                  (pending?.sessionOnly
+                    ? "Replace in this tab"
+                    : "Confirm replacement"))}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

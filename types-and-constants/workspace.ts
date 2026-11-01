@@ -30,6 +30,9 @@ export type WorkspaceEdit = (update: DocumentUpdate, group?: EditGroup) => void;
 
 type Replacement = {
   title: string;
+  kind?: "clear";
+  description?: string;
+  confirmLabel?: string;
   snapshot: WorkspaceSnapshot;
   review: StorageReview | null;
   sessionOnly: boolean;

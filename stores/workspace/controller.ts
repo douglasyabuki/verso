@@ -401,6 +401,39 @@ export class WorkspaceController {
    * @example controller.requestReplacement("Load example", example);
    */
   requestReplacement = (title: string, snapshot: WorkspaceSnapshot) => {
+    this.stageWorkspaceChange(title, snapshot);
+  };
+
+  /** Request confirmation before clearing career details, resumes, settings, and the backup baseline.
+   * Storage remains unchanged until confirmation; successful clearing retains one recovery snapshot.
+   * @example controller.requestClearData();
+   */
+  requestClearData = () => {
+    this.stageWorkspaceChange(
+      "Clear all data?",
+      { document: createEmptyDocument(), backupFingerprint: null },
+      {
+        kind: "clear",
+        description:
+          "All career details and resumes will be cleared, and settings will return to their defaults. Download a JSON backup first if you want to keep your work.",
+        confirmLabel: "Clear data",
+      },
+    );
+  };
+
+  /** Stage a reviewed workspace change using the shared persistence and recovery safeguards.
+   * @param title Dialog heading. @param snapshot Candidate workspace and backup baseline.
+   * @param options Operation kind and action-specific dialog wording.
+   * @example this.stageWorkspaceChange("Load example", example);
+   */
+  private stageWorkspaceChange(
+    title: string,
+    snapshot: WorkspaceSnapshot,
+    options: Pick<
+      NonNullable<WorkspaceState["pending"]>,
+      "description" | "confirmLabel" | "kind"
+    > = {},
+  ) {
     if (this.state.saving) return;
     this.endEditGroup();
     this.generation++;
@@ -408,12 +441,13 @@ export class WorkspaceController {
     this.patch({
       pending: {
         title,
+        ...options,
         snapshot,
         review: this.review,
         sessionOnly: this.state.sessionOnly,
       },
     });
-  };
+  }
 
   /** Dismiss a replacement without changing content or its stored version.
    * @example controller.cancelReplacement();
@@ -462,6 +496,9 @@ export class WorkspaceController {
     this.patch({
       pending: {
         title: pending?.title ?? "Continue in this tab only",
+        description: pending?.description,
+        confirmLabel: pending?.confirmLabel,
+        kind: pending?.kind,
         snapshot: pending?.snapshot ?? {
           document: this.state.document,
           backupFingerprint: this.state.backupFingerprint,
@@ -489,7 +526,13 @@ export class WorkspaceController {
       clearTimeout(this.timer);
       this.patch({
         pending: {
-          title: "Replace the version saved in this browser",
+          title:
+            this.state.pending?.kind === "clear"
+              ? "Clear all data?"
+              : "Replace the version saved in this browser",
+          description: this.state.pending?.description,
+          confirmLabel: this.state.pending?.confirmLabel,
+          kind: this.state.pending?.kind,
           snapshot: this.state.pending?.snapshot ?? {
             document: this.state.document,
             backupFingerprint: this.state.backupFingerprint,

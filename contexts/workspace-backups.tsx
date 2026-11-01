@@ -46,6 +46,7 @@ function useBackupControls() {
             )
         : undefined,
       resume: controller.reviewOverwrite,
+      clear: controller.requestClearData,
     },
   };
 }

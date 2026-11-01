@@ -5,6 +5,7 @@ import {
   Download,
   FilePlus2,
   RefreshCw,
+  Trash2,
   Undo2,
   Upload,
 } from "lucide-react";
@@ -33,6 +34,7 @@ export function WorkspaceDataMenu({
   example,
   recover,
   resume,
+  clear,
   disabled,
   inline = false,
 }: {
@@ -42,6 +44,7 @@ export function WorkspaceDataMenu({
   example: () => void;
   recover?: () => void;
   resume: () => void;
+  clear: () => void;
   disabled: boolean;
   inline?: boolean;
 }) {
@@ -78,6 +81,10 @@ export function WorkspaceDataMenu({
           <Button variant="outline" disabled={disabled} onClick={resume}>
             <RefreshCw data-icon="inline-start" />
             Review browser saving
+          </Button>
+          <Button variant="destructive" disabled={disabled} onClick={clear}>
+            <Trash2 data-icon="inline-start" />
+            Clear data
           </Button>
         </div>
       </div>
@@ -133,6 +140,13 @@ export function WorkspaceDataMenu({
           <DropdownMenuItem onClick={resume}>
             <RefreshCw />
             Review browser saving
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem variant="destructive" onClick={clear}>
+            <Trash2 />
+            Clear data
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
