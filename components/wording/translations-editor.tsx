@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ChevronRight,
   Filter,
+  Globe,
   ListChecks,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -60,7 +61,7 @@ import {
 import { plain } from "@/lib/wording/localization";
 import { sharedWording, variantWording } from "@/lib/wording/wording";
 import type { EditorProps } from "@/types-and-constants/editor";
-import { languageNames } from "@/types-and-constants/languages";
+import { languageNames, locales } from "@/types-and-constants/languages";
 import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
 import type { ResumeDocument } from "@/types-and-constants/resume";
 import type {
@@ -207,8 +208,7 @@ export function TranslationsEditor({
         label: "Language",
         options: [
           ["all", "Both languages"],
-          ["en-US", "English"],
-          ["pt-BR", "Portuguese"],
+          ...locales.map((locale) => [locale, languageNames[locale]]),
         ],
       },
       {
@@ -250,6 +250,11 @@ export function TranslationsEditor({
       const filterItems = options.map(([value, label]) => ({
         value,
         label,
+        bothLanguages: key === "language" && value === "all",
+        languageLocales:
+          key === "language"
+            ? locales.filter((locale) => value === locale)
+            : [],
         resumeColor:
           key === "owner"
             ? document.variants.find(
@@ -300,6 +305,14 @@ export function TranslationsEditor({
                 {selectedSection?.resumeColor && (
                   <ResumeIcon color={selectedSection.resumeColor} />
                 )}
+                {selectedSection?.bothLanguages && (
+                  <span className="inline-flex w-5 shrink-0 items-center justify-center">
+                    <Globe aria-hidden="true" />
+                  </span>
+                )}
+                {selectedSection?.languageLocales.map((locale) => (
+                  <LanguageFlag key={locale} locale={locale} />
+                ))}
                 <SelectValue className="min-w-0 truncate" />
               </SelectTrigger>
               <SelectContent>
@@ -315,6 +328,14 @@ export function TranslationsEditor({
                       {option.resumeColor && (
                         <ResumeIcon color={option.resumeColor} />
                       )}
+                      {option.bothLanguages && (
+                        <span className="inline-flex w-5 shrink-0 items-center justify-center">
+                          <Globe aria-hidden="true" />
+                        </span>
+                      )}
+                      {option.languageLocales.map((locale) => (
+                        <LanguageFlag key={locale} locale={locale} />
+                      ))}
                       <span className="max-w-64 truncate">{option.label}</span>
                     </SelectItem>
                   ))}

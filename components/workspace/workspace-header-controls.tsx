@@ -20,6 +20,7 @@ import {
 import { useWorkspaceOutput } from "@/contexts/workspace-output";
 import { useWorkspaceWorkflow } from "@/contexts/workspace-workflow";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
+import { languageNames, locales } from "@/types-and-constants/languages";
 
 /** Connect workflow/output controls to the header and layout-owned preview toggle. */
 export function WorkspaceHeaderControls({
@@ -41,10 +42,10 @@ export function WorkspaceHeaderControls({
   } = useWorkspaceWorkflow();
   const { variant, locale, view } = navigation;
   const { validation, validations, exports } = useWorkspaceOutput();
-  const languageItems = [
-    { value: "en-US", label: "English" },
-    { value: "pt-BR", label: "Português" },
-  ];
+  const languageItems = locales.map((value) => ({
+    value,
+    label: languageNames[value],
+  }));
   return (
     <WorkspaceHeader
       context={

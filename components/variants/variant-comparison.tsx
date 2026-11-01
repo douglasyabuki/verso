@@ -4,6 +4,7 @@ import { type ComponentProps, useState } from "react";
 
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { CheckField } from "@/components/editor/fields";
+import { LanguageFlag } from "@/components/shared/language-flag";
 import { ReviewStatusBadge } from "@/components/shared/semantic-badges/review-status-badge";
 import { WordingSourceBadge } from "@/components/shared/semantic-badges/wording-source-badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import {
   variantWording,
 } from "@/lib/wording/wording";
 import type { Locale } from "@/types-and-constants/languages";
+import { languageNames, locales } from "@/types-and-constants/languages";
 import { templateSettingLabels } from "@/types-and-constants/output";
 import type {
   LocalizedText,
@@ -216,10 +218,10 @@ export function VariantComparison({
       !differences ||
       JSON.stringify(row.cells[0]) !== JSON.stringify(row.cells[1]),
   );
-  const languageItems = [
-    { value: "en-US", label: "English" },
-    { value: "pt-BR", label: "Português" },
-  ];
+  const languageItems = locales.map((value) => ({
+    value,
+    label: languageNames[value],
+  }));
   return (
     <div className="flex flex-col gap-4">
       <FieldGroup className="grid gap-4 @2xl:grid-cols-2">
@@ -289,12 +291,14 @@ export function VariantComparison({
               id="compare-language"
               className="w-full"
             >
+              <LanguageFlag locale={locale} />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 {languageItems.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
+                    <LanguageFlag locale={option.value} />
                     {option.label}
                   </SelectItem>
                 ))}
