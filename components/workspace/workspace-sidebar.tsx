@@ -48,6 +48,8 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { SidebarSelection } from "@/components/ui/sidebar-selection";
+import { useListEntrance } from "@/hooks/use-list-entrance";
 import type { useCareerActions } from "@/hooks/workspace/use-career-actions";
 import type { useResumeActions } from "@/hooks/workspace/use-resume-actions";
 import { careerSectionLabel } from "@/lib/content/section-fields";
@@ -57,6 +59,23 @@ import type {
   CareerTarget,
   ResumeDocument,
 } from "@/types-and-constants/resume";
+
+type CollectionMeasurement = () => () => void;
+
+const pendingCollectionMeasurements = new Set<CollectionMeasurement>();
+let collectionFrame = 0;
+
+/** Queue collection reads together before applying any flex allocation writes. */
+function scheduleCollectionMeasurement(measure: CollectionMeasurement) {
+  pendingCollectionMeasurements.add(measure);
+  if (collectionFrame) return;
+  collectionFrame = requestAnimationFrame(() => {
+    collectionFrame = 0;
+    const writes = [...pendingCollectionMeasurements].map((read) => read());
+    pendingCollectionMeasurements.clear();
+    writes.forEach((write) => write());
+  });
+}
 
 export function WorkspaceSidebar({
   document,
@@ -107,6 +126,7 @@ export function WorkspaceSidebar({
         ? destination.resumeId
         : expansion.id;
   const collectionsRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const selected = collectionsRef.current?.querySelector<HTMLElement>(
       '[aria-current="page"]',
@@ -128,6 +148,17 @@ export function WorkspaceSidebar({
     observer.observe(viewport);
     return () => observer.disconnect();
   }, [destination, openMobile, sidebarOpen]);
+  useListEntrance({
+    getElements: () =>
+      [collectionsRef.current, footerRef.current].flatMap((container) => [
+        ...(container?.querySelectorAll<HTMLElement>(
+          '[data-sidebar="group-label"], [data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]',
+        ) ?? []),
+      ]),
+    contextKey: `sidebar:${isMobile}:${isMobile ? openMobile : sidebarOpen}`,
+    disabled: !(isMobile ? openMobile : sidebarOpen),
+    mode: "all",
+  });
   const go = (next: WorkspaceDestination) => {
     open(next);
     setOpenMobile(false);
@@ -425,26 +456,30 @@ export function WorkspaceSidebar({
         </div>
       </SidebarContent>
       <SidebarSeparator className="mx-5 shrink-0" />
-      <SidebarFooter className="shrink-0 px-3 py-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              className="pr-9"
-              isActive={destination.kind === "review"}
-              aria-current={destination.kind === "review" ? "page" : undefined}
-              onClick={() => go({ kind: "review" })}
-            >
-              <GlobeCheck aria-hidden="true" />
-              <span>Text to review</span>
-            </SidebarMenuButton>
-            <SidebarMenuBadge
-              aria-label={`${formatCount(reviewCount, "item to review", "items to review")} across the workspace`}
-              title="Items to review across all career details and resumes"
-            >
-              {reviewCount}
-            </SidebarMenuBadge>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarFooter ref={footerRef} className="shrink-0 px-3 py-2">
+        <SidebarSelection>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="pr-9"
+                isActive={destination.kind === "review"}
+                aria-current={
+                  destination.kind === "review" ? "page" : undefined
+                }
+                onClick={() => go({ kind: "review" })}
+              >
+                <GlobeCheck aria-hidden="true" />
+                <span>Text to review</span>
+              </SidebarMenuButton>
+              <SidebarMenuBadge
+                aria-label={`${formatCount(reviewCount, "item to review", "items to review")} across the workspace`}
+                title="Items to review across all career details and resumes"
+              >
+                {reviewCount}
+              </SidebarMenuBadge>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarSelection>
         {isMobile && utilities}
       </SidebarFooter>
     </Sidebar>
@@ -474,7 +509,7 @@ function SidebarCollection({
     const group = groupRef.current!;
     const content = contentRef.current!;
     const collections = group.parentElement!;
-    const resize = () => {
+    const measure = () => {
       const heading = group
         .querySelector('[data-sidebar="group-label"]')!
         .getBoundingClientRect().height;
@@ -495,26 +530,42 @@ function SidebarCollection({
         0,
         Math.min(rowHeight * 4 + menuGap * 3, available / 2 - heading),
       );
-      group.style.flexBasis = `${heading + height}px`;
-      group.style.minHeight = `${heading + Math.min(height, minimum)}px`;
+      const basis = `${heading + height}px`;
+      const minHeight = `${heading + Math.min(height, minimum)}px`;
+      return () => {
+        if (group.style.flexBasis !== basis) group.style.flexBasis = basis;
+        if (group.style.minHeight !== minHeight)
+          group.style.minHeight = minHeight;
+      };
     };
-    resize();
-    const observer = new ResizeObserver(resize);
+    measure()();
+    const observer = new ResizeObserver(() =>
+      scheduleCollectionMeasurement(measure),
+    );
     observer.observe(content);
     observer.observe(collections);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      pendingCollectionMeasurements.delete(measure);
+      if (!pendingCollectionMeasurements.size) {
+        cancelAnimationFrame(collectionFrame);
+        collectionFrame = 0;
+      }
+    };
   }, []);
   return (
     <SidebarGroup ref={groupRef} className="min-h-0 shrink px-3 py-0">
-      <SidebarGroupLabel
-        render={<button type="button" />}
-        aria-current={active ? "page" : undefined}
-        data-active={active || undefined}
-        className="h-9 pr-9 hover:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
-        onClick={onOpen}
-      >
-        {label}
-      </SidebarGroupLabel>
+      <SidebarSelection className="shrink-0">
+        <SidebarGroupLabel
+          render={<button type="button" />}
+          aria-current={active ? "page" : undefined}
+          data-active={active || undefined}
+          className="h-9 w-full pr-9 hover:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+          onClick={onOpen}
+        >
+          {label}
+        </SidebarGroupLabel>
+      </SidebarSelection>
       <SidebarGroupAction
         className="top-2 right-5 disabled:opacity-50"
         aria-label={createLabel}
@@ -531,7 +582,9 @@ function SidebarCollection({
         tabIndex={0}
         className="app-scrollbar min-h-0 overflow-x-hidden overflow-y-auto"
       >
-        <div ref={contentRef}>{children}</div>
+        <div ref={contentRef}>
+          <SidebarSelection>{children}</SidebarSelection>
+        </div>
       </div>
     </SidebarGroup>
   );

@@ -25,6 +25,7 @@ import type {
 export class WorkspaceController {
   private state: WorkspaceState = {
     textHistoryEpoch: 0,
+    workspaceEpoch: 0,
     document: createEmptyDocument(),
     backupFingerprint: null,
     ready: false,
@@ -49,6 +50,7 @@ export class WorkspaceController {
   private future: ResumeDocument[] = [];
   private editGroup: (EditGroup & { at: number }) | null = null;
   private textHistoryEpoch = 0;
+  private workspaceEpoch = 0;
 
   private editorDraftGuard: (() => boolean) | null = null;
 
@@ -90,6 +92,7 @@ export class WorkspaceController {
       ...this.state,
       ...patch,
       textHistoryEpoch: this.textHistoryEpoch,
+      workspaceEpoch: this.workspaceEpoch,
       ...(changed ? { currentFingerprint: null } : {}),
     };
     this.state.canUndo =
@@ -293,6 +296,7 @@ export class WorkspaceController {
    * @example this.resetHistory();
    */
   private resetHistory() {
+    this.workspaceEpoch++;
     this.textHistoryEpoch++;
     this.past = [];
     this.future = [];

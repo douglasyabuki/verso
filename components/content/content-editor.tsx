@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "cn";
 import {
   Archive,
   ArchiveRestore,
@@ -205,6 +204,7 @@ export function ContentEditor({
             {displayed.length ? (
               <SortableList
                 scope={`career:${section.id}`}
+                selectedId={entry?.id ?? null}
                 revision={document}
                 contextKey={JSON.stringify([
                   query,
@@ -237,10 +237,9 @@ export function ContentEditor({
                         id={item.id}
                         label={entryLabel(item, section.kind, locale)}
                         as="li"
-                        className={cn(
-                          "list-item-surface flex flex-col gap-2 rounded-lg border border-s-2 py-2",
-                          entry?.id === item.id && "list-item-surface-selected",
-                        )}
+                        surface="standard"
+                        current={entry?.id === item.id}
+                        className="flex flex-col gap-2 rounded-lg border py-2"
                       >
                         {({ dragHandle, orderButtons }) => (
                           <SortableItemLayout
@@ -506,7 +505,8 @@ export function ContentEditor({
                         key={bullet.id}
                         id={bullet.id}
                         label={`${terms.item.toLowerCase()} ${index + 1}`}
-                        className="list-item-surface flex flex-col gap-3 rounded-lg border py-3"
+                        surface="standard"
+                        className="flex flex-col gap-3 rounded-lg border py-3"
                       >
                         {({ dragHandle, orderButtons }) => (
                           <SortableItemLayout dragHandle={dragHandle}>

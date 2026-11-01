@@ -20,6 +20,7 @@ import {
 } from "react";
 
 import { OrderButtons } from "@/components/editor/fields";
+import { AnimatedList, AnimatedListItem } from "@/components/ui/animated-list";
 import { Button } from "@/components/ui/button";
 import { WorkspaceContext } from "@/stores/workspace/provider";
 import type { ResumeDocument } from "@/types-and-constants/resume";
@@ -88,6 +89,7 @@ export function SortableList({
   items,
   revision,
   contextKey = "",
+  selectedId,
   onReorder,
   children,
 }: {
@@ -95,11 +97,13 @@ export function SortableList({
   items: SortItem[];
   revision: ResumeDocument;
   contextKey?: string;
+  selectedId?: string | null;
   onReorder: (sourceId: string, targetId: string) => void;
   children: ReactNode;
 }) {
   const controller = useContext(WorkspaceContext);
   const [announcement, announce] = useState("");
+  const [dragging, setDragging] = useState(false);
   const mounted = useRef(false);
   const started = useRef<{ revision: ResumeDocument; key: string } | null>(
     null,
@@ -129,9 +133,11 @@ export function SortableList({
             event.preventDefault();
         }}
         onDragStart={() => {
+          setDragging(true);
           started.current = { revision, key };
         }}
         onDragEnd={(event) => {
+          setDragging(false);
           const snapshot = started.current;
           started.current = null;
           const { source, target } = event.operation;
@@ -161,7 +167,15 @@ export function SortableList({
         }}
       >
         <CancelStaleDrag revision={revision} contextKey={key} />
-        {children}
+        <AnimatedList
+          mode="sortable"
+          selectedId={selectedId}
+          contextKey={scope}
+          itemIds={items.map((item) => item.id)}
+          dragging={dragging}
+        >
+          {children}
+        </AnimatedList>
         <span
           className="sr-only"
           role="status"
@@ -184,6 +198,8 @@ type SortableRowProps = {
   }) => ReactNode;
   className?: string;
   as?: "div" | "li";
+  surface?: "standard" | "nested" | "plain";
+  current?: boolean;
 };
 
 export function SortableRow(props: SortableRowProps) {
@@ -193,14 +209,20 @@ export function SortableRow(props: SortableRowProps) {
   if (index < 0) {
     const Tag = props.as ?? "div";
     return (
-      <Tag className={props.className}>
+      <AnimatedListItem
+        as={Tag}
+        itemId={props.id}
+        className={props.className}
+        surface={props.surface ?? "plain"}
+        current={props.current}
+      >
         {props.children({
           dragHandle: <span aria-hidden="true" className="size-7 shrink-0" />,
           orderButtons: (
             <span aria-hidden="true" className="h-6 w-12 shrink-0" />
           ),
         })}
-      </Tag>
+      </AnimatedListItem>
     );
   }
   return <RegisteredRow {...props} context={context} index={index} />;
@@ -212,21 +234,24 @@ function RegisteredRow({
   children,
   className,
   as: Tag = "div",
+  surface = "plain",
+  current = false,
   context,
   index,
 }: SortableRowProps & {
   context: SortContextValue;
   index: number;
 }) {
-  const { ref, handleRef } = useSortable({
-    id,
-    index: Math.max(0, index),
-    group: context.scope,
-    type: context.scope,
-    accept: context.scope,
-    disabled: index < 0 || context.items.length < 2,
-    data: { label },
-  });
+  const { ref, handleRef, isDragSource, isDropTarget, isDropping } =
+    useSortable({
+      id,
+      index: Math.max(0, index),
+      group: context.scope,
+      type: context.scope,
+      accept: context.scope,
+      disabled: index < 0 || context.items.length < 2,
+      data: { label },
+    });
   const handle = useRef<HTMLButtonElement | null>(null);
   const dragHandle = (
     <Button
@@ -262,8 +287,19 @@ function RegisteredRow({
     />
   );
   return (
-    <Tag ref={ref} className={className} data-sort-id={id}>
+    <AnimatedListItem
+      as={Tag}
+      itemId={id}
+      surface={surface}
+      current={current}
+      ref={ref}
+      className={className}
+      data-sort-id={id}
+      dragging={isDragSource}
+      dropTarget={isDropTarget}
+      dropping={isDropping}
+    >
       {children({ dragHandle, orderButtons })}
-    </Tag>
+    </AnimatedListItem>
   );
 }

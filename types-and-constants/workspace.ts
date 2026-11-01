@@ -38,6 +38,8 @@ type Replacement = {
 export type WorkspaceState = WorkspaceSnapshot & {
   /** Transient invalidation of field-local history after workspace history/replacement. */
   textHistoryEpoch: number;
+  /** Transient list-history invalidation after explicit workspace replacement. */
+  workspaceEpoch: number;
   ready: boolean;
   sessionOnly: boolean;
   saving: boolean;

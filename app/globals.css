@@ -11,23 +11,6 @@
 }
 
 @layer components {
-  /* List items need stronger boundaries than filled form controls. */
-  .list-item-surface {
-    border-color: var(--border);
-    background-color: var(--list-item-surface);
-  }
-
-  .list-item-surface-selected {
-    border-inline-start-color: var(--primary);
-  }
-
-  /* An inset outline preserves the dimensions of previously borderless rows. */
-  .list-item-surface-nested {
-    background-color: var(--list-item-surface-nested);
-    outline: 1px solid var(--border);
-    outline-offset: -1px;
-  }
-
   .quick-actions-dropdown {
     width: 14rem !important;
     max-width: var(--available-width) !important;
@@ -323,13 +306,17 @@
   [data-sidebar="menu-sub-button"][data-active],
   [data-sidebar="group-label"][data-active] {
     position: relative;
-    background: var(--sidebar-accent);
     color: var(--sidebar-accent-foreground);
     font-weight: 500;
   }
-  [data-sidebar="menu-button"][data-active]::before,
-  [data-sidebar="menu-sub-button"][data-active]::before,
-  [data-sidebar="group-label"][data-active]::before {
+  [data-slot="sidebar-selection-surface"] {
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--sidebar-accent) 70%, transparent);
+  }
+  [data-slot="sidebar-selection-surface"]::before {
     content: "";
     position: absolute;
     inset-block: 8px;
@@ -354,6 +341,12 @@
   .pdfViewer .page {
     background: white;
     color-scheme: light;
+  }
+}
+
+@layer utilities {
+  [data-sidebar-selection] [data-sidebar][data-active] {
+    background: transparent;
   }
 }
 

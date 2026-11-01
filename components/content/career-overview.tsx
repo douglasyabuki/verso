@@ -1,6 +1,7 @@
 "use client";
 
 import { ListChecks, Pencil } from "lucide-react";
+import { useRef } from "react";
 
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { LanguageFlag } from "@/components/shared/language-flag";
@@ -15,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { InfoHint } from "@/components/ui/info-hint";
+import { useListEntrance } from "@/hooks/use-list-entrance";
 import { careerSectionLabel } from "@/lib/content/section-fields";
 import { formatCount } from "@/lib/format-count";
 import { reviewItems } from "@/lib/review/review-queue";
@@ -38,6 +40,15 @@ export function CareerOverview({
     locale: Locale,
   ) => void;
 }) {
+  const list = useRef<HTMLDivElement>(null);
+  useListEntrance({
+    getElements: () => [
+      ...(list.current?.querySelectorAll<HTMLElement>(
+        ":scope > [data-list-id]",
+      ) ?? []),
+    ],
+    contextKey: "career-overview",
+  });
   const queue = reviewItems(document).filter((item) => !item.resumeId);
   return (
     <div className="flex flex-col gap-5">
@@ -48,7 +59,7 @@ export function CareerOverview({
           choose the content to check.
         </InfoHint>
       </div>
-      <div className="grid gap-4 @2xl:grid-cols-2">
+      <div ref={list} className="grid gap-4 @2xl:grid-cols-2">
         {[
           {
             id: "profile",
@@ -77,7 +88,11 @@ export function CareerOverview({
             reviewSectionId: section.id,
           })),
         ].map((section) => (
-          <Card key={JSON.stringify(section.destination)} size="sm">
+          <Card
+            key={JSON.stringify(section.destination)}
+            data-list-id={section.id}
+            size="sm"
+          >
             <CardHeader>
               <CardTitle
                 size="section"

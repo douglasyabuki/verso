@@ -57,3 +57,10 @@ export type ReviewReturnContext = {
   scroll: number;
   pageScroll?: number;
 };
+
+/** Ephemeral explicit list intent; never include in return context or backups. */
+export type ListActivation = {
+  sequence: number;
+  contextKey: string;
+  itemId: string;
+};

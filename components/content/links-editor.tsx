@@ -75,7 +75,8 @@ export function LinksEditor({
               key={link.id}
               id={link.id}
               label={link.label.trim() || `link ${index + 1}`}
-              className="list-item-surface flex flex-col gap-3 rounded-lg border py-3"
+              surface="standard"
+              className="flex flex-col gap-3 rounded-lg border py-3"
             >
               {({ dragHandle, orderButtons }) => (
                 <SortableItemLayout dragHandle={dragHandle}>

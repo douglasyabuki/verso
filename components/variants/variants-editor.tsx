@@ -403,7 +403,8 @@ function VariantCareerSection({
                             key={entry.id}
                             id={entry.id}
                             label={label}
-                            className="list-item-surface flex flex-col gap-3 rounded-lg border py-3"
+                            surface="standard"
+                            className="flex flex-col gap-3 rounded-lg border py-3"
                           >
                             {({ dragHandle, orderButtons }) => (
                               <SortableItemLayout dragHandle={dragHandle}>
@@ -520,7 +521,8 @@ function VariantCareerSection({
                                           key={bullet.id}
                                           id={bullet.id}
                                           label={`${terms.item.toLowerCase()} ${index + 1}: ${label}`}
-                                          className="list-item-surface-nested flex flex-col gap-3 rounded-lg py-2"
+                                          surface="nested"
+                                          className="flex flex-col gap-3 rounded-lg py-2"
                                         >
                                           {({ dragHandle, orderButtons }) => (
                                             <SortableItemLayout

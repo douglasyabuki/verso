@@ -8,9 +8,10 @@ import {
   Filter,
   ListChecks,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
+import { SelectableList } from "@/components/editor/selectable-list";
 import { LanguageFlag } from "@/components/shared/language-flag";
 import { CareerSectionBadge } from "@/components/shared/semantic-badges/career-section-badge";
 import { ContentStatusBadge } from "@/components/shared/semantic-badges/content-status-badge";
@@ -63,6 +64,7 @@ import { languageNames } from "@/types-and-constants/languages";
 import type { WorkspaceFocusTarget } from "@/types-and-constants/navigation";
 import type { ResumeDocument } from "@/types-and-constants/resume";
 import type {
+  ListActivation,
   ReviewFilters,
   ReviewItem,
   ReviewReturnContext,
@@ -132,8 +134,9 @@ export function TranslationsEditor({
   const next = candidates.find((item) => all.indexOf(item) > index);
   const visible = scope === "queue" ? candidates : fields.filter(matches);
   const detail = useRef<HTMLDivElement>(null);
-  const list = useRef<HTMLDivElement>(null);
-  const restoredPage = useRef<string | null>(null);
+  const sequence = useRef(0);
+  const [activation, setActivation] = useState<ListActivation | null>(null);
+  const disabled = state.replacing || !!state.pending;
   const pageKey =
     scope === "resume"
       ? `resume:${variant.id}`
@@ -146,19 +149,13 @@ export function TranslationsEditor({
       ?.querySelector<HTMLElement>("[data-issue-field]")
       ?.focus({ preventScroll: true });
   }, [current, scope, sectionId]);
-  useLayoutEffect(() => {
-    // Restore once on entry. Replaying saved offsets during wheel or thumb
-    // movement can overwrite a newer browser position with an older render.
-    if (restoredPage.current === pageKey) return;
-    const scroller = list.current?.closest<HTMLElement>(
-      "[data-workspace-scroll]",
-    );
-    if (!scroller) return;
-    restoredPage.current = pageKey;
-    scroller.scrollTop = context.pageScroll ?? 0;
-    if (list.current) list.current.scrollTop = context.scroll;
-  }, [pageKey, context.pageScroll, context.scroll]);
   const select = (item: ReviewItem) => {
+    if (disabled) return;
+    setActivation({
+      sequence: ++sequence.current,
+      contextKey: pageKey,
+      itemId: item.id,
+    });
     onContext({
       ...context,
       pageScroll: scope === "queue" ? context.pageScroll : undefined,
@@ -445,18 +442,58 @@ export function TranslationsEditor({
           current && "@3xl:grid-cols-[16rem_minmax(0,1fr)]",
         )}
       >
-        <div
-          ref={list}
-          className={cn(
-            "flex min-w-0 flex-col gap-3 overflow-y-auto p-1",
-            current && "max-h-80 @3xl:max-h-[60dvh]",
-          )}
-          role="region"
-          aria-label="Text to review"
-          onScroll={(event) => {
-            if (event.currentTarget.scrollTop !== context.scroll)
-              onContext({ ...context, scroll: event.currentTarget.scrollTop });
+        <SelectableList
+          key={`${pageKey}:${state.workspaceEpoch}`}
+          items={listItems}
+          selectedId={currentItem?.id ?? null}
+          onSelect={select}
+          contextKey={pageKey}
+          activation={activation}
+          label="Text to review"
+          disabled={disabled}
+          restoreScroll={{
+            list: context.scroll,
+            page: context.pageScroll ?? 0,
           }}
+          className={cn(current && "max-h-80 @3xl:max-h-[60dvh]")}
+          onScroll={(scroll) => {
+            if (scroll !== context.scroll) onContext({ ...context, scroll });
+          }}
+          renderItem={(item) => (
+            <>
+              <span className="flex h-5 w-full min-w-0 shrink-0 items-center justify-between gap-2">
+                <span
+                  className="min-w-0 flex-1 truncate text-sm leading-5 font-semibold"
+                  title={item.field.label}
+                >
+                  {item.field.label}
+                </span>
+                <ReviewItemBadges item={item} document={document} compact />
+              </span>
+              <span
+                lang={item.locale}
+                className="line-clamp-2 h-[2lh] shrink-0 text-sm leading-relaxed wrap-anywhere"
+              >
+                {plain(item.field.value, item.locale) || "No text yet"}
+              </span>
+              <span className="flex w-full flex-col items-start gap-1.5 border-t pt-2">
+                <WordingStatus
+                  stacked
+                  showHelp={false}
+                  missing={item.categories.includes("missing")}
+                  review={item.categories.includes("translation")}
+                  sharedReview={item.categories.includes("shared-wording")}
+                />
+                <span
+                  className="w-full shrink-0 truncate text-xs leading-relaxed text-muted-foreground"
+                  title={`${item.archived ? "Archived · " : ""}${reviewOutputLabel(item, outputResumeId)}`}
+                >
+                  {item.archived ? "Archived · " : ""}
+                  {reviewOutputLabel(item, outputResumeId)}
+                </span>
+              </span>
+            </>
+          )}
         >
           {!visible.length && !currentItem && (
             <Empty role="status">
@@ -468,48 +505,7 @@ export function TranslationsEditor({
               </EmptyHeader>
             </Empty>
           )}
-          {listItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              disabled={state.replacing || !!state.pending}
-              aria-current={item.id === currentItem?.id ? "true" : undefined}
-              onClick={() => select(item)}
-              className={cn(
-                "flex w-full min-w-0 shrink-0 cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left text-card-foreground shadow-sm transition-colors hover:border-ring hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
-                item.id === currentItem?.id &&
-                  "border-primary bg-accent ring-1 ring-primary",
-              )}
-            >
-              <span className="flex min-w-0 flex-col gap-2">
-                <span className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-                  <span className="min-w-0 text-sm leading-snug font-semibold wrap-anywhere">
-                    {item.field.label}
-                  </span>
-                  <ReviewItemBadges item={item} document={document} />
-                </span>
-              </span>
-              <span
-                lang={item.locale}
-                className="line-clamp-2 text-sm leading-relaxed wrap-anywhere"
-              >
-                {plain(item.field.value, item.locale) || "No text yet"}
-              </span>
-              <span className="mt-auto flex flex-col items-start gap-2 border-t pt-3">
-                <WordingStatus
-                  showHelp={false}
-                  missing={item.categories.includes("missing")}
-                  review={item.categories.includes("translation")}
-                  sharedReview={item.categories.includes("shared-wording")}
-                />
-                <span className="text-xs leading-relaxed text-muted-foreground">
-                  {item.archived ? "Archived · " : ""}
-                  {reviewOutputLabel(item, outputResumeId)}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
+        </SelectableList>
         <div className="min-w-0" hidden={!current}>
           {current && (
             <Card ref={detail} className="min-w-0">
@@ -608,7 +604,7 @@ export function TranslationsEditor({
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={!previous}
+                      disabled={disabled || !previous}
                       onClick={() => previous && select(previous)}
                     >
                       <ArrowLeft data-icon="inline-start" />
@@ -616,7 +612,7 @@ export function TranslationsEditor({
                     </Button>
                     <Button
                       size="sm"
-                      disabled={!next}
+                      disabled={disabled || !next}
                       onClick={() => next && select(next)}
                     >
                       Next task
@@ -651,16 +647,25 @@ export function TranslationsEditor({
 function ReviewItemBadges({
   item,
   document,
+  compact = false,
 }: {
   item: ReviewItem;
   document: ResumeDocument;
+  compact?: boolean;
 }) {
   const section = document.sections.find(
     (section) => section.id === item.field.sectionId,
   );
 
   return (
-    <span className="flex max-w-full min-w-0 flex-wrap items-center gap-1.5">
+    <span
+      className={cn(
+        "min-w-0 items-center gap-1.5",
+        compact
+          ? "grid max-w-[65%] shrink-0 grid-cols-[minmax(0,1fr)_auto]"
+          : "flex max-w-full flex-wrap",
+      )}
+    >
       <CareerSectionBadge
         section={item.path === "profile.summary" ? "summary" : section}
       />

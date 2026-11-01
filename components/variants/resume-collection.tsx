@@ -1,6 +1,7 @@
 "use client";
 
 import { Copy, FileText, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InfoHint } from "@/components/ui/info-hint";
+import { useListEntrance } from "@/hooks/use-list-entrance";
 import type { useResumeActions } from "@/hooks/workspace/use-resume-actions";
 import type { ResumeDocument } from "@/types-and-constants/resume";
 import type { Variant } from "@/types-and-constants/resume";
@@ -33,11 +35,20 @@ export function ResumeCollection({
   onOpen: (id: string) => void;
   onCreate: (source?: Variant) => void;
 }) {
+  const list = useRef<HTMLDivElement>(null);
+  useListEntrance({
+    getElements: () => [
+      ...(list.current?.querySelectorAll<HTMLElement>(
+        ":scope > [data-list-id]",
+      ) ?? []),
+    ],
+    contextKey: "resume-collection",
+  });
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid gap-4 @2xl:grid-cols-2">
+      <div ref={list} className="grid gap-4 @2xl:grid-cols-2">
         {document.variants.map((resume) => (
-          <Card key={resume.id} size="sm">
+          <Card key={resume.id} data-list-id={resume.id} size="sm">
             <CardHeader>
               <CardTitle
                 size="section"
