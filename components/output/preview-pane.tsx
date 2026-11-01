@@ -100,6 +100,9 @@ export function PreviewPane({
           {!autoSync && compiler.stale && !busy && !compiler.error
             ? "Auto-update paused · Refresh to update"
             : statusLabels[compiler.status] || compiler.status}
+          {compiler.status === "initializing" && (
+            <> · First preview may take a moment. You can keep editing.</>
+          )}
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Field orientation="horizontal" className="w-auto">

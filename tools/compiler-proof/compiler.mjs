@@ -38,6 +38,43 @@ export class CompilerError extends Error {
   }
 }
 
+/** Decode compiler resources while allowing navigation and paints between batches.
+ * @param {Array<[string, string]>} encoded Ordered names and padded base64 contents.
+ * @param {AbortSignal} signal Initialization cancellation and timeout signal.
+ * @returns {Promise<Array<[string, ArrayBuffer]>>} Ordered worker-ready resources.
+ * @example const files = await decodeResources(encoded, controller.signal);
+ */
+async function decodeResources(encoded, signal) {
+  const files = [];
+  let batchStarted = performance.now();
+
+  for (const [name, text] of encoded) {
+    signal.throwIfAborted();
+    const padding = text.endsWith("==") ? 2 : text.endsWith("=") ? 1 : 0;
+    const bytes = new Uint8Array((text.length / 4) * 3 - padding);
+    let offset = 0;
+
+    // A multiple of four keeps every base64 chunk aligned, including padding.
+    for (let start = 0; start < text.length; start += 65_536) {
+      signal.throwIfAborted();
+      const binary = atob(text.slice(start, start + 65_536));
+      for (let index = 0; index < binary.length; index++) {
+        bytes[offset++] = binary.charCodeAt(index);
+      }
+
+      if (performance.now() - batchStarted >= 8) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        signal.throwIfAborted();
+        batchStarted = performance.now();
+      }
+    }
+
+    files.push([name, bytes.buffer]);
+  }
+
+  return files;
+}
+
 /**
  * Compile trusted generated source in two local-only WebAssembly workers.
  * Construction does not load the engine. One instance runs one job at a time.
@@ -133,13 +170,7 @@ export class BrowserCompiler {
       .pipeThrough(new DecompressionStream("gzip"));
     const encoded = await new Response(stream).json();
     signal.throwIfAborted();
-    const files = encoded.map(([name, text]) => {
-      const binary = atob(text);
-      return [
-        name,
-        Uint8Array.from(binary, (char) => char.charCodeAt(0)).buffer,
-      ];
-    });
+    const files = await decodeResources(encoded, signal);
     for (const name of ["xetex", "dvipdfm"]) {
       signal.throwIfAborted();
       const worker = new Worker(
