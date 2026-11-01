@@ -373,7 +373,7 @@ export const schema7DocumentSchema = schema6DocumentSchema.extend({
     .max(30),
 });
 
-export const documentSchema = schema7DocumentSchema.extend({
+export const schema8DocumentSchema = schema7DocumentSchema.extend({
   schemaVersion: z.literal(8),
   sections: z
     .array(
@@ -393,5 +393,23 @@ export const documentSchema = schema7DocumentSchema.extend({
             });
         }),
     )
+    .max(30),
+});
+
+export const documentSchema = schema8DocumentSchema.extend({
+  schemaVersion: z.literal(9),
+  variants: z
+    .array(
+      schema8DocumentSchema.shape.variants.element.extend({
+        profileSelection: z.strictObject({
+          email: z.boolean(),
+          phone: z.boolean(),
+          city: z.boolean(),
+          country: z.boolean(),
+          hiddenLinkIds: z.array(id).max(30),
+        }),
+      }),
+    )
+    .min(1)
     .max(30),
 });

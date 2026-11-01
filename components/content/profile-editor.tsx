@@ -33,7 +33,8 @@ export function ProfileEditor({
         <CardDescription className="flex items-center gap-1.5">
           <span>Shared contact details</span>
           <InfoHint label="profile languages">
-            Contact details apply to both languages and all resumes.
+            Contact details are shared across languages and resumes. Choose what
+            appears in each resume under Content &amp; order &gt; Profile.
           </InfoHint>
         </CardDescription>
       </CardHeader>

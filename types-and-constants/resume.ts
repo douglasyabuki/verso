@@ -14,6 +14,24 @@ export const resumeColors = [
 
 export type ResumeDocument = z.infer<typeof documentSchema>;
 
+export type ProfileSelection =
+  ResumeDocument["variants"][number]["profileSelection"];
+
+export const profileContactFields = [
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "city", label: "City" },
+  { key: "country", label: "Country" },
+] as const;
+
+export const defaultProfileSelection: ProfileSelection = {
+  email: true,
+  phone: true,
+  city: true,
+  country: true,
+  hiddenLinkIds: [],
+};
+
 export type Section = ResumeDocument["sections"][number];
 
 export type Entry = Section["entries"][number];

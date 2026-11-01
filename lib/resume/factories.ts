@@ -1,7 +1,11 @@
 import { templateIdentity } from "@/lib/resume/model";
 import { localized } from "@/lib/wording/localization";
 import { defaultSettings } from "@/types-and-constants/output";
-import { type Entry, type ResumeDocument } from "@/types-and-constants/resume";
+import {
+  defaultProfileSelection,
+  type Entry,
+  type ResumeDocument,
+} from "@/types-and-constants/resume";
 import { defaultSectionIcons } from "@/types-and-constants/sections";
 
 /**
@@ -25,7 +29,7 @@ export function createEmptyDocument(): ResumeDocument {
     entries: [],
   }));
   return {
-    schemaVersion: 8,
+    schemaVersion: 9,
     revision: 0,
     template: { ...templateIdentity },
     profile: {
@@ -49,6 +53,7 @@ export function createEmptyDocument(): ResumeDocument {
         id: "general",
         name: "General",
         color: "indigo",
+        profileSelection: structuredClone(defaultProfileSelection),
         sections: sections.map((section) => ({
           sectionId: section.id,
           visible: true,

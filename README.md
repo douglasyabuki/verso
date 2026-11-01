@@ -153,10 +153,16 @@ completion of a browser save dialog cannot be confirmed. Saved work is specific
 to this browser profile and origin: changing the hostname or port opens a separate
 workspace. Use a JSON export/import to move drafts between them.
 
-JSON exports use resume schema 8. Compatible schema-1 through schema-7 backups migrate
+JSON exports use resume schema 9. Compatible schema-1 through schema-8 backups migrate
 on import or browser restoration, preserving wording, IDs, revisions, and review
 flags. Missing historical review snapshots stay unknown until explicitly reviewed;
 schema-1 certification metadata starts unset. Older resumes receive an indigo navigation color and retain their original PDF colors. Unsupported schemas/templates are rejected.
+
+Each resume has a Profile card in Content & order. Choose email, phone, city,
+country, and individual links for both languages without deleting shared Career
+details. The name is always included. All contacts and new links are included by
+default; duplicated resumes keep their selections. Older backups migrate with
+all contacts included. Hidden contact values do not block PDF or LaTeX exports.
 
 Custom career sections have a shared icon selected from 25 career-related choices.
 Click the section heading icon to choose an icon, then Save or Cancel. Saved icons

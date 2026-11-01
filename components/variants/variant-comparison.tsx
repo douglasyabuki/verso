@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { ResumeIcon } from "@/components/variants/resume-icon";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
+import { selectedProfile } from "@/lib/content/profile";
 import { entryLabel } from "@/lib/content/section-fields";
 import { resolveSettings } from "@/lib/output/settings";
 import { plain } from "@/lib/wording/localization";
@@ -45,6 +46,7 @@ import type {
   Span,
   Variant,
 } from "@/types-and-constants/resume";
+import { profileContactFields } from "@/types-and-constants/resume";
 import type { Issue } from "@/types-and-constants/review";
 
 type Cell = {
@@ -58,7 +60,7 @@ type Row = {
   id: string;
   label: string;
   sectionId: string;
-  sectionKind?: Section["kind"] | "summary";
+  sectionKind?: Section["kind"] | "summary" | "profile";
   path?: string;
   entryId?: string;
   cells: Cell[];
@@ -134,6 +136,35 @@ export function VariantComparison({
       ),
     },
   ];
+  const profiles = variants.map((item) =>
+    selectedProfile(document.profile, item),
+  );
+  rows.unshift(
+    ...profileContactFields.map(({ key, label }): Row => ({
+      id: `profile.${key}`,
+      label: `Profile · ${label}`,
+      sectionKind: "profile",
+      sectionId: "profile",
+      cells: variants.map((item, index) => ({
+        status: item.profileSelection[key]
+          ? profiles[index][key]
+            ? `Shown in PDF · ${profiles[index][key]}`
+            : "Included · not provided"
+          : "Hidden from PDF",
+      })),
+    })),
+    ...document.profile.links.map((link): Row => ({
+      id: `profile.links.${link.id}`,
+      label: `Profile · ${link.label || link.url || "Untitled link"}`,
+      sectionKind: "profile",
+      sectionId: "profile",
+      cells: profiles.map((profile) => ({
+        status: profile.links.some((item) => item.id === link.id)
+          ? `Included · ${link.url || "Not provided"}`
+          : "Hidden from PDF",
+      })),
+    })),
+  );
   for (const section of document.sections) {
     rows.push({
       id: section.id,
@@ -404,11 +435,13 @@ export function VariantComparison({
                         wordingPath: row.path,
                         fieldKey: row.path
                           ? `variants.${item.id}.${row.path}.${locale}`
-                          : row.sectionId === "template"
-                            ? row.id
-                            : row.entryId
-                              ? `variants.${item.id}.entries.${row.entryId}`
-                              : `variants.${item.id}.sections.${row.sectionId}`,
+                          : row.sectionKind === "profile"
+                            ? `variants.${item.id}.profileSelection`
+                            : row.sectionId === "template"
+                              ? row.id
+                              : row.entryId
+                                ? `variants.${item.id}.entries.${row.entryId}`
+                                : `variants.${item.id}.sections.${row.sectionId}`,
                       },
                     })
                   }

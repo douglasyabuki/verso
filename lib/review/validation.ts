@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { certificationDateErrors } from "@/lib/content/certification";
+import { selectedProfile } from "@/lib/content/profile";
 import { outputIssue } from "@/lib/review/issues";
 import { plain } from "@/lib/wording/localization";
 import {
@@ -99,6 +100,7 @@ export function validateOutput(
   variant: Variant,
   locale: Locale,
 ): { errors: Issue[]; warnings: Issue[] } {
+  const profile = selectedProfile(doc.profile, variant);
   const errors: Pick<Issue, "path" | "message">[] = [];
   const warnings: Pick<Issue, "path" | "message">[] = [];
   const sharedWarnings: Pick<Issue, "path" | "message">[] = [];
@@ -161,33 +163,29 @@ export function validateOutput(
       const error = urlError(link.url);
       if (error) errors.push({ path: `${path}.${link.id}`, message: error });
     });
-  if (!doc.profile.name.trim())
+  if (!profile.name.trim())
     errors.push({
       path: "profile.name",
       message: "Add your name to generate a PDF.",
     });
-  if (doc.profile.email && !z.email().safeParse(doc.profile.email).success)
+  if (profile.email && !z.email().safeParse(profile.email).success)
     errors.push({
       path: "profile.email",
       message: "Enter a valid email address.",
     });
-  if (doc.profile.phone && !/\d/.test(doc.profile.phone))
+  if (profile.phone && !/\d/.test(profile.phone))
     errors.push({
       path: "profile.phone",
       message: "Include a phone number with digits.",
     });
-  if (doc.profile.country && !/^[A-Z]{2}$/.test(doc.profile.country))
+  if (profile.country && !/^[A-Z]{2}$/.test(profile.country))
     errors.push({
       path: "profile.country",
       message: "Use a two-letter country code, for example BR.",
     });
-  const summary = effectiveWording(
-    doc.profile.summary,
-    variant,
-    "profile.summary",
-  );
+  const summary = effectiveWording(profile.summary, variant, "profile.summary");
   if (plain(summary, locale).trim()) wording(summary, "profile.summary");
-  links(doc.profile.links, "profile.links");
+  links(profile.links, "profile.links");
   for (const selected of variant.sections.filter(
     (section) => section.visible,
   )) {

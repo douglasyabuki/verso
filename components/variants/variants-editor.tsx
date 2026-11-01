@@ -27,6 +27,7 @@ import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
 import { Toggle } from "@/components/ui/toggle";
 import { CareerSectionVisibilityHint } from "@/components/variants/career-section-visibility-hint";
+import { ProfileSelection } from "@/components/variants/profile-selection";
 import { ResumeColorPicker } from "@/components/variants/resume-color-picker";
 import {
   AchievementSelectionActions,
@@ -144,6 +145,12 @@ export function VariantsEditor({
         />
       ) : (
         <>
+          <ProfileSelection
+            document={document}
+            variant={variant}
+            locale={locale}
+            update={update}
+          />
           <Card>
             <CardHeader>
               <div className="flex items-center gap-1.5 text-lg">

@@ -9,10 +9,12 @@ import {
   schema5DocumentSchema,
   schema6DocumentSchema,
   schema7DocumentSchema,
+  schema8DocumentSchema,
   templateIdentity,
 } from "@/lib/resume/model";
 import { defaultSettings } from "@/types-and-constants/output";
 import type { ResumeDocument } from "@/types-and-constants/resume";
+import { defaultProfileSelection } from "@/types-and-constants/resume";
 import { defaultSectionIcons } from "@/types-and-constants/sections";
 
 /**
@@ -54,7 +56,7 @@ export function parseBackup(source: string): ResumeDocument {
     throw new Error(
       "This file is not a supported Verso backup. Choose a JSON backup downloaded from Verso.",
     );
-  if (![1, 2, 3, 4, 5, 6, 7, 8].includes(header.data.schemaVersion))
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(header.data.schemaVersion))
     throw new Error(
       `This backup uses an unsupported format (version ${header.data.schemaVersion}). Open it with a compatible version of Verso. Your current work has not changed.`,
     );
@@ -88,7 +90,9 @@ export function parseBackup(source: string): ResumeDocument {
                 ? schema6DocumentSchema.safeParse(data)
                 : header.data.schemaVersion === 7
                   ? schema7DocumentSchema.safeParse(data)
-                  : documentSchema.safeParse(data);
+                  : header.data.schemaVersion === 8
+                    ? schema8DocumentSchema.safeParse(data)
+                    : documentSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue.path.join(".");
@@ -113,7 +117,8 @@ export function parseBackup(source: string): ResumeDocument {
     migrated.schemaVersion === 5 ? migrateSchema5(migrated) : migrated;
   const layout =
     colored.schemaVersion === 6 ? migrateSchema6(colored) : colored;
-  const doc = layout.schemaVersion === 7 ? migrateSchema7(layout) : layout;
+  const icons = layout.schemaVersion === 7 ? migrateSchema7(layout) : layout;
+  const doc = icons.schemaVersion === 8 ? migrateSchema8(icons) : icons;
   const seen = new Set<string>();
 
   /**
@@ -140,6 +145,15 @@ export function parseBackup(source: string): ResumeDocument {
   }
   for (const variant of doc.variants) {
     unique(variant.id);
+    const profileLinkIds = new Set(doc.profile.links.map((link) => link.id));
+    const hiddenLinkIds = variant.profileSelection.hiddenLinkIds;
+    if (
+      new Set(hiddenLinkIds).size !== hiddenLinkIds.length ||
+      hiddenLinkIds.some((id) => !profileLinkIds.has(id))
+    )
+      throw new Error(
+        `Resume ${variant.name || "Untitled"} has repeated or missing Profile link selections. Choose another Verso backup. Your current work has not changed.`,
+      );
     const bulletIds = new Set(
       doc.sections.flatMap((section) =>
         section.entries.flatMap((entry) =>
@@ -387,19 +401,39 @@ export function migrateSchema6(
 /**
  * Add the existing section icons to a legacy workspace without changing output.
  * @param legacy Validated schema-7 workspace.
- * @returns {ResumeDocument} A validated schema-8 copy with the current default icon on every section.
+ * @returns {z.infer<typeof schema8DocumentSchema>} A validated schema-8 copy with the current default icon on every section.
  * @example const document = migrateSchema7(schema7DocumentSchema.parse(data));
  */
 export function migrateSchema7(
   legacy: z.infer<typeof schema7DocumentSchema>,
-): ResumeDocument {
+): z.infer<typeof schema8DocumentSchema> {
   const validated = schema7DocumentSchema.parse(legacy);
-  return documentSchema.parse({
+  return schema8DocumentSchema.parse({
     ...validated,
     schemaVersion: 8,
     sections: validated.sections.map((section) => ({
       ...section,
       icon: defaultSectionIcons[section.kind],
+    })),
+  });
+}
+
+/**
+ * Preserve legacy output by including every contact field and link in each resume.
+ * @param legacy Validated schema-8 workspace.
+ * @returns {ResumeDocument} A schema-9 copy with independent Profile selections and unchanged shared facts.
+ * @example migrateSchema8(schema8DocumentSchema.parse(data));
+ */
+export function migrateSchema8(
+  legacy: z.infer<typeof schema8DocumentSchema>,
+): ResumeDocument {
+  const validated = schema8DocumentSchema.parse(legacy);
+  return documentSchema.parse({
+    ...validated,
+    schemaVersion: 9,
+    variants: validated.variants.map((variant) => ({
+      ...variant,
+      profileSelection: structuredClone(defaultProfileSelection),
     })),
   });
 }

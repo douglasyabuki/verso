@@ -1,3 +1,4 @@
+import { selectedProfile } from "@/lib/content/profile";
 import { resolveSettings } from "@/lib/output/settings";
 import { templateIdentity } from "@/lib/resume/model";
 import { validateOutput } from "@/lib/review/validation";
@@ -199,31 +200,32 @@ export function renderLatex(
   const settings = resolveSettings(doc, variant, locale);
   const headingHex = pdfColorPresets[settings.headingColor].hex;
   const bodyHex = pdfColorPresets[settings.bodyColor].hex;
+  const profile = selectedProfile(doc.profile, variant);
   const contacts = [
-    doc.profile.city || doc.profile.country
-      ? `${settings.contactIcons === "on" ? "{\\color{icnclr}\\faMapMarker}~" : ""}${escapeLatex(displayLocation(doc.profile.city, doc.profile.country, locale))}`
+    profile.city || profile.country
+      ? `${settings.contactIcons === "on" ? "{\\color{icnclr}\\faMapMarker}~" : ""}${escapeLatex(displayLocation(profile.city, profile.country, locale))}`
       : "",
-    doc.profile.email
+    profile.email
       ? renderLink(
           {
             id: "email",
-            label: doc.profile.email,
-            url: `mailto:${doc.profile.email}`,
+            label: profile.email,
+            url: `mailto:${profile.email}`,
           },
           settings.contactIcons === "on",
         )
       : "",
-    doc.profile.phone
+    profile.phone
       ? renderLink(
           {
             id: "phone",
-            label: doc.profile.phone,
-            url: `tel:${encodeURIComponent(doc.profile.phone.replace(/[^+\d]/g, ""))}`,
+            label: profile.phone,
+            url: `tel:${encodeURIComponent(profile.phone.replace(/[^+\d]/g, ""))}`,
           },
           settings.contactIcons === "on",
         )
       : "",
-    ...doc.profile.links.map((link) =>
+    ...profile.links.map((link) =>
       renderLink(link, settings.contactIcons === "on"),
     ),
   ].filter(Boolean);
@@ -617,8 +619,12 @@ ${
 \color{bodyclr}
 ${settings.headerGap === defaultValue ? `\\begin{${settings.headerAlignment === "center" ? "center" : "flushleft"}}` : `\\par\\begingroup${settings.headerAlignment === "center" ? "\\centering" : "\\raggedright"}`}
 {${typography(settings.nameSize, "\\fontsize{20}{22}\\selectfont", 1.1)}${weight(settings.nameWeight)} ${escapeLatex(doc.profile.name)}\par}
-\vspace{${dimension(settings.nameContactGap, "8pt")}}
-${contacts.join(" \\quad ")}\par
+${
+  contacts.length
+    ? String.raw`\vspace{${dimension(settings.nameContactGap, "8pt")}}
+${contacts.join(" \\quad ")}\par`
+    : ""
+}
 ${settings.headerGap === defaultValue ? `\\end{${settings.headerAlignment === "center" ? "center" : "flushleft"}}` : `\\endgroup\\vspace{${settings.headerGap}pt}`}
 ${body.join("\n\n")}
 \end{document}

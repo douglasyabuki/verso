@@ -3,6 +3,7 @@
 import { useId } from "react";
 
 import { Field, FieldLabel } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { type ResumeColor, resumeColors } from "@/types-and-constants/resume";
 
@@ -17,7 +18,13 @@ export function ResumeColorPicker({
 
   return (
     <Field>
-      <FieldLabel id={labelId}>Color</FieldLabel>
+      <div className="flex items-center gap-2">
+        <FieldLabel id={labelId}>Color</FieldLabel>
+        <InfoHint label="resume color">
+          This color only changes the resume icon in the app. It does not change
+          the resume itself.
+        </InfoHint>
+      </div>
       <ToggleGroup
         multiple={false}
         aria-labelledby={labelId}

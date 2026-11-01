@@ -1,3 +1,4 @@
+import { reconcileProfileSelection } from "@/lib/content/profile";
 import { createEmptyDocument } from "@/lib/resume/factories";
 import { reconcileVariantWording } from "@/lib/wording/wording";
 import { serializeBackup } from "@/lib/workspace/backup";
@@ -224,6 +225,7 @@ export class WorkspaceController {
     if (!this.state.ready || this.state.pending || this.state.replacing) return;
     const document = structuredClone(this.state.document);
     update(document);
+    reconcileProfileSelection(document);
     reconcileVariantWording(this.state.document, document);
     if (serializeBackup(document) === serializeBackup(this.state.document))
       return;

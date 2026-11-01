@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { selectedProfile } from "@/lib/content/profile";
 import { renderLatex } from "@/lib/output/render";
 import { resolveSettings } from "@/lib/output/settings";
 import { effectiveWording, sharedWordingChanged } from "@/lib/wording/wording";
@@ -33,7 +34,9 @@ function snapshotKey(
   return JSON.stringify({
     template: document.template,
     profile: {
-      ...document.profile,
+      ...(variant
+        ? selectedProfile(document.profile, variant)
+        : document.profile),
       summary: variant
         ? effectiveWording(document.profile.summary, variant, "profile.summary")
         : document.profile.summary,

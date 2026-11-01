@@ -14,6 +14,7 @@ import type {
   Section,
   Variant,
 } from "@/types-and-constants/resume";
+import { defaultProfileSelection } from "@/types-and-constants/resume";
 import type { ReviewReturnContext } from "@/types-and-constants/review";
 import { defaultSectionIcons } from "@/types-and-constants/sections";
 
@@ -182,6 +183,7 @@ export function useWorkspaceNavigation({
           id,
           name: "New resume",
           color: "indigo",
+          profileSelection: structuredClone(defaultProfileSelection),
           sections: document.sections.map((section) => ({
             sectionId: section.id,
             visible: true,
