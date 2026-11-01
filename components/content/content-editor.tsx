@@ -322,7 +322,7 @@ export function ContentEditor({
       {entry && (
         <Card key={entry.id} ref={entryForm} className="scroll-mt-4">
           <CardHeader>
-            <CardTitle className="min-w-0 break-words">
+            <CardTitle className="min-w-0 wrap-break-word">
               {entryLabel(entry, section.kind, locale)}
             </CardTitle>
             <CardAction>
