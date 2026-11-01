@@ -79,19 +79,31 @@ export function SidebarSelection({
       const updates = surfaces.map((surface, index) => {
         const target = targets[index];
         if (!target || !origin) return { surface, next: null };
-        const rect = target.getBoundingClientRect();
+        // Entrance animations scale the button without changing its layout.
+        // ResizeObserver does not fire when that scale finishes, so measuring
+        // painted bounds here can leave the surface permanently undersized.
+        let top = 0;
+        let left = 0;
+        for (
+          let element: HTMLElement | null = target;
+          element && element !== container;
+          element = element.offsetParent as HTMLElement | null
+        ) {
+          top += element.offsetTop;
+          left += element.offsetLeft;
+          const parent: Element | null = element.offsetParent;
+          if (parent instanceof HTMLElement && parent !== container) {
+            top += parent.clientTop - parent.scrollTop;
+            left += parent.clientLeft - parent.scrollLeft;
+          }
+        }
         const next = {
           target,
           context: target.closest('[data-sidebar="menu-sub"]')?.id ?? null,
-          top:
-            rect.top - origin.top + container.scrollTop - container.clientTop,
-          left:
-            rect.left -
-            origin.left +
-            container.scrollLeft -
-            container.clientLeft,
-          width: rect.width,
-          height: rect.height,
+          top,
+          left,
+          width: target.offsetWidth,
+          height: target.offsetHeight,
         };
         const previous = history.current.get(surface);
         if (
@@ -101,7 +113,7 @@ export function SidebarSelection({
           )
         )
           return;
-        const from =
+        const painted =
           animate &&
           previous &&
           previous.target !== target &&
@@ -110,7 +122,23 @@ export function SidebarSelection({
           !surface.hidden
             ? surface.getBoundingClientRect()
             : null;
-        return { surface, next, previous, from, rect };
+        const from = painted
+          ? {
+              top:
+                painted.top -
+                origin.top +
+                container.scrollTop -
+                container.clientTop,
+              left:
+                painted.left -
+                origin.left +
+                container.scrollLeft -
+                container.clientLeft,
+              width: painted.width,
+              height: painted.height,
+            }
+          : null;
+        return { surface, next, previous, from };
       });
       // Both indicators finish reading before either surface changes layout.
       updates.forEach((update) => {
@@ -122,7 +150,7 @@ export function SidebarSelection({
           history.current.delete(surface);
           return;
         }
-        const { previous, from, rect } = update;
+        const { previous, from } = update;
         surface.getAnimations().forEach((animation) => animation.cancel());
         surface.hidden = false;
         Object.assign(surface.style, {
@@ -142,14 +170,14 @@ export function SidebarSelection({
           surface.animate(
             [
               {
-                transform: `translate(${from.left - rect.left}px, ${from.top - rect.top}px)`,
+                transform: `translate(${from.left - next.left}px, ${from.top - next.top}px)`,
                 width: `${from.width}px`,
                 height: `${from.height}px`,
               },
               {
                 transform: "translate(0, 0)",
-                width: `${rect.width}px`,
-                height: `${rect.height}px`,
+                width: `${next.width}px`,
+                height: `${next.height}px`,
               },
             ],
             { duration: 250, easing: "ease-out" },
