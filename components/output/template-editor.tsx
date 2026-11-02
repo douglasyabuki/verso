@@ -437,7 +437,12 @@ function LayoutInspector({
       }}
     >
       <CardHeader>
-        <CardTitle size="section">Layout settings</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle size="section">Layout settings</CardTitle>
+          <InfoHint label="layout backups">
+            Layout settings are included in backups.
+          </InfoHint>
+        </div>
         <CardDescription>
           Fine-tune the selected layout. Changes refresh the PDF.
         </CardDescription>
@@ -711,8 +716,7 @@ function LayoutInspector({
       <CardFooter>
         <p className="text-xs text-muted-foreground">
           Current PDF layout: {layoutPaperSizes[output.pageSize].label},{" "}
-          {output.fontSize} pt · Target {output.targetPages} pages. Included in
-          backups.
+          {output.fontSize} pt · Target {output.targetPages} pages.
         </p>
       </CardFooter>
     </Card>
@@ -728,7 +732,12 @@ export function CompilerSettings({
   return (
     <Card>
       <CardHeader>
-        <CardTitle size="section">PDF generation</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle size="section">PDF generation</CardTitle>
+          <InfoHint label="PDF generation time limits">
+            These time limits apply to all resumes and are included in backups.
+          </InfoHint>
+        </div>
         <CardDescription>
           Choose how long to allow PDF tools to start and PDFs to be created.
           Changing these settings restarts the PDF tools.
@@ -791,11 +800,6 @@ export function CompilerSettings({
           )}
         </FieldGroup>
       </CardContent>
-      <CardFooter>
-        <p className="text-xs text-muted-foreground">
-          These time limits apply to all resumes and are included in backups.
-        </p>
-      </CardFooter>
     </Card>
   );
 }

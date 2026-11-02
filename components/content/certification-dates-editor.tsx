@@ -19,6 +19,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -102,11 +103,18 @@ function DateSetup({
   ];
   return (
     <FieldGroup>
-      <FieldDescription>
-        {committed
-          ? "Certification dates are set. Any original date range also appears as Additional dates in the PDF."
-          : "Only the original date range appears in the PDF. Setup changes nothing until you save."}
-      </FieldDescription>
+      <div className="flex items-center gap-2">
+        <FieldDescription>
+          {committed
+            ? "Certification dates are set."
+            : "Using original date range in the PDF."}
+        </FieldDescription>
+        <InfoHint label="certification date setup">
+          Setup changes nothing until you save. When certification dates are
+          set, any original date range also appears as Additional dates in the
+          PDF.
+        </InfoHint>
+      </div>
       {committed && (
         <FieldDescription>
           Issue date: {committed.issued || "Unspecified"}. Expiration:{" "}

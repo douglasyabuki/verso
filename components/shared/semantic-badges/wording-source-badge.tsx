@@ -18,7 +18,7 @@ const wordingSources = {
     icon: Library,
     variant: "outline",
     description:
-      "This resume uses the shared text for this language. Edit it in Career details, or customize it for this resume.",
+      "This resume uses the shared text for this language. Edit and review shared text in Career details, or customize it for this resume.",
   },
   custom: {
     label: "Custom text for this resume",

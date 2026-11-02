@@ -28,7 +28,6 @@ import {
   CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -462,7 +461,8 @@ export function ContentEditor({
                 <>
                   <span>Used across resumes</span>
                   <InfoHint label="content used across resumes">
-                    Changes update every resume that uses this entry.
+                    Changes update every resume that uses this entry. Dates and
+                    links apply to both languages.
                   </InfoHint>
                 </>
               )}
@@ -654,12 +654,6 @@ export function ContentEditor({
               />
             </FieldGroup>
           </CardContent>
-
-          <CardFooter>
-            <p className="text-xs text-muted-foreground">
-              Dates and links apply to both languages.
-            </p>
-          </CardFooter>
         </Card>
       )}
     </div>

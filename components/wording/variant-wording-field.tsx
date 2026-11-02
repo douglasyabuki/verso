@@ -192,11 +192,7 @@ export function VariantWordingField({
             }}
           />
         </WordingComparisonDetails>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Review shared text in Career details.
-        </p>
-      )}
+      ) : null}
       {baselineChanged && override && (
         <Collapsible defaultOpen={showReference}>
           <CollapsibleTrigger

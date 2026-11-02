@@ -16,12 +16,8 @@ import {
   DisclosureLabel,
   disclosureTriggerClassName,
 } from "@/components/ui/disclosure";
-import {
-  FieldDescription,
-  FieldGroup,
-  FieldLegend,
-  FieldSet,
-} from "@/components/ui/field";
+import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { WordingField } from "@/components/wording/wording-field";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import { dateErrors } from "@/lib/review/validation";
@@ -154,21 +150,25 @@ function TailoredFields({
   const dates = (
     <FieldSet>
       <FieldLegend>
-        {certification
-          ? "Original date range"
-          : education
-            ? "Attendance dates"
-            : section.kind === "experience"
-              ? "Employment dates"
-              : section.kind === "projects"
-                ? "Project dates"
-                : "Dates"}
+        <span className="inline-flex items-center gap-2">
+          <span>
+            {certification
+              ? "Original date range"
+              : education
+                ? "Attendance dates"
+                : section.kind === "experience"
+                  ? "Employment dates"
+                  : section.kind === "projects"
+                    ? "Project dates"
+                    : "Dates"}
+          </span>
+          {certification && (
+            <InfoHint label="original date range">
+              Original dates also appear in the PDF as Additional dates.
+            </InfoHint>
+          )}
+        </span>
       </FieldLegend>
-      {certification && (
-        <FieldDescription>
-          Original dates also appear in the PDF as Additional dates.
-        </FieldDescription>
-      )}
       <FieldGroup className="grid gap-4 sm:grid-cols-2">
         <TextField
           fieldKey={`entries.${entry.id}.start`}
@@ -228,8 +228,7 @@ function TailoredFields({
             .slice(0, 100);
         }, group)
       }
-      description="Separate names with commas."
-      hint="Shared across languages. Use the text fields below for details that need translation."
+      hint="Separate names with commas. Shared across languages. Use the text fields below for details that need translation."
     />
   );
   return (
@@ -284,18 +283,20 @@ function TailoredFields({
           open={additionalOpen || additionalHasErrors}
           onOpenChange={setAdditionalOpen}
         >
-          <CollapsibleTrigger
-            render={<Button variant="ghost" size="sm" />}
-            className={disclosureTriggerClassName}
-          >
-            <DisclosureChevron />
-            <DisclosureLabel>Additional details</DisclosureLabel>
-          </CollapsibleTrigger>
+          <div className="flex items-center gap-2">
+            <CollapsibleTrigger
+              render={<Button variant="ghost" size="sm" />}
+              className={disclosureTriggerClassName}
+            >
+              <DisclosureChevron />
+              <DisclosureLabel>Additional details</DisclosureLabel>
+            </CollapsibleTrigger>
+            <InfoHint label="additional details">
+              Filled fields appear in the PDF. Clear them to remove them.
+            </InfoHint>
+          </div>
           <CollapsibleContent keepMounted>
             <FieldGroup className={disclosureGuideClassName}>
-              <FieldDescription>
-                Filled fields appear in the PDF. Clear them to remove them.
-              </FieldDescription>
               {skills && organization}
               {!locationInMain && location}
               {(skills || certification) && dates}

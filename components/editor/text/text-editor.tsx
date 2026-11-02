@@ -18,12 +18,8 @@ import {
   spansToEditorContent,
 } from "@/components/editor/text/text-editor-model";
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -448,7 +444,12 @@ export function TextEditor({
                 }}
               >
                 <Field data-invalid={!!linkError}>
-                  <FieldLabel htmlFor={`${id}-url`}>Link address</FieldLabel>
+                  <div className="flex items-center gap-2">
+                    <FieldLabel htmlFor={`${id}-url`}>Link address</FieldLabel>
+                    <InfoHint label="link address">
+                      Use https, http, mailto, or tel.
+                    </InfoHint>
+                  </div>
                   <Input
                     ref={urlInput}
                     id={`${id}-url`}
@@ -459,16 +460,12 @@ export function TextEditor({
                       setLinkError(undefined);
                     }}
                     aria-invalid={!!linkError}
-                    aria-describedby={`${id}-url-help`}
+                    aria-describedby={linkError ? `${id}-url-help` : undefined}
                     placeholder="https://example.com"
                     autoComplete="off"
                   />
-                  {linkError ? (
+                  {linkError && (
                     <FieldError id={`${id}-url-help`}>{linkError}</FieldError>
-                  ) : (
-                    <FieldDescription id={`${id}-url-help`}>
-                      Use https, http, mailto, or tel.
-                    </FieldDescription>
                   )}
                 </Field>
                 <div className="flex flex-wrap gap-2">

@@ -10,6 +10,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import {
   Select,
   SelectContent,
@@ -74,12 +75,12 @@ export function LinkFields({
       </Field>
       <TextField
         fieldKey={`links.${link.id}.label`}
-        label="Link label"
+        label="Link label (optional)"
         value={link.label}
         maxLength={200}
         onChange={(label, group) => onChange({ ...link, label }, group)}
         placeholder="Professional profile"
-        description="Optional. A blank label displays the link address."
+        hint="A blank label displays the link address."
       />
       <TextField
         fieldKey={`links.${link.id}.url`}
@@ -90,10 +91,13 @@ export function LinkFields({
         error={urlError(link.url)}
         placeholder="https://example.com"
       />
-      <FieldDescription>
-        Labels, types and addresses are shared across resumes. Inclusion applies
-        to both output languages.
-      </FieldDescription>
+      <div className="flex items-center gap-2">
+        <FieldDescription>Shared across resumes</FieldDescription>
+        <InfoHint label="shared links">
+          Labels, types and addresses are shared across resumes. Inclusion
+          applies to both output languages.
+        </InfoHint>
+      </div>
     </FieldGroup>
   );
 }
