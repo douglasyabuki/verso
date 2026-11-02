@@ -1,204 +1,386 @@
-# Resume Manager — Application Requirements
+# Verso — Requirements and implementation order
 
-This checklist defines a complete first release of a personal, cloud-backed resume application. Completion means the application is deployed and the acceptance scenarios at the end pass, not merely that its screens have been implemented.
+Updated: 2026-11-02.
 
-## 1. Product scope and decisions
+This replaces the previous bilingual cloud-release checklist. It defines the next
+local-editor milestone and future account/public-download work, not delivered
+features. README.md describes the current implementation.
 
-The application replaces repeated manual updates to English and Portuguese resumes and the portfolio's downloadable resume. Structured career content is the source of truth; LaTeX produces the PDFs. Everyday editing requires no LaTeX knowledge.
+## Confirmed direction
 
-Working defaults: Next.js with TypeScript; managed authentication and a cloud database; object storage for published PDFs; an existing LaTeX resume adapted into one supported template. These are proposed implementation choices, not requirements to use a specific vendor.
+- Design the app the owner needs, even when that requires replacing or recreating
+  existing features. Current code is a reference and reusable asset, not a product
+  constraint. Preserve user data and safety guarantees, not obsolete architecture.
+- Career details define available information; resumes select what appears;
+  layout controls its presentation. Hiding fields never deletes career data.
+- Address single-language use, languages beyond en-US/pt-BR, differing content and
+  fields across language versions, and the burden of mandatory translation review.
+- Use a language-agnostic model with user-selected languages, no mandatory locales,
+  fixed language count, or hardcoded counterpart. English and Portuguese remain
+  desired output languages through the same extensible mechanisms as other locales;
+  existing support must not dictate the new architecture.
+- Provide a settings menu.
+- Future work: login similar to `temp/dayplan`, authenticated storage through
+  Prisma ORM with Prisma Postgres, and synchronization across tabs and browsers.
+- Future downloadable resumes provide a PDF URL for a specified or latest version.
+- Routes for every view and explicit Save actions remain undecided.
 
-- [ ] Document the selected authentication, database, file-storage, and hosting providers and how they fit together.
-- [ ] Select the LaTeX engine and compilation environment after successfully compiling the existing resume template, including its fonts, packages, links, and Portuguese accents.
-- [ ] Decide whether compilation runs in the browser or in an isolated service. Confirm its compatibility, deployment constraints, and dependency licenses before building the rest of the rendering pipeline around it.
-- [ ] Define the first release as a private personal editor with public, read-only published outputs. Account creation for arbitrary visitors is outside this release.
-- [ ] Record supported browsers, supported page sizes, and the default page-count target. One supported template is sufficient for completion.
+## Recommended design, subject to phase-0 decisions
 
-## 2. Authentication and access from anywhere
+- One language per resume, with independent selection, field visibility, order,
+  wording, and layout; shared Career details retain reusable identities and facts.
+- Optional groups and directional translation relationships between resumes.
+  Independent adaptations need not convey identical content.
+- Layout presets save appearance. Resume starters save initial sections/order,
+  field defaults, and layout. Duplicate resume copies specific content selections.
+- Presets/starters copy configuration on application, without live inheritance.
+- Routes for durable destinations; local state for transient controls and typing.
+- Preserve recoverable editing/autosaving initially; control PDF refresh separately.
+  Measure memory consumption before introducing explicit Save as its remedy.
+- Public latest links follow the latest successfully released version, separately
+  from draft saving. Confirm that meaning before implementing public links.
 
-- [ ] The owner can sign in, sign out, and regain access through the chosen provider's recovery mechanism.
-- [ ] Unauthenticated visitors cannot read drafts, revision history, private assets, or editor settings, or perform mutations.
-- [ ] Ownership is checked on the server or database for every private resource; hiding controls in the interface is not the access-control mechanism.
-- [ ] The owner can open the deployed app on another supported computer and access the latest saved content, templates, and variants.
-- [ ] Expired sessions produce a clear sign-in prompt and preserve recoverable unsaved work without exposing it to another account.
+These are recommendations, not blanket owner approval. Record consequential
+decisions before dependent implementation; do not silently convert proposals into
+confirmed requirements. Future infrastructure choices need not block local work.
 
-## 3. Structured career content
+## Delivery rules
 
-- [ ] Store profile information, contact details, social links, summaries, work experience, projects, education, skills, certifications, and optional custom sections.
-- [ ] Every reusable entry and localized bullet has a stable identifier, so variants and translations remain associated after reordering or renaming.
-- [ ] Shared facts—dates, URLs, technologies, and other nonlocalized fields—are stored once and reused across language versions.
-- [ ] Localized fields support separate `en-US` and `pt-BR` text without duplicating the entire career record.
-- [ ] Dates are stored independently of their displayed language and support ongoing roles and projects.
-- [ ] Entries can be created, edited, reordered, archived, and restored. Permanent deletion explains its effect on resume variants before confirmation.
-- [ ] Required fields, date ranges, and URLs are validated with useful messages beside the relevant inputs.
-- [ ] Structured content and template configuration have an explicit schema version and validated import/export.
+- Work in phase order and dependency order within phases, through complete slices.
+- Phases 0–7 are the proposed next local milestone. Phases 8–11 are future work;
+  wait for owner activation before installing dependencies or building that work.
+- Read root/applicable nested AGENTS.md, relevant installed Next.js guides, and
+  task-specific skills. Preserve framework settings, selected versions, npm lockfile,
+  and generated Next.js guidance. Do not copy Dayplan dependencies wholesale.
+- Root AGENTS.md still describes bilingual schema 1 and local-only scope. Reconcile
+  affected guidance during accepted product changes; this roadmap does not silently
+  override implementation instructions or remove unrelated constraints.
+- Deliver useful editing, accessibility, undo/redo, safe saving, recovery, backups,
+  and deterministic rendering under the target design. Refactor, replace, or rebuild
+  workflows, schemas, review rules, inheritance, and UI where needed; reproducing
+  current behavior is not acceptance unless that behavior serves an accepted
+  requirement. Preserve valuable user data through explicit backup/conversion,
+  and disclose intentionally changed or retired behavior.
+- Automated tests are in scope as of 2026-11-02, superseding the earlier exclusion.
+  Add meaningful behavior/regression coverage alongside each implementation slice.
+  Use Vitest Node for domain rules and controlled async behavior, Vitest Browser
+  Mode for interactive components, and Playwright for complete application flows.
+  Configure missing runners only with real initial coverage; no empty suites,
+  passWithNoTests, or implementation-shaped assertions.
+- Application changes require format:check, lint, typecheck with route generation,
+  and build under repository guidance, plus relevant non-watch automated tests and
+  meaningful manual verification. Confirm executed file/test counts; starter smoke
+  tests alone are not product acceptance coverage. Use isolated databases when
+  database behavior is the contract; mocks do not prove real persistence or OAuth.
+  Documentation-only changes need formatting and local-link validation.
+- Record actual checks, failures, skipped checks, and blocked infrastructure.
+  Builds do not prove browser, PDF, OAuth, synchronization, or database behavior.
+- Update affected project artifacts in the same implementation slice: this
+  checklist and accepted decisions, README usage/setup/current behavior, applicable
+  AGENTS.md and repository skills, architecture/compiler documentation, schema and
+  backup-format documentation, and configuration/environment examples. Update only
+  artifacts affected by the change; distinguish current behavior from future plans.
+  Keep links and examples valid, preserve customizations/generated guidance, and
+  never copy secrets into documentation. Generated outputs follow their existing
+  generation policy. Check off requirements only with recorded acceptance evidence.
 
-## 4. Editing without LaTeX syntax
+## Phase 0 — Decisions and migration plan
 
-- [ ] The main interface uses labeled forms for content and offers a compiled PDF preview alongside or readily accessible from the editor.
-- [ ] The owner can add and reorder achievement bullets, manage links, select sections, and edit translations without entering LaTeX commands.
-- [ ] Supported formatting is intentionally limited and documented, such as plain text, emphasis, and links. Formatting is represented structurally rather than as arbitrary executable LaTeX.
-- [ ] All user-provided text is safely encoded for its LaTeX context, including special characters, accented letters, and link values.
-- [ ] Template controls expose supported choices such as page size, spacing, and typography within validated limits.
-- [ ] Empty optional fields and sections disappear cleanly from generated documents.
-- [ ] The editor remains usable by keyboard, has visible focus states and accessible labels, and works on the screen sizes defined for this release.
-- [ ] Destructive operations have confirmation or recovery, and failed operations do not silently remove content.
+- [ ] P0.1 Audit current career, language, resume, review, layout, backup, navigation,
+      saving, and compiler contracts; document relevant baseline findings.
+- [ ] P0.2 Settle resume/language ownership. Recommended: independent one-language
+      resumes. Compare multilingual resumes with independent per-language selections;
+      obtain the owner's decision before changing dependent contracts.
+- [ ] P0.3 Specify user-selected languages and extensible locale capabilities for
+      wording, labels, formatting, fonts, and compilation. English/Portuguese are
+      desired outputs, not mandatory workspace languages or architectural exceptions.
+      Distinguish editable content, verified PDF support, and interface-language
+      scope; do not promise arbitrary scripts. Do not add Spanish solely to prove
+      extensibility; settle any extra locales and interface localization explicitly.
+- [ ] P0.4 Settle preset/starter scope and whether base career fields means initial
+      field definitions, default visibility, or specific preselected career records.
+- [ ] P0.5 Decide which durable views get routes, deep-link/reload and Back/Forward
+      behavior, and which transient interactions remain local.
+- [ ] P0.6 Decide saving separately from preview: memory edits, recovery, durable
+      save, compilation, and release. If explicit Save wins, define Save/Cancel scope,
+      dirty navigation, validation, undo, failure/retry, conflicts, and shared-edit effects.
+- [ ] P0.7 Specify schema versioning, raw backup, and recovery before migration.
+      Protect valuable data with previewed conversion where meaningful; never
+      reinterpret schema-1 data silently. Do not retain the old schema or behavior
+      merely to simplify compatibility. Explain unsupported/retired metadata and
+      preserve the original backup without overwriting existing work.
+- [ ] P0.8 For one-language resumes, map each bilingual variant to two resumes,
+      preserving valuable career content, associations, selections, and customized
+      wording. Carry over appearance/review metadata only where meaningful under
+      the target design; disclose changes instead of rebuilding obsolete inheritance
+      or review solely for parity. Set collection limits from target needs and
+      conversion size, rather than retaining the existing 30-variant limit by default.
+- [ ] P0.9 Reconcile affected AGENTS.md scope/schema/language guidance with accepted
+      decisions, preserving unrelated rules and generated blocks.
+- [ ] P0.10 Audit existing Playwright coverage and define test boundaries. Before
+      schema conversion, establish meaningful baseline coverage for backup validation,
+      identity/reference integrity, desired output selection/settings, and safe
+      replacement behavior. Configure Vitest Node with these real cases; add Browser
+      Mode when the first interactive slice requires it. Record runner commands,
+      discovery patterns, isolation, and installed-version compatibility. Tests
+      protect accepted contracts and valuable data, not incidental old UI or behavior.
 
-## 5. Bilingual workflow
+Exit: decisions and conversion mapping recorded before dependent code.
 
-- [ ] English and Portuguese wording can be reviewed together or switched without losing editing state.
-- [ ] Editing localized source text marks the associated existing translation as needing review; it does not silently overwrite it.
-- [ ] Missing translations and translations needing review are visibly distinguishable.
-- [ ] The owner can mark a translation reviewed after checking it.
-- [ ] Shared-fact changes appear in both language outputs without manual duplication.
-- [ ] Section headings, date labels, and other template-provided text use the selected output language.
-- [ ] Publishing a language with missing required text is blocked. Outstanding translation-review flags require explicit acknowledgment before publication.
-- [ ] Each language can have different wording lengths and appropriate layout adjustments while referring to the same underlying entries.
+## Phase 1 — Career information and language contracts
 
-Automatic translation is optional. Human-reviewed bilingual content is sufficient for this release.
+- [ ] P1.1 Career details own available sections, fields, facts, and reusable wording.
+      Resume selection and layout do not define which career information can exist.
+- [ ] P1.2 Preserve stable section/entry/field/achievement/link identities through
+      rename, reorder, archive, localization, and conversion; duplication creates
+      independent identities where appropriate.
+- [ ] P1.3 Represent active content languages explicitly. One is sufficient; adding
+      another does not require translating the entire library. Remove fixed-pair
+      assumptions from accepted new contracts.
+- [ ] P1.4 Separate facts from localized display wording. Audit organizations,
+      degrees/titles, locations, headings, and link labels without duplicating records.
+- [ ] P1.5 Define field types/validation from the target information model, reusing
+      existing rules where they fit. If custom field definitions are approved,
+      define types, labels, IDs, order, deletion impact, and output support in Career
+      details; avoid building an incidental unrestricted form designer.
+- [ ] P1.6 Keep interface language distinct from output language. Removing/deactivating
+      a language explains dependent resumes and retained wording without silent deletion.
+- [ ] P1.7 Implement conversion, factories, validation, and backup import/export
+      together. Manually round-trip old/new fixtures on disposable workspaces,
+      preserving the user's original data and recovery path.
+      Add automated conversion/round-trip coverage, including invalid input,
+      meaningful preserved content/associations/customizations, disclosed setting
+      changes, collection expansion, and no mutation
+      of the original workspace on rejection or failed conversion.
 
-## 6. Resume variants
+Exit: single-language data works without a counterpart; extra languages and old
+workspace handling have explicit, safe contracts.
 
-- [ ] The owner can create, name, duplicate, and delete resume variants, such as general, frontend, and backend resumes.
-- [ ] Each variant selects entries and individual bullets from the shared content library and controls their order and section visibility.
-- [ ] Editing a shared entry updates every draft variant that references it; published revisions remain unchanged.
-- [ ] Each variant can generate English and Portuguese outputs using the supported template.
-- [ ] A default public variant is selected explicitly; private or job-specific variants are not exposed accidentally.
+## Phase 2 — Independent resumes and output fields
 
-## 7. Saving, recovery, and version history
+These criteria express the recommended model; revise explicitly if P0.2 selects
+another model.
 
-- [ ] Changes autosave to the cloud, with visible saving, saved, offline, and failed states.
-- [ ] The interface only reports a successful cloud save after the server confirms persistence.
-- [ ] Recoverable local drafts protect edits during connection loss or a page refresh, and the interface distinguishes them from cloud-saved content.
-- [ ] Reconnection retries do not duplicate entries or silently overwrite a newer remote revision.
-- [ ] Concurrent edits from two tabs or devices are detected; the owner can resolve the conflict without losing either version.
-- [ ] Revision history supports inspecting and restoring an earlier saved snapshot. Restoration creates a new current revision.
-- [ ] Signing out or changing accounts clears or appropriately isolates private local caches.
+- [ ] P2.1 Create/name/duplicate/open/delete resumes with a language visible in their
+      collection cards and active header.
+- [ ] P2.2 Independently select/order sections, entries, achievements, contact fields,
+      and relevant career-entry fields. Language resumes can differ without copied facts.
+- [ ] P2.3 Distinguish excluded, empty, required, and unsupported fields. Explain
+      structural minimums; hiding optional values retains their career data.
+- [ ] P2.4 Support customized wording/reset-to-shared and clarify edit scope. Shared
+      facts update dependent drafts; custom text remains. Archive/deletion effects
+      are explicit and recoverable.
+- [ ] P2.5 Provide translated-copy creation using shared career identities with
+      independent selection/presentation. Tracking is separate; no implied automatic translation.
+- [ ] P2.6 Optional grouping organizes without forcing shared content/settings/saves/
+      releases. Comparisons show language/effective content; downloads identify exact snapshots.
 
-Full offline compilation and seamless real-time collaboration are not required.
+Exit: demonstrate English-only use and English/Portuguese resumes with differing
+fields, achievements, ordering, and layout.
 
-## 8. LaTeX generation and compilation
+## Phase 3 — Optional tracking and focused readiness
 
-- [ ] A deterministic renderer converts a specific content revision, variant, locale, and template version into `.tex` source.
-- [ ] Engine, package, font, and template versions are pinned or otherwise controlled so outputs can be reproduced.
-- [ ] Generated files are treated as artifacts; ordinary content edits happen in structured records, and layout changes happen in the template.
-- [ ] The owner can export generated `.tex` and the template assets needed to compile it, subject to font and asset redistribution licenses.
-- [ ] Compilation has visible pending, running, successful, failed, and timed-out states and can be retried.
-- [ ] Compilation errors provide a useful explanation and diagnostic details without exposing secrets or unrelated filesystem information.
-- [ ] A late compilation result cannot replace the preview for a newer edit. The preview identifies its content revision and whether it is out of date.
-- [ ] Compilation uses bounded time, memory, input size, and concurrency. Server-side jobs have isolated temporary files, restricted filesystem/network access, and shell execution disabled unless a narrowly justified implementation requires otherwise.
-- [ ] Temporary compilation files are cleaned up after success or failure, and repeated requests reuse suitable results rather than creating unlimited duplicate jobs.
+- [ ] P3.1 Single-language use has no counterpart tasks or bilingual confirmations.
+      Another language alone creates no equivalence promise or automatic review debt.
+- [ ] P3.2 Explicit directional relationships record source/target IDs/languages and
+      acknowledged source revision, without all-to-all flag propagation.
+- [ ] P3.3 Source changes offer a nonblocking reminder: update, acknowledge keeping
+      the adaptation, or stop tracking. Never overwrite text or acknowledge stale snapshots.
+- [ ] P3.4 Separate translation reminders from shared same-language text changing
+      beneath an override; acknowledging one does not clear the other.
+- [ ] P3.5 Validate required wording only for selected output. Inactive languages,
+      hidden fields, unused entries, and archives do not block the active resume.
+      Invalid selected facts/unsafe selected links remain actionable errors.
+- [ ] P3.6 Active-resume readiness is primary. Any global queue makes unused/archive
+      scope explicit and secondary. Preserve comparison/field navigation; intentional
+      differences and review reminders do not block valid private downloads.
 
-Arbitrary third-party `.tex` imports, unrestricted template execution, and editing a PDF back into structured data are outside the first release.
+Exit: intentional adaptations create no compulsory review debt; opted-in tracking helps.
 
-## 9. PDF preview, navigation, and readability
+## Phase 4 — Layout presets and resume starters
 
-- [ ] The preview displays the actual compiled PDF using a PDF viewer; a separate HTML approximation is not the final acceptance reference.
-- [ ] The viewer supports page navigation, zoom, working hyperlinks, and access to text selection/search through the selected viewer's supported interface.
-- [ ] PDF text is selectable and searchable, including Portuguese accents, punctuation, dates, and technology names.
-- [ ] Email, website, repository, portfolio, and LinkedIn links point to the intended destinations.
-- [ ] PDF metadata includes an appropriate document title, author, and language.
-- [ ] An extracted-text view or equivalent diagnostic makes reading order and missing characters inspectable.
-- [ ] Both languages are checked for sensible text-extraction order; essential information is not conveyed only through icons, graphics, or visual positioning.
-- [ ] The app shows the compiled page count and warns when it exceeds the configured target. It does not silently remove content to fit.
-- [ ] Representative PDFs have no clipped text, overlapping elements, broken characters, unintended blank pages, or detached headings.
-- [ ] Check and document assistive-technology reading behavior. Do not claim PDF/UA conformance or universal recruitment-system compatibility without the corresponding validation.
+Implement P0.4's accepted scope. Presets are distinct from template engines. Reuse
+or adapt the bundled renderer where it fits; replace relevant rendering mechanisms
+when necessary for the accepted language/field/layout design. This does not imply
+adding a freeform designer or marketplace.
 
-Text-extraction checks are a diagnostic for machine readability, not a guarantee that every applicant tracking system will interpret the PDF identically. If formal tagged-PDF accessibility is a release requirement, select a compatible template/toolchain and add explicit conformance acceptance tests before implementation.
+- [ ] P4.1 Layout controls positioning, typography, paper, spacing, and colors of
+      selected fields. Switching layout preserves data/selections and explains unsupported fields.
+- [ ] P4.2 Save/name/apply/duplicate/delete layout presets with preview/undo. Presets
+      contain appearance, not private career text or source-resume references.
+- [ ] P4.3 Save/use starters with approved sections/order, field defaults, and layout.
+      Any included field definitions reconcile without ID collisions or silent replacement.
+- [ ] P4.4 Keep selected jobs/achievements/custom wording in Duplicate resume unless
+      content-bearing starters are separately approved and labeled.
+- [ ] P4.5 Copy settings on application. Editing/deleting starters does not mutate
+      existing resumes or add live inheritance/review obligations.
+- [ ] P4.6 Offer starters in Create resume and presets in Layout. Include them in
+      backup/recovery/undo. Map useful existing appearance settings where practical
+      and disclose changed output; do not recreate four-scope inheritance solely for parity.
 
-## 10. Downloads and backups
+Exit: reusable structure/appearance never owns career data or unexpectedly changes resumes.
 
-- [ ] The owner can download either language's PDF and generate/download both language outputs in one action.
-- [ ] Filenames clearly identify the resume owner, locale, and variant where appropriate.
-- [ ] PDF downloads correspond to an identifiable content/template revision and never silently mix old and new language outputs.
-- [ ] A complete editable backup can be exported, including structured content, translations, variants, settings, and required template/assets or references to their bundled versions.
-- [ ] Backup import validates its schema before modifying data and reports incompatible or malformed files clearly.
-- [ ] Import explains whether it replaces or merges data, preserves a recovery snapshot, and does not publish imported content automatically.
-- [ ] An exported backup can restore a working private draft in a clean test account or clean application environment.
+## Phase 5 — Settings and navigation
 
-## 11. Publication lifecycle
+- [ ] P5.1 Discoverable settings menu covers appearance, content languages, editing/
+      preview, data/backups, and defaults. Account controls wait for account implementation.
+- [ ] P5.2 Distinguish local preferences, document configuration, and future account
+      settings; state backup/sync scope. Consolidate controls without losing recovery or diagnostics.
+- [ ] P5.3 Implement P0.5. Routes, if adopted, support deep links, reload, Back/Forward,
+      validated IDs, and useful missing-resource states. Never expose resume text/secrets in URLs.
+- [ ] P5.4 Establish coherent workspace/controller ownership and compiler lifecycle;
+      protect edits, focus,
+      scroll, issue links, narrow-screen access, and dirty-edit policy across navigation.
+      If navigation remains local, document its limitations rather than adding fake URLs.
 
-- [ ] Draft saves and public publication are separate actions.
-- [ ] Publication presents the selected variant, locales, public fields, and the exact revisions being released for review.
-- [ ] Published data is selected through an explicit public-field schema; private editor fields, history, and internal notes are excluded.
-- [ ] The app compiles and validates all selected outputs before switching the public publication pointer.
-- [ ] A failed publication leaves the previous working public release available. Visitors never receive a partially updated release.
-- [ ] Published JSON and PDFs reference the same immutable release identifier.
-- [ ] Published PDFs are stored and served as artifacts rather than compiled for every visitor request.
-- [ ] The owner can inspect publication history, roll back to a previous complete release, and unpublish current outputs with clearly explained behavior.
-- [ ] Historical asset visibility and retention are defined; unpublishing removes intended public access rather than merely hiding a link in the editor.
+Exit: settings/navigation consistently follow the recorded policy.
 
-## 12. Public API and portfolio integration
+## Phase 6 — Saving and bounded PDF resources
 
-- [ ] Provide a documented, versioned public JSON endpoint for each supported locale of the selected published variant, for example `/api/public/v1/resume?locale=en-US`.
-- [ ] Provide stable public PDF URLs or endpoints for both locales, with documented behavior for unsupported locales and missing/unpublished releases.
-- [ ] Public responses expose only approved published content and require no secret embedded in the portfolio frontend.
-- [ ] Configure CORS for browser-based JSON requests from the production portfolio and explicitly supported development origins. Required preflight requests work.
-- [ ] Private endpoints enforce authentication and ownership independently of CORS; CORS is not treated as authorization.
-- [ ] PDF endpoints return correct content types, useful filenames, and download headers where download behavior is intended.
-- [ ] Responses use appropriate caching/version identifiers, with a documented bound on how long visitors can see an older release after publication.
-- [ ] The existing Vite portfolio displays its resume content from the published JSON and links its English and Portuguese download controls to the published PDF URLs.
-- [ ] The portfolio has loading, unavailable, and empty states, and a deliberate fallback such as the last successfully published content.
-- [ ] The production Vite portfolio can consume the deployed Next.js endpoints without authentication prompts or CORS failures.
-- [ ] Publishing a new revision updates the portfolio within the defined cache window without manually replacing files or redeploying the portfolio.
+Saving less often does not prove lower PDF memory use. Persistence, history,
+compilation, and rendering consume different resources.
 
-Updating a separate portfolio repository is part of integration acceptance, even if that work happens outside this app's repository.
+- [ ] P6.1 Measure extended sessions: compilers, pending work, retained PDFs, viewer
+      documents/workers/canvases, object URLs, and history bounds where inspectable.
+- [ ] P6.2 Follow P0.6 with distinct truthful recovery, save, preview, backup, and
+      future release statuses.
+- [ ] P6.3 Manual refresh is independent of saving. Optional automatic refresh
+      compiles only active output-affecting changes.
+- [ ] P6.4 Bound concurrent/pending work, supersede stale requests, reject late results,
+      release obsolete PDF/worker/canvas/URL resources, and define hidden-preview behavior.
+- [ ] P6.5 Preserve a labeled last successful preview on failure, identifying revision,
+      stale state, diagnostics, and retry.
+- [ ] P6.6 If explicit Save is approved, implement agreed Save/Cancel, recovery, dirty
+      navigation, validation, undo, and conflicts. Save without compile is possible;
+      refresh/export identify draft versus committed snapshot use.
+- [ ] P6.7 Ensure coordinated conditional guest writes/replacements, session-only
+      recovery, and other-tab conflict protection regardless of save mode. Reuse
+      Web Locks/reviewed tokens or replace them with verified equivalent safeguards;
+      the safety contract matters more than preserving implementation details.
+- [ ] P6.8 Manually verify rapid edits/switches, hidden previews, failures/timeouts,
+      and long sessions against recorded resource bounds.
 
-## 13. LinkedIn assistance
+Exit: deliberate saving behavior and evidenced bounded preview resources.
 
-- [ ] Generate copy-ready localized summaries, experience descriptions, and project text from the shared content.
-- [ ] The owner can compare relevant changes against a snapshot previously marked as copied to LinkedIn.
-- [ ] The owner can mark the current LinkedIn text as manually applied, recording the corresponding revision and date.
-- [ ] The interface clearly states that copying or marking text does not itself update LinkedIn.
+## Phase 7 — Local acceptance and documentation
 
-Direct LinkedIn account integration and automatic posting/profile updates are outside this release.
+- [ ] P7.1 Verify one-language onboarding/editing/export, independent language resumes,
+      visibility/order, shared facts, custom wording, and optional tracking.
+- [ ] P7.2 Verify each added output language's labels, dates/regions, fonts, hyphenation/
+      direction where applicable, metadata, links, selectable/searchable text, and layout.
+      Clearly disable unsupported PDF output instead of silently using wrong labels/glyphs.
+- [ ] P7.3 Verify approved presets/starters, settings, routing, save/preview, undo,
+      keyboard access, and narrow layouts.
+- [ ] P7.4 Restore old-converted/new backups on disposable origins; verify identities,
+      wording, order/selection, appearance, and recovery. Invalid imports preserve current
+      work; imports never publish anything.
+- [ ] P7.5 Inspect actual PDFs with accents/special characters, long titles/URLs,
+      optional omissions, and page overflow; exercise failure/stale results. Page counts
+      do not prove clipping detection, PDF/UA, or universal ATS compatibility.
+- [ ] P7.6 Run required static checks/build, record manual evidence/limitations, update
+      README/applicable guidance and all other affected project artifacts.
+- [ ] P7.7 Run relevant Node, browser-component, and application-flow suites with
+      actual file/test/pass/fail/skip counts. Cover single-language use, independent
+      selection, optional tracking, persistence conflicts/recovery, stale compiler
+      results, and approved navigation/save behavior at appropriate boundaries.
+      Test observable contracts with independent expectations, not private structure;
+      retain manual visual/PDF inspection and do not hide failures with skips/retries.
 
-## 14. Reliability, privacy, and deployment
+Exit: verified local milestone. Future phases await explicit activation.
 
-- [ ] The app, database, asset storage, and chosen compiler are deployed and reachable through production HTTPS URLs.
-- [ ] Database setup, environment configuration, and deployment steps are documented and repeatable.
-- [ ] Secrets remain server-side; database and storage permissions are verified using unauthenticated and unauthorized requests.
-- [ ] Uploaded files, imported backups, and compilation inputs have validated types and size limits. Displayed links accept only intended URL schemes.
-- [ ] Compilation and mutation endpoints have appropriate abuse controls and request limits, and authenticated browser mutations have protections appropriate to the selected session model.
-- [ ] Logs identify failed saves, compilation jobs, and publications without routinely recording private resume content, session credentials, or secrets.
-- [ ] A health check or monitoring mechanism makes production failures discoverable.
-- [ ] Database and file backups have a retention policy, and at least one recovery exercise has been completed.
-- [ ] The owner can export and delete personal content, with documented treatment of published artifacts and retained backups.
-- [ ] Define measurable save, preview, and public-download response targets; measure them against representative resumes on the selected production infrastructure.
-- [ ] Setup documentation covers local development, compilation dependencies, backups, restore, deployment, and common failure recovery.
+## Phase 8 — Future authentication and Prisma Postgres storage
 
-## 15. Agent guidance and maintainability
+Prerequisites: stable local model, owner activation, approved infrastructure. Read
+auth/persistence and Prisma setup skills before implementation.
 
-- [ ] Repository `AGENTS.md` records the source-of-truth model, generated-file policy, supported locales, architecture boundaries, and required verification commands.
-- [ ] A repository skill at `.agents/skills/resume-latex/SKILL.md` documents template editing, compilation, font/package conventions, and PDF verification.
-- [ ] The skill requires checking both language outputs after template changes, including visual inspection, links, and extracted text.
-- [ ] Repeatable compilation and validation are available as scripts or tests; application operation does not depend on an AI agent following a skill.
-- [ ] Automated checks cover access control, content validation, locale/variant rendering, special-character encoding, publication consistency, and public API contracts.
-- [ ] Automated integration checks cover save recovery/conflicts and compiler/publication failures without replacing visual review of representative PDFs.
-- [ ] Reference fixtures include Portuguese accents, LaTeX special characters, long titles, long URLs, empty optional fields, and content near page boundaries.
+- [ ] P8.1 Inspect Dayplan login, isolation, guest import, recovery, and revision-aware
+      saving as references. Verify source/selected-version official docs; do not blindly
+      copy credentials, versions, schemas, or stale README claims. Better Auth
+      Google/GitHub is the reference direction.
+- [ ] P8.2 Record provider/access policy, sessions, runtime/hosting, Prisma version/
+      driver, and Prisma Postgres connection choice. Keep secrets/auth/clients server-only.
+- [ ] P8.3 Implement login/logout/expiry recovery/account settings and server ownership
+      checks for every private read/write; guessed IDs cannot expose drafts.
+- [ ] P8.4 Persist validated user-owned career data, resumes, relationships, starters/
+      presets, and applicable settings. Choose snapshot versus normalized storage from
+      actual consistency/query needs.
+- [ ] P8.5 Confirm durable writes after acknowledgment; revision checks and idempotent
+      operations prevent stale overwrites/duplicate retries.
+- [ ] P8.6 Preserve guest use and explicit previewed import. Login never silently
+      merges/replaces account work; define mapping, retries, and cleanup preserving newer guest edits.
+- [ ] P8.7 Isolate caches/recovery by account/workspace. Logout/switching preserves or
+      resolves pending work without cross-account exposure; guest data stays separate.
+- [ ] P8.8 Add isolated-database integration coverage for ownership, durable writes,
+      stale revisions, idempotent retries, import, and account isolation; use controlled
+      provider-boundary tests for deterministic auth behavior. Manually verify real
+      callbacks/expiry. Record blocked infrastructure rather than claiming completion.
 
-## 16. End-to-end completion scenarios
+## Phase 9 — Future tab, browser, and device sync
 
-Check these only against the deployed application and integrated portfolio.
+Guest tab coordination remains local scope. Browser/device sync needs authenticated
+shared storage; localStorage alone cannot provide it.
 
-- [ ] **Initial setup:** Sign in, enter resume content, review both translations, and generate PDFs matching the required template behavior.
-- [ ] **One edit, multiple outputs:** Add a project once, enter its English and Portuguese wording, select it in a variant, and generate both PDFs without editing LaTeX.
-- [ ] **Translation maintenance:** Change an English bullet, see the Portuguese review flag, update that translation, and clear the flag without changing shared facts twice.
-- [ ] **Cross-device use:** Save an edit on computer A, open computer B, and find the latest saved content and working preview.
-- [ ] **Interrupted saving:** Lose connectivity during editing, refresh if supported by the local-draft design, recover the draft, reconnect, and save without data loss.
-- [ ] **Conflicting edits:** Edit the same record in two tabs/devices and resolve the conflict without silently discarding either version.
-- [ ] **Private drafts:** Edit a published project and verify that visitors still see the previous release until a new publication is completed.
-- [ ] **Publication:** Publish both languages, confirm JSON and PDFs belong to the same release, and see the updated portfolio without replacing files or redeploying it.
-- [ ] **Failed publication:** Trigger a controlled compilation/storage failure and confirm the previous public release remains usable.
-- [ ] **Rollback:** Restore a prior public release and confirm the portfolio and both PDF links resolve consistently to it after the documented cache window.
-- [ ] **PDF quality:** Verify both languages visually, inspect extracted text, test links/search/selection, and resolve page overflow or explicitly accept it.
-- [ ] **LinkedIn workflow:** Copy updated text, apply it manually, and mark the matching revision as applied.
-- [ ] **Backup recovery:** Export editable data, restore it into a clean environment, and regenerate the selected bilingual variant successfully.
-- [ ] **Access control:** Confirm a visitor can retrieve public outputs while private data and mutations remain inaccessible.
-- [ ] **Operational readiness:** Complete deployment, recovery documentation, monitoring, license review, and the required automated checks with no unresolved release-blocking failures.
+- [ ] P9.1 Detect revisions on focus/reconnect and a documented periodic/event mechanism;
+      specify/measure freshness and apply clean updates without discarding dirty drafts.
+- [ ] P9.2 Coordinate local tabs; server revision checks remain authoritative across
+      browsers/devices. Web Locks cannot prevent cross-device conflicts.
+- [ ] P9.3 Preserve local/remote conflict versions with comparison, export, reload,
+      and explicit resolution; no silent full-workspace last-writer-wins.
+- [ ] P9.4 Recover edits through network loss/refresh and retry safely. Bound recovery/
+      history retention; restoration creates a new revision. Define settings sync scope.
+- [ ] P9.5 Verify separate tabs/browser profiles/devices, simultaneous saves, sleeping
+      tabs, offline recovery/retries, account changes, and expiry.
+      Automate reproducible conflict, stale-response, retry, and recovery scenarios;
+      retain manual checks across actual browsers/devices.
 
-## Explicitly deferred features
+Full coauthoring and automatic semantic merging are not required.
 
-The following are not needed to call this release complete: public SaaS registration, billing, collaborative editing, arbitrary LaTeX project imports, a template marketplace, direct editing of PDF contents, automatic translation or AI rewriting, automatic LinkedIn updates, additional output languages, and formal PDF/UA certification unless separately adopted as a requirement.
+## Phase 10 — Future downloadable resumes and versioned URLs
 
-Any deferred feature added later should receive its own acceptance criteria rather than silently expanding this checklist.
+Prerequisites: accounts, persistence, hosted artifacts, and explicit latest policy.
+A local blob URL is not a public share URL.
+
+- [ ] P10.1 Owner marks a specific resume downloadable after reviewing its selected
+      public content/language; private resumes remain private.
+- [ ] P10.2 Store immutable PDF releases identifying resume/content revision, locale,
+      template/runtime, settings, and artifact. Compile/store before exposure, not per visitor.
+- [ ] P10.3 Provide pinned and stable latest URLs. Recommended latest advances through
+      explicit release of a valid saved snapshot. Automatic saved-version release, if
+      chosen, needs explicit opt-in/privacy semantics; typing is never implicit publication.
+- [ ] P10.4 Advance latest atomically after successful validation/storage. Failure
+      preserves the old link; pinned bytes never silently change. Drafts/presets/imports
+      cannot mutate existing release artifacts.
+- [ ] P10.5 Expose only released PDFs/intended metadata, not editable backups, career
+      libraries, internal names, or private data. Define public versus unlisted access;
+      unlisted URLs are not authentication.
+- [ ] P10.6 Provide copy-link, history, latest inspection, retained-release rollback,
+      disable/revoke controls, and defined deletion/retention/missing-link behavior.
+      Define cache invalidation; downloaded files cannot be recalled.
+- [ ] P10.7 Serve correct PDF type, attachment disposition, filenames, and version-aware
+      caching with a documented latest-link freshness bound.
+- [ ] P10.8 Verify hosted anonymous downloads, denied private access, pinned stability,
+      latest advancement/failure, rollback, revocation, caches, and artifact/cost bounds.
+      Add integration/application-flow coverage for release atomicity, authorization,
+      pinned/latest behavior, and failed publication preserving the previous release.
+
+## Phase 11 — Future hosted-release readiness
+
+- [ ] P11.1 Document hosting/env/callbacks, Prisma migrations, artifact permissions,
+      compiler assets, and recovery. No destructive setup against shared/production data.
+- [ ] P11.2 Define account/artifact deletion, backup/log retention, restore procedures;
+      perform a recovery exercise.
+- [ ] P11.3 Bound input/backup sizes, compilation, mutation/download abuse, and artifacts
+      without routinely logging private resume content.
+- [ ] P11.4 Verify HTTPS, ownership/origin protections, isolation, caching, browsers,
+      and measured save/sync/preview/download targets.
+- [ ] P11.5 Record actual hosted acceptance and limitations in project documentation; local
+      screens or mocks are not deployment evidence.
+
+## Deferred unless separately requested
+
+Portfolio JSON/public APIs and other-repository integration; LinkedIn assistance;
+automatic translation/AI rewriting; arbitrary LaTeX imports/executable user templates;
+template marketplace/freeform designer; billing; coauthoring; all-script PDF promises;
+formal PDF/UA; automatic public release of drafts.
+
+These are not prerequisites for the local-editor or public-PDF-link milestones.

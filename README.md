@@ -254,11 +254,18 @@ URL history entries or shareable links to individual views yet.
 | `npm run lint`             | Lint source and import ordering                           |
 | `npm run typecheck`        | Run Next.js route type generation and TypeScript          |
 | `npm run build`            | Produce a production build                                |
+| `npm test`                 | Run the current Playwright application checks             |
 | `npm start`                | Serve the production build                                |
 
-Automated tests are excluded from this implementation. Existing Playwright
-scripts remain available but are not product acceptance coverage. Use the bundled
-fictional example on a disposable localhost origin for manual verification.
+Automated tests are in scope for ongoing implementation. Currently `npm test`
+runs Playwright against a fresh production build/server on localhost:3100. The
+existing scaffold test still asserts starter-page content and needs to be updated
+for the actual application; it is not product acceptance coverage. Vitest Node and
+browser-component projects are not yet configured. Add meaningful domain,
+interaction, and application-flow coverage alongside the roadmap's implementation,
+starting with baseline checks before schema conversion. Run targeted non-watch
+tests and confirm file/test counts. Use the bundled fictional example on a
+disposable localhost origin for complementary manual verification.
 Static checks and production builds do not establish browser behavior. Safari and
 assistive-technology compatibility remain unverified; no PDF/UA or universal ATS
 compatibility is claimed.
