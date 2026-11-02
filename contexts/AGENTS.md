@@ -1,5 +1,7 @@
 # Workspace coordination contexts
 
+- The topology below describes current implementation, not a requirement to retain obsolete workflows. Follow docs/requirements.md for durable routing, dirty-form guards, explicit Save/Cancel, and committed-only preview. Navigation cannot discard drafts implicitly; defer tracking and review acknowledgment workflows.
+
 - Own React workflow coordination and expose it to connected presentation components. Keep the persistent document, commands, subscriptions, and storage lifecycle in `stores/workspace/`; never copy store snapshots into context state.
 - Mount workflow, output, and backup providers once after readiness, in that order, without destination-dependent keys or preview-dependent mounting. Providers render providers and children; product UI belongs in `components/`.
 - Navigation remains the sole owner of destinations, review contexts, career editor contexts, and return destinations. Editor review hooks derive context and coordinate updates through navigation; they do not introduce another review state owner.

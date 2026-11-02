@@ -5,6 +5,24 @@ TypeScript, Tailwind CSS 4, and Base UI shadcn components. Edit structured caree
 content, review English/Portuguese wording, tailor resumes, and generate actual
 LaTeX PDFs entirely in the browser.
 
+## Target roadmap status
+
+[Requirements](docs/requirements.md) contains the complete contracts and roadmap
+for independent one-language resumes, explicit form
+Save/Cancel, durable routes, and separate preview refresh. Tracking and groups are
+deferred. Phase 0 is complete as a decision specification, including storage, format, capacity,
+and performance targets; these changes are not implemented or runtime-verified. The usage
+and architecture sections below describe the current application.
+
+The target supports workspace schema 2 only. Schema-1 compatibility, conversion,
+and legacy regression tests are out of scope for this development-only app.
+The current schema-1 behavior below describes existing code until replacement.
+
+Target guest Saves commit to IndexedDB. Future authenticated Saves will send
+explicit edits immediately to PostgreSQL, with local recovery and safe retries;
+account-save success requires server acknowledgment. Typing remains local recovery
+only. Authentication and account persistence remain future implementation scope.
+
 ## Local setup
 
 Use Node.js 20.19+ and npm 11.3.0, plus Python 3.12+ for compiler asset preparation.
@@ -263,7 +281,7 @@ existing scaffold test still asserts starter-page content and needs to be update
 for the actual application; it is not product acceptance coverage. Vitest Node and
 browser-component projects are not yet configured. Add meaningful domain,
 interaction, and application-flow coverage alongside the roadmap's implementation,
-starting with baseline checks before schema conversion. Run targeted non-watch
+starting with target-contract checks alongside schema-2 implementation. Run targeted non-watch
 tests and confirm file/test counts. Use the bundled fictional example on a
 disposable localhost origin for complementary manual verification.
 Static checks and production builds do not establish browser behavior. Safari and
@@ -280,8 +298,8 @@ covered by the repository's `resume-latex` skill. The
 [browser compilation milestone](docs/compilation-proof.md) documents the pinned
 bundle, standalone demonstration, and recorded compiler verification.
 
-[Product requirements](docs/requirements.md) describe a broader cloud-backed
-release roadmap; the current implementation is the local-only workspace described
+[Product requirements](docs/requirements.md) describe the local-editor milestone and future account/public-download
+roadmap; the current implementation is the local-only workspace described
 above.
 
 ## Structured resume links

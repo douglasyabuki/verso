@@ -1,5 +1,7 @@
 # Application state stores
 
+- Current controller/storage arrangements are baseline descriptions. Target rules in docs/requirements.md separate local form drafts/recovery from committed workspace content. Typing/reordering does not commit, persist workspace content, compile, or add workspace undo steps. Save validates and commits one scope; failures retain drafts. Recovery must not be reported as saved work. Use the specified IndexedDB transactions for the schema-2-only target; no schema-1 compatibility or legacy regression suite is required.
+
 - Group modules by state owner or domain. `workspace/` owns the tab-scoped resume workspace. Create additional folders only for implemented responsibilities; do not add placeholder adapters or future account stores.
 - Include application state ownership, commands, subscriptions, lifecycle coordination, persistence, and thin React provider/context adapters. Keep pure domain operations in `lib/`, shared contracts in `types-and-constants/`, interaction hooks in `hooks/`, and presentation in `components/`.
 - Separate framework-independent code from React adapters: `workspace/controller.ts` owns observable state and commands, `workspace/persistence.ts` owns browser storage access, and `workspace/provider.tsx` owns React context and lifecycle listeners. Controllers and persistence must not import React, components, or hooks. Apply client boundaries only to modules that need them.

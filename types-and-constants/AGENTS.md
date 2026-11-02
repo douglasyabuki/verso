@@ -1,5 +1,7 @@
 # Shared types and constants
 
+- Fixed locales and schema-derived contracts below describe the baseline. Target contracts follow docs/requirements.md: one language per resume, extensible languages, explicit output capabilities, and separately owned drafts/recovery. Do not encode a mandatory locale pair or deferred review relationships in new contracts.
+
 - Group files by cohesive responsibility, keeping related types and constants together. Add a file only for a distinct responsibility with real consumers; do not create files for individual nested document types.
 - `languages.ts` owns the ordered locales, locale type, language names, and flag mappings. Keep it independent of resume contracts.
 - `resume.ts` owns schema-derived document and wording contracts, localized field descriptors, document updates, and resume colors. Keep nested document types together here.

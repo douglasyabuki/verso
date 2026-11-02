@@ -19,15 +19,19 @@ Reviewed against installed `@dnd-kit/react` and `@dnd-kit/dom` **0.5.1**, React 
 
 ## Verso interaction contracts
 
+Current variants/schema references below describe the baseline. Follow
+`docs/requirements.md` for target one-language resumes and form Save/Cancel.
+Do not preserve old commit timing or private array structure as product constraints.
+
 - Content shows entries and achievements in library order. Variants shows selected entries and achievements in variant output order, followed by unselected items in library order. Selection indicators remain visible in Content.
 - Library entry moves touch only `section.entries`; library achievement moves touch only `entry.bullets`. Variant moves touch only the active variant's section/entry references or `bulletIds`. Never rewrite another variant or library order as a consequence of a variant move.
 - Sort only within the same list. Excluded variant entries and achievements are selection controls, not sortable destinations. Keep registration IDs and rendered indexes consistent with each sortable group; use separate group identities for sections, entries, and achievements.
 - Render excluded items without a sortable hook rather than registering them with `disabled: true`: in 0.5.1 the optimistic sorting plugin enumerates every registered sortable droppable, including disabled ones, when constructing its group order.
 - When search/archive filters hide entries, reorder visible IDs among their original slots. Hidden IDs retain their positions. Dragging and move buttons must call the same pure operation.
-- Preserve the active source through feedback. Keep preview state transient; commit once on a valid completed drop through `WorkspaceEdit`. No persistence on hover. If using default optimistic sorting, do not layer React-owned speculative reordering on top of it.
+- Preserve the active source through feedback. Keep preview state transient; apply a valid completed drop once to the owning form draft. Persist and add a workspace undo step only on explicit form Save; Cancel restores selection/order together. No persistence on hover or drop. If using default optimistic sorting, do not layer React-owned speculative reordering on top of it.
 - Cancel/no-op drops and invalid destinations must not edit. Cancel when navigating, changing visible membership, undoing/redoing, or replacing the workspace. Reject deferred commits against stale document identity; avoid nested-source teardown updates during insertion effects.
 - Keep handles separate from inputs, rich text, checkboxes, links, and other buttons. Keep touch scrolling available outside handles. Retain labeled move-up/down alternatives, focus restoration, instructions, and position announcements.
 
 ## Validation
 
-Follow the repository exclusion of automated tests: do not add or run them. Run format checking, lint, route type generation/type checking, and a production build. Manually check pointer and keyboard sorting, touch when available, nested lists, filtering with hidden IDs, cancellation/outside drops, no-op drops, undo/redo, focus and announcements, local save/reload, and two variants' independent output order. Watch for duplicate registration, React insertion-effect warnings, stale feedback, or accidental edits from ordinary controls. Report unverified browser/device behavior explicitly.
+Automated tests are authorized. Read vitest-testing; cover reorder/filter/cancel behavior, keyboard alternatives, and Save/Cancel draft boundaries. Phase 0 specifies tests only; add runners with real coverage during phase 1. Run format checking, lint, route type generation/type checking, and a production build. Manually check pointer and keyboard sorting, touch when available, nested lists, filtering with hidden IDs, cancellation/outside drops, no-op drops, undo/redo, focus and announcements, local save/reload, and two variants' independent output order. Watch for duplicate registration, React insertion-effect warnings, stale feedback, or accidental edits from ordinary controls. Report unverified browser/device behavior explicitly.

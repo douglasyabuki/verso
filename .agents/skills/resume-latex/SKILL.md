@@ -9,9 +9,16 @@ Read `docs/compilation-proof.md` before changing the compiler or bundle and
 `lib/output/render.ts` before changing generated source. The reference is the
 owner's Overleaf project/PDF pairs under `temp/`, not a newly designed template.
 
-- Structured schema-1 data is the source of truth. Preserve IDs, shared facts,
-  `en-US`/`pt-BR` wording, and safe text/URL encoding. Never make raw LaTeX an
-  editable content field.
+- Schema 1 and en-US/pt-BR describe the current baseline. Target requirements in
+  docs/requirements.md supersede fixed-pair/schema assumptions: one language
+  per resume and extensible capabilities. Schema 2 is the only target workspace
+  schema; no schema-1 conversion or legacy regression coverage is required. Preserve
+  content/IDs and safe encoding; never make raw LaTeX an editable field.
+- Verify English/Portuguese PDFs through the same capability mechanism as future
+  languages. Editable content does not imply verified PDF output; disable unsupported
+  output rather than silently substituting labels, glyphs, or hyphenation.
+- Target preview/export consumes committed snapshots, never unsaved form drafts.
+  Save does not imply compile; manual refresh is default and automatic refresh opt-in.
 - Keep the template identity in the model and generated compiler manifest in
   sync. Changing supported template behavior or resources requires an explicit
   template version and backup compatibility decision; do not substitute unknown
@@ -35,5 +42,7 @@ owner's Overleaf project/PDF pairs under `temp/`, not a newly designed template.
   limitations. Do not claim PDF/UA or universal ATS compatibility.
 - Keep fonts/packages' redistribution notices with source exports. Generated
   PDFs and `.tex` files never mark the workspace as JSON-backed-up.
-- Follow the user's explicit verification scope. This implementation excludes
-  automated tests; use static checks and manual browser/PDF review.
+- Automated behavior/regression tests are authorized. Read vitest-testing and test
+  deterministic rendering, selected-output validation, and stale compiler behavior.
+  Retain static checks and manual browser/PDF review. Phase 0 defines coverage only;
+  target-contract coverage starts alongside phase-1 implementation.
