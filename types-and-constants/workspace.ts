@@ -47,9 +47,8 @@ export type WorkspaceNotice = {
   workspaceEpoch: number;
   title: string;
   description?: string;
-  action?: "undo" | "recovery";
+  action?: "undo";
   document: ResumeDocument;
-  recovery: WorkspaceSnapshot | null;
 };
 
 type Replacement = {

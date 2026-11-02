@@ -25,11 +25,16 @@ export function WorkspaceFeedback() {
         timeout: notice.action ? 15_000 : 4_000,
         actionProps: notice.action
           ? {
-              children:
-                notice.action === "undo" ? "Undo" : "Review previous work",
-              onClick: () => controller.runNoticeAction(notice),
+              children: "Undo",
+              onClick: () => {
+                controller.runNoticeAction(notice);
+                toast.close(id);
+              },
             }
           : undefined,
+        onClose: () => {
+          actionable.current.delete(id);
+        },
       });
       if (notice.action) actionable.current.set(id, notice.generation);
     } catch (error) {

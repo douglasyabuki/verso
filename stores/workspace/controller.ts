@@ -510,7 +510,7 @@ export class WorkspaceController {
     );
   };
 
-  /** Publish a typed presentation outcome without depending on toast UI. @param title Outcome heading. @param description Detail. @param action Guarded recovery/history action. @example controller.notify("Action undone") */
+  /** Publish a typed presentation outcome without depending on toast UI. @param title Outcome heading. @param description Detail. @param action Guarded history action. @example controller.notify("Action undone") */
   notify = (
     title: string,
     description?: string,
@@ -525,7 +525,6 @@ export class WorkspaceController {
         description,
         action,
         document: this.state.document,
-        recovery: this.state.recovery,
       },
     });
   };
@@ -541,12 +540,6 @@ export class WorkspaceController {
     )
       return;
     if (notice.action === "undo" && this.state.canUndo) this.undo();
-    if (
-      notice.action === "recovery" &&
-      notice.recovery === this.state.recovery &&
-      this.state.recovery
-    )
-      this.requestReplacement("recovery", this.state.recovery);
   };
 
   /** Translate committed operations to presentation outcomes. @param kind Explicit operation. @param sessionOnly Whether no durable write occurred. @example this.operationSucceeded("clear", true) */
@@ -574,11 +567,6 @@ export class WorkspaceController {
     this.notify(
       title,
       sessionOnly ? "Changes are kept only in this tab." : undefined,
-      ["import", "example", "recovery"].includes(kind) &&
-        this.state.recovery &&
-        !semanticallyEqual(this.state.document, this.state.recovery.document)
-        ? "recovery"
-        : undefined,
     );
   }
 
