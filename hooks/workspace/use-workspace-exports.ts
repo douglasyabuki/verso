@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-import { toast } from "@/components/ui/toast";
 import { useResumeCompiler } from "@/hooks/output/use-resume-compiler";
+import { useWorkspace } from "@/hooks/workspace/use-workspace";
 import {
   bilingualZip,
   downloadFile,
@@ -34,8 +34,16 @@ export function useWorkspaceExports({
   locale,
   compiler,
 }: WorkspaceExportsOptions) {
+  const { controller } = useWorkspace();
   const [exporting, setExporting] = useState(false);
   const runExport = async (kind: "pdf" | "both" | "latex") => {
+    if (controller.getSnapshot().pending || controller.getSnapshot().replacing)
+      return;
+    const epoch = controller.getSnapshot().workspaceEpoch;
+    const generation = controller.getGeneration();
+    const current = () =>
+      controller.getSnapshot().workspaceEpoch === epoch &&
+      controller.getGeneration() === generation;
     setExporting(true);
     const snapshot = structuredClone(document);
     const selected = variant.id;
@@ -57,6 +65,7 @@ export function useWorkspaceExports({
         const outputs = [];
         for (const language of locales)
           outputs.push(await compiler.getPdf(snapshot, selected, language));
+        if (!current()) return;
         downloadFile(
           bilingualZip(snapshot, variant.name, outputs),
           prefix + "-bilingual.zip",
@@ -68,30 +77,30 @@ export function useWorkspaceExports({
           selected,
           selectedLocale,
         );
-        if (kind === "latex")
+        if (!current()) return;
+        if (kind === "latex") {
+          const bytes = await latexZip(output);
+          if (!current()) return;
           downloadFile(
-            await latexZip(output),
+            bytes,
             `${prefix}-${selectedLocale}-latex.zip`,
             "application/zip",
           );
-        else
+        } else
           downloadFile(
             output.bytes,
             `${prefix}-${selectedLocale}.pdf`,
             "application/pdf",
           );
       }
-      toast.add({
-        type: "success",
-        title: "Download started",
-        description: `${kind === "both" ? "Bilingual ZIP" : kind === "latex" ? "LaTeX and assets" : "PDF"} download started. Download a backup separately to keep your editable career details, resumes, and settings.`,
-      });
+      if (current())
+        controller.notify(
+          "Download started",
+          `${kind === "both" ? "Bilingual ZIP" : kind === "latex" ? "LaTeX and assets" : "PDF"} download started. Download a backup separately to keep your editable career details, resumes, and settings.`,
+        );
     } catch (error) {
-      toast.add({
-        type: "error",
-        title: "Action could not finish",
-        description: (error as Error).message,
-      });
+      if (current())
+        controller.notify("Download could not start", (error as Error).message);
     } finally {
       setExporting(false);
     }

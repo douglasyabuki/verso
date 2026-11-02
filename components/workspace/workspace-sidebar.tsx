@@ -413,7 +413,16 @@ export function WorkspaceSidebar({
                               onClick={() => actions.remove(resume.id)}
                             >
                               <Trash2 />
-                              Delete
+                              <span>
+                                Delete resume
+                                {(blocked || document.variants.length <= 1) && (
+                                  <span className="block text-xs whitespace-normal text-muted-foreground">
+                                    {blocked
+                                      ? "Wait for the current action to finish."
+                                      : "Keep at least one resume."}
+                                  </span>
+                                )}
+                              </span>
                             </DropdownMenuItem>
                           </DropdownMenuGroup>
                         </DropdownMenuContent>
@@ -650,23 +659,41 @@ function CareerMenu({
             onClick={() => actions.clear(target, trigger.current)}
           >
             <Eraser />
-            Clear content
+            <span>
+              Clear content
+              {!actions.canClear(target) && (
+                <span className="block text-xs whitespace-normal text-muted-foreground">
+                  {blocked
+                    ? "Wait for the current action to finish."
+                    : "There is no content to clear."}
+                </span>
+              )}
+            </span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
-        {remove && (
+        {target.kind === "section" && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem
                 variant="destructive"
-                disabled={blocked}
+                disabled={blocked || !remove}
                 onClick={() => {
                   if (target.kind === "section")
                     actions.remove(target.sectionId, trigger.current);
                 }}
               >
                 <Trash2 />
-                Delete section
+                <span>
+                  Delete section
+                  {(blocked || !remove) && (
+                    <span className="block text-xs whitespace-normal text-muted-foreground">
+                      {blocked
+                        ? "Wait for the current action to finish."
+                        : "Built-in sections cannot be deleted."}
+                    </span>
+                  )}
+                </span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </>

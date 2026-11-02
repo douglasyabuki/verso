@@ -2,9 +2,9 @@
 
 import { useRef } from "react";
 
-import { toast } from "@/components/ui/toast";
 import { downloadFile, fileSlug } from "@/lib/output/files";
 import { parseBackup, serializeBackup } from "@/lib/workspace/backup";
+import { semanticallyEqual } from "@/lib/workspace/semantic";
 import type { WorkspaceController } from "@/stores/workspace/controller";
 import { fingerprint } from "@/stores/workspace/persistence";
 import type { ResumeDocument } from "@/types-and-constants/resume";
@@ -25,6 +25,12 @@ export function useWorkspaceBackups({
 }: WorkspaceBackupsOptions) {
   const input = useRef<HTMLInputElement>(null);
   const exportJson = () => {
+    if (
+      controller.getSnapshot().pending ||
+      controller.getSnapshot().replacing ||
+      controller.getSnapshot().saving
+    )
+      return;
     try {
       const snapshot = document;
       const serialized = serializeBackup(snapshot);
@@ -35,37 +41,47 @@ export function useWorkspaceBackups({
         "application/json",
       );
       void controller.markBackup(snapshot);
-      toast.add({
-        type: "success",
-        title: "Download started",
-        description:
-          "Your backup download started. It includes all editable career details, resumes, and settings. Saving in this browser is tracked separately.",
-      });
+      controller.notify(
+        "Backup download started",
+        "The JSON includes your editable career details, resumes, and workspace settings.",
+      );
     } catch (error) {
-      toast.add({
-        type: "error",
-        title: "Action could not finish",
-        description: (error as Error).message,
-      });
+      controller.notify(
+        "Backup download could not start",
+        (error as Error).message,
+      );
     }
   };
   const importJson = async (file?: File) => {
-    if (!file) return;
+    if (
+      !file ||
+      controller.getSnapshot().pending ||
+      controller.getSnapshot().replacing
+    )
+      return;
+    const generation = controller.getGeneration();
     try {
       if (!file.name.toLowerCase().endsWith(".json") || file.size > 5_000_000)
         throw new Error("Choose a JSON backup no larger than 5 MB.");
       const document = parseBackup(await file.text());
+      if (generation !== controller.getGeneration()) return;
+      const current = controller.getSnapshot().document;
+      if (semanticallyEqual(current, document)) {
+        await controller.markBackup(current, "matching-import");
+        return;
+      }
       const backupFingerprint = await fingerprint(document);
-      controller.requestReplacement("Restore from backup?", {
+      if (generation !== controller.getGeneration()) return;
+      controller.requestReplacement("import", {
         document,
         backupFingerprint,
       });
     } catch (error) {
-      toast.add({
-        type: "error",
-        title: "Action could not finish",
-        description: (error as Error).message,
-      });
+      if (generation === controller.getGeneration())
+        controller.notify(
+          "Backup could not be restored",
+          `${(error as Error).message} Your workspace has not changed.`,
+        );
     } finally {
       if (input.current) input.current.value = "";
     }

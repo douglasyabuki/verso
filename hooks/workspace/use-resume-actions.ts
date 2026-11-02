@@ -79,20 +79,33 @@ export function useResumeActions({
       const requestedDocument = snapshot.document;
       confirm(
         `Delete ${resume.name || "this resume"}?`,
-        "Its selections, customizations, reviews, and layout settings will be removed. Shared career content remains available.",
+        "Its selections, customizations, reviews, and layout settings will be removed. Shared career content remains available. You can undo this action.",
         () => {
           const state = controller.getSnapshot();
           if (
             state.replacing ||
             state.pending ||
             state.document !== requestedDocument
-          )
+          ) {
+            controller.notify(
+              "Workspace changed",
+              "Review the current content and try again. Nothing was removed.",
+            );
             return;
+          }
           controller.edit((draft) => {
             if (draft.variants.length > 1)
               draft.variants = draft.variants.filter((item) => item.id !== id);
           });
+          controller.notify(
+            `${resume.name || "Resume"} deleted`,
+            undefined,
+            "undo",
+          );
         },
+        undefined,
+        true,
+        "Delete resume",
       );
     },
   };

@@ -22,15 +22,20 @@ import { useWorkspace } from "@/hooks/workspace/use-workspace";
 
 export function WorkspaceSaveStatus({ className }: { className?: string }) {
   const { state, controller } = useWorkspace();
-  const status = state.sessionOnly
-    ? "Session only"
-    : state.error || state.conflict
-      ? "Saving paused"
-      : state.pending
-        ? "Replacement awaiting confirmation"
-        : state.saving || controller.isUnsaved()
-          ? "Saving…"
-          : "Saved in this browser";
+  const status =
+    state.saving && state.pending?.kind === "clear"
+      ? "Clearing data…"
+      : state.saving
+        ? "Saving…"
+        : state.pending
+          ? "Awaiting confirmation"
+          : state.sessionOnly
+            ? "This tab only"
+            : state.error || state.conflict
+              ? "Saving paused"
+              : controller.isUnsaved()
+                ? "Saving…"
+                : "Saved in this browser";
 
   return (
     <span className={className} role="status">

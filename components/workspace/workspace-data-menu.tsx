@@ -17,10 +17,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { InfoHint } from "@/components/ui/info-hint";
 import {
   Tooltip,
   TooltipContent,
@@ -36,6 +34,8 @@ export function WorkspaceDataMenu({
   resume,
   clear,
   disabled,
+  reasons,
+  sessionOnly,
   inline = false,
 }: {
   backupStatus: string;
@@ -46,47 +46,95 @@ export function WorkspaceDataMenu({
   resume: () => void;
   clear: () => void;
   disabled: boolean;
+  sessionOnly: boolean;
+  reasons: Record<string, string | undefined>;
   inline?: boolean;
 }) {
+  const actions = [
+    {
+      key: "import",
+      label: "Restore from backup",
+      run: importJson,
+      icon: Upload,
+    },
+    {
+      key: "export",
+      label: "Download backup (JSON)",
+      run: exportJson,
+      icon: Download,
+    },
+    {
+      key: "example",
+      label: "Load fictional example",
+      run: example,
+      icon: FilePlus2,
+    },
+    {
+      key: "recover",
+      label: "Restore previous work",
+      run: recover,
+      icon: Undo2,
+    },
+    {
+      key: "resume",
+      label: sessionOnly
+        ? "Start saving in this browser"
+        : "Review browser saving",
+      run: resume,
+      icon: RefreshCw,
+    },
+    { key: "clear", label: "Clear data", run: clear, icon: Trash2 },
+  ];
+  const items = actions.map(({ key, label, run, icon: Icon }) => {
+    const reason = disabled
+      ? "Wait for the current action to finish."
+      : reasons[key];
+    const text = (
+      <span className="flex min-w-0 flex-col gap-1">
+        <span>{label}</span>
+        {reason && (
+          <span className="text-xs text-muted-foreground">{reason}</span>
+        )}
+      </span>
+    );
+    return inline ? (
+      <div key={key} className="flex max-w-xs flex-col gap-1">
+        <Button
+          variant={key === "clear" ? "destructive" : "outline"}
+          disabled={!!reason}
+          aria-describedby={reason ? `inline-${key}-reason` : undefined}
+          onClick={run}
+        >
+          <Icon data-icon="inline-start" />
+          {label}
+        </Button>
+        {reason && (
+          <p
+            id={`inline-${key}-reason`}
+            className="text-xs text-muted-foreground"
+          >
+            {reason}
+          </p>
+        )}
+      </div>
+    ) : (
+      <DropdownMenuItem
+        className="whitespace-normal"
+        key={key}
+        disabled={!!reason}
+        onClick={run}
+        variant={key === "clear" ? "destructive" : "default"}
+      >
+        <Icon />
+        {text}
+      </DropdownMenuItem>
+    );
+  });
   if (inline)
     return (
       <div className="flex flex-col gap-3">
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          {backupStatus}
-          <InfoHint label="JSON backup status" size="sm">
-            Saving in this browser is separate from downloading a backup. A
-            backup (JSON) includes all editable career details, resumes, and
-            settings.
-          </InfoHint>
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={disabled} onClick={importJson}>
-            <Upload data-icon="inline-start" />
-            Restore from backup
-          </Button>
-          <Button disabled={disabled} onClick={exportJson}>
-            <Download data-icon="inline-start" />
-            Download backup (JSON)
-          </Button>
-          <Button variant="outline" disabled={disabled} onClick={example}>
-            <FilePlus2 data-icon="inline-start" />
-            Load fictional example
-          </Button>
-          {recover && (
-            <Button variant="outline" disabled={disabled} onClick={recover}>
-              <Undo2 data-icon="inline-start" />
-              Restore previous work
-            </Button>
-          )}
-          <Button variant="outline" disabled={disabled} onClick={resume}>
-            <RefreshCw data-icon="inline-start" />
-            Review browser saving
-          </Button>
-          <Button variant="destructive" disabled={disabled} onClick={clear}>
-            <Trash2 data-icon="inline-start" />
-            Clear data
-          </Button>
-        </div>
+        <p className="text-xs text-muted-foreground">{backupStatus}</p>
+        <div className="flex flex-wrap items-start gap-3">{items}</div>
       </div>
     );
   return (
@@ -100,7 +148,6 @@ export function WorkspaceDataMenu({
                   variant="ghost"
                   size="icon"
                   aria-label="Backups and settings"
-                  disabled={disabled}
                 />
               }
             />
@@ -110,45 +157,18 @@ export function WorkspaceDataMenu({
         </TooltipTrigger>
         <TooltipContent side="right">Backups & settings</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent side="right" align="start" className="w-64">
+      <DropdownMenuContent
+        side="right"
+        align="start"
+        className="w-80 max-w-[calc(100vw-2rem)]"
+      >
         <DropdownMenuGroup>
-          <DropdownMenuLabel>Backups</DropdownMenuLabel>
-          <DropdownMenuItem onClick={importJson}>
-            <Upload />
-            Restore from backup
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={exportJson}>
-            <Download />
-            Download backup (JSON)
-          </DropdownMenuItem>
+          <DropdownMenuLabel>Backups & settings</DropdownMenuLabel>
+          {items}
         </DropdownMenuGroup>
         <div className="px-2 py-2 text-xs text-muted-foreground">
           {backupStatus}
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={example}>
-            <FilePlus2 />
-            Load fictional example
-          </DropdownMenuItem>
-          {recover && (
-            <DropdownMenuItem onClick={recover}>
-              <Undo2 />
-              Restore previous work
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem onClick={resume}>
-            <RefreshCw />
-            Review browser saving
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem variant="destructive" onClick={clear}>
-            <Trash2 />
-            Clear data
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

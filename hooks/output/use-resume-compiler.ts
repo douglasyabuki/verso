@@ -13,6 +13,7 @@ import type { ResumeDocument } from "@/types-and-constants/resume";
 
 type ResumeCompilerOptions = {
   document: ResumeDocument;
+  workspaceEpoch: number;
   variantId: string;
   locale: Locale;
   autoSync: boolean;
@@ -138,6 +139,7 @@ async function readPageCount(bytes: Uint8Array): Promise<number> {
  * @param options.locale Selected preview language.
  * @param options.autoSync Whether changes queue a preview after an 800 ms debounce.
  * @param options.initializationTimeoutMs Maximum browser compiler initialization time in milliseconds.
+ * @param options.workspaceEpoch Replacement generation, invalidating old output and asynchronous results.
  * @param options.compilationTimeoutMs Maximum time for one compilation in milliseconds.
  * @returns Preview/status/error, pending state covering queued and active requests, stale indicator, serial snapshot compiler, snapshot-matched layout status for either locale, and manual refresh action that ignores requests while pending and remains available when sync is paused.
  * @example useResumeCompiler({document, variantId, locale, autoSync: true, initializationTimeoutMs: 120000, compilationTimeoutMs: 30000})
@@ -148,9 +150,11 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
     variantId,
     locale,
     autoSync,
+    workspaceEpoch,
     initializationTimeoutMs,
     compilationTimeoutMs,
   } = options;
+  const [observedEpoch, setObservedEpoch] = useState(workspaceEpoch);
   const [layouts, setLayouts] = useState<OutputLayout[]>([]);
   const [pendingKeys, setPendingKeys] = useState<string[]>([]);
   const [preview, setPreview] = useState<ResumeOutput>();
@@ -165,6 +169,30 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
   const activeKey = useRef("");
   const automaticKey = useRef("");
   const mounted = useRef(false);
+  if (observedEpoch !== workspaceEpoch) {
+    setObservedEpoch(workspaceEpoch);
+    setLayouts([]);
+    setPendingKeys([]);
+    setPreview(undefined);
+    setError(undefined);
+    setStatus("idle");
+    setIsPending(false);
+  }
+  const lifecycle = useRef({ epoch: workspaceEpoch, valid: true });
+  useEffect(() => {
+    const token = { epoch: workspaceEpoch, valid: true };
+    lifecycle.current = token;
+    cache.current.clear();
+    layoutCache.current.clear();
+    pendingRequests.current = 0;
+    activeKey.current = "";
+    automaticKey.current = "";
+    engine.current?.close();
+    engine.current = null;
+    return () => {
+      token.valid = false;
+    };
+  }, [workspaceEpoch]);
   const key = useMemo(
     () => snapshotKey(document, variantId, locale),
     [document, variantId, locale],
@@ -192,6 +220,9 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
       automatic = false,
       force = false,
     ): Promise<ResumeOutput> => {
+      const token = lifecycle.current;
+      const current = () =>
+        mounted.current && token.valid && token.epoch === workspaceEpoch;
       const requestedKey = snapshotKey(
         snapshot,
         selectedVariant,
@@ -210,7 +241,7 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
         .catch(() => {})
         .then(async () => {
           if (
-            !mounted.current ||
+            !current() ||
             (automatic && automaticKey.current !== requestedKey)
           )
             throw new Error("Obsolete preview request");
@@ -232,7 +263,7 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
               initializationTimeoutMs,
               compilationTimeoutMs,
               onState: (state) => {
-                if (mounted.current) setStatus(state);
+                if (current()) setStatus(state);
               },
             });
             try {
@@ -254,12 +285,15 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
                 key: requestedKey,
                 revision: snapshot.revision,
               };
+              if (!current()) throw new Error("Obsolete preview request");
               cache.current.set(requestedKey, output);
               if (cache.current.size > 4)
                 cache.current.delete(cache.current.keys().next().value!);
             } catch (error) {
-              engine.current?.close();
-              engine.current = null;
+              if (current()) {
+                engine.current?.close();
+                engine.current = null;
+              }
               throw error;
             }
           }
@@ -279,20 +313,21 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
                   "The PDF was created, but its page count could not be read. Try checking layout again.",
               };
             }
+            if (!current()) throw new Error("Obsolete preview request");
             layoutCache.current.set(requestedKey, layout);
             if (layoutCache.current.size > 4)
               layoutCache.current.delete(
                 layoutCache.current.keys().next().value!,
               );
           }
-          if (mounted.current)
+          if (current())
             setLayouts((results) =>
               [
                 ...results.filter((result) => result.key !== requestedKey),
                 layout!,
               ].slice(-4),
             );
-          if (mounted.current && activeKey.current === requestedKey) {
+          if (current() && activeKey.current === requestedKey) {
             setPreview(output);
             setError(undefined);
             setStatus("successful");
@@ -300,8 +335,9 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
           return output;
         })
         .catch((reason: unknown) => {
+          if (!current()) throw new Error("Obsolete preview request");
           if (
-            mounted.current &&
+            current() &&
             (reason as Error).message !== "Obsolete preview request"
           ) {
             const failure = {
@@ -321,8 +357,8 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
           throw reason;
         })
         .finally(() => {
+          if (!current()) return;
           pendingRequests.current -= 1;
-          if (!mounted.current) return;
 
           setPendingKeys((keys) => {
             const index = keys.indexOf(requestedKey);
@@ -337,7 +373,7 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
       queue.current = job;
       return job;
     },
-    [initializationTimeoutMs, compilationTimeoutMs],
+    [initializationTimeoutMs, compilationTimeoutMs, workspaceEpoch],
   );
 
   const reportError = useCallback((reason: unknown) => {
@@ -378,6 +414,7 @@ export function useResumeCompiler(options: ResumeCompilerOptions) {
     getPdf,
     reportError,
     preview?.key,
+    workspaceEpoch,
   ]);
 
   const refresh = useCallback(() => {

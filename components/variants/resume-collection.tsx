@@ -121,7 +121,14 @@ export function ResumeCollection({
                       onClick={() => actions.remove(resume.id)}
                     >
                       <Trash2 />
-                      Delete
+                      <span>
+                        Delete resume
+                        {document.variants.length <= 1 && (
+                          <span className="block text-xs whitespace-normal text-muted-foreground">
+                            Keep at least one resume.
+                          </span>
+                        )}
+                      </span>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>

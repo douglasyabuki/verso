@@ -32,8 +32,16 @@ function useWorkflowState() {
     action,
     returnFocus,
     destructive,
+    confirmLabel,
   ) =>
-    setConfirmation({ title, description, action, returnFocus, destructive });
+    setConfirmation({
+      title,
+      description,
+      action,
+      returnFocus,
+      destructive,
+      confirmLabel,
+    });
   const resume = useResumeActions({ controller, navigation, confirm });
   const career = useCareerActions({
     controller,

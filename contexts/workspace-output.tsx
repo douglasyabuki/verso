@@ -20,7 +20,7 @@ import { validateOutput } from "@/lib/review/validation";
  */
 function useOutputState() {
   const {
-    state: { document },
+    state: { document, workspaceEpoch },
   } = useWorkspace();
   const {
     navigation: { variant, locale },
@@ -37,6 +37,7 @@ function useOutputState() {
   const validation = validations[locale];
   const compiler = useResumeCompiler({
     document,
+    workspaceEpoch,
     variantId: variant.id,
     locale,
     autoSync,

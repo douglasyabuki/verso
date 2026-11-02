@@ -141,16 +141,25 @@ export function EditorHeader() {
                 }
               >
                 <Eraser />
-                Clear content
+                <span>
+                  Clear content
+                  {!careerActions.canClear(careerTarget) && (
+                    <span className="block text-xs whitespace-normal text-muted-foreground">
+                      {disabled
+                        ? "Wait for the current action to finish."
+                        : "There is no content to clear."}
+                    </span>
+                  )}
+                </span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            {section?.kind === "custom" && (
+            {section && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     variant="destructive"
-                    disabled={disabled}
+                    disabled={disabled || section.kind !== "custom"}
                     onClick={() =>
                       careerActions.remove(
                         section.id,
@@ -159,7 +168,16 @@ export function EditorHeader() {
                     }
                   >
                     <Trash2 />
-                    Delete section
+                    <span>
+                      Delete section
+                      {(disabled || section.kind !== "custom") && (
+                        <span className="block text-xs whitespace-normal text-muted-foreground">
+                          {disabled
+                            ? "Wait for the current action to finish."
+                            : "Built-in sections cannot be deleted."}
+                        </span>
+                      )}
+                    </span>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </>

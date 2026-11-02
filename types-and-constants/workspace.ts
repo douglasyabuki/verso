@@ -12,11 +12,14 @@ export type StorageReview = {
   raw: string | null;
   snapshot: WorkspaceSnapshot | null;
   savedAt: string | null;
+  documentFingerprint?: string;
   error: string | null;
 };
 
 export type CommitResult =
   | { status: "success"; review: StorageReview }
+  | { status: "committed-unverified"; review: StorageReview }
+  | { status: "committed-conflict"; review: StorageReview }
   | { status: "conflict"; review: StorageReview }
   | { status: "failure"; error: string }
   | { status: "cancelled" };
@@ -28,11 +31,31 @@ export type EditGroup = {
 
 export type WorkspaceEdit = (update: DocumentUpdate, group?: EditGroup) => void;
 
-type Replacement = {
+export type OperationKind =
+  | "import"
+  | "example"
+  | "recovery"
+  | "clear"
+  | "resume-saving"
+  | "overwrite"
+  | "load-saved"
+  | "session";
+
+export type WorkspaceNotice = {
+  id: number;
+  generation: number;
+  workspaceEpoch: number;
   title: string;
-  kind?: "clear";
   description?: string;
-  confirmLabel?: string;
+  action?: "undo" | "recovery";
+  document: ResumeDocument;
+  recovery: WorkspaceSnapshot | null;
+};
+
+type Replacement = {
+  kind: OperationKind;
+  backupOrigin?: "export" | "matching-import";
+  writeTarget: "tab" | "browser" | "both" | "none";
   snapshot: WorkspaceSnapshot;
   review: StorageReview | null;
   sessionOnly: boolean;
@@ -50,6 +73,12 @@ export type WorkspaceState = WorkspaceSnapshot & {
   canUndo: boolean;
   canRedo: boolean;
   error: string | null;
+  backupFailure: {
+    origin: "export" | "matching-import";
+    document: ResumeDocument;
+    generation: number;
+  } | null;
+  notice: WorkspaceNotice | null;
   conflict: StorageReview | null;
   pending: Replacement | null;
   recovery: WorkspaceSnapshot | null;

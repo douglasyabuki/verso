@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/hooks/workspace/use-workspace";
+import { operationDialog } from "@/lib/workspace/operations";
 import type { Confirmation } from "@/types-and-constants/editor";
 
 export function WorkspaceOverlays({
@@ -26,6 +27,7 @@ export function WorkspaceOverlays({
   const { state, controller } = useWorkspace();
   const pending = state.pending;
   const reviewed = pending?.review;
+  const dialog = operationDialog(state);
   const returnFocus = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (confirmation) returnFocus.current = confirmation.returnFocus ?? null;
@@ -67,7 +69,7 @@ export function WorkspaceOverlays({
                 action?.();
               }}
             >
-              Confirm
+              {confirmation?.confirmLabel ?? "Confirm"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -80,35 +82,31 @@ export function WorkspaceOverlays({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{pending?.title}</AlertDialogTitle>
+            <AlertDialogTitle>{dialog?.title}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pending?.description && <>{pending.description} </>}
-              {pending?.kind === "clear"
-                ? pending.sessionOnly
-                  ? "This clears work in this tab only. Data already saved in this browser stays unchanged."
-                  : "This clears your current work and the saved browser version shown below. If the saved version changes, you must review it again before clearing it."
-                : pending?.sessionOnly
-                  ? "This replaces your work in this tab only. It will not be saved in this browser and can be lost when you close the tab. Download a backup to keep it. The version already saved in this browser stays unchanged."
-                  : "This replaces your current work and the version saved in this browser shown below. If the saved version changes again, you must review it before replacing it."}{" "}
-              You can restore one previous version while this tab stays open.
+              {dialog?.messages.join(" ")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2 text-sm">
-            {pending?.kind !== "clear" && (
+            {!!dialog?.summary && (
               <p>
-                Version to load:{" "}
+                {dialog?.summary}:{" "}
                 {pending?.snapshot.document.profile.name || "Untitled profile"}{" "}
                 · revision {pending?.snapshot.document.revision}
               </p>
             )}
             {!pending?.sessionOnly && (
               <p className="text-muted-foreground">
-                Currently saved in this browser:{" "}
+                Saved browser version:{" "}
                 {reviewed?.snapshot
                   ? `${reviewed.snapshot.document.profile.name || "Untitled profile"} · revision ${reviewed.snapshot.document.revision} · ${reviewed.savedAt}`
                   : reviewed?.error || "No work saved in this browser"}
               </p>
             )}
+            {pending?.kind === "clear" &&
+              !controller.canClearData(pending.sessionOnly) && (
+                <p role="status">There is no workspace data to clear.</p>
+              )}
             {state.error && (
               <p role="alert" className="text-destructive">
                 {state.error}
@@ -139,17 +137,21 @@ export function WorkspaceOverlays({
             )}
             <Button
               variant="destructive"
-              disabled={state.saving}
+              disabled={
+                state.saving ||
+                (pending?.kind === "clear" &&
+                  !controller.canClearData(pending.sessionOnly)) ||
+                (!pending?.sessionOnly &&
+                  !!state.conflict &&
+                  state.conflict.raw !== pending?.review?.raw)
+              }
               onClick={() => void controller.confirmReplacement()}
             >
               {state.saving
                 ? pending?.kind === "clear"
-                  ? "Clearing…"
+                  ? "Clearing data…"
                   : "Saving…"
-                : (pending?.confirmLabel ??
-                  (pending?.sessionOnly
-                    ? "Replace in this tab"
-                    : "Confirm replacement"))}
+                : dialog?.confirmLabel}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

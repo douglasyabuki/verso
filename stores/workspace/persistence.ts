@@ -87,10 +87,26 @@ export async function commitWorkspace(
         backupFingerprint: snapshot.backupFingerprint,
       });
       localStorage.setItem(workspaceKey, raw);
-      const written = loadWorkspace();
-      if (written.raw !== raw)
-        return { status: "conflict", review: written } as const;
-      return { status: "success", review: written } as const;
+      // setItem is the durable boundary. Verification failures cannot undo it.
+      try {
+        const written = loadWorkspace();
+        if (written.raw !== raw)
+          return { status: "committed-conflict", review: written } as const;
+        return { status: "success", review: written } as const;
+      } catch {
+        return {
+          status: "committed-unverified",
+          review: {
+            raw,
+            snapshot: {
+              document,
+              backupFingerprint: snapshot.backupFingerprint,
+            },
+            savedAt: null,
+            error: null,
+          },
+        } as const;
+      }
     });
   } catch (error) {
     return {

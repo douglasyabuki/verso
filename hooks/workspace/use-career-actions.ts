@@ -86,8 +86,13 @@ export function useCareerActions({
       `${description} You can undo this action.`,
       () => {
         const state = controller.getSnapshot();
-        if (state.replacing || state.pending || state.document !== requested)
+        if (state.replacing || state.pending || state.document !== requested) {
+          controller.notify(
+            "Workspace changed",
+            "Review the current content and try again. Nothing was removed.",
+          );
           return;
+        }
         if (
           !controller.commitEditorDrafts() ||
           controller.getSnapshot().document !== requested
@@ -98,6 +103,17 @@ export function useCareerActions({
             deleteCareerSection(draft, target.sectionId);
           else clearCareerContent(draft, target);
         });
+        controller.notify(
+          deleting
+            ? `${name} deleted`
+            : target.kind === "profile"
+              ? "Profile cleared"
+              : target.kind === "summary"
+                ? "Shared summary cleared"
+                : `${name} content cleared`,
+          undefined,
+          "undo",
+        );
         resetContext(target);
         if (
           deleting &&
@@ -108,7 +124,14 @@ export function useCareerActions({
           navigation.open({ kind: "career-overview" });
       },
       returnFocus,
-      deleting,
+      true,
+      deleting
+        ? "Delete section"
+        : target.kind === "profile"
+          ? "Clear profile"
+          : target.kind === "summary"
+            ? "Clear summary"
+            : "Clear content",
     );
   };
 
