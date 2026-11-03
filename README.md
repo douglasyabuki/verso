@@ -1,309 +1,232 @@
 # Verso
 
-A locally saved bilingual resume workspace built with Next.js 16.4.2, React 19.3,
-TypeScript, Tailwind CSS 4, and Base UI shadcn components. Edit structured career
-content, review English/Portuguese wording, tailor resumes, and generate actual
-LaTeX PDFs entirely in the browser.
+Local career information editor. The active application uses workspace schema 2,
+explicit form Save/Cancel, and transactional IndexedDB. Schema-1 development data
+and backups are unsupported and are never loaded or converted.
 
-## Target roadmap status
+## Current capabilities
 
-[Requirements](docs/requirements.md) contains the complete contracts and roadmap
-for independent one-language resumes, explicit form
-Save/Cancel, durable routes, and separate preview refresh. Tracking and groups are
-deferred. Phase 0 is complete as a decision specification, including storage, format, capacity,
-and performance targets; these changes are not implemented or runtime-verified. The usage
-and architecture sections below describe the current application.
+The schema-2 career editor runs inside the retained workspace shell: utility rail,
+collapsible branded sidebar, workspace toolbar/history/status, and wording-language
+header. Career navigation uses the schema-2 dirty-form guard. Narrow screens use
+the existing navigation drawer, with Data & backups and Appearance in its footer.
+Imported resumes expose their existing selection form and committed-only output in
+the resizable desktop preview panel or narrow-screen Editor/PDF preview tabs.
+Layout and appearance preferences remain device-only. Data & backups opens the
+schema-2 backup/recovery/replacement controls; it offers no retired reset/autosave actions.
 
-The target supports workspace schema 2 only. Schema-1 compatibility, conversion,
-and legacy regression tests are out of scope for this development-only app.
-The current schema-1 behavior below describes existing code until replacement.
+The editor uses the previous career overview card grid, destination headings/icons,
+entry-list card, and grouped form layout. Schema-2 drafts supply these views without
+changing the shared utility rail, sidebar, or workspace shell.
 
-Target guest Saves commit to IndexedDB. Future authenticated Saves will send
-explicit edits immediately to PostgreSQL, with local recovery and safe retries;
-account-save success requires server acknowledgment. Typing remains local recovery
-only. Authentication and account persistence remain future implementation scope.
+Career details owns profile, summary, built-in/custom sections, entries, achievements,
+links, shared facts, and reusable wording. One content language is sufficient.
+Content languages use canonical tags; activation is separate from the English UI
+and PDF capability. Deactivation retains wording and existing resumes.
 
-## Local setup
+Create sections/entries explicitly, then edit their wording and facts. Ordinary
+forms, ordering, and language changes stay uncommitted until Save. Cancel discards
+the affected form. Entry editing and section entry ordering can stay open as
+independent drafts with separate Save/Cancel actions and history steps. Opening an
+entry preserves pending order; dragging preserves the entry draft and selection.
+Dirty navigation and browser Back/Forward offer Cancel/Discard/Save;
+close/reload warnings and recovery flushing are best effort. Keyboard undo remains
+inside dirty forms. Workspace Undo/Redo is invoked separately after resolving a
+form; Undo after Save undoes that Save. Undo of creation archives the new shared
+record; Redo restores the same identity. Shared content has archive/restore only.
 
-Use Node.js 20.19+ and npm 11.3.0, plus Python 3.12+ for compiler asset preparation.
-No credentials, database, Docker, or native LaTeX installation are required.
+Recovery is separate from saved content. It writes after 500 ms of inactivity,
+with a two-second maximum scheduling wait. Restore opens an uncommitted draft;
+compare and reconcile it before Save. Failed/uncertain Saves retain drafts and
+reuse immutable operation IDs. Unknown operation history requires reconciliation.
+Unresolved drafts do not expire. Browser clearing/eviction can still remove data.
+Session-only Save is an explicit choice and does not replace durable content.
 
-```sh
-npm ci
-npm run compiler:prepare
-npm run dev
-```
+Data & backups exports committed schema-2 content and separate format-1 recovery.
+It can be visited without resolving open drafts. Stored draft recovery appears
+there with readable names and explicit Restore draft actions; entry lists do not
+show recovery comparison panels.
+Workspace replacement requires review and an atomic current-revision check,
+preserving one previous workspace. Rollback rotates that same snapshot. Recovery
+is retained separately. Downloads are reported as initiated, not completed.
+Device preferences and operation ledgers are excluded from portable exports.
 
-Open http://localhost:3000. Preparation downloads hash-locked engine/package
-archives and creates ignored assets under `public/compiler/` and `.cache/`.
-The first run needs network access; compilation uses only self-hosted assets.
-Keep the verified download cache because changed upstream archives are rejected.
+Imported resumes have independent language/layout/selection contracts. Existing
+archived selections are labeled and can be removed through an explicit form.
+A minimal committed-snapshot output panel manually compiles the pinned template
+for English/Portuguese; unsupported languages have no PDF output. Save never
+compiles a draft. Both inactive-language archived-content fixtures produced PDFs
+in Chromium, Firefox, and WebKit. Automated text/font/link/metadata inspection
+uses the pinned PDF.js dependency. Visual PDF acceptance remains with the owner.
 
-The bundled fictional workspace in `lib/resume/example.ts` provides reproducible
-content for reviewing the editor and exporting both languages. Load it through
-the workspace data menu after preparing the compiler assets.
+New workspaces start with empty Experience, Projects, Education, Skills, and
+Certifications sections. Existing saved workspaces are not reseeded. Summaries
+and achievements support rich prose; headings and short fields remain plain.
+Switching the narrow Editor/PDF preview panel preserves open drafts.
 
-## Code organization
+Import parsing/validation uses a disposable worker and reports progress after
+500 ms. See [recovery-file boundaries and raw reassembly](docs/recovery-files.md).
+Explicit discard cleanup uses durable exact-version intents and retries on load;
+uncertain commit receipts remain protected until acknowledgment and are discoverable
+after restart. Completed receipt retention is configurable through controller
+options (30 days/1,000 acknowledged operations by default).
 
-| Directory               | Responsibility                                                                                |
-| ----------------------- | --------------------------------------------------------------------------------------------- |
-| `app/`                  | Routes, layouts, and global styles                                                            |
-| `components/workspace/` | Workspace composition, readiness, navigation UI, shell, and controls                          |
-| `components/content/`   | Career overview and shared content editors                                                    |
-| `components/variants/`  | Resume collection, identity, selection, and comparison                                        |
-| `components/wording/`   | Shared and variant wording, translation comparison, and review editing                        |
-| `components/output/`    | Template settings, layout controls, and PDF preview                                           |
-| `components/review/`    | Output issues and navigation into their editors                                               |
-| `components/editor/`    | Shared editing fields, sorting, and rich-text editor modules                                  |
-| `components/shared/`    | Language indicators and semantic badges shared across features                                |
-| `components/ui/`        | Shared UI primitives                                                                          |
-| `hooks/`                | Reusable hooks and feature interaction coordination in `workspace/`, `output/`, and `review/` |
-| `contexts/`             | Mounted workflow, output, backup coordination, and narrow owner-editor links                  |
-| `stores/workspace/`     | Observable controller, persistence, and React lifecycle adapter                               |
-| `types-and-constants/`  | Shared domain contracts and declarative defaults                                              |
-| `lib/resume/`           | Canonical document schemas, factories, and fictional example                                  |
-| `lib/content/`          | Career content, resume selection, certification dates, and entry labels                       |
-| `lib/wording/`          | Localization, structured spans, and variant wording rules                                     |
-| `lib/review/`           | Validation, issue descriptions, and review queue derivation                                   |
-| `lib/output/`           | Deterministic LaTeX rendering, resolved settings, and browser downloads                       |
-| `lib/workspace/`        | Portable backup validation and editor destinations                                            |
-| `lib/ordering.ts`       | Generic array ordering, including filtered-list moves                                         |
-| `types/`                | External-library declarations                                                                 |
+The former bilingual schema-1 editor, translation-review queues, automatic
+workspace autosaving, and full resume/layout controls are retired from the active
+root page. Schema-1 workflow/state modules remain unmounted reference assets;
+their reusable shell, sidebar collection, toolbar presentation, and UI primitives
+are shared with the active schema-2 composition. Resume creation, full independent
+selection/customization controls, presets/starters, and the broader settings
+experience are not delivered. Outstanding verification is listed below; it does
+not block subsequent user-authorized development and is not passed acceptance.
 
-Use `career` for shared profile, summary, sections, and entries; the interface calls
-this area **Career details**. Use `shared` for wording inheritance and
-`shared-wording` for the review reason. Resume selection, visibility, and output
-order belong to the variants feature. In `lib/content/`, `career.ts` owns clearing
-and deletion, `entries.ts` owns search and duplication, `section-fields.ts` owns
-labels, and `selection.ts` owns achievement selection.
+## Planned capabilities
 
-Domain logic does not depend on React or storage. Shared contracts use type-only
-schema imports, and stores keep their React adapter separate from controller and
-persistence code. Hooks connect those layers to presentation. The workspace
-controller is the single writable owner of resume state; navigation selections,
-compiler lifecycle, and local interaction state retain their existing owners.
+These are accepted directions, not available features or authorization to start
+new work. Update this list and Current capabilities as implementation ships.
 
-After readiness, the workspace mounts workflow, output, and backup providers in
-that order. They stay mounted across destination changes and preview visibility.
-The workflow provider composes navigation and career/resume actions, confirmations,
-and issue-focus coordination. Navigation alone owns review contexts and return
-destinations; the editor-review hook derives their effective context and coordinates
-updates without storing another copy. The output provider owns one compiler,
-validation, auto-sync, and exports. The backup provider owns one backup-hook instance
-and input ref shared by every menu and inline presentation; the workspace renders
-exactly one import input.
+- Independent resumes: create/name/duplicate/open/delete with visible language,
+  confirmation before deletion, and no deletion of shared career content. Select
+  and order sections, entries, achievements, contacts, and entry fields per resume.
+  Explain excluded, empty, required, and unsupported fields without deleting values.
+- Wording: inherit career wording or customize any display text per resume.
+  Shared edits preserve customizations; **Use career wording** removes an override.
+  Copy into another language using destination wording and copied selection/order,
+  with compatible layout and font/rendering warnings. Preserve the original;
+  leave missing wording missing, without translation or silent fallback.
+- Readiness: save valid incomplete work; reject malformed values with retained
+  drafts. Only selected output blocks export. Provide issues with editor links;
+  unused records, inactive languages, and archive status alone do not block output.
+- Layout: control typography, positioning, paper, spacing, and colors. Presets
+  contain appearance; starters contain empty structure/default visibility/layout.
+  Applying either copies settings without live inheritance. Use Duplicate resume
+  for content-bearing reuse. Include supported configuration in backups and undo.
+- Settings/navigation: consolidate appearance, content languages, editing/preview,
+  data/backups, and defaults. Distinguish device-only from workspace settings.
+  Durable validated routes support reload and Back/Forward while preserving
+  drafts, focus, scroll, keyboard access, and narrow layouts. URLs contain no private text.
+- Preview: manual by default, optional automatic refresh of committed output changes,
+  truthful save/recovery/preview status, bounded queued work, deterministic cleanup,
+  and a labeled last successful PDF with stale state, diagnostics, and retry.
+- Local acceptance: verify independent-language editing, ordering, wording, layouts,
+  settings, navigation, backup/recovery, and browser behavior. Inspect real PDFs for
+  labels, dates, fonts, links, metadata, selectable text, accents, long content,
+  omissions, and overflow. Disable unsupported output explicitly.
+- Future accounts, after explicit activation: Better Auth GitHub/Google and
+  Prisma/PostgreSQL, with server ownership checks, isolated local recovery, reviewed
+  guest import, and immediate explicit Saves confirmed only by server acknowledgment.
+  Immutable request IDs and atomic server receipts protect retries and uncertain work.
+- Future sync: preserve dirty drafts and both conflict versions across tabs,
+  browsers, devices, offline use, reconnect, expiry, and account changes. Define
+  measured freshness; local notifications do not replace server revision checks.
+- Future public releases/hosting: explicitly reviewed immutable PDFs, pinned/latest
+  URLs, atomic latest advancement, rollback/revocation, access/privacy and cache
+  policies. Verify hosted anonymous/private access and recovery procedures; local
+  compilation is not publication. Typing and imports never publish.
 
-`WorkspaceView` composes layout and connected controls. `EditorPane` composes the
-scrolling/disabled boundary, header, return navigation, and destination content.
-Their extracted components render controls, career tabs, review content, settings,
-preview/issues panels, and dialogs. Reusable controls retain explicit props, while
-connected workspace components consume the appropriate contexts. See
-[context guidance](contexts/AGENTS.md) for ownership and mounting constraints.
+Translation tracking, groups, user-defined field types, content-bearing starters,
+freeform/template marketplaces, arbitrary LaTeX imports, AI rewriting, coauthoring,
+billing, portfolio/LinkedIn integration, and public content APIs remain outside scope
+unless separately requested. No universal ATS, all-script, or formal PDF/UA promise.
 
-See [store guidance](stores/AGENTS.md) and
-[contract guidance](types-and-constants/AGENTS.md) for dependency rules and
-persistence invariants.
+## Data limits and performance targets
 
-## Working with drafts
+The supported format is UTF-8 `verso.workspace` schema 2; recovery uses a separate
+`verso.recovery` schema 1. Unsupported versions are rejected without changing saved
+content. Backups include committed content/configuration, not device preferences or
+credentials. Recovery imports restore drafts, never automatically committed edits.
 
-Start empty or explicitly load the fictional example in **Data & backups**.
-**Career details** opens Overview; each section has **Edit content** and
-**Review translations** tabs. Shared edits affect every resume using that content.
-New entries and achievements stay outside all resumes until explicitly included.
-**Resumes** opens All resumes for creation, duplication, opening, and deletion.
-Each resume owns **Content & order**, **Translations**, and **Layout**.
-Layout starts with Resume and Resume-language scopes; **Edit shared defaults**
-opens workspace/language defaults separately. Compiler timeouts live in Data & backups.
-Desktop has a resizable editor/PDF split; narrow screens switch between panels.
-Career details navigation stays in English while resume wording follows the
-selected language. Section-specific forms show relevant fields, with retained
-extra fields available under Additional details. Certifications support a
-credential ID and optional issue/expiration dates; date setup saves as one edit
-only after confirmation.
+Safety ceilings are 120 resumes, 100 sections, 10,000 entries total, 300 entries per
+section, 100 achievements and 30 links per entry, 30 profile links, and 100 each of
+starters/presets. Languages are bounded by file size. Workspace documents and files
+each allow 64 MiB, including envelope overhead for files; recovery allows 256 MiB
+per file and 64 MiB per draft including its baseline. Limits never permit truncation
+or automatic eviction of unresolved recovery. In-memory undo is bounded to 100
+steps or 32 MiB; undo is not a backup. Browser clearing/eviction can still remove data.
 
-Summaries, headings, titles, and achievements share a formatted editor with
-emphasis and links. Select text to format it, or place the caret in a link to
-edit its destination. Ctrl/Command+I toggles emphasis and Ctrl/Command+K opens
-link editing. Paste inserts plain text; HTML, Markdown, and LaTeX syntax remain
-literal text. Links accept only validated http, https, mailto, and tel destinations.
+These are production acceptance targets, not verified performance claims:
 
-Search career entries within the current section or Content & order across sections, matching
-shared facts and wording in both languages without case or accent differences.
-Archived entries are hidden until Include archived entries is enabled. Duplicate
-an entry to create an independent copy outside every resume. Use drag handles,
-keyboard sorting, or move buttons to reorder content; Escape cancels a drag.
-Career content order and each resume's output order remain independent. In Content & order,
-Select all appends missing achievements to the existing selection order; Clear
-all removes achievement selections while keeping the entry included.
+| Measurement                                                    | Normal-speed target                                                      |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Input, selection, reorder                                      | p95 <=100 ms                                                             |
+| Save click to committed acknowledgment                         | p95 <=500 ms representative / <=2 s capacity                             |
+| Workspace open, excluding compiler initialization              | p95 <=2 s representative / <=5 s capacity                                |
+| Recovery acknowledgment during continuous input                | <=3 s; report storage failure within 1 s of detection                    |
+| Capacity import preview                                        | <=5 s; progress after 500 ms; no recurring parsing/transfer tasks >50 ms |
+| Cached warm compilation / cold initialization plus compilation | <=5 s / <=20 s on representative 1–3-page output                         |
 
-Auto-update preview is enabled by default and updates the PDF preview after
-800 ms without output-affecting changes. Edits to hidden sections, unselected
-entries/achievements, or other variants do not trigger automatic compilation.
-Turn it off beside Refresh to update manually; turn it back on to sync the
-current draft. This option lasts only for the current tab session.
+Measure production small (20 entries/3 resumes), representative (300/30),
+multi-resume (60 independently configured resumes), and near-limit capacity
+fixtures. Record hardware/browser/build, p50/p95/max, failures, at least 100
+interactions and 30 Saves/opens per data fixture, plus 10 warm and 5 cached-cold
+compiler runs. Separate normal/4x CPU results and uncached downloads; comparisons
+use the same build/fixtures or disclose their limitations.
 
-The utility rail provides workspace data/backups and appearance controls. Collapse
-the sidebar to gain editing space, or hide the PDF preview for a full-width editor.
-On mobile these utilities live in the navigation sheet. Sidebar visibility,
-preview visibility, and split proportions are saved separately from resume content
-when browser storage is available; JSON backups do not include these preferences.
+Compiler defaults are a 120-second initialization timeout, 30-second compilation
+timeout, and 1,000,000-byte source limit. Bound work to one active compilation and
+one replaceable queued request, one compiler/worker pair per tab, and one retained
+successful PDF plus an in-flight result. Verify settled cleanup deterministically;
+there is no mandatory duration soak. Detailed engineering safeguards live in
+[AGENTS.md](AGENTS.md).
 
-Toolbar Undo and Redo cover document edits, translations, entries, achievements,
-archiving, ordering, variants, and template settings. Typing in one field groups
-until a one-second pause or leaving the field; paste and cut are separate steps,
-and each IME composition is one step regardless of duration. Use Command+Z and
-Shift+Command+Z on Apple platforms, or Ctrl+Z and Ctrl+Y / Ctrl+Shift+Z elsewhere.
-While a formatted field is focused, these shortcuts use its field-local history;
-ordinary text inputs retain native browser undo/redo. Workspace toolbar undo/redo
-and workspace replacements clear formatted fields' local histories. Workspace
-history stays available during autosaving and pauses during workspace replacement
-confirmation. It retains up to 100 steps in memory, clears
-on reload or successful workspace replacement, and never restores backup markers.
-Undo and redo create new document revisions and follow the current preview sync
-and local-saving settings.
+## Outstanding verification
 
-The workspace restores from this browser and autosaves 500 ms after edits when
-localStorage and Web Locks are available. Save status reflects confirmed browser
-writes, independently of JSON backup reminders. JSON backup freshness survives
-reloads; PDF and LaTeX downloads do not advance it. Browser storage can be cleared,
-so export JSON for a portable backup. Downloads are reported as initiated, since
-completion of a browser save dialog cannot be confirmed. Saved work is specific
-to this browser profile and origin: changing the hostname or port opens a separate
-workspace. Use a JSON export/import to move drafts between them.
+These items are deferred rather than passed. Complete them before claiming full
+local acceptance, or explicitly agree a revised scope. They do not block further
+authorized feature development.
 
-JSON exports use the initial resume schema 1 and the bundled
-`yabuki-reference@1.0.2` template. Import validates the complete document and its
-references before replacing any work. Unsupported formats and templates are rejected.
+- Run final formatting/lint/typecheck, unit, browser-component, and production
+  E2E/build checks; record actual counts. Earlier green runs predate the final
+  batched-import and uncertain-discard changes. Rename/discovery checks and static
+  validation do not replace regression execution.
+- Verify batched import Unicode/prototype safety and cancellation/error cleanup;
+  verify discard exact-version/newer-draft safety, receipt resolution, restart
+  recovery, and interrupted Save/history retries.
+- Reverify automated workspace/recovery round trips and obtain manual disposable-
+  workspace acceptance for identities, wording, customizations, selection/order,
+  appearance, capacity, and rejection without mutation.
+- Complete affected/missing performance rows with the enriched multi-resume fixture.
+  Historical measurements are partial; collecting reports does not prove budgets.
+  Close Save click-to-acknowledgment, continuous-input recovery, failure-announcement,
+  real import long-task/progress, and cached-cold/warm compiler measurement gaps.
+- Obtain owner presentation review and English/Portuguese PDF layout/clipping
+  acceptance, separately from automated text/font/link/metadata checks.
+- Update these current-capability, target, and limitation statements after verified
+  changes so they remain accurate without temporary planning/evidence documents.
 
-Each resume has sortable Profile cards in Content & order. Choose and order email,
-phone, city, country, and individual links for both languages without deleting
-shared Career details. Full name stays fixed and always included. New links are
-included automatically; duplicated resumes retain their order and selections.
-Hidden contact values do not block PDF or LaTeX exports. Adjacent city and country
-values share one location item in their chosen order.
+## Setup and checks
 
-Career entries, links, achievements, highlights, skills, and details have optional
-internal names. Use Rename on a career list card to organize it independently of
-its resume wording. Names are shared across languages and resumes, searchable,
-and included in JSON backups; they never appear in generated resume content.
+Use Node >=20.19 and npm 11.3 with the existing package-lock.json.
+Run `npm ci`, `npm run compiler:prepare`, then `npm run dev`.
+The browser compiler uses locally prepared assets and needs no account credentials.
+Builds use the existing Next.js Google-font integration.
 
-Custom career sections have a shared icon selected from 25 career-related choices.
-Click the section heading icon to choose an icon, then Save or Cancel. Saved icons
-appear throughout the workspace, including Content & order and Text to review,
-and are included in JSON backups. Built-in sections retain their default icons.
+| Command                | Purpose                                                               |
+| ---------------------- | --------------------------------------------------------------------- |
+| `npm run format:check` | Formatting                                                            |
+| `npm run lint`         | ESLint/import order                                                   |
+| `npm run typecheck`    | Next route generation and TypeScript                                  |
+| `npm run build`        | Production build                                                      |
+| `npm run test:unit`    | Vitest Node domain/capacity cases                                     |
+| `npm run test:browser` | Real Chromium component/IndexedDB cases                               |
+| `npm run test:e2e`     | Playwright with a fresh production build/server on localhost:3100     |
+| `npm run test:measure` | Explicit production capacity/interaction/import/compiler measurements |
+| `npm test`             | Unit, browser, then E2E suites                                        |
 
-Other-tab changes pause saving. Review the stored version before loading it or
-explicitly replacing it; a changed version invalidates any previous confirmation.
-Import, example loading and recovery use this same conditional replacement path.
-One previous workspace remains recoverable during the current session.
+Vitest 4.1.0, renderer 2.2.0, Vite 7.3.1 and a Tailwind Vite adapter are scoped to
+testing and preserve the selected Next/React versions. Test browsers live in
+`.cache/ms-playwright`. Test against disposable origins; browser storage belongs
+to the origin/profile. Tests do not establish Safari support, PDF/UA, universal
+ATS compatibility, production deployment, or the performance targets listed above.
 
-If storage or safe coordination is unavailable, editing, JSON import/export,
-example loading and recovery still work in **session-only mode**. Confirmed
-replacements affect only this tab, remain unsaved, and leave stored data untouched.
-Failed persistent replacements offer retry or an explicit session-only choice.
-Resume browser saving explicitly through workspace controls; it never silently
-restarts over potentially newer data. Leaving-page warnings cover unsaved or
-blocked local saving. Hidden-page flushes and warnings are best effort and cannot
-guarantee protection against closure or device shutdown.
+Install the pinned browser engines with `PLAYWRIGHT_BROWSERS_PATH` set to
+`.cache/ms-playwright` before running cross-browser checks. E2E runs Chromium,
+Firefox, and WebKit; the Chromium quota case waits for the browser's 30-second
+quota cache to expire. Measurements run separately with one worker and write
+raw samples under `.cache/performance/`; their recorded evidence includes reference
+hardware, browser version, normal/4× CPU runs, and sample counts. There is no
+mandatory 30-minute resource soak.
 
-A missing required translation blocks only that language. Translation-review
-flags warn without blocking draft downloads. Bilingual export requires two valid
-outputs from the same snapshot. Open Issues to inspect the active variant's
-English and Portuguese blocking errors, translation-review warnings, and layout
-status separately. Field links navigate to the affected editor. Check layout
-compiles that language and compares its PDF page count with the template target;
-it does not detect clipping or overlap. Exceeding the page target warns without
-blocking downloads.
-
-PDF appearance settings cover paper, four margins, Inter/Source Sans 3/Source
-Serif 4, body and heading typography, header alignment, section dividers, entry
-and paragraph gaps, achievement bullets, six color roles, and localized page
-numbering. They follow all-resumes, language, resume, and resume-language scopes.
-Use default removes a scoped override (or restores the factory value at base
-scope); Template default stores the original template behavior explicitly.
-Numeric drafts commit on blur/Enter; Escape cancels. Linking side margins affects
-the next margin commit only. JSON backups and undo/redo include appearance.
-
-Named text colors meet 4.5:1 contrast against white. Explicit link color wins
-inside headings and emphasis. Template-default links follow section color;
-secondary text and icons follow explicit body color, otherwise original grays.
-
-Source ZIPs include generated LaTeX, the exact browser runtime/resources, notices,
-and a standalone local compilation launcher.
-
-### Resume wording and comparison
-
-Resumes inherit shared career wording until you explicitly choose **Customize for this resume**
-for a summary or achievement in a particular language. The other language keeps
-inheriting. The editor labels each source and explains its scope before editing.
-**Reset to shared** removes that language's override, with confirmation and workspace
-undo. Facts and achievement IDs stay shared. Hidden, unselected, and archived content
-retains overrides; permanent career entry deletion removes them.
-
-Resume translation review compares its effective bilingual pair. If English has
-an override and Portuguese inherits, editing shared Portuguese flags the English
-override for translation review (and vice versa). **Shared wording changed** is a
-separate review of same-language shared text beneath an override. Its acknowledgment
-never clears translation review. Draft downloads remain available when valid.
-
-Open **Compare resumes** in Content & order for a read-only, language-specific comparison
-of visibility, selections, ordering, effective wording and its source/review state,
-and effective template settings. **Differences only** hides equal rows; edit links
-open the corresponding resume and field. JSON backups preserve all overrides and
-review metadata.
-
-**Translation review** is the global unresolved queue. Its badge counts distinct
-owner/field/language items across both languages, including archived career content
-and excluded resume customizations. Resolving an opened item keeps it in a labeled
-current-item area until another item is opened or its review context is left.
-Filters and focus changes do not dismiss it. Owner-editor return links preserve
-queue filters, list scroll, and the current item. Translation target language is
-independent of the resume output language.
-
-Navigation uses typed, tab-local destinations; editor navigation does not create
-URL history entries or shareable links to individual views yet.
-
-## Verification
-
-| Command                    | Purpose                                                   |
-| -------------------------- | --------------------------------------------------------- |
-| `npm run compiler:prepare` | Verify locked downloads and prepare local compiler assets |
-| `npm run format:check`     | Check source formatting                                   |
-| `npm run lint`             | Lint source and import ordering                           |
-| `npm run typecheck`        | Run Next.js route type generation and TypeScript          |
-| `npm run build`            | Produce a production build                                |
-| `npm test`                 | Run the current Playwright application checks             |
-| `npm start`                | Serve the production build                                |
-
-Automated tests are in scope for ongoing implementation. Currently `npm test`
-runs Playwright against a fresh production build/server on localhost:3100. The
-existing scaffold test still asserts starter-page content and needs to be updated
-for the actual application; it is not product acceptance coverage. Vitest Node and
-browser-component projects are not yet configured. Add meaningful domain,
-interaction, and application-flow coverage alongside the roadmap's implementation,
-starting with target-contract checks alongside schema-2 implementation. Run targeted non-watch
-tests and confirm file/test counts. Use the bundled fictional example on a
-disposable localhost origin for complementary manual verification.
-Static checks and production builds do not establish browser behavior. Safari and
-assistive-technology compatibility remain unverified; no PDF/UA or universal ATS
-compatibility is claimed.
-
-The workspace sends no resume data to a backend. Authentication, account persistence,
-publication, public APIs, portfolio/LinkedIn integration, and hosted deployment
-are outside this implementation. Builds fetch the existing Geist interface
-fonts through Next.js; document fonts are in the local compiler bundle.
-
-Agent guidance is in [AGENTS.md](AGENTS.md). Template/compiler maintenance is
-covered by the repository's `resume-latex` skill. The
-[browser compilation milestone](docs/compilation-proof.md) documents the pinned
-bundle, standalone demonstration, and recorded compiler verification.
-
-[Product requirements](docs/requirements.md) describe the local-editor milestone and future account/public-download
-roadmap; the current implementation is the local-only workspace described
-above.
-
-## Structured resume links
-
-Profile and career-entry links support independent editable labels, default
-addresses and icon types. Create separate links for different destinations and
-choose their inclusion per resume.
+The application sends no resume content to a backend. Accounts, synchronization,
+public downloads, and deployment remain future scope. Compiler maintenance is
+covered in [compilation proof](docs/compilation-proof.md).

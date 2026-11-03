@@ -211,6 +211,24 @@ function onInteract(event: Event) {
   const sortableInteraction =
     target instanceof Element &&
     target.closest('[data-slot="animated-list-item"]');
+  // Canceling scale on pointerdown moves an action away before pointerup,
+  // causing the browser to dispatch click to its parent. Pause ordinary actions
+  // through click instead; drag handles still cancel before drag measurement.
+  const action =
+    target instanceof Element &&
+    target.closest("button, input, a, [contenteditable]");
+  if (
+    sortableInteraction &&
+    action &&
+    !action.hasAttribute("data-sort-handle")
+  ) {
+    if (event.type === "pointerdown") {
+      for (const state of subscribers)
+        state.animations.forEach((animation) => animation.pause());
+      return;
+    }
+    if (event.type === "focusin" && !action.matches(":focus-visible")) return;
+  }
   for (const state of subscribers) {
     if (sortableInteraction) cancelAll(state);
     for (const element of state.elements) {
@@ -220,6 +238,14 @@ function onInteract(event: Event) {
       }
     }
   }
+}
+
+/** Resume entrances after the native click has used the stable pressed geometry. */
+function onPointerEnd() {
+  for (const state of subscribers)
+    state.animations.forEach((animation) => {
+      if (animation.playState === "paused") animation.play();
+    });
 }
 
 /** Immediately stop active entrances when the shared media query requests less motion. */
@@ -234,6 +260,8 @@ function subscribe(state: EntranceState) {
     window.addEventListener("scroll", onScroll, true);
     document.addEventListener("pointerdown", onInteract, true);
     document.addEventListener("focusin", onInteract, true);
+    document.addEventListener("pointerup", onPointerEnd, true);
+    document.addEventListener("pointercancel", onPointerEnd, true);
     motionQuery.addEventListener("change", onReduce);
   }
   subscribers.add(state);
@@ -249,6 +277,8 @@ function subscribe(state: EntranceState) {
       window.removeEventListener("scroll", onScroll, true);
       document.removeEventListener("pointerdown", onInteract, true);
       document.removeEventListener("focusin", onInteract, true);
+      document.removeEventListener("pointerup", onPointerEnd, true);
+      document.removeEventListener("pointercancel", onPointerEnd, true);
       motionQuery?.removeEventListener("change", onReduce);
       motionQuery = null;
     }

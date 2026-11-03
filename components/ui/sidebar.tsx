@@ -198,7 +198,7 @@ function Sidebar({
           <SheetHeader className="sr-only">
             <SheetTitle>Verso workspace</SheetTitle>
             <SheetDescription>
-              Career content, translations, variants, and workspace controls.
+              Career content and workspace controls.
             </SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>

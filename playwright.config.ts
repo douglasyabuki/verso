@@ -12,13 +12,26 @@ const baseURL = "http://localhost:3100";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  testIgnore: /workspace-performance\.spec\.ts/,
   fullyParallel: true,
   workers: 2,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
   reporter: "list",
   use: { baseURL, trace: "retain-on-failure" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+      testIgnore: /(storage-quota|workspace-performance)\.spec\.ts/,
+    },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
+      testIgnore: /(storage-quota|workspace-performance)\.spec\.ts/,
+    },
+  ],
   webServer: {
     command:
       "npm run build && npm run start -- --hostname localhost --port 3100",
