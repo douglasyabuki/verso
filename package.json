@@ -14,8 +14,10 @@
     "format:check": "prettier --check . --ignore-unknown",
     "typecheck": "next typegen && tsc --noEmit",
     "fix": "npm run format && npm run lint:fix",
-    "test": "npm run test:e2e",
-    "test:e2e": "playwright test"
+    "test": "npm run test:unit && npm run test:browser && npm run test:e2e",
+    "test:e2e": "playwright test",
+    "test:unit": "vitest run --project unit",
+    "test:browser": "vitest run --project browser"
   },
   "engines": {
     "node": ">=20.19.0"
@@ -51,9 +53,11 @@
   "devDependencies": {
     "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
+    "@tailwindcss/vite": "4.3.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/browser-playwright": "4.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
     "eslint-config-prettier": "^10.1.8",
@@ -61,6 +65,9 @@
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "7.3.1",
+    "vitest": "4.1.0",
+    "vitest-browser-react": "2.2.0"
   }
 }

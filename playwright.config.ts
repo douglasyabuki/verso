@@ -24,6 +24,8 @@ export default defineConfig({
       "npm run build && npm run start -- --hostname localhost --port 3100",
     url: baseURL,
     reuseExistingServer: false,
+    stdout: "pipe",
+    stderr: "pipe",
     timeout: 300_000,
   },
 });
