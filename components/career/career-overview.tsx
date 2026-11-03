@@ -1,4 +1,7 @@
+"use client";
+
 import { Pencil } from "lucide-react";
+import { useRef } from "react";
 
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useListEntrance } from "@/hooks/use-list-entrance";
 import type { CareerDocument } from "@/types-and-constants/career";
 
 /** Render the original career overview card layout using schema-2 career records.
@@ -24,6 +28,15 @@ export function CareerOverview({
   document: CareerDocument;
   navigate: (destination: string) => void;
 }) {
+  const list = useRef<HTMLDivElement>(null);
+  useListEntrance({
+    getElements: () => [
+      ...(list.current?.querySelectorAll<HTMLElement>(
+        ":scope > [data-list-id]",
+      ) ?? []),
+    ],
+    contextKey: "career-overview",
+  });
   const sections = [
     {
       id: "profile",
@@ -53,9 +66,9 @@ export function CareerOverview({
   return (
     <div className="flex flex-col gap-5">
       <p className="text-xs text-muted-foreground">Shared career content</p>
-      <div className="grid gap-4 @2xl:grid-cols-2">
+      <div ref={list} className="grid gap-4 @2xl:grid-cols-2">
         {sections.map((section) => (
-          <Card key={section.id} size="sm">
+          <Card key={section.id} data-list-id={section.id} size="sm">
             <CardHeader>
               <CardTitle
                 size="section"

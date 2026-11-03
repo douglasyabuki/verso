@@ -943,31 +943,6 @@ export function CareerWorkspace({
                 : "Career details · Shared content"}
             </p>
           </div>
-          {contextSection && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Section actions"
-                  />
-                }
-              >
-                <MoreHorizontal />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    onClick={() => navigate(`section/${contextSection.id}`)}
-                  >
-                    <Pencil />
-                    Edit section properties
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
           {destination === "overview" && !state.draft && (
             <Button
               disabled={documentValue.sections.length >= 100}
@@ -976,6 +951,41 @@ export function CareerWorkspace({
               <Plus data-icon="inline-start" />
               Add section
             </Button>
+          )}
+          {(contextSection || (destination === "overview" && !state.draft)) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={
+                      contextSection ? "Section actions" : "Overview actions"
+                    }
+                  />
+                }
+              >
+                <MoreHorizontal />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      navigate(
+                        contextSection
+                          ? `section/${contextSection.id}`
+                          : "sections",
+                      )
+                    }
+                  >
+                    <Pencil />
+                    {contextSection
+                      ? "Edit section properties"
+                      : "Edit section order"}
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
         {(state.draft || (destination === "backups" && state.orderDraft)) && (
@@ -1425,16 +1435,7 @@ export function CareerWorkspace({
             </FieldGroup>
           </section>
         ) : listSection ? null : (
-          <>
-            <CareerOverview document={documentValue} navigate={navigate} />
-            <Button
-              variant="outline"
-              className="self-start"
-              onClick={() => navigate("sections")}
-            >
-              Edit section order
-            </Button>
-          </>
+          <CareerOverview document={documentValue} navigate={navigate} />
         )}
         <Dialog open={addingSection} onOpenChange={setAddingSection}>
           <DialogContent>

@@ -269,6 +269,10 @@ function subscribe(state: EntranceState) {
     state.observer?.disconnect();
     state.observer = null;
     cancelAll(state);
+    // Effect replay cancels the first entrance but retains this ref. A new
+    // subscription must reveal rows again rather than treating them as finished.
+    state.seen.clear();
+    state.scrolled = false;
     pending.delete(state);
     subscribers.delete(state);
     if (!subscribers.size) {

@@ -18,6 +18,8 @@ schema-2 backup/recovery/replacement controls; it offers no retired reset/autosa
 The editor uses the previous career overview card grid, destination headings/icons,
 entry-list card, and grouped form layout. Schema-2 drafts supply these views without
 changing the shared utility rail, sidebar, or workspace shell.
+Overview cards and sidebar navigation use shared staggered pop entrances, honoring
+reduced motion; reopening the sidebar replays its entrance.
 
 Career details owns profile, summary, built-in/custom sections, entries, achievements,
 links, shared facts, and reusable wording. One content language is sufficient.

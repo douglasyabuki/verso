@@ -2,7 +2,7 @@
 
 import { cn } from "cn";
 import { Database, FileText, Languages, X } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { BrandLockup } from "@/components/brand/brand";
 import { contentLanguageName } from "@/components/career/career-fields";
@@ -40,6 +40,7 @@ import { SidebarCollection } from "@/components/workspace/sidebar-collection";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { WorkspaceToolbarView } from "@/components/workspace/workspace-toolbar-view";
 import { AppearanceControl } from "@/components/workspace/workspace-utility-rail";
+import { useListEntrance } from "@/hooks/use-list-entrance";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useWorkspaceLayout } from "@/hooks/workspace/use-workspace-layout";
 import type { CareerDocument } from "@/types-and-constants/career";
@@ -57,7 +58,25 @@ function CareerSidebar({
   navigate,
   addSection,
 }: CareerNavigation) {
-  const { isMobile, setOpenMobile } = useSidebar();
+  const {
+    isMobile,
+    openMobile,
+    open: sidebarOpen,
+    setOpenMobile,
+  } = useSidebar();
+  const collectionsRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  useListEntrance({
+    getElements: () =>
+      [collectionsRef.current, footerRef.current].flatMap((container) => [
+        ...(container?.querySelectorAll<HTMLElement>(
+          '[data-sidebar="group-label"], [data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]',
+        ) ?? []),
+      ]),
+    contextKey: `sidebar:${isMobile}:${isMobile ? openMobile : sidebarOpen}`,
+    disabled: !(isMobile ? openMobile : sidebarOpen),
+    mode: "all",
+  });
   const go = (next: string) => {
     setOpenMobile(false);
     navigate(next);
@@ -101,7 +120,10 @@ function CareerSidebar({
         )}
       </SidebarHeader>
       <SidebarContent className="overflow-hidden">
-        <div className="flex min-h-0 flex-1 flex-col gap-2 py-3">
+        <div
+          ref={collectionsRef}
+          className="flex min-h-0 flex-1 flex-col gap-2 py-3"
+        >
           <SidebarCollection
             label="Career details"
             active={destination === "overview"}
@@ -146,7 +168,7 @@ function CareerSidebar({
         </div>
       </SidebarContent>
       <SidebarSeparator className="mx-5 shrink-0" />
-      <SidebarFooter className="shrink-0 px-3 py-2">
+      <SidebarFooter ref={footerRef} className="shrink-0 px-3 py-2">
         <SidebarMenu>
           {item(
             "languages",
