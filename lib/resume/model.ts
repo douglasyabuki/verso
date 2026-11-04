@@ -7,8 +7,8 @@ import { linkTypes, resumeColors } from "@/types-and-constants/resume";
 import {
   defaultSectionIcons,
   sectionIconIds,
-  sectionKinds,
-} from "@/types-and-constants/sections";
+} from "@/types-and-constants/section-icons";
+import { sectionKinds } from "@/types-and-constants/sections";
 
 export const templateIdentity = {
   id: "yabuki-reference",

@@ -1,4 +1,8 @@
 import { FieldDescription } from "@/components/ui/field";
+import {
+  sectionIconIds,
+  sectionIconLabels,
+} from "@/types-and-constants/section-icons";
 
 const names: Record<string, string> = {
   fullName: "Full name",
@@ -6,6 +10,7 @@ const names: Record<string, string> = {
   wording: "Wording",
   heading: "Section heading",
   name: "Internal name",
+  icon: "Section icon",
   active: "Active",
   archived: "Archived",
   label: "Link label",
@@ -70,7 +75,10 @@ function comparisonRows(value: unknown, prefix = ""): Map<string, string> {
               ? item
                 ? "Yes"
                 : "No"
-              : String(item),
+              : key.endsWith("/icon") &&
+                  sectionIconIds.some((id) => id === item)
+                ? sectionIconLabels[item as (typeof sectionIconIds)[number]]
+                : String(item),
       );
   };
   walk(value, "", prefix);

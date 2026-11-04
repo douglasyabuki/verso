@@ -547,13 +547,13 @@ function CareerMenu({
             </span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
-        {target.kind === "section" && (
+        {target.kind === "section" && remove && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem
                 variant="destructive"
-                disabled={blocked || !remove}
+                disabled={blocked}
                 onClick={() => {
                   if (target.kind === "section")
                     actions.remove(target.sectionId, trigger.current);
@@ -562,11 +562,9 @@ function CareerMenu({
                 <Trash2 />
                 <span>
                   Delete section
-                  {(blocked || !remove) && (
+                  {blocked && (
                     <span className="block text-xs whitespace-normal text-muted-foreground">
-                      {blocked
-                        ? "Wait for the current action to finish."
-                        : "Built-in sections cannot be deleted."}
+                      Wait for the current action to finish.
                     </span>
                   )}
                 </span>

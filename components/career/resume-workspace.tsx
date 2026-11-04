@@ -108,6 +108,7 @@ import type {
   CareerDocument,
   CareerResume,
 } from "@/types-and-constants/career";
+import type { SectionIconId } from "@/types-and-constants/section-icons";
 
 export function ResumeIdentityFields({
   values,
@@ -1035,7 +1036,10 @@ export function ResumeContentEditor({
                     }
                   >
                     <DisclosureChevron />
-                    <CareerSectionIcon kind={section.kind} />
+                    <CareerSectionIcon
+                      kind={section.kind}
+                      icon={section.icon}
+                    />
                     <DisclosureLabel>
                       {section.name || section.kind} entries
                     </DisclosureLabel>
@@ -1228,13 +1232,23 @@ export function ResumeContentEditor({
   );
 }
 
-function ResumeFieldIcon({ owner }: { owner: ResumeFieldOwner }) {
+function ResumeFieldIcon({
+  owner,
+  icon,
+}: {
+  owner: ResumeFieldOwner;
+  icon?: SectionIconId;
+}) {
   return (
     <span aria-hidden="true" className="flex h-lh shrink-0 items-center">
       {owner === "resume" ? (
         <FileText className="size-4 shrink-0" />
       ) : (
-        <CareerSectionIcon kind={owner} className="size-4 shrink-0" />
+        <CareerSectionIcon
+          kind={owner}
+          icon={icon}
+          className="size-4 shrink-0"
+        />
       )}
     </span>
   );
@@ -1270,6 +1284,7 @@ function CareerReferenceRow({
   label,
   value,
   owner,
+  icon,
   destination,
   navigate,
   showLabel = true,
@@ -1278,6 +1293,7 @@ function CareerReferenceRow({
   label: string;
   value: string;
   owner: ResumeFieldOwner;
+  icon?: SectionIconId;
   destination: string;
   navigate: (destination: string) => void;
   showLabel?: boolean;
@@ -1302,7 +1318,7 @@ function CareerReferenceRow({
       <div className="min-w-0 flex-1 basis-48">
         {showLabel && (
           <p className="mb-1 flex items-start gap-2 text-sm font-medium">
-            <ResumeFieldIcon owner={owner} />
+            <ResumeFieldIcon owner={owner} icon={icon} />
             <span className="min-w-0 wrap-anywhere">{label}</span>
           </p>
         )}
@@ -1402,7 +1418,7 @@ export function ResumeWordingEditor({
           <Card key={field.id} size="sm" role="group" aria-label={field.label}>
             <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
               <CardTitle className="flex min-w-0 flex-1 basis-48 items-start gap-2">
-                <ResumeFieldIcon owner={field.owner} />
+                <ResumeFieldIcon owner={field.owner} icon={field.icon} />
                 <span className="min-w-0 wrap-anywhere">{field.label}</span>
               </CardTitle>
               <WordingSourceBadge
@@ -1468,6 +1484,7 @@ export function ResumeWordingEditor({
                         label={field.label}
                         value={wordingText(field.shared)}
                         owner={field.owner}
+                        icon={field.icon}
                         destination={field.destination}
                         navigate={navigate}
                         showLabel={false}
@@ -1589,7 +1606,7 @@ export function ResumeComparison({ document }: { document: CareerDocument }) {
           <Card key={row.id} size="sm">
             <CardHeader>
               <CardTitle className="flex items-start gap-2">
-                <ResumeFieldIcon owner={row.owner} />
+                <ResumeFieldIcon owner={row.owner} icon={row.icon} />
                 <span className="min-w-0 wrap-anywhere">{row.label}</span>
               </CardTitle>
             </CardHeader>

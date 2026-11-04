@@ -41,6 +41,7 @@ export function CareerOverview({
     {
       id: "profile",
       kind: "profile" as const,
+      icon: undefined,
       label: "Profile",
       description: "Shared contact details for all resumes",
       destination: "profile",
@@ -49,6 +50,7 @@ export function CareerOverview({
     {
       id: "summary",
       kind: "summary" as const,
+      icon: undefined,
       label: "Summary",
       description: "Reusable summary wording for each content language",
       destination: "summary",
@@ -57,6 +59,7 @@ export function CareerOverview({
     ...document.sections.map((section) => ({
       id: section.id,
       kind: section.kind,
+      icon: section.icon,
       label: section.name || section.kind,
       description: `${section.entries.filter((entry) => !entry.archived).length} active · ${section.entries.filter((entry) => entry.archived).length} archived entries`,
       destination: `list/${section.id}`,
@@ -74,7 +77,7 @@ export function CareerOverview({
                 size="section"
                 className="flex items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
               >
-                <CareerSectionIcon kind={section.kind} />
+                <CareerSectionIcon kind={section.kind} icon={section.icon} />
                 {section.label}
                 {section.archived && (
                   <Badge variant="secondary">Archived</Badge>

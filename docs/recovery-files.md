@@ -48,3 +48,20 @@ require reconciliation/export rather than attaching a draft to another resume.
 Imported operation IDs never prove a local commit. Locally prepared uncertain
 creation/deletion requests reuse their exact operation identity and check the
 receipt before attempting the mutation again.
+
+## Section icon data
+
+Current workspace schema-2 sections require a catalog `icon` ID. Custom sections
+may use any supported ID; built-in sections require their fixed default. Starter
+section definitions also include an icon. Earlier development files without
+these fields are unsupported and are not converted or silently reseeded.
+
+Section-properties recovery retains the icon in both baseline and draft values.
+Malformed draft icon values remain recoverable for correction; workspace imports
+reject invalid icons without adoption. Restore remains uncommitted, and the
+properties form's Save/Cancel resolves the icon together with other properties.
+Prepared requests keep their exact operation identity and fingerprint on retry.
+Icons participate in section-property conflicts and history; entry-order scopes
+remain IDs only. Workspace backups, the one previous workspace, and rollback
+preserve committed icon choices. Recovery uses format 1 and workspace backups use
+schema 2; no compatibility format or migration is added.

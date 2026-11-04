@@ -7,6 +7,7 @@ import type {
   CareerSection,
 } from "@/types-and-constants/career";
 import { CAREER_OUTPUT_CAPABILITIES } from "@/types-and-constants/career";
+import type { SectionIconId } from "@/types-and-constants/section-icons";
 
 export type ResumeContent = Pick<
   CareerResume,
@@ -17,6 +18,7 @@ export type ResumeFieldOwner =
   CareerSection["kind"] | "profile" | "summary" | "resume";
 export type ResumeWordingField = {
   owner: ResumeFieldOwner;
+  icon?: SectionIconId;
   id: string;
   label: string;
   shared: RichText;
@@ -140,6 +142,7 @@ export function resumeWordingFields(
     destination: string,
     owner: ResumeFieldOwner,
     rich = false,
+    icon?: SectionIconId,
   ) =>
     rows.push({
       id,
@@ -147,6 +150,7 @@ export function resumeWordingFields(
       shared: shared[language] ?? "",
       destination,
       owner,
+      icon,
       rich,
     });
   for (const field of document.profile.fields.filter(
@@ -176,6 +180,8 @@ export function resumeWordingFields(
       section.heading,
       `section/${section.id}`,
       section.kind,
+      false,
+      section.icon,
     );
     for (const entry of section.entries) {
       const label = `${section.name || section.kind} · ${entry.name || "Untitled entry"}`;
@@ -186,6 +192,8 @@ export function resumeWordingFields(
           field.wording,
           `entry/${entry.id}`,
           section.kind,
+          false,
+          section.icon,
         );
       entry.achievements.forEach((item, index) =>
         add(
@@ -195,6 +203,7 @@ export function resumeWordingFields(
           `entry/${entry.id}`,
           section.kind,
           true,
+          section.icon,
         ),
       );
       entry.links.forEach((item, index) =>
@@ -204,6 +213,8 @@ export function resumeWordingFields(
           item.label,
           `entry/${entry.id}`,
           section.kind,
+          false,
+          section.icon,
         ),
       );
     }
@@ -224,6 +235,7 @@ export function resumeFactFields(document: CareerDocument) {
     value: string;
     destination: string;
     owner: ResumeFieldOwner;
+    icon?: SectionIconId;
   }[] = [];
   const add = (
     fields: CareerDocument["profile"]["fields"],
@@ -231,6 +243,7 @@ export function resumeFactFields(document: CareerDocument) {
     label: string,
     destination: string,
     owner: ResumeFieldOwner,
+    icon?: SectionIconId,
   ) => {
     for (const field of fields.filter((field) => field.type !== "text"))
       rows.push({
@@ -240,6 +253,7 @@ export function resumeFactFields(document: CareerDocument) {
         value: field.fact,
         destination,
         owner,
+        icon,
       });
     links.forEach((link, index) =>
       rows.push({
@@ -249,6 +263,7 @@ export function resumeFactFields(document: CareerDocument) {
         value: link.url,
         destination,
         owner,
+        icon,
       }),
     );
   };
@@ -267,6 +282,7 @@ export function resumeFactFields(document: CareerDocument) {
         `${section.name || section.kind} · ${entry.name || "Untitled entry"}`,
         `entry/${entry.id}`,
         section.kind,
+        section.icon,
       );
   return rows;
 }
@@ -309,6 +325,7 @@ export function resumeComparisonRows(
     id: field.id,
     label: field.label,
     owner: field.owner,
+    icon: field.icon,
     value: wordingText(
       Object.hasOwn(resume.overrides, field.id)
         ? resume.overrides[field.id]
@@ -338,6 +355,7 @@ export function resumeComparisonRows(
       id: fact.id,
       label: fact.label,
       owner: fact.owner,
+      icon: fact.icon,
       value: fact.value,
       status: selected.has(fact.selectionId) ? "Included" : "Excluded",
       source: "Shared fact",
@@ -348,6 +366,7 @@ export function resumeComparisonRows(
       id: "order:contacts",
       label: "Contact order",
       owner: "profile",
+      icon: undefined,
       value: effective
         .profileSelection!.map((id) => {
           const field = document.profile.fields.find(
@@ -372,6 +391,7 @@ export function resumeComparisonRows(
       id: "order:sections",
       label: "Section order",
       owner: "resume",
+      icon: undefined,
       value: effective.selection
         .map((item) => {
           const section = document.sections.find(
@@ -399,6 +419,7 @@ export function resumeComparisonRows(
       id: `order:entries:${section.id}`,
       label: `${title} · Entry order`,
       owner: section.kind,
+      icon: section.icon,
       value:
         config?.entryIds
           .map(
@@ -417,6 +438,7 @@ export function resumeComparisonRows(
         id: `order:details:${entry.id}`,
         label: `${label} · Detail / achievement / link order`,
         owner: section.kind,
+        icon: section.icon,
         value:
           visible && config
             ? [

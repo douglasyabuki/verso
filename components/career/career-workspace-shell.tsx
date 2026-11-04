@@ -175,7 +175,7 @@ function CareerSidebar({
                 item(
                   `list/${section.id}`,
                   section.name || section.kind,
-                  <CareerSectionIcon kind={section.kind} />,
+                  <CareerSectionIcon kind={section.kind} icon={section.icon} />,
                   section.archived,
                 ),
               )}

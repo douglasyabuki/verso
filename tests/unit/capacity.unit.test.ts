@@ -18,6 +18,7 @@ it("accepts 120 independent resumes, 10,000 entries, and maximum nested shapes w
     document.sections.push({
       id: `section-${sectionIndex}`,
       kind: "experience",
+      icon: "briefcase-business",
       name: "",
       archived: false,
       heading: {},

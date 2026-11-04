@@ -18,6 +18,7 @@ function fixture() {
   document.sections.push({
     id: "section",
     kind: "experience",
+    icon: "briefcase-business",
     name: "",
     heading: {},
     archived: false,

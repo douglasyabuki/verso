@@ -29,6 +29,7 @@ export function outputFixture(language = "en-US") {
   document.sections.push({
     id: "section",
     kind: "experience",
+    icon: "briefcase-business",
     name: "Work",
     heading: {},
     archived: false,

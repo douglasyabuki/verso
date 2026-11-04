@@ -46,6 +46,7 @@ for (const cpuRate of [1, 4])
                     id: `section-${i}`,
                     name: `Section ${i}`,
                     kind: "experience",
+                    icon: "briefcase-business",
                     archived: false,
                     heading: {},
                     entries: [],

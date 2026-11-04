@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 
+import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspace } from "@/components/career/career-workspace";
 import {
+  ResumeComparison,
   ResumeContentEditor,
   ResumeWordingEditor,
 } from "@/components/career/resume-workspace";
@@ -742,4 +744,77 @@ it("allocates untransformed sidebar heights without unnecessary scrollbars or wr
   await expect.poll(overflowing).toBeGreaterThan(0);
   await page.viewport(1440, 1000);
   await expect.poll(overflowing).toBe(0);
+});
+
+it("keeps distinct custom-section icons in overview, Content, Wording, references, and comparison", async () => {
+  const { document, resume } = fixture();
+  document.sections.push(
+    {
+      id: "service",
+      kind: "custom",
+      icon: "heart-handshake",
+      name: "Service",
+      heading: {},
+      archived: false,
+      entries: [createEntry("custom")],
+    },
+    {
+      id: "research",
+      kind: "custom",
+      icon: "flask-conical",
+      name: "Research",
+      heading: {},
+      archived: false,
+      entries: [createEntry("custom")],
+    },
+  );
+  document.resumes.push({ ...structuredClone(resume), id: "second-resume" });
+  await render(
+    <>
+      <section aria-label="Career icon overview">
+        <CareerOverview document={document} navigate={vi.fn()} />
+      </section>
+      <section aria-label="Content icons">
+        <ResumeContentEditor
+          document={document}
+          resume={resume}
+          values={{ selection: [] }}
+          onChange={vi.fn()}
+        />
+      </section>
+      <section aria-label="Wording icons">
+        <ResumeWordingEditor
+          document={document}
+          resume={resume}
+          values={{}}
+          onChange={vi.fn()}
+          navigate={vi.fn()}
+        />
+      </section>
+      <section aria-label="Comparison icons">
+        <ResumeComparison document={document} />
+      </section>
+    </>,
+  );
+  for (const region of [
+    "Career icon overview",
+    "Content icons",
+    "Wording icons",
+    "Comparison icons",
+  ]) {
+    const surface = page.getByRole("region", { name: region }).element();
+    expect(surface.querySelector("svg.lucide-heart-handshake")).not.toBeNull();
+    expect(surface.querySelector("svg.lucide-flask-conical")).not.toBeNull();
+  }
+  await page
+    .getByRole("region", { name: "Wording icons" })
+    .getByRole("button", { name: "Shared facts read only", exact: true })
+    .click();
+  const facts = page
+    .getByRole("region", { name: "Wording icons" })
+    .element()
+    .querySelector('[data-slot="collapsible-content"]');
+  expect(facts).not.toBeNull();
+  expect(facts!.querySelector("svg.lucide-heart-handshake")).not.toBeNull();
+  expect(facts!.querySelector("svg.lucide-flask-conical")).not.toBeNull();
 });

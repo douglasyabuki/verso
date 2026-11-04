@@ -2,7 +2,7 @@ import { reconcileProfileSelection } from "@/lib/content/profile";
 import { createEmptyDocument } from "@/lib/resume/factories";
 import { localized } from "@/lib/wording/localization";
 import type { Entry, ResumeDocument } from "@/types-and-constants/resume";
-import { defaultSectionIcons } from "@/types-and-constants/sections";
+import { defaultSectionIcons } from "@/types-and-constants/section-icons";
 
 /**
  * Build an explicitly fictional bilingual example with populated resume sections.

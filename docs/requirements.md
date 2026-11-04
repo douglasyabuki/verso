@@ -601,6 +601,55 @@ source/build identity, regressions resolved, and limits. Deferred F1–F7 remain
 historical/open acceptance, not automatically passed by this implementation.
 Owner visual/PDF, manual round-trip, and performance acceptance remain separate.
 
+## Phase 2.5 — Custom-section icons
+
+Implementation delivered; browser/manual acceptance remains with the owner.
+
+This slice corrects the delivered career model and resume presentation without
+changing the historical completion records above. Earlier development workspaces,
+backups, drafts, and prepared operations need no backward compatibility; do not
+add migration adapters, silently reseed data, or add legacy regression coverage.
+Workspace schema 2 and recovery format 1 remain the development target formats.
+
+- [x] P2.5.1 Require validated section icon IDs in the active model, factories,
+      fixtures, starter definitions, and portable validators. Reuse the 25-icon
+      catalog; custom sections default to file-text, and built-in icons are fixed.
+- [x] P2.5.2 Edit icons in Section properties through its existing draft and
+      Cancel / Save. Show draft choices only inside the properties editor;
+      other views use committed icons. No independent picker Save operation.
+- [x] P2.5.3 Resolve each section's saved icon consistently across Career details,
+      section destinations, sidebar, resume Content & order, Wording, comparison,
+      and any other existing section representation. Preserve resume identity
+      colors and generic navigation/action icons; add no new representations.
+- [x] P2.5.4 Include icons in scope baselines, validation, recovery, reconciliation,
+      conflicts, atomic Save receipts, retries, and Undo/Redo. Preserve independent
+      entry-order drafts, exact-version cleanup, archive/restore, replacement,
+      rollback, and workspace/recovery round trips.
+- [x] P2.5.5 Keep icons shared and language-independent, outside wording and output
+      readiness. Starter structure copies icon choices; appearance presets do not
+      overwrite shared icons. Starter workflows remain later layout work. Icons
+      remain app-only; preserve PDF rendering and revision metadata, so an icon Save
+      may mark preview stale but never automatically compiles. Subsequent settings,
+      resource, and local acceptance work includes icon consistency and recovery.
+- [x] P2.5.6 Run formatting, lint, route generation/typecheck, non-watch unit tests,
+      and production build. Update maintained guidance and record actual results.
+      Browser Mode, Playwright, computer-use, visual, and manual PDF validation
+      belong to the owner and remain explicitly unverified for this slice.
+
+Owner acceptance: verify picker keyboard/focus and narrow-screen behavior; draft
+isolation and Save/Cancel; navigation/reload and recovery; and distinct custom
+section icons across career and resume views. Existing deferred acceptance stays
+open. No dependency upgrades, routes, per-resume icon overrides, PDF section icons,
+or future starter/preset workflows are included.
+
+Non-browser verification on 2026-11-04: formatting, lint, generated route types /
+TypeScript, 58 unit tests across 10 files, and production build passed. Seven local
+documentation links were checked, and requirements through Phase 2 were verified
+unchanged. Controller unit checks exercise explicit session-only behavior, not
+real IndexedDB atomicity. Three icon-specific browser cases were added for picker
+Save/Cancel, distinct icons across views, and real persistence/retry/rollback;
+these and all other browser/manual checks remain unexecuted for this slice.
+
 ## Phase 3 — Output readiness
 
 - [ ] P3.1 Remove compulsory counterpart tasks and translation confirmations.

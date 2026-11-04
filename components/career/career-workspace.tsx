@@ -44,6 +44,7 @@ import {
 } from "@/components/career/resume-workspace";
 import { ScopeComparison } from "@/components/career/scope-comparison";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
+import { CareerSectionIconPicker } from "@/components/content/career-section-icon-picker";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,7 @@ import {
   duplicateEntry,
   entrySchema,
   readScope,
-  sectionSchema,
+  sectionPropertiesSchema,
 } from "@/lib/career/model";
 import { importPortable } from "@/lib/career/portable-import";
 import { oversizedRecovery, recoveryFiles } from "@/lib/career/recovery-export";
@@ -108,6 +109,7 @@ import {
   SECTION_KINDS,
   VERIFIED_OUTPUT_LANGUAGES,
 } from "@/types-and-constants/career";
+import { defaultSectionIcons } from "@/types-and-constants/section-icons";
 
 function download(value: unknown, filename: string) {
   const url = URL.createObjectURL(
@@ -212,7 +214,7 @@ function DraftEditor({
         : scope === "summary"
           ? careerDocumentSchema.shape.summary.safeParse(sanitized).success
           : scope.startsWith("section/") || scope.startsWith("new-section/")
-            ? sectionSchema.omit({ entries: true }).safeParse(sanitized).success
+            ? sectionPropertiesSchema.safeParse(sanitized).success
             : scope === "languages"
               ? careerDocumentSchema.shape.languages.safeParse(sanitized)
                   .success
@@ -225,8 +227,7 @@ function DraftEditor({
                   ? Array.isArray(sanitized) &&
                     sanitized.every(
                       (section) =>
-                        sectionSchema.omit({ entries: true }).safeParse(section)
-                          .success,
+                        sectionPropertiesSchema.safeParse(section).success,
                     )
                   : scope.startsWith("selection/") &&
                     careerDocumentSchema.shape.resumes.element.shape.selection.safeParse(
@@ -403,6 +404,13 @@ function DraftEditor({
     const section = values as Omit<CareerSection, "entries">;
     return (
       <FieldGroup>
+        {section.kind === "custom" && (
+          <CareerSectionIconPicker
+            value={section.icon}
+            onChange={(icon) => onChange({ ...section, icon })}
+            disabled={disabled}
+          />
+        )}
         <Field orientation="horizontal">
           <Checkbox
             id="section-archived"
@@ -950,6 +958,16 @@ export function CareerWorkspace({
       : scope === "summary"
         ? "summary"
         : contextSection?.kind;
+  const propertiesDraft =
+    scope.startsWith("section/") || scope.startsWith("new-section/")
+      ? sectionPropertiesSchema.safeParse(state.draft?.values)
+      : null;
+  const formIconKind = propertiesDraft?.success
+    ? propertiesDraft.data.kind
+    : iconKind;
+  const formIcon = propertiesDraft?.success
+    ? propertiesDraft.data.icon
+    : contextSection?.icon;
   const formTitle = scope.startsWith("resume-content/")
     ? "Resume content & order"
     : scope.startsWith("resume-wording/")
@@ -1066,7 +1084,10 @@ export function CareerWorkspace({
                       data-resume-color={activeResume.color ?? "indigo"}
                     />
                   ) : iconKind ? (
-                    <CareerSectionIcon kind={iconKind} />
+                    <CareerSectionIcon
+                      kind={iconKind}
+                      icon={contextSection?.icon}
+                    />
                   ) : null}
                   <h1 tabIndex={-1} data-workspace-heading>
                     {title}
@@ -1350,7 +1371,12 @@ export function CareerWorkspace({
                         size="section"
                         className="flex flex-wrap items-center gap-2"
                       >
-                        {iconKind && <CareerSectionIcon kind={iconKind} />}
+                        {formIconKind && (
+                          <CareerSectionIcon
+                            kind={formIconKind}
+                            icon={formIcon}
+                          />
+                        )}
                         {formTitle}
                       </CardTitle>
                       <CardDescription>
@@ -1811,6 +1837,7 @@ export function CareerWorkspace({
                       const section = {
                         id: crypto.randomUUID(),
                         kind,
+                        icon: defaultSectionIcons[kind],
                         name: kind.charAt(0).toUpperCase() + kind.slice(1),
                         heading: {},
                         archived: false,

@@ -358,7 +358,8 @@
             ],
             "links": []
           }
-        ]
+        ],
+        "icon": "briefcase-business"
       },
       {
         "id": "example-section-projects",
@@ -581,7 +582,8 @@
             ],
             "links": []
           }
-        ]
+        ],
+        "icon": "folder-kanban"
       },
       {
         "id": "example-section-education",
@@ -787,7 +789,8 @@
             ],
             "links": []
           }
-        ]
+        ],
+        "icon": "graduation-cap"
       },
       {
         "id": "example-section-skills",
@@ -945,7 +948,8 @@
             ],
             "links": []
           }
-        ]
+        ],
+        "icon": "code-2"
       },
       {
         "id": "example-section-certifications",
@@ -1173,7 +1177,8 @@
             ],
             "links": []
           }
-        ]
+        ],
+        "icon": "award"
       },
       {
         "id": "example-section-custom",
@@ -1254,7 +1259,8 @@
             ],
             "links": []
           }
-        ]
+        ],
+        "icon": "heart-handshake"
       }
     ],
     "resumes": [
@@ -1447,7 +1453,18 @@
           "paper": "a4",
           "font": "inter",
           "fontSize": 10
-        }
+        },
+        "color": "indigo",
+        "profileSelection": [
+          "example-profile-email",
+          "example-profile-phone",
+          "example-profile-city",
+          "example-profile-country",
+          "example-site",
+          "example-github",
+          "example-linkedin"
+        ],
+        "summaryIncluded": true
       },
       {
         "id": "example-resume-pt-BR",
@@ -1638,7 +1655,18 @@
           "paper": "a4",
           "font": "inter",
           "fontSize": 10
-        }
+        },
+        "color": "indigo",
+        "profileSelection": [
+          "example-profile-email",
+          "example-profile-phone",
+          "example-profile-city",
+          "example-profile-country",
+          "example-site",
+          "example-github",
+          "example-linkedin"
+        ],
+        "summaryIncluded": true
       }
     ],
     "starters": [],

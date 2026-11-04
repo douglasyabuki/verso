@@ -14,6 +14,10 @@ import {
   SECTION_KINDS,
   WORKSPACE_BYTES,
 } from "@/types-and-constants/career";
+import {
+  defaultSectionIcons,
+  sectionIconIds,
+} from "@/types-and-constants/section-icons";
 
 const id = z
   .string()
@@ -122,12 +126,28 @@ export const entrySchema = z.strictObject({
   achievements: z.array(achievementSchema).max(100),
   links: z.array(linkSchema).max(30),
 });
-export const sectionSchema = z.strictObject({
+const sectionIdentitySchema = z
+  .strictObject({
+    kind: z.enum(SECTION_KINDS),
+    icon: z.enum(sectionIconIds),
+  })
+  .refine(
+    (section) =>
+      section.kind === "custom" ||
+      section.icon === defaultSectionIcons[section.kind],
+    {
+      path: ["icon"],
+      message: "Built-in sections must use their default icon.",
+    },
+  );
+
+export const sectionPropertiesSchema = sectionIdentitySchema.safeExtend({
   id,
-  kind: z.enum(SECTION_KINDS),
   name: z.string().max(500),
   heading: wording,
   archived: z.boolean(),
+});
+export const sectionSchema = sectionPropertiesSchema.safeExtend({
   entries: z.array(entrySchema).max(300),
 });
 const layoutSchema = z.strictObject({
@@ -180,8 +200,7 @@ export const careerDocumentSchema = z
           name: z.string().max(500),
           sections: z
             .array(
-              z.strictObject({
-                kind: z.enum(SECTION_KINDS),
+              sectionIdentitySchema.safeExtend({
                 visibleFields: z.array(z.string().max(80)).max(30),
               }),
             )
@@ -530,6 +549,7 @@ export function createCareerDocument(tag = "en-US"): CareerDocument {
     ).map((kind) => ({
       id: crypto.randomUUID(),
       kind,
+      icon: defaultSectionIcons[kind],
       name: kind[0].toUpperCase() + kind.slice(1),
       heading: {},
       archived: false,
@@ -645,6 +665,7 @@ export function readScope(document: CareerDocument, scope: string): unknown {
     return {
       id: section.id,
       kind: section.kind,
+      icon: section.icon,
       name: section.name,
       heading: section.heading,
       archived: section.archived,
@@ -800,7 +821,7 @@ export function applyScope(
     next.sections = reorderRecords(next.sections, values);
   else if (kind === "new-section") {
     if (baseline !== null) throw new Error("Section identity already exists.");
-    const properties = sectionSchema.omit({ entries: true }).parse(values);
+    const properties = sectionPropertiesSchema.parse(values);
     if (properties.id !== target)
       throw new Error("New section identity must match its scope.");
     next.sections.push({ ...properties, entries: [] });
@@ -879,7 +900,7 @@ export function applyScope(
     if (kind === "entries")
       section.entries = reorderRecords(section.entries, values);
     if (kind === "section") {
-      const properties = sectionSchema.omit({ entries: true }).parse(values);
+      const properties = sectionPropertiesSchema.parse(values);
       if (properties.id !== section.id || properties.kind !== section.kind)
         throw new Error("Section identity and kind cannot change.");
       Object.assign(section, properties);

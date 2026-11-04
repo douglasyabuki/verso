@@ -29,6 +29,7 @@ function fixture(language = "en-US") {
     id: "section",
     name: "Fictional work",
     kind: "experience",
+    icon: "briefcase-business",
     heading: {},
     archived: false,
     entries: [entry],

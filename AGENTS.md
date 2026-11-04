@@ -84,6 +84,17 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 
 ## Editing and portable-data contracts
 
+- Current schema-2 sections and starter section definitions require validated icon
+  IDs from `types-and-constants/section-icons.ts`. Custom sections start with
+  `file-text`; built-in icons are fixed. Section properties owns icon draft editing
+  and its existing Save/Cancel; no separate picker commit. All existing section
+  representations resolve the saved icon, including resume wording/fact/comparison
+  descriptors. Icons are shared, language-independent app metadata, outside wording
+  overrides and PDF graphics/readiness. Revision metadata can still stale preview.
+  Include icons in scope baselines, recovery, history, backups, and rollback. No
+  compatibility or migration for earlier development icon data; never silently
+  reseed it. Starter workflows remain future work; presets do not change shared icons.
+
 - New workspaces start with empty Experience, Projects, Education, Skills, and Certifications sections; never reseed existing content. Rich prose belongs in summaries and achievements/details; names, headings, facts, short values, and link labels use plain controls.
 - Entry forms and section entry-order drafts are independent. Sorting preserves the entry draft, selection, search/filter, scroll, and hidden-ID slots. Save/Cancel affects only its scope. Leaving a section resolves each applicable draft independently; later cancellation never undoes an earlier explicit resolution. Data & backups remains accessible without resolving drafts.
 - Use Cancel / Save for forms and Cancel / Discard / Save for dirty navigation, with the primary action rightmost. Disable form actions while unchanged or saving; navigation Cancel retains the draft. Recovery discovery/restoration belongs in Data & backups, not entry-order comparison panels. Preserve shared accessible controls and narrow-screen Editor/PDF switching without closing drafts.

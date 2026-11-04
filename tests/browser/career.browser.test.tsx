@@ -7,6 +7,7 @@ import {
   createCareerDocument,
   createEntry,
   duplicateEntry,
+  readScope,
 } from "@/lib/career/model";
 import { CareerController } from "@/stores/career/controller";
 import {
@@ -220,6 +221,7 @@ describe("Phase 1 recovery and concurrency contracts", () => {
     const section = {
       id: "custom-section",
       kind: "custom",
+      icon: "file-text",
       name: "Volunteering",
       archived: false,
       heading: {},
@@ -797,6 +799,7 @@ describe("Phase 1 recovery and concurrency contracts", () => {
     await controller.command("new-section/destination", {
       id: "destination",
       kind: "experience",
+      icon: "briefcase-business",
       name: "Work",
       heading: {},
       archived: false,
@@ -1084,6 +1087,7 @@ describe("career editing boundaries", () => {
     const properties = {
       id: "new-section",
       kind: "custom",
+      icon: "file-text",
       name: "Custom",
       heading: {},
       archived: false,
@@ -1978,5 +1982,123 @@ describe("restored schema-2 editing controls", () => {
     } finally {
       await screen.unmount();
     }
+  });
+});
+
+describe("custom-section icon properties", () => {
+  it("keeps picker changes in the properties draft until Save and restores committed icons on Cancel", async () => {
+    const owner = await storage();
+    const document = createCareerDocument();
+    document.sections.push({
+      id: "custom-icon",
+      kind: "custom",
+      icon: "file-text",
+      name: "Research",
+      heading: {},
+      archived: false,
+      entries: [],
+    });
+    await owner.load(document);
+    const controller = await controllerOwner();
+    window.history.replaceState({}, "", "?scope=section/custom-icon");
+    const screen = await render(<CareerWorkspace controller={controller} />);
+    await screen
+      .getByRole("button", { name: "Choose section icon", exact: true })
+      .click();
+    await page
+      .getByRole("group", { name: "Section icon", exact: true })
+      .getByRole("button", { name: "Research", exact: true, pressed: false })
+      .click();
+    expect(controller.getSnapshot().draft?.values).toMatchObject({
+      icon: "flask-conical",
+    });
+    expect(controller.getSnapshot().head!.document.sections.at(-1)?.icon).toBe(
+      "file-text",
+    );
+    await userEvent.keyboard("{Escape}");
+    await expect
+      .element(
+        screen.getByRole("button", {
+          name: "Choose section icon",
+          exact: true,
+        }),
+      )
+      .toHaveFocus();
+    await screen.getByRole("button", { name: "Cancel", exact: true }).click();
+    expect(controller.getSnapshot().head!.document.sections.at(-1)?.icon).toBe(
+      "file-text",
+    );
+    controller.open("section/custom-icon");
+    await screen
+      .getByRole("button", { name: "Choose section icon", exact: true })
+      .click();
+    await page
+      .getByRole("group", { name: "Section icon", exact: true })
+      .getByRole("button", { name: "Research", exact: true, pressed: false })
+      .click();
+    await userEvent.keyboard("{Escape}");
+    await screen.getByRole("button", { name: "Save", exact: true }).click();
+    await expect
+      .poll(() => controller.getSnapshot().head!.document.sections.at(-1)?.icon)
+      .toBe("flask-conical");
+    expect((await owner.load()).document.sections.at(-1)?.icon).toBe(
+      "flask-conical",
+    );
+    await screen.unmount();
+  });
+
+  it("retains icon recovery, retries one receipt, and rotates icons through replacement and rollback", async () => {
+    const owner = await storage();
+    const document = createCareerDocument();
+    document.sections.push({
+      id: "custom-icon",
+      kind: "custom",
+      icon: "heart-handshake",
+      name: "Service",
+      heading: {},
+      archived: false,
+      entries: [],
+    });
+    const head = await owner.load(document);
+    const scope = "section/custom-icon";
+    const baseline = readScope(head.document, scope) as object;
+    const values = { ...baseline, icon: "rocket" };
+    const draft: CareerDraft = {
+      draftId: "icon-draft",
+      draftVersion: 1,
+      workspaceId: head.workspaceId,
+      generation: head.generation,
+      baselineRevision: head.revision,
+      scope,
+      baseline,
+      values,
+    };
+    await owner.writeDraft(draft);
+    expect((await owner.drafts())[0].values).toEqual(values);
+    const save = request(head, scope, baseline, values, {
+      draftId: draft.draftId,
+      draftVersion: draft.draftVersion,
+    });
+    await owner.prepare(save);
+    const committed = await owner.commit(save.id);
+    const retried = await owner.commit(save.id);
+    expect(retried.revision).toBe(committed.revision);
+    expect(retried.document.sections.at(-1)?.icon).toBe("rocket");
+    expect(await owner.drafts()).toEqual([]);
+    const incoming = structuredClone(committed.document);
+    incoming.sections.at(-1)!.icon = "flask-conical";
+    const replaced = await owner.replace(committed, incoming);
+    expect(replaced.document.sections.at(-1)?.icon).toBe("flask-conical");
+    const rolledBack = await owner.replace(replaced);
+    expect(rolledBack.document.sections.at(-1)?.icon).toBe("rocket");
+    expect((await owner.previous())?.document.sections.at(-1)?.icon).toBe(
+      "flask-conical",
+    );
+    const invalid = structuredClone(rolledBack.document);
+    Object.assign(invalid.sections.at(-1)!, { icon: "unknown-icon" });
+    const previous = await owner.previous();
+    await expect(owner.replace(rolledBack, invalid)).rejects.toThrow();
+    expect(await owner.load()).toEqual(rolledBack);
+    expect(await owner.previous()).toEqual(previous);
   });
 });

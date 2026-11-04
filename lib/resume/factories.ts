@@ -6,7 +6,7 @@ import {
   type Entry,
   type ResumeDocument,
 } from "@/types-and-constants/resume";
-import { defaultSectionIcons } from "@/types-and-constants/sections";
+import { defaultSectionIcons } from "@/types-and-constants/section-icons";
 
 /**
  * Create the deterministic empty workspace used during hydration.

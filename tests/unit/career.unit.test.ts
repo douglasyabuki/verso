@@ -20,6 +20,7 @@ describe("schema-2 career information", () => {
     document.sections.push({
       id: "section",
       kind: "experience",
+      icon: "briefcase-business",
       name: "Work",
       archived: false,
       heading: { "pt-BR": "Experiência" },
@@ -44,6 +45,7 @@ describe("schema-2 career information", () => {
     document.sections.push({
       id: "section",
       kind: "experience",
+      icon: "briefcase-business",
       name: "",
       archived: false,
       heading: {},
@@ -80,6 +82,7 @@ describe("schema-2 career information", () => {
     document.sections.push({
       id: "section",
       kind: "education",
+      icon: "graduation-cap",
       name: "Education",
       archived: false,
       heading: {},
@@ -109,6 +112,7 @@ describe("schema-2 career information", () => {
     document.sections.push({
       id: "section",
       kind: "projects",
+      icon: "folder-kanban",
       name: "Projects",
       archived: false,
       heading: {},

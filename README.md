@@ -26,6 +26,24 @@ links, shared facts, and reusable wording. One content language is sufficient.
 Content languages use canonical tags; activation is separate from the English UI
 and PDF capability. Deactivation retains wording and existing resumes.
 
+Custom sections have one shared, language-independent app icon. Open **Section
+properties** from the section heading menu and choose **Section icon**. The picker
+edits the properties draft; the form's Cancel / Save resolves the whole edit.
+Until Save succeeds, other views retain the committed icon. Saved choices follow
+section representations in career navigation/overview, section headings, resume
+Content & order, Wording, shared references, and comparison. Resume identity
+colors and navigation icons remain separate. Built-in section icons are fixed.
+
+Section icons are required in the current development model and portable section
+and starter definitions. Earlier development data without icons is unsupported;
+there is no conversion or silent reseeding. Workspace schema 2 and recovery
+format 1 remain the target formats. Icons survive recovery, history,
+archive/restore, and workspace replacement/rollback. They do not add PDF graphics
+or readiness requirements. An icon Save still advances workspace revision and
+can mark the preview stale through its existing PDF revision metadata.
+Starter definitions carry icon choices for future structure copying; starter
+workflows remain planned. Appearance presets do not overwrite shared icons.
+
 Create sections/entries explicitly, then edit their wording and facts. Ordinary
 forms, ordering, and language changes stay uncommitted until Save. Cancel discards
 the affected form. Entry editing and section entry ordering can stay open as
@@ -239,6 +257,27 @@ there is no mandatory duration soak. Detailed engineering safeguards live in
 [AGENTS.md](AGENTS.md).
 
 ## Outstanding verification
+
+Custom-section icon non-browser verification on 2026-11-04 passed formatting,
+lint, generated route types / TypeScript, 58 unit tests across 10 files, and a
+production build. Controller unit cases use explicit session-only behavior;
+they do not prove real IndexedDB transaction behavior. Browser test sources cover
+picker Save/Cancel, distinct section icons across views, and durable retry/rollback,
+but were not executed for this change.
+
+Custom-section icon browser and manual acceptance belongs to the owner. Updated
+browser test source is not execution evidence. Check:
+
+- Picker keyboard navigation, selection, Escape/focus return, and narrow screens.
+- Draft isolation, disabled unchanged/saving actions, Cancel, successful Save,
+  failed Save retention, Undo/Redo, and independent entry ordering.
+- Distinct icons through career overview/sidebar/section destinations and every
+  existing section representation in resume Content & order, Wording, shared
+  references, and comparison; preserve resume colors and generic navigation icons.
+- Navigation, Back/Forward, reload, recovery restoration, workspace/recovery
+  imports, replacement/rollback, and rejected imports preserving stored data.
+- PDF appearance stays unchanged; revision metadata may mark preview stale, and
+  Save never automatically compiles.
 
 Resume navigation and icon updates on 2026-11-04 have updated browser-component
 and E2E test sources. Browser tests and manual validation were left to the owner;
