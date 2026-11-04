@@ -1,3 +1,4 @@
+import { effectiveResume, resolveResumeWording } from "@/lib/career/resumes";
 import {
   renderWording,
   type RichText,
@@ -5,46 +6,13 @@ import {
 } from "@/lib/career/wording";
 import { escapeLatex, escapeLatexUrl } from "@/lib/output/encoding";
 import { renderTemplate } from "@/lib/output/template";
-import type { CareerDocument } from "@/types-and-constants/career";
+import {
+  CAREER_OUTPUT_CAPABILITIES,
+  type CareerDocument,
+} from "@/types-and-constants/career";
 import { defaultSettings } from "@/types-and-constants/output";
 
-export const outputCapabilities: Record<
-  string,
-  {
-    languageNumber: number;
-    pageLabel: string;
-    ofLabel: string;
-    summaryLabel: string;
-    labels: Record<string, string>;
-  }
-> = {
-  "en-US": {
-    languageNumber: 0,
-    pageLabel: "Page",
-    ofLabel: "of",
-    summaryLabel: "About me",
-    labels: {
-      experience: "Experience",
-      education: "Education",
-      projects: "Projects",
-      skills: "Skills",
-      certifications: "Certifications",
-    },
-  },
-  "pt-BR": {
-    languageNumber: 1,
-    pageLabel: "Página",
-    ofLabel: "de",
-    summaryLabel: "Sobre mim",
-    labels: {
-      experience: "Experiência",
-      education: "Formação",
-      projects: "Projetos",
-      skills: "Competências",
-      certifications: "Certificações",
-    },
-  },
-};
+export const outputCapabilities = CAREER_OUTPUT_CAPABILITIES;
 
 /** Render one committed schema-2 resume through the pinned template, retaining selected archived content.
  * @param document Committed validated workspace, never form-draft values.
@@ -58,38 +26,39 @@ export function renderCareerResume(
   resumeId: string,
   revision: number,
 ): string {
-  const resume = document.resumes.find((item) => item.id === resumeId);
-  if (!resume) throw new Error("Resume not found.");
+  const stored = document.resumes.find((item) => item.id === resumeId);
+  if (!stored) throw new Error("Resume not found.");
+  const resume = effectiveResume(document, stored);
   const capability = outputCapabilities[resume.language];
   if (!capability)
     throw new Error(
       "PDF unavailable: language rendering has not been verified.",
     );
   const wording = (id: string, values: Record<string, RichText>) =>
-    resume.overrides[id] ?? values[resume.language] ?? "";
+    resolveResumeWording(resume, id, values);
   const fields = document.profile.fields;
   const nameField = fields.find((field) => field.key === "fullName")!;
   const name = wordingText(wording(nameField.id, nameField.wording));
   if (!name.trim())
     throw new Error("Add the selected language's full name before output.");
-  const contacts = fields
-    .filter((field) => field.key !== "fullName")
-    .map((field) =>
-      escapeLatex(
-        field.type === "text"
-          ? wordingText(wording(field.id, field.wording))
-          : field.fact,
-      ),
-    )
+  const contacts = resume
+    .profileSelection!.map((id) => {
+      const field = fields.find((item) => item.id === id);
+      if (field)
+        return escapeLatex(
+          field.type === "text"
+            ? wordingText(wording(field.id, field.wording))
+            : field.fact,
+        );
+      const link = document.profile.links.find((item) => item.id === id);
+      return link?.url
+        ? `\\href{${escapeLatexUrl(link.url)}}{${escapeLatex(wordingText(wording(link.id, link.label)) || link.url)}}`
+        : "";
+    })
     .filter(Boolean);
-  for (const link of document.profile.links.filter((item) => !item.archived))
-    if (link.url)
-      contacts.push(
-        `\\href{${escapeLatexUrl(link.url)}}{${escapeLatex(wordingText(wording(link.id, link.label)) || link.url)}}`,
-      );
   const body: string[] = [];
   const summary = wording(document.summary.id, document.summary.wording);
-  if (wordingText(summary).trim())
+  if (resume.summaryIncluded && wordingText(summary).trim())
     body.push(
       `\\section{${escapeLatex(capability.summaryLabel.toLocaleUpperCase(resume.language))}}\n${renderWording(summary)}\\par`,
     );

@@ -1,8 +1,9 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 
+import PdfPreview from "@/components/output/lazy-pdf-preview";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -17,7 +18,13 @@ import { outputCapabilities, renderCareerResume } from "@/lib/career/output";
 import type { CareerHead } from "@/stores/career/persistence";
 import { BrowserCompiler } from "@/tools/compiler-proof/compiler.mjs";
 
-export function CommittedOutput({ head }: { head: CareerHead }) {
+export const CommittedOutput = memo(function CommittedOutput({
+  head,
+  activeResumeId,
+}: {
+  head: CareerHead;
+  activeResumeId?: string;
+}) {
   const [resumeId, setResumeId] = useState("");
   const [output, setOutput] = useState<{
     url: string;
@@ -34,8 +41,9 @@ export function CommittedOutput({ head }: { head: CareerHead }) {
   const latest = useRef("");
   const mounted = useRef(true);
   const active =
-    head.document.resumes.find((resume) => resume.id === resumeId) ??
-    head.document.resumes[0];
+    head.document.resumes.find(
+      (resume) => resume.id === (activeResumeId ?? resumeId),
+    ) ?? head.document.resumes[0];
   let source = "";
   let sourceError = "";
   try {
@@ -104,68 +112,85 @@ export function CommittedOutput({ head }: { head: CareerHead }) {
   if (!active) return null;
   return (
     <section
-      className="flex flex-col gap-3"
+      className="flex h-full min-h-0 flex-1 flex-col gap-3"
       aria-label="Committed resume output"
     >
-      <h2 className="text-xl font-semibold">Committed resume output</h2>
-      <p>
-        Manual refresh. Unsaved forms never enter output. Activation does not
-        revoke supported PDF output.
-      </p>
-      <Field>
-        <FieldLabel htmlFor="existing-resume">Existing resume</FieldLabel>
-        <Select
-          value={active.id}
-          items={head.document.resumes.map((resume) => ({
-            value: resume.id,
-            label: `${resume.name} (${resume.language})`,
-          }))}
-          onValueChange={(value) => {
-            if (value) setResumeId(value);
-          }}
-        >
-          <SelectTrigger id="existing-resume">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {head.document.resumes.map((resume) => (
-                <SelectItem key={resume.id} value={resume.id}>
-                  <FileText aria-hidden="true" />
-                  {resume.name} ({resume.language})
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </Field>
-      {!outputCapabilities[active.language] && (
-        <p>PDF unavailable · language rendering is unverified.</p>
-      )}
-      <Button disabled={pending || !source} onClick={() => void compile()}>
-        {pending ? "Compiling committed snapshot…" : "Refresh preview"}
-      </Button>
-      {(sourceError || error) && <p role="alert">{sourceError || error}</p>}
+      <div className="flex shrink-0 flex-col gap-3 px-3 pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-medium">PDF preview</h2>
+          <Button
+            size="sm"
+            disabled={pending || !source}
+            onClick={() => void compile()}
+          >
+            {pending ? "Compiling committed snapshot..." : "Refresh preview"}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Manual refresh · Saved content only
+        </p>
+        {!activeResumeId && (
+          <Field>
+            <FieldLabel htmlFor="existing-resume">Existing resume</FieldLabel>
+            <Select
+              disabled={Boolean(activeResumeId)}
+              value={active.id}
+              items={head.document.resumes.map((resume) => ({
+                value: resume.id,
+                label: `${resume.name} (${resume.language})`,
+              }))}
+              onValueChange={(value) => {
+                if (value) setResumeId(value);
+              }}
+            >
+              <SelectTrigger id="existing-resume">
+                <SelectValue>
+                  <FileText
+                    aria-hidden="true"
+                    className="resume-color text-(--resume-color)"
+                    data-resume-color={active.color ?? "indigo"}
+                  />
+                  {active.name || "Untitled resume"} ({active.language})
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {head.document.resumes.map((resume) => (
+                    <SelectItem key={resume.id} value={resume.id}>
+                      <FileText
+                        aria-hidden="true"
+                        className="resume-color text-(--resume-color)!"
+                        data-resume-color={resume.color ?? "indigo"}
+                      />
+                      {resume.name || "Untitled resume"} ({resume.language})
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
+        {!outputCapabilities[active.language] && (
+          <p>PDF unavailable · language rendering is unverified.</p>
+        )}
+        {(sourceError || error) && <p role="alert">{sourceError || error}</p>}
+      </div>
       {output && (
         <>
-          <p>
+          <p className="shrink-0 px-3 text-xs text-muted-foreground">
             Last successful preview · {output.resumeName} ({output.language}) ·
             revision {output.revision} · generation {output.generation}
             {output.key !== key ? " · Outdated" : " · Current"}
           </p>
-          <a
-            href={output.url}
-            download={`verso-${output.resumeId}-${output.language}-${output.revision}.pdf`}
-          >
-            Download PDF · revision {output.revision}
-          </a>
-          <iframe
-            title="Last successful resume preview"
-            src={output.url}
-            className="h-[600px] w-full rounded-lg border"
+          <PdfPreview
+            document={{
+              key: output.key,
+              url: output.url,
+              fileName: `verso-${output.resumeId}-${output.language}-${output.revision}.pdf`,
+            }}
           />
         </>
       )}
     </section>
   );
-}
+});

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { cleanup, render } from "vitest-browser-react";
 
 import { CareerWorkspace } from "@/components/career/career-workspace";
 import {
@@ -89,7 +89,12 @@ async function reset() {
 }
 
 afterEach(async () => {
-  controllers.forEach((owner) => owner.dispose());
+  await cleanup();
+  for (const owner of controllers) {
+    await expect.poll(() => owner.getSnapshot().saving).toBe(false);
+    await owner.flushRecovery();
+    owner.dispose();
+  }
   controllers.length = 0;
   owners.forEach((owner) => owner.close());
   owners.length = 0;
@@ -1597,7 +1602,10 @@ describe("restored schema-2 editing controls", () => {
           href: "https://example.com/?a=1&b=2",
         },
       ]);
-      await controller.history("undo");
+      // Wait for the Save acknowledgment and its maintenance to settle before
+      // invoking a separate workspace history operation.
+      await expect.poll(() => controller.getSnapshot().saving).toBe(false);
+      expect(await controller.history("undo")).toBe(true);
       expect(controller.getSnapshot().head!.document.summary.wording).toEqual(
         {},
       );
@@ -1737,6 +1745,7 @@ describe("restored schema-2 editing controls", () => {
         controller.getSnapshot().head!.document.sections[0].entries[0].name,
       ).toBe("Beta");
       expect(controller.getSnapshot().undoCount).toBe(undoCount + 2);
+      await expect.poll(() => controller.getSnapshot().saving).toBe(false);
       expect(await owner.drafts()).toEqual([]);
     } finally {
       await screen.unmount();

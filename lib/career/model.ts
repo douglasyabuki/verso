@@ -10,6 +10,7 @@ import {
   BUILTIN_FIELDS,
   FIELD_TYPES,
   RECOVERY_BYTES,
+  RESUME_COLORS,
   SECTION_KINDS,
   WORKSPACE_BYTES,
 } from "@/types-and-constants/career";
@@ -136,6 +137,8 @@ const layoutSchema = z.strictObject({
 });
 const selectionSchema = z.strictObject({
   sectionId: id,
+  hidden: z.boolean().optional(),
+  hiddenEntryIds: z.array(id).max(300).optional(),
   entryIds: z.array(id).max(300),
   achievementIds: z.array(id).max(30_000),
   fieldIds: z.array(id).max(9000),
@@ -144,9 +147,12 @@ const selectionSchema = z.strictObject({
 const resumeSchema = z.strictObject({
   id,
   name: z.string().max(500),
+  color: z.enum(RESUME_COLORS).optional(),
   language,
   template: z.literal("yabuki-reference@1.0.2"),
   selection: z.array(selectionSchema).max(100),
+  profileSelection: z.array(id).max(60).optional(),
+  summaryIncluded: z.boolean().optional(),
   overrides: z.record(id, richTextSchema),
   layout: layoutSchema,
 });
@@ -316,6 +322,25 @@ export const careerDocumentSchema = z
       addId(item.id);
     for (const resume of document.resumes) {
       addId(resume.id);
+      if (resume.profileSelection) {
+        const pool = [
+          ...document.profile.fields.filter(
+            (field) => field.key !== "fullName",
+          ),
+          ...document.profile.links,
+        ];
+        if (
+          new Set(resume.profileSelection).size !==
+            resume.profileSelection.length ||
+          resume.profileSelection.some(
+            (value) => !pool.some((item) => item.id === value),
+          )
+        )
+          ctx.addIssue({
+            code: "custom",
+            message: "Duplicate or dangling contact selection.",
+          });
+      }
       if (!languages.has(resume.language))
         ctx.addIssue({
           code: "custom",
@@ -342,6 +367,17 @@ export const careerDocumentSchema = z
             message: "Duplicate section selection.",
           });
         selectedSections.add(selected.sectionId);
+        if (
+          new Set(selected.hiddenEntryIds).size !==
+            (selected.hiddenEntryIds?.length ?? 0) ||
+          selected.hiddenEntryIds?.some(
+            (value) => !selected.entryIds.includes(value),
+          )
+        )
+          ctx.addIssue({
+            code: "custom",
+            message: "Hidden entries must retain their configured selection.",
+          });
         const section = document.sections.find(
           (item) => item.id === selected.sectionId,
         );
@@ -395,7 +431,7 @@ export const draftSchema = z.strictObject({
     .string()
     .max(370)
     .regex(
-      /^(profile|summary|languages|sections|(entry|section|entries|selection|new-section)\/[A-Za-z0-9_-]{1,120}|new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120})$/,
+      /^(profile|summary|languages|sections|(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording)\/[A-Za-z0-9_-]{1,120}|new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120})$/,
       "Unsupported editing scope.",
     ),
   baseline: z.unknown(),
@@ -572,12 +608,26 @@ export function readScope(document: CareerDocument, scope: string): unknown {
   if (scope === "sections")
     return document.sections.map((section) => section.id);
   if (
-    !/^(entry|section|entries|selection|new-section)\/[A-Za-z0-9_-]{1,120}$|^new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120}$/.test(
+    !/^(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording)\/[A-Za-z0-9_-]{1,120}$|^new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120}$/.test(
       scope,
     )
   )
     return undefined;
   const [kind, target, child] = scope.split("/");
+  if (kind.startsWith("resume")) {
+    const resume = document.resumes.find((item) => item.id === target);
+    if (kind === "resume") return resume ?? null;
+    if (!resume) return undefined;
+    if (kind === "resume-details")
+      return { name: resume.name, color: resume.color ?? "indigo" };
+    if (kind === "resume-wording") return resume.overrides;
+    if (kind === "resume-content")
+      return {
+        selection: resume.selection,
+        profileSelection: resume.profileSelection,
+        summaryIncluded: resume.summaryIncluded,
+      };
+  }
   if (kind === "selection")
     return document.resumes.find((item) => item.id === target)?.selection;
   const section = document.sections.find((item) => item.id === target);
@@ -672,7 +722,60 @@ export function applyScope(
     resumes: document.resumes.map((resume) => ({ ...resume })),
   };
   const [kind, target, child] = scope.split("/");
-  if (scope === "profile") {
+  if (kind === "resume") {
+    if (values === null)
+      next.resumes = next.resumes.filter((item) => item.id !== target);
+    else {
+      if (baseline !== null)
+        throw new Error(
+          "Existing resumes can only be changed through their editing scopes.",
+        );
+      const resume = resumeSchema.parse(values);
+      if (resume.id !== target)
+        throw new Error("Resume identity must match its scope.");
+      next.resumes.push(resume);
+    }
+  } else if (kind === "resume-details") {
+    const details = resumeSchema
+      .pick({ name: true, color: true })
+      .parse(values);
+    Object.assign(
+      next.resumes.find((item) => item.id === target)!,
+      details,
+    );
+  } else if (kind === "resume-wording") {
+    next.resumes.find((item) => item.id === target)!.overrides =
+      resumeSchema.shape.overrides.parse(values);
+  } else if (kind === "resume-content") {
+    const content = resumeSchema
+      .pick({ selection: true, profileSelection: true, summaryIncluded: true })
+      .parse(values);
+    // The selection scope remains supported for existing immutable recovery requests.
+    const selected = applyScope(
+      document,
+      `selection/${target}`,
+      content.selection,
+    );
+    const resume = selected.resumes.find((item) => item.id === target)!;
+    if (
+      content.profileSelection?.some(
+        (value) =>
+          document.profile.links.some(
+            (link) => link.id === value && link.archived,
+          ) &&
+          !(
+            document.resumes.find((item) => item.id === target)!
+              .profileSelection ??
+            document.profile.links
+              .filter((link) => !link.archived)
+              .map((link) => link.id)
+          ).includes(value),
+      )
+    )
+      throw new Error("Archived contacts are unavailable for new selections.");
+    Object.assign(resume, content);
+    return validateDocument(selected);
+  } else if (scope === "profile") {
     const profile = careerDocumentSchema.shape.profile.parse(values);
     if (profile.id !== document.profile.id)
       throw new Error("Profile identity cannot change.");
@@ -711,6 +814,22 @@ export function applyScope(
       const prior = resume.selection.find(
         (item) => item.sectionId === selection.sectionId,
       );
+      if (section?.archived && !selection.hidden && (!prior || prior.hidden))
+        throw new Error(
+          "Archived sections are unavailable for new selections.",
+        );
+      if (
+        selection.entryIds.some(
+          (value) =>
+            !selection.hiddenEntryIds?.includes(value) &&
+            prior?.hiddenEntryIds?.includes(value) &&
+            (section?.archived ||
+              section?.entries.some(
+                (entry) => entry.id === value && entry.archived,
+              )),
+        )
+      )
+        throw new Error("Archived entries are unavailable for new selections.");
       for (const entryId of selection.entryIds)
         if (
           !prior?.entryIds.includes(entryId) &&

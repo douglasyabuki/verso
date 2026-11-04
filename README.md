@@ -1,6 +1,6 @@
 # Verso
 
-Local career information editor. The active application uses workspace schema 2,
+Local career information and resume editor. The active application uses workspace schema 2,
 explicit form Save/Cancel, and transactional IndexedDB. Schema-1 development data
 and backups are unsupported and are never loaded or converted.
 
@@ -10,7 +10,7 @@ The schema-2 career editor runs inside the retained workspace shell: utility rai
 collapsible branded sidebar, workspace toolbar/history/status, and wording-language
 header. Career navigation uses the schema-2 dirty-form guard. Narrow screens use
 the existing navigation drawer, with Data & backups and Appearance in its footer.
-Imported resumes expose their existing selection form and committed-only output in
+Independent resumes expose Content and Wording forms and committed-only output in
 the resizable desktop preview panel or narrow-screen Editor/PDF preview tabs.
 Layout and appearance preferences remain device-only. Data & backups opens the
 schema-2 backup/recovery/replacement controls; it offers no retired reset/autosave actions.
@@ -53,13 +53,79 @@ preserving one previous workspace. Rollback rotates that same snapshot. Recovery
 is retained separately. Downloads are reported as initiated, not completed.
 Device preferences and operation ledgers are excluded from portable exports.
 
-Imported resumes have independent language/layout/selection contracts. Existing
-archived selections are labeled and can be removed through an explicit form.
-A minimal committed-snapshot output panel manually compiles the pinned template
-for English/Portuguese; unsupported languages have no PDF output. Save never
-compiles a draft. Both inactive-language archived-content fixtures produced PDFs
-in Chromium, Firefox, and WebKit. Automated text/font/link/metadata inspection
-uses the pinned PDF.js dependency. Visual PDF acceptance remains with the owner.
+Resumes can be created, named, colored, duplicated, opened, and deleted with
+confirmation. The final resume can be deleted without deleting career content.
+New resumes choose an active language and start with full name only; optional
+contacts, summary, sections, entries, fields, achievements, and links are selected
+and ordered in Content & order. Hiding a section or entry retains its nested choices.
+The six icon colors identify resumes in the app and do not change PDF appearance.
+Existing archived selections remain labeled and rendered; archived content cannot
+be newly selected. Every Content Save commits one independent scope/history step.
+
+Wording customizes profile text, summaries, section headings, entry text,
+achievements, and link labels for one resume. Shared facts remain in Career
+details. Shared wording changes update inheriting resumes while preserving custom
+text, including explicit empty customizations. Use career wording removes the
+override on Save. Copying into another language retains shared identities,
+selection/order, color, and compatible layout, clears source customizations, and
+uses destination career wording without translation or cross-language fallback.
+Missing destination wording stays missing. Language-dependent wrapping can differ.
+Comparison shows two resumes' effective committed values in their own languages;
+drafts are excluded. Content/Wording deep links, reload, and guarded Back/Forward
+use opaque IDs. Earlier selection links open Content.
+
+Wording and comparison cards use the same section icons as the sidebar and
+readable English field labels. Wording source badges sit beside card titles;
+expanded read-only references use the shared nested list-card surface with compact
+Open Career details navigation links and the shared list entrance animation. Card icons align with the
+first title line, including wrapped titles. Comparison separates resume identity, inclusion/source metadata,
+and values. Owner browser, E2E, and visual validation of these presentation
+changes remains outstanding.
+
+The sidebar restores each resume's tree: its name opens and selects the read-only
+Overview child, above Content & order and Wording. Individual resume views use
+their colored icon beside the title, with the actions menu in the title row.
+Overview, Content & order, and Wording use underlined tabs with icons; tab changes
+follow the same dirty-form guard as sidebar navigation. Compare resumes remains
+a separate action. Narrow tab lists scroll horizontally.
+Name & color hides those controls and offers Back to overview through the same
+dirty-form guard.
+Resume selectors show the same colored icons in options and selected values.
+The overview card omits color; edit it on the Name & color page. Return to the
+collection through the sidebar's Resumes destination. That destination is selected
+only for the collection and comparison; individual views show the resume name
+and current view in the workspace breadcrumb. The read-only overview card has no
+footer actions or navigation instructions. Empty Content & order groups show an
+explicit message; search misses are distinguished from unavailable choices.
+Overview, sidebar, and collection
+share actions for editing name/color, duplication, language copying, and confirmed
+deletion. Name/color editing uses a dedicated Save/Cancel page. Overview/details
+URLs support reload and guarded Back/Forward. Sidebar names stay on one line
+with ellipsis; full names/languages remain available in tooltips. Collection sizing
+uses layout heights so entrance animations do not create unnecessary scrollbars;
+short windows and long collections retain independent scrolling.
+
+The committed-snapshot output panel manually compiles the pinned template for
+English/Portuguese; unsupported languages have no PDF output. Save never compiles
+a draft. The Verso-styled PDF.js viewer provides page navigation, percentage zoom,
+Fit width/Fit page with resize updates, on-demand thumbnails, embedded document
+outline, search, download, and a document-properties dialog. Its navigation starts
+closed and overlays the PDF in narrow panes. Search opens through its button;
+Ctrl/Cmd+F is left to the browser. Native browser Find across unrendered pages is
+not guaranteed and still needs manual browser-specific acceptance. Compilation
+failure retains the labeled last successful PDF. Viewer replacement cancels its
+owned rendering tasks and releases workers; compiler and URL ownership remain
+with the committed-output coordinator.
+
+Entry search uses a conditional inline X that clears the query and restores
+input focus. Resume selection checkboxes and sorting controls align with the
+first title line, including multiline labels.
+
+Independent-resume PDF fixtures produced English/Portuguese PDFs in Chromium,
+Firefox, and WebKit. Automated text/font/link/metadata inspection uses pinned
+PDF.js. See the verification section for the current refactor checks; historical
+fixture checks do not prove the new viewer's acceptance. Visual PDF acceptance
+remains with the owner.
 
 New workspaces start with empty Experience, Projects, Education, Skills, and
 Certifications sections. Existing saved workspaces are not reseeded. Summaries
@@ -77,9 +143,9 @@ The former bilingual schema-1 editor, translation-review queues, automatic
 workspace autosaving, and full resume/layout controls are retired from the active
 root page. Schema-1 workflow/state modules remain unmounted reference assets;
 their reusable shell, sidebar collection, toolbar presentation, and UI primitives
-are shared with the active schema-2 composition. Resume creation, full independent
-selection/customization controls, presets/starters, and the broader settings
-experience are not delivered. Outstanding verification is listed below; it does
+are shared with the active schema-2 composition. Presets/starters, layout editing,
+readiness dashboards, and the broader settings experience are not delivered.
+Outstanding verification is listed below; it does
 not block subsequent user-authorized development and is not passed acceptance.
 
 ## Planned capabilities
@@ -87,15 +153,6 @@ not block subsequent user-authorized development and is not passed acceptance.
 These are accepted directions, not available features or authorization to start
 new work. Update this list and Current capabilities as implementation ships.
 
-- Independent resumes: create/name/duplicate/open/delete with visible language,
-  confirmation before deletion, and no deletion of shared career content. Select
-  and order sections, entries, achievements, contacts, and entry fields per resume.
-  Explain excluded, empty, required, and unsupported fields without deleting values.
-- Wording: inherit career wording or customize any display text per resume.
-  Shared edits preserve customizations; **Use career wording** removes an override.
-  Copy into another language using destination wording and copied selection/order,
-  with compatible layout and font/rendering warnings. Preserve the original;
-  leave missing wording missing, without translation or silent fallback.
 - Readiness: save valid incomplete work; reject malformed values with retained
   drafts. Only selected output blocks export. Provide issues with editor links;
   unused records, inactive languages, and archive status alone do not block output.
@@ -137,6 +194,16 @@ The supported format is UTF-8 `verso.workspace` schema 2; recovery uses a separa
 `verso.recovery` schema 1. Unsupported versions are rejected without changing saved
 content. Backups include committed content/configuration, not device preferences or
 credentials. Recovery imports restore drafts, never automatically committed edits.
+Resume color/contact/summary configuration and hidden selection flags are optional
+schema-2 additions. When absent, older schema-2 resumes retain their prior output
+defaults without writes on load. New resumes explicitly store unselected defaults.
+Name/color, Content, Wording, and single-resume lifecycle scopes commit separately;
+older selection drafts and immutable pending requests remain supported unchanged.
+Deleting a resume retains unresolved recovery. When its shared references still
+exist, Restore as new creates an uncommitted resume in an explicitly chosen active
+language and retains the original recovery. Invalid references require reconciliation
+or export. Interrupted creation/deletion receipts are checked before replay; Undo
+and Redo never overwrite a conflicting resume.
 
 Safety ceilings are 120 resumes, 100 sections, 10,000 entries total, 300 entries per
 section, 100 achievements and 30 links per entry, 30 profile links, and 100 each of
@@ -173,14 +240,43 @@ there is no mandatory duration soak. Detailed engineering safeguards live in
 
 ## Outstanding verification
 
+Resume navigation and icon updates on 2026-11-04 have updated browser-component
+and E2E test sources. Browser tests and manual validation were left to the owner;
+the earlier results below do not verify these updates.
+
+Independent-resume verification on 2026-11-03 passed formatting, lint, route generation /
+TypeScript, and the complete `npm test` chain: 40 Node tests in 9 files, 59
+Chromium component tests in 6 files, and 43 production E2E cases across Chromium,
+Firefox, and WebKit, including a fresh production build and actual English /
+Portuguese PDF checks. These functional results do not establish performance,
+manual round-trip acceptance, actual Safari behavior, or owner visual sign-off.
+
+Presentation-refactor verification on 2026-11-03 passed formatting, lint, generated
+route types / TypeScript, 40 Node tests (9 files), 67 Chromium component tests
+(7 files), and 46 production E2E cases across Chromium, Firefox, and WebKit with a
+fresh build. The three suites ran sequentially, with `test:e2e -- --workers=1`
+after overlapping verification runs encountered host resource contention. Coverage
+includes the real PDF viewer, thumbnails/outline/search/zoom/properties, worker
+cleanup, overview/details navigation, checkbox alignment, inline search clearing,
+ellipsis labels, and tall/short sidebar overflow.
+
+Development-server visual checks of an English fixture at 1440×900 and 390×900
+covered light/dark themes and open/closed PDF navigation. They showed no page
+errors, horizontal overflow, or unnecessary desktop sidebar scrolling. These
+spot checks remain separate from owner visual/PDF acceptance.
+
+Native desktop Find acceptance remains unverified: the Computer Use helper could
+not connect to its native pipe after retry and reinitialization. Component checks
+verify that the viewer does not intercept the browser's Find shortcut; that does
+not prove native Find coverage of unrendered PDF pages.
+
 These items are deferred rather than passed. Complete them before claiming full
 local acceptance, or explicitly agree a revised scope. They do not block further
 authorized feature development.
 
-- Run final formatting/lint/typecheck, unit, browser-component, and production
-  E2E/build checks; record actual counts. Earlier green runs predate the final
-  batched-import and uncertain-discard changes. Rename/discovery checks and static
-  validation do not replace regression execution.
+- Reconcile inherited import/discard acceptance with current automated evidence.
+  The current regression run does not retroactively close the deferred historical
+  acceptance record or establish unexecuted manual/capacity/failure scenarios.
 - Verify batched import Unicode/prototype safety and cancellation/error cleanup;
   verify discard exact-version/newer-draft safety, receipt resolution, restart
   recovery, and interrupted Save/history retries.

@@ -13,6 +13,16 @@ vi.mock("@/tools/compiler-proof/compiler.mjs", () => ({
   },
 }));
 
+// The compiler coordinator is tested independently from Next's dynamic-loader boundary.
+vi.mock("@/components/output/lazy-pdf-preview", () => ({
+  default: ({ document }: { document?: { url: string; fileName: string } }) =>
+    document ? (
+      <a href={document.url} download={document.fileName}>
+        Download PDF
+      </a>
+    ) : null,
+}));
+
 afterEach(() => {
   vi.restoreAllMocks();
   runtime.compile.mockReset();
@@ -51,15 +61,39 @@ it("refreshes manually, retains captured download identity after switching, and 
   runtime.compile.mockResolvedValue({
     bytes: new Uint8Array([37, 80, 68, 70]),
   });
-  const screen = await render(<CommittedOutput head={head()} />);
+  const committed = head();
+  committed.document.resumes[1].color = "rose";
+  const screen = await render(<CommittedOutput head={committed} />);
   try {
     expect(runtime.compile).not.toHaveBeenCalled();
     await screen.getByRole("button", { name: "Refresh preview" }).click();
     await expect
       .element(screen.getByRole("link", { name: /Download PDF/ }))
       .toHaveAttribute("download", "verso-resume-0-en-US-7.pdf");
-    await screen.getByRole("combobox").click();
-    await screen.getByRole("option", { name: "Application 1 (pt-BR)" }).click();
+    const selector = screen.getByRole("combobox", { name: "Existing resume" });
+    expect(
+      selector
+        .element()
+        .querySelector("[data-resume-color]")
+        ?.getAttribute("data-resume-color"),
+    ).toBe("indigo");
+    await selector.click();
+    const option = screen.getByRole("option", {
+      name: "Application 1 (pt-BR)",
+    });
+    expect(
+      option
+        .element()
+        .querySelector("[data-resume-color]")
+        ?.getAttribute("data-resume-color"),
+    ).toBe("rose");
+    await option.click();
+    expect(
+      selector
+        .element()
+        .querySelector("[data-resume-color]")
+        ?.getAttribute("data-resume-color"),
+    ).toBe("rose");
     await expect
       .element(screen.getByRole("link", { name: /Download PDF/ }))
       .toHaveAttribute("download", "verso-resume-0-en-US-7.pdf");

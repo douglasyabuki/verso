@@ -170,7 +170,9 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   expect(backup.document).toEqual(document);
   expect(backup.schemaVersion).toBe(2);
   await page.reload();
-  await page.getByRole("button", { name: "Application", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Application (en-US)", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Refresh preview" }),
   ).toBeVisible();
@@ -210,7 +212,7 @@ test("sample button handles failure, cancellation, adoption and reload without a
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.reload();
   await page
-    .getByRole("button", { name: "Alex Morgan · English", exact: true })
+    .getByRole("button", { name: "Alex Morgan · English (en-US)", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Refresh preview" }),
@@ -297,11 +299,20 @@ for (const language of ["en-US", "pt-BR"])
       .click();
     await page.getByRole("button", { name: "Confirm adoption" }).click();
     await page
-      .getByRole("button", { name: "Application", exact: true })
+      .getByRole("button", { name: `Application (${language})`, exact: true })
       .click();
     await page.getByRole("button", { name: "Refresh preview" }).click();
-    const link = page.getByRole("link", { name: /Download PDF/ });
-    await expect(link).toBeVisible({ timeout: 150_000 });
+    await expect(
+      page.getByRole("button", { name: "Search PDF", exact: true }),
+    ).toBeEnabled({ timeout: 150_000 });
+    await page
+      .getByRole("button", { name: "PDF actions", exact: true })
+      .click();
+    const link = page.getByRole("menuitem", {
+      name: "Download PDF",
+      exact: true,
+    });
+    await expect(link).toBeVisible();
     const downloadEvent = page.waitForEvent("download");
     await link.click();
     const download = await downloadEvent;
@@ -477,7 +488,9 @@ test("imported schema-2 resume uses restored desktop split and narrow panel acce
     .click();
   await page.getByRole("button", { name: "Confirm adoption" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
-  await page.getByRole("button", { name: "Application", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Application (en-US)", exact: true })
+    .click();
   await expect(
     page.getByRole("region", { name: "Committed resume output" }),
   ).toBeVisible();
@@ -492,12 +505,14 @@ test("imported schema-2 resume uses restored desktop split and narrow panel acce
   await expect(
     page.getByRole("tab", { name: "PDF preview", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("region", { name: "Editing form" })).toBeHidden();
+  await expect(
+    page.getByRole("heading", { name: "Resume overview", exact: true }),
+  ).toBeHidden();
   await expect(
     page.getByRole("button", { name: "Refresh preview" }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await expect(
-    page.getByRole("region", { name: "Editing form" }),
+    page.getByRole("heading", { name: "Resume overview", exact: true }),
   ).toBeVisible();
 });

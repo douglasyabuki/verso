@@ -13,6 +13,35 @@ export type CareerEntry = z.infer<typeof entrySchema>;
 export type CareerField = z.infer<typeof fieldSchema>;
 export type CareerSection = z.infer<typeof sectionSchema>;
 export type CareerDraft = z.infer<typeof draftSchema>;
+export type CareerResume = CareerDocument["resumes"][number];
+export const CAREER_FIELD_LABELS: Readonly<Record<string, string>> = {
+  fullName: "Full name",
+  email: "Email",
+  phone: "Phone",
+  city: "City",
+  country: "Country",
+  title: "Title",
+  organization: "Organization",
+  location: "Location",
+  start: "Start date",
+  end: "End date",
+  degree: "Degree / qualification",
+  institution: "Institution",
+  url: "Website",
+  level: "Proficiency",
+  credential: "Credential ID",
+  issued: "Issue date",
+  expires: "Expiration date",
+};
+
+export const RESUME_COLORS = [
+  "indigo",
+  "emerald",
+  "amber",
+  "rose",
+  "sky",
+  "violet",
+] as const;
 
 export const WORKSPACE_BYTES = 64 * 1024 * 1024;
 export const RECOVERY_BYTES = 256 * 1024 * 1024;
@@ -49,3 +78,41 @@ export const BUILTIN_FIELDS = {
 } as const;
 
 export const VERIFIED_OUTPUT_LANGUAGES = ["en-US", "pt-BR"] as const;
+
+export const CAREER_OUTPUT_CAPABILITIES: Record<
+  string,
+  {
+    languageNumber: number;
+    pageLabel: string;
+    ofLabel: string;
+    summaryLabel: string;
+    labels: Record<string, string>;
+  }
+> = {
+  "en-US": {
+    languageNumber: 0,
+    pageLabel: "Page",
+    ofLabel: "of",
+    summaryLabel: "About me",
+    labels: {
+      experience: "Experience",
+      education: "Education",
+      projects: "Projects",
+      skills: "Skills",
+      certifications: "Certifications",
+    },
+  },
+  "pt-BR": {
+    languageNumber: 1,
+    pageLabel: "Página",
+    ofLabel: "de",
+    summaryLabel: "Sobre mim",
+    labels: {
+      experience: "Experiência",
+      education: "Formação",
+      projects: "Projetos",
+      skills: "Competências",
+      certifications: "Certificações",
+    },
+  },
+};

@@ -51,10 +51,12 @@ export function SidebarCollection({
     const content = contentRef.current!;
     const collections = group.parentElement!;
     const measure = () => {
-      const heading = group
-        .querySelector('[data-sidebar="group-label"]')!
-        .getBoundingClientRect().height;
-      const height = content.getBoundingClientRect().height;
+      // Entrance animations transform headings and rows. Allocate their layout
+      // dimensions, not the temporarily scaled visual bounds.
+      const heading = group.querySelector<HTMLElement>(
+        '[data-sidebar="group-label"]',
+      )!.offsetHeight;
+      const height = content.offsetHeight;
       const styles = getComputedStyle(collections);
       const available =
         collections.clientHeight -
@@ -62,9 +64,8 @@ export function SidebarCollection({
         parseFloat(styles.paddingBottom) -
         parseFloat(styles.rowGap);
       const rowHeight =
-        content
-          .querySelector('[data-sidebar="menu-button"]')
-          ?.getBoundingClientRect().height ?? 32;
+        content.querySelector<HTMLElement>('[data-sidebar="menu-button"]')
+          ?.offsetHeight ?? 32;
       const menuGap =
         parseFloat(getComputedStyle(content.querySelector("ul")!).rowGap) || 0;
       const minimum = Math.max(

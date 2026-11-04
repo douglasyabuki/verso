@@ -1,9 +1,11 @@
 import {
   applyScope,
+  careerDocumentSchema,
   createCareerDocument,
   readScope,
   validateDocument,
 } from "@/lib/career/model";
+import { createResume } from "@/lib/career/resumes";
 import {
   type CareerHead,
   type CareerStorage,
@@ -534,7 +536,10 @@ export class CareerController {
     }
     this.publishFor(target, { saving: true, error: "" });
     try {
-      applyScope(head.document, draft.scope, draft.values);
+      // A prepared request may already have committed (notably resume creation).
+      // Its receipt must be checked before trying to apply that creation again.
+      if (!draft.operationId)
+        applyScope(head.document, draft.scope, draft.values);
       const operationId = draft.operationId ?? crypto.randomUUID();
       const fingerprint =
         draft.fingerprint ??
@@ -715,11 +720,26 @@ export class CareerController {
   /** Execute a distinct committed command using the same scope-safe Save boundary.
    * @param scope Affected scope.
    * @param values Proposed complete scope values.
+   * @param reviewed Optional reviewed baseline; reject changes since the user's review before opening the immutable command.
    * @returns {Promise<boolean>} Confirmed commit outcome; failures leave an editable draft.
    * @example await controller.command(`entry/${id}`, archivedEntry)
    */
-  async command(scope: string, values: unknown): Promise<boolean> {
+  async command(
+    scope: string,
+    values: unknown,
+    reviewed?: unknown,
+  ): Promise<boolean> {
     if (this.state.draft) return false;
+    if (
+      reviewed !== undefined &&
+      this.state.head &&
+      !sameScope(readScope(this.state.head.document, scope), reviewed)
+    ) {
+      this.publish({
+        error: "This record changed. Review it again before continuing.",
+      });
+      return false;
+    }
     this.open(scope);
     this.change(values);
     return this.save();
@@ -925,6 +945,78 @@ export class CareerController {
       error: "Restored as new · review and Save to commit.",
     });
     void this.flushRecovery();
+  }
+
+  /** Restore a missing resume scope as a fresh, explicitly reviewed creation draft.
+   * @param language Active language selected by the user; missing facts/wording are never translated.
+   * @returns {Promise<boolean>} True when a validated creation draft opens; original recovery remains available.
+   * @example await controller.restoreResumeAsNew("pt-BR")
+   */
+  async restoreResumeAsNew(language: string): Promise<boolean> {
+    const { head, draft } = this.state;
+    if (!head || !draft || !draft.scope.startsWith("resume")) return false;
+    try {
+      const created = createResume(head.document, language);
+      const kind = draft.scope.split("/")[0];
+      const schema = careerDocumentSchema.shape.resumes.element;
+      const resume =
+        kind === "resume"
+          ? { ...schema.parse(draft.values), id: created.id, language }
+          : kind === "resume-content"
+            ? {
+                ...created,
+                ...schema
+                  .pick({
+                    selection: true,
+                    profileSelection: true,
+                    summaryIncluded: true,
+                  })
+                  .parse(draft.values),
+              }
+            : kind === "resume-wording"
+              ? {
+                  ...created,
+                  overrides: schema.shape.overrides.parse(draft.values),
+                }
+              : {
+                  ...created,
+                  ...schema
+                    .pick({ name: true, color: true })
+                    .parse(draft.values),
+                };
+      applyScope(head.document, `resume/${created.id}`, resume);
+      await this.flushRecovery();
+      if (this.state.draft !== draft) return false;
+      this.publish({
+        recovery: this.state.recovery.some(
+          (item) => item.draftId === draft.draftId,
+        )
+          ? this.state.recovery
+          : [...this.state.recovery, structuredClone(draft)],
+        draft: {
+          ...draft,
+          draftId: crypto.randomUUID(),
+          draftVersion: 1,
+          workspaceId: head.workspaceId,
+          generation: head.generation,
+          baselineRevision: head.revision,
+          scope: `resume/${created.id}`,
+          baseline: null,
+          values: resume,
+          operationId: undefined,
+          fingerprint: undefined,
+        },
+        error:
+          "Restored as a new resume draft. Review and Save; original recovery is retained separately.",
+      });
+      void this.flushRecovery();
+      return true;
+    } catch (error) {
+      this.publish({
+        error: `Cannot restore this resume yet. Retain or export recovery and reconcile its references. ${String(error)}`,
+      });
+      return false;
+    }
   }
 
   /** Replace/rollback using an already-reviewed revision, preserving recovery and resetting committed history.

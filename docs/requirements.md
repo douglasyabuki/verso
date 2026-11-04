@@ -19,7 +19,9 @@ behavior; [evidence](phase-1-evidence.md) records executed checks;
 - Phase 0 decisions are complete. Phase 1 implementation is delivered with open
   verification recorded in the final follow-up list. Those items no longer block
   progression from Phase 1 and are not counted as passed acceptance.
-- Phase 2 is the next implementation scope; this plan update does not start it.
+- Phase 2 implementation adds independent resume lifecycle, Content/Wording,
+  comparison, and committed output choices. Verification is recorded separately
+  below; owner visual/PDF and deferred performance acceptance remain open.
   Accounts, sync, public downloads, and hosting still require explicit activation.
 
 ## Delivery rules
@@ -35,7 +37,8 @@ behavior; [evidence](phase-1-evidence.md) records executed checks;
   Documentation-only edits need formatting and local-link checks.
 - Update affected requirements, usage, guidance, and format documentation.
   Keep performance measurements separate from routine regression runs.
-- Whenever updating an artifact outside `docs/`, make it self-contained: state the
+- Whenever updating a maintained artifact, including permanent docs and skills,
+  make it self-contained: state the
   applicable behavior, contracts, limitations, and instructions directly, without
   relying on phase numbers or temporary requirements, evidence, or handoff files.
   Those planning files will be removed after implementation; their removal must
@@ -540,16 +543,63 @@ Its outstanding round-trip acceptance remains unchecked in follow-up F3.
 
 ## Phase 2 — Independent resumes and output fields
 
-- [ ] P2.1 Create/name/duplicate/open/delete resumes; show language and confirm deletion.
+- [x] P2.1 Create/name/duplicate/open/delete resumes; show language and confirm deletion.
       Resume deletion never deletes career content.
-- [ ] P2.2 Select/order sections, entries, achievements, contact fields, and entry fields independently.
-- [ ] P2.3 Distinguish excluded, empty, required, and unsupported fields; retain hidden data.
-- [ ] P2.4 Inherit or customize all display wording; shared edits preserve overrides.
+- [x] P2.2 Select/order sections, entries, achievements, contact fields, and entry fields independently.
+- [x] P2.3 Distinguish excluded, empty, required, and unsupported fields; retain hidden data.
+- [x] P2.4 Inherit or customize all display wording; shared edits preserve overrides.
       **Use career wording** removes an override; label the editing scope.
-- [ ] P2.5 Copy to another language using destination wording and shared identities;
+- [x] P2.5 Copy to another language using destination wording and shared identities;
       copy selection/order and compatible layout, preserve the original, warn about
       font/rendering differences, and never silently translate or fall back.
-- [ ] P2.6 Show resume names/languages and compare effective committed content.
+- [x] P2.6 Show resume names/languages and compare effective committed content.
+
+Implementation preserves the `master` resume card/dialog/color/disclosure styles
+inside the restored shell, with separate Content and Wording views. Existing
+schema-2 defaults and pending selection operations remain supported without
+schema-1 compatibility. Parent exclusion retains child configuration. Creation
+and deletion use nullable single-resume scopes with transactional retries/history;
+missing-resume recovery remains explicit and uncommitted.
+
+Presentation refactor: each resume's sidebar name opens a read-only overview,
+with **Overview**, **Content & order**, and **Wording** child destinations.
+Selecting the resume name also selects Overview. Individual views use the resume's
+colored title icon and title-row actions menu, omit All resumes, and show the
+resume name in the breadcrumb. Only the collection/comparison selects Resumes.
+Resume selectors include colored icons in options and selected values; the
+overview card omits the color value.
+The resume views use underlined Overview, Content & order, and Wording tabs with
+icons, controlled by the durable destination and existing dirty-form guard.
+Comparison remains a separate action; narrow tab lists scroll horizontally.
+Shared actions open name/color editing on a dedicated Save/Cancel page, duplicate/copy, or confirm
+deletion. Navigation remains durable and draft-guarded. Labels truncate with
+ellipsis; collection sizing ignores entrance transforms and scrolls only on actual
+overflow. Choice controls align to the first title line. Entry search uses a
+conditional inline clear action and restores input focus.
+
+The committed PDF viewer uses existing Verso controls around pinned PDF.js:
+page navigation, fit/percentage zoom, thumbnails, embedded outline, button-opened
+search, download, and on-demand properties. Native browser Find shortcuts remain
+untouched; manual browser-specific acceptance remains separate. Viewer changes
+preserve explicit refresh, saved-content-only output, stale-job rejection, and
+last-successful-preview labeling. No schema or dependency versions change.
+
+Presentation-refactor verification on 2026-11-03: formatting, lint, generated route
+types/TypeScript, 40 Node tests (9 files), 67 Chromium component tests (7 files),
+and 46 production E2E cases passed across Chromium/Firefox/WebKit with a fresh
+build. Suites ran sequentially; production E2E used one worker after overlapping
+runs encountered host resource contention. Native desktop Find UI remains
+unverified because the Computer Use helper could not connect after recovery;
+the automated shortcut check proves non-interception, not native Find coverage.
+
+Historical Phase 2 verification (before this presentation refactor):
+Verification on 2026-11-03: formatting, lint, route generation/typecheck, and
+`npm test` passed: 40 Node tests (9 files), 59 Chromium component tests (6 files),
+and 43 production E2E cases across Chromium/Firefox/WebKit, including actual
+English/Portuguese PDF checks. See [phase-2 evidence](phase-2-evidence.md) for
+source/build identity, regressions resolved, and limits. Deferred F1–F7 remain
+historical/open acceptance, not automatically passed by this implementation.
+Owner visual/PDF, manual round-trip, and performance acceptance remain separate.
 
 ## Phase 3 — Output readiness
 

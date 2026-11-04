@@ -32,3 +32,19 @@ Workspace JSON files have their own 64-MiB ceiling including envelope metadata.
 A document at its independent 64-MiB ceiling may exceed the backup-file ceiling;
 export reports this explicitly instead of downloading a file the app cannot import.
 No export contains device preferences, local operation ledgers, or credentials.
+
+Resume drafts use `resume-details/<id>` for name/icon color,
+`resume-content/<id>` for visibility/order/contact/summary configuration, and
+`resume-wording/<id>` for display overrides. Nullable `resume/<id>` requests
+represent one creation or deletion. Earlier schema-2 `selection/<id>` drafts and
+prepared requests remain valid; their payloads and retry fingerprints are never
+rewritten to the newer scopes. The portable envelope versions remain unchanged.
+
+Deleting a resume does not delete its career records or unresolved recovery.
+Restore as new requires an explicit active language and valid existing shared
+references. It opens a fresh resume creation draft without committing it and
+retains the original recovery separately. Dangling references or malformed values
+require reconciliation/export rather than attaching a draft to another resume.
+Imported operation IDs never prove a local commit. Locally prepared uncertain
+creation/deletion requests reuse their exact operation identity and check the
+receipt before attempting the mutation again.

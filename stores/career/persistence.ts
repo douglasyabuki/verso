@@ -51,14 +51,31 @@ function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 
-/** Compare scope values without interpreting undefined as empty content.
+/** Compare JSON scope values structurally, keeping array order and ignoring object key order.
  * @param left First scope.
  * @param right Second scope.
- * @returns {boolean} Whether their serialized content is identical.
+ * @returns {boolean} Whether values match; omitted object properties match undefined, while null and array order remain meaningful.
  * @example sameScope({ title: "A" }, { title: "A" })
  */
 export function sameScope(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  if (left === right) return true;
+  if (Array.isArray(left) || Array.isArray(right))
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => sameScope(value, right[index]))
+    );
+  if (!left || !right || typeof left !== "object" || typeof right !== "object")
+    return false;
+  const a = left as Record<string, unknown>;
+  const b = right as Record<string, unknown>;
+  const keys = Object.keys(a).filter((key) => a[key] !== undefined);
+  return (
+    keys.length ===
+      Object.keys(b).filter((key) => b[key] !== undefined).length &&
+    keys.every((key) => Object.hasOwn(b, key) && sameScope(a[key], b[key]))
+  );
 }
 
 /** Open the target-only local database; never reads or converts legacy browser storage.

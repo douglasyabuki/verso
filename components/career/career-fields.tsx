@@ -21,6 +21,7 @@ import { InfoHint } from "@/components/ui/info-hint";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { careerFieldLabel } from "@/lib/career/labels";
 import { fieldSchema } from "@/lib/career/model";
 import { type RichText, wordingSpans } from "@/lib/career/wording";
 import { reorderVisible } from "@/lib/ordering";
@@ -30,27 +31,8 @@ import type {
   CareerSection,
 } from "@/types-and-constants/career";
 
-const labels: Record<string, string> = {
-  fullName: "Full name",
-  email: "Email",
-  phone: "Phone",
-  city: "City",
-  country: "Country",
-  title: "Title",
-  organization: "Organization",
-  location: "Location",
-  start: "Start date",
-  end: "End date",
-  degree: "Degree / qualification",
-  institution: "Institution",
-  url: "Website",
-  level: "Proficiency",
-  credential: "Credential ID",
-  issued: "Issue date",
-  expires: "Expiration date",
-};
-
 /** Name an extensible content language without making it an interface locale.
+
  * @param tag Canonical content-language tag.
  * @returns English display name and the tag for disambiguation.
  * @example contentLanguageName("pt-BR")
@@ -172,7 +154,7 @@ function CareerFieldInput({
   const result = fieldSchema.safeParse(field);
   return (
     <CareerTextField
-      label={labels[field.key] ?? field.key}
+      label={careerFieldLabel(field.key)}
       value={
         field.type === "text" ? (field.wording[language] ?? "") : field.fact
       }

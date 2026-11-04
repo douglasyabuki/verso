@@ -1,9 +1,20 @@
 "use client";
 
-import { cn } from "cn";
-import { ArrowLeft, ArrowRight, FileText, Search } from "lucide-react";
-import type { EventBus, PDFViewer } from "pdfjs-dist/web/pdf_viewer.mjs";
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Download,
+  Info,
+  Minus,
+  MoreHorizontal,
+  PanelLeft,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
+import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
+import { PDFDateString } from "pdfjs-dist";
+import { useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -13,20 +24,37 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DisclosureChevron,
   DisclosureLabel,
   disclosureTriggerClassName,
 } from "@/components/ui/disclosure";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Empty,
   EmptyDescription,
   EmptyHeader,
-  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -35,311 +63,587 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ResumeOutput } from "@/types-and-constants/output";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePdfDocument } from "@/hooks/output/use-pdf-document";
+import type { PdfOutline, PdfSource } from "@/types-and-constants/pdf-preview";
 
-export default function PdfPreview({ output }: { output?: ResumeOutput }) {
-  const container = useRef<HTMLDivElement>(null);
-  const pages = useRef<HTMLDivElement>(null);
-  const searchInput = useRef<HTMLInputElement>(null);
-  const instance = useRef<{ viewer: PDFViewer; bus: EventBus } | null>(null);
-  const [page, setPage] = useState(1);
-  const [count, setCount] = useState(0);
-  const [query, setQuery] = useState("");
-  const [diagnostics, setDiagnostics] = useState("");
-  const [error, setError] = useState("");
-  const [searchResult, setSearchResult] = useState("");
-  const id = useId();
-
+function Thumbnail({
+  pdf,
+  number,
+  current,
+  onSelect,
+}: {
+  pdf: PDFDocumentProxy;
+  number: number;
+  current: boolean;
+  onSelect: () => void;
+}) {
+  const button = useRef<HTMLButtonElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [error, setError] = useState(false);
   useEffect(() => {
-    if (!output || !container.current || !pages.current) return;
     let cancelled = false;
-    let task: { destroy: () => Promise<void> } | undefined;
-    let viewer: PDFViewer | undefined;
-    const load = async () => {
-      const pdfjs = await import("pdfjs-dist");
-      const controls = await import("pdfjs-dist/web/pdf_viewer.mjs");
-      if (cancelled) return;
-      pdfjs.GlobalWorkerOptions.workerSrc = "/compiler/pdf.worker.mjs";
-      const bus = new controls.EventBus();
-      const linkService = new controls.PDFLinkService({
-        eventBus: bus,
-        externalLinkTarget: 2,
-        externalLinkRel: "noopener noreferrer",
-      });
-      const findController = new controls.PDFFindController({
-        eventBus: bus,
-        linkService,
-      });
-      viewer = new controls.PDFViewer({
-        container: container.current!,
-        viewer: pages.current!,
-        eventBus: bus,
-        linkService,
-        findController,
-        textLayerMode: 1,
-        annotationMode: 2,
-        maxCanvasPixels: 8_000_000,
-      });
-      linkService.setViewer(viewer);
-      bus.on("pagesinit", () => {
-        if (!cancelled) viewer!.currentScaleValue = "page-width";
-      });
-      bus.on("pagechanging", (event: { pageNumber: number }) => {
-        if (!cancelled) setPage(event.pageNumber);
-      });
-      bus.on(
-        "updatefindmatchescount",
-        (event: { matchesCount: { current: number; total: number } }) => {
-          if (!cancelled)
-            setSearchResult(
-              `${event.matchesCount.current} / ${event.matchesCount.total}`,
-            );
-        },
-      );
-      const loading = pdfjs.getDocument({
-        data: output.bytes.slice(),
-        isEvalSupported: false,
-      });
-      task = loading;
-      const pdf = await loading.promise;
-      if (cancelled) {
-        await loading.destroy();
-        return;
-      }
-      instance.current = { viewer, bus };
-      viewer.setDocument(pdf);
-      linkService.setDocument(pdf);
-      setCount(pdf.numPages);
-      setPage(1);
-      setError("");
-      setQuery("");
-      setSearchResult("");
-      const metadata = await pdf.getMetadata();
-      const text: string[] = [JSON.stringify(metadata.info, null, 2)];
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        const annotations = await page.getAnnotations();
-        text.push(
-          `\nPAGE ${i}\n` +
-            content.items
-              .map((item) =>
-                "str" in item ? item.str + (item.hasEOL ? "\n" : " ") : "",
-              )
-              .join(""),
-        );
-        text.push(
-          "\nLinks:\n" +
-            annotations
-              .filter((annotation) => annotation.subtype === "Link")
-              .map(
-                (annotation) =>
-                  annotation.url ||
-                  annotation.unsafeUrl ||
-                  "Internal destination",
-              )
-              .join("\n"),
-        );
-      }
-      if (!cancelled) setDiagnostics(text.join("\n"));
+    let task: RenderTask | undefined;
+    const target = canvas.current!;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        void (async () => {
+          const page = await pdf.getPage(number);
+          if (cancelled) return;
+          const original = page.getViewport({ scale: 1 });
+          const viewport = page.getViewport({ scale: 120 / original.width });
+          target.width = Math.ceil(viewport.width);
+          target.height = Math.ceil(viewport.height);
+          task = page.render({ canvas: target, viewport });
+          await task.promise;
+        })().catch(() => {
+          if (!cancelled) setError(true);
+        });
+      },
+      {
+        root: button.current?.closest("[data-pdf-navigation]"),
+        rootMargin: "100px",
+      },
+    );
+    observer.observe(button.current!);
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+      task?.cancel();
+      target.width = 0;
+      target.height = 0;
     };
-    void load().catch((reason) => {
-      if (!cancelled) setError(reason.message || "Unable to display PDF");
+  }, [pdf, number]);
+  return (
+    <Button
+      ref={button}
+      variant={current ? "secondary" : "ghost"}
+      className="h-auto w-full flex-col gap-2 py-3"
+      aria-label={`Go to PDF page ${number}`}
+      aria-current={current ? "page" : undefined}
+      onClick={onSelect}
+    >
+      <canvas
+        ref={canvas}
+        aria-hidden="true"
+        className="h-auto min-h-24 max-w-30 bg-white shadow-sm"
+      />
+      <span>
+        {error
+          ? `Page ${number} \u00b7 thumbnail unavailable`
+          : `Page ${number}`}
+      </span>
+    </Button>
+  );
+}
+
+function Outline({
+  items,
+  navigate,
+}: {
+  items: PdfOutline;
+  navigate: (destination: string | unknown[]) => void;
+}) {
+  return (
+    <ul className="flex min-w-0 flex-col gap-1">
+      {items.map((item, index) => {
+        const entry = item.dest ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto justify-start whitespace-normal"
+            onClick={() => navigate(item.dest!)}
+          >
+            {item.title || "Untitled bookmark"}
+          </Button>
+        ) : item.url && /^(https?:|mailto:)/i.test(item.url) ? (
+          <a
+            className="block rounded-lg px-3 py-2 text-sm underline"
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {item.title || "Untitled bookmark"}
+          </a>
+        ) : (
+          <span className="block px-3 py-2 text-sm wrap-anywhere">
+            {item.title || "Untitled bookmark"}
+          </span>
+        );
+        return (
+          <li key={index} className="min-w-0 wrap-anywhere">
+            {item.items.length ? (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger
+                  render={<Button variant="ghost" size="sm" />}
+                  className={disclosureTriggerClassName}
+                >
+                  <DisclosureChevron />
+                  <DisclosureLabel>
+                    {item.title || "Untitled bookmark"}
+                  </DisclosureLabel>
+                </CollapsibleTrigger>
+                {item.dest && entry}
+                <CollapsibleContent className="ms-3 border-s ps-3">
+                  <Outline items={item.items} navigate={navigate} />
+                </CollapsibleContent>
+              </Collapsible>
+            ) : (
+              entry
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Properties({
+  pdf,
+  source,
+  page,
+}: {
+  pdf: PDFDocumentProxy;
+  source: PdfSource;
+  page: number;
+}) {
+  const [rows, setRows] = useState<[string, string][] | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const [metadata, downloaded, currentPage] = await Promise.all([
+        pdf.getMetadata(),
+        pdf.getDownloadInfo(),
+        pdf.getPage(page),
+        import("pdfjs-dist"),
+      ]);
+      const info = metadata.info as Record<string, unknown>;
+      const text = (key: string) =>
+        typeof info[key] === "string" && info[key]
+          ? String(info[key])
+          : "Unavailable";
+      const date = (key: string) =>
+        PDFDateString.toDateObject(
+          typeof info[key] === "string" ? String(info[key]) : "",
+        )?.toLocaleString("en-US") ?? "Unavailable";
+      const viewport = currentPage.getViewport({ scale: 1 });
+      const values: [string, string][] = [
+        ["Filename", source.fileName],
+        ["File size", `${downloaded.length.toLocaleString("en-US")} bytes`],
+        ["Pages", String(pdf.numPages)],
+        [
+          "Current-page dimensions",
+          `${((viewport.width * 25.4) / 72).toFixed(1)} \u00d7 ${((viewport.height * 25.4) / 72).toFixed(1)} mm (page ${page})`,
+        ],
+        ["Title", text("Title")],
+        ["Author", text("Author")],
+        ["Subject", text("Subject")],
+        ["Creator", text("Creator")],
+        ["Producer", text("Producer")],
+        ["Created", date("CreationDate")],
+        ["Modified", date("ModDate")],
+        ["PDF version", text("PDFFormatVersion")],
+      ];
+      if (!cancelled) setRows(values);
+    })().catch(() => {
+      if (!cancelled) setError("Document properties could not be loaded.");
     });
     return () => {
       cancelled = true;
-      instance.current = null;
-      viewer?.setDocument(null!);
-      void task?.destroy();
     };
-  }, [output]);
+  }, [pdf, source.fileName, page]);
+  return error ? (
+    <p role="alert">{error}</p>
+  ) : !rows ? (
+    <p role="status">Loading properties...</p>
+  ) : (
+    <dl className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
+      {rows.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="text-muted-foreground">{label}</dt>
+          <dd className="wrap-anywhere">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
-  if (!output)
-    return (
-      <div className="flex min-w-0 flex-1 items-center p-6">
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <FileText />
-            </EmptyMedia>
-            <EmptyTitle>Your document starts here</EmptyTitle>
-            <EmptyDescription>
-              Add your name and some career content. The PDF will appear here as
-              you work.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </div>
-    );
-
+function LoadedPreview({ source }: { source: PdfSource }) {
+  const container = useRef<HTMLDivElement>(null);
+  const pages = useRef<HTMLDivElement>(null);
+  const searchButton = useRef<HTMLButtonElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const focusFrame = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(focusFrame.current), []);
+  const pdf = usePdfDocument({ source, container, pages });
+  const [navigation, setNavigation] = useState(false);
+  const [search, setSearch] = useState(false);
+  const [query, setQuery] = useState("");
+  const [properties, setProperties] = useState(false);
+  const count = pdf.pdf?.numPages ?? 0;
+  const zoom =
+    pdf.scale.value === "page-width" || pdf.scale.value === "page-fit"
+      ? pdf.scale.value
+      : String(pdf.scale.percent / 100);
   const zoomItems = [
     { value: "page-width", label: "Fit width" },
-    ...["0.75", "1", "1.25", "1.5"].map((value) => ({
-      value,
-      label: `${Number(value) * 100}%`,
+    { value: "page-fit", label: "Fit page" },
+    ...[25, 50, 75, 100, 125, 150, 200, 300, 400].map((percent) => ({
+      value: String(percent / 100),
+      label: `${percent}%`,
     })),
   ];
+  if (!zoomItems.some((item) => item.value === zoom))
+    zoomItems.push({ value: zoom, label: `${pdf.scale.percent}%` });
+  const { setScale, go, find } = pdf;
+  const closeSearch = () => {
+    pdf.closeFind();
+    setQuery("");
+    setSearch(false);
+    searchButton.current?.focus();
+  };
   return (
-    <div
+    <section
       className="flex min-h-0 min-w-0 flex-1 flex-col"
-      onKeyDown={(event) => {
-        if (
-          !event.defaultPrevented &&
-          !event.nativeEvent.isComposing &&
-          (event.ctrlKey || event.metaKey) &&
-          !event.altKey &&
-          !event.shiftKey &&
-          event.key.toLowerCase() === "f"
-        ) {
-          event.preventDefault();
-          event.stopPropagation();
-          searchInput.current?.focus();
-          searchInput.current?.select();
-        }
-      }}
+      aria-label="PDF viewer"
     >
-      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5">
-        <div className="flex shrink-0 items-center gap-2">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Previous PDF page"
-              disabled={page <= 1}
-              onClick={() => {
-                if (instance.current)
-                  instance.current.viewer.currentPageNumber = page - 1;
-              }}
-            >
-              <ArrowLeft />
-            </Button>
-            <span className="min-w-10 text-center text-xs" aria-live="polite">
-              {page} / {count || "…"}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Next PDF page"
-              disabled={page >= count}
-              onClick={() => {
-                if (instance.current)
-                  instance.current.viewer.currentPageNumber = page + 1;
-              }}
-            >
-              <ArrowRight />
-            </Button>
-          </div>
-          <Select
-            items={zoomItems}
-            defaultValue="page-width"
-            onValueChange={(value) => {
-              if (value === null) return;
-              if (instance.current)
-                instance.current.viewer.currentScaleValue = value;
-            }}
-          >
-            <SelectTrigger appearance="utility" aria-label="PDF zoom" size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {zoomItems.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex min-w-0 flex-[1_1_12rem] items-center gap-2">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <Label htmlFor={id} className="sr-only">
-            Search PDF text
-          </Label>
-          <Input
-            appearance="utility"
-            ref={searchInput}
-            id={id}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Find in document"
-            onKeyDown={(event) => {
-              if (event.key === "Enter")
-                instance.current?.bus.dispatch("find", {
-                  source: instance.current.viewer,
-                  type: "again",
-                  query,
-                  caseSensitive: false,
-                  entireWord: false,
-                  highlightAll: true,
-                  findPrevious: event.shiftKey,
-                  matchDiacritics: false,
-                });
-            }}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              instance.current?.bus.dispatch("find", {
-                source: instance.current.viewer,
-                type: "",
-                query,
-                caseSensitive: false,
-                entireWord: false,
-                highlightAll: true,
-                findPrevious: false,
-                matchDiacritics: false,
-              })
+      <div
+        className="flex shrink-0 flex-wrap items-center gap-1 border-b px-2 py-1.5"
+        aria-label="PDF controls"
+      >
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="PDF navigation"
+          aria-expanded={navigation}
+          aria-controls="pdf-navigation"
+          disabled={!count}
+          onClick={() => setNavigation(!navigation)}
+        >
+          <PanelLeft />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Previous PDF page"
+          disabled={pdf.page <= 1}
+          onClick={() => go(pdf.page - 1)}
+        >
+          <ArrowLeft />
+        </Button>
+        <Input
+          key={pdf.page}
+          appearance="utility"
+          type="number"
+          min={1}
+          max={count || 1}
+          className="w-14"
+          aria-label="PDF page number"
+          defaultValue={pdf.page}
+          disabled={!count}
+          onBlur={(event) => {
+            const value = Number(event.target.value);
+            event.target.value = String(
+              go(Number.isInteger(value) && value > 0 ? value : pdf.page),
+            );
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
+        />
+        <span className="text-xs" aria-live="polite">
+          / {count || "..."}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Next PDF page"
+          disabled={pdf.page >= count}
+          onClick={() => go(pdf.page + 1)}
+        >
+          <ArrowRight />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Zoom out PDF"
+          disabled={!count || pdf.scale.percent <= 25}
+          onClick={() =>
+            setScale(String(Math.max(25, pdf.scale.percent - 10) / 100))
+          }
+        >
+          <Minus />
+        </Button>
+        <Select
+          items={zoomItems}
+          value={zoom}
+          disabled={!count}
+          onValueChange={(value) => {
+            if (value) setScale(value);
+          }}
+        >
+          <SelectTrigger appearance="utility" size="sm" aria-label="PDF zoom">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {zoomItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <span className="sr-only" role="status">
+          PDF zoom {pdf.scale.percent}%
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Zoom in PDF"
+          disabled={!count || pdf.scale.percent >= 400}
+          onClick={() =>
+            setScale(String(Math.min(400, pdf.scale.percent + 10) / 100))
+          }
+        >
+          <Plus />
+        </Button>
+        <Button
+          ref={searchButton}
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Search PDF"
+          aria-expanded={search}
+          aria-controls="pdf-search"
+          disabled={!count}
+          onClick={() => {
+            if (search) closeSearch();
+            else {
+              setSearch(true);
+              focusFrame.current = requestAnimationFrame(() =>
+                searchInput.current?.focus(),
+              );
+            }
+          }}
+        >
+          <Search />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" size="icon-sm" aria-label="PDF actions" />
             }
           >
-            Find
-          </Button>
-          <span className="shrink-0 text-xs" role="status">
-            {searchResult}
-          </span>
-        </div>
+            <MoreHorizontal />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                render={<a href={source.url} download={source.fileName} />}
+              >
+                <Download />
+                Download PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!count}
+                onClick={() => setProperties(true)}
+              >
+                <Info />
+                Document properties
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      {error && (
-        <Alert variant="destructive" className="shrink-0">
+      {search && (
+        <div
+          id="pdf-search"
+          className="flex shrink-0 flex-wrap items-center gap-1 border-b p-2"
+        >
+          <InputGroup className="min-w-32 flex-1">
+            <InputGroupInput
+              ref={searchInput}
+              appearance="utility"
+              aria-label="Search PDF text"
+              value={query}
+              placeholder="Find in document"
+              onChange={(event) => {
+                setQuery(event.target.value);
+                find(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") find(query, true, event.shiftKey);
+                if (event.key === "Escape") {
+                  event.stopPropagation();
+                  closeSearch();
+                }
+              }}
+            />
+            {query.length !== 0 && (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  size="icon-xs"
+                  aria-label="Clear PDF search"
+                  onClick={() => {
+                    setQuery("");
+                    find("");
+                    searchInput.current?.focus();
+                  }}
+                >
+                  <X />
+                </InputGroupButton>
+              </InputGroupAddon>
+            )}
+          </InputGroup>
+          <span className="text-xs" role="status">
+            {query ? pdf.matches : ""}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Previous PDF match"
+            disabled={!query}
+            onClick={() => find(query, true, true)}
+          >
+            <ArrowLeft />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Next PDF match"
+            disabled={!query}
+            onClick={() => find(query, true)}
+          >
+            <ArrowRight />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Close PDF search"
+            onClick={closeSearch}
+          >
+            <X />
+          </Button>
+        </div>
+      )}
+      {pdf.error && (
+        <Alert variant="destructive">
           <AlertTitle>PDF viewer error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{pdf.error}</AlertDescription>
         </Alert>
       )}
-      <div className="relative isolate min-h-0 min-w-0 flex-1 overflow-hidden bg-preview-surface">
-        <div
-          ref={container}
-          className="absolute inset-0 overflow-auto"
-          tabIndex={0}
-          role="region"
-          aria-label="PDF document pages"
-        >
-          <div ref={pages} className="pdfViewer" />
+      {!count && !pdf.error && (
+        <p role="status" className="p-3 text-sm">
+          Loading PDF...
+        </p>
+      )}
+      <div className="@container/pdf relative isolate flex min-h-0 min-w-0 flex-1 overflow-hidden bg-preview-surface">
+        {navigation && pdf.pdf && (
+          <aside
+            id="pdf-navigation"
+            aria-label="PDF document navigation"
+            className="absolute inset-y-0 start-0 z-10 flex w-60 shrink-0 flex-col border-e bg-background shadow-md @min-[36rem]/pdf:static @min-[36rem]/pdf:shadow-none"
+          >
+            <div className="flex items-center justify-between px-2 py-1">
+              <span className="text-sm">Document navigation</span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Close PDF navigation"
+                onClick={() => setNavigation(false)}
+              >
+                <X />
+              </Button>
+            </div>
+            <Tabs
+              defaultValue="thumbnails"
+              className="flex min-h-0 flex-1 flex-col gap-2 p-2"
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="thumbnails">Thumbnails</TabsTrigger>
+                <TabsTrigger value="outline">Document outline</TabsTrigger>
+              </TabsList>
+              <TabsContent
+                value="thumbnails"
+                data-pdf-navigation
+                className="min-h-0 flex-1 overflow-auto"
+                aria-label="PDF thumbnails"
+              >
+                {Array.from({ length: count }, (_, index) => (
+                  <Thumbnail
+                    key={index}
+                    pdf={pdf.pdf!}
+                    number={index + 1}
+                    current={pdf.page === index + 1}
+                    onSelect={() => go(index + 1)}
+                  />
+                ))}
+              </TabsContent>
+              <TabsContent
+                value="outline"
+                className="min-h-0 flex-1 overflow-auto"
+                aria-label="Document outline"
+              >
+                {pdf.outline.length ? (
+                  <Outline
+                    items={pdf.outline}
+                    navigate={(destination) => {
+                      pdf.goToDestination(destination);
+                    }}
+                  />
+                ) : (
+                  <p className="p-2 text-sm text-muted-foreground">
+                    {pdf.outlineError || "This PDF has no document outline."}
+                  </p>
+                )}
+              </TabsContent>
+            </Tabs>
+          </aside>
+        )}
+        <div className="relative min-w-0 flex-1">
+          <div
+            ref={container}
+            className="absolute inset-0 overflow-auto"
+            tabIndex={0}
+            role="region"
+            aria-label="PDF document pages"
+          >
+            <div ref={pages} className="pdfViewer" />
+          </div>
         </div>
       </div>
-      <Collapsible className="min-w-0 shrink-0 border-t bg-background px-3 py-2">
-        <CollapsibleTrigger
-          render={<Button variant="ghost" size="xs" />}
-          className={cn(disclosureTriggerClassName, "min-h-6 py-0.5")}
-        >
-          <DisclosureChevron />
-          <DisclosureLabel>PDF text & technical details</DisclosureLabel>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <ScrollArea
-            className="mt-2 max-h-[min(12rem,20dvh)] min-w-0"
-            viewportProps={{
-              role: "region",
-              "aria-label": "PDF text and technical details",
-            }}
-          >
-            <pre className="pr-3 text-xs wrap-anywhere whitespace-pre-wrap">
-              {diagnostics || "Extracting text…"}
-            </pre>
-          </ScrollArea>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+      <Dialog open={properties} onOpenChange={setProperties}>
+        <DialogContent className="max-h-[85dvh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Document properties</DialogTitle>
+            <DialogDescription>
+              Properties of the last successful PDF.
+            </DialogDescription>
+          </DialogHeader>
+          {properties && pdf.pdf && (
+            <Properties pdf={pdf.pdf} source={source} page={pdf.page} />
+          )}
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
+export default function PdfPreview({ document }: { document?: PdfSource }) {
+  return document ? (
+    <LoadedPreview key={`${document.key}:${document.url}`} source={document} />
+  ) : (
+    <Empty>
+      <EmptyHeader>
+        <EmptyTitle>Your document starts here</EmptyTitle>
+        <EmptyDescription>
+          Refresh the preview to display your saved resume.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }

@@ -1,14 +1,29 @@
 "use client";
 
 import { cn } from "cn";
-import { Database, FileText, Languages, X } from "lucide-react";
+import {
+  Database,
+  FileText,
+  Languages,
+  LayoutDashboard,
+  ListOrdered,
+  X,
+} from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 
 import { BrandLockup } from "@/components/brand/brand";
 import { contentLanguageName } from "@/components/career/career-fields";
+import {
+  type ResumeActions,
+  ResumeActionsMenu,
+} from "@/components/career/resume-workspace";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DisclosureChevron,
+  disclosureChevronTriggerClassName,
+} from "@/components/ui/disclosure";
 import { Label } from "@/components/ui/label";
 import {
   ResizableHandle,
@@ -29,8 +44,12 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -50,6 +69,8 @@ type CareerNavigation = {
   destination: string;
   navigate: (destination: string) => void;
   addSection: () => void;
+  addResume: () => void;
+  resumeActions: ResumeActions;
 };
 
 function CareerSidebar({
@@ -57,6 +78,8 @@ function CareerSidebar({
   destination,
   navigate,
   addSection,
+  addResume,
+  resumeActions,
 }: CareerNavigation) {
   const {
     isMobile,
@@ -64,6 +87,16 @@ function CareerSidebar({
     open: sidebarOpen,
     setOpenMobile,
   } = useSidebar();
+  const [expansion, setExpansion] = useState<{
+    destination: string;
+    id: string | null;
+  }>({ destination: "", id: null });
+  const expandedId =
+    expansion.destination === destination
+      ? expansion.id
+      : destination.startsWith("resume-")
+        ? destination.split("/")[1]
+        : null;
   const collectionsRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
   useListEntrance({
@@ -95,7 +128,7 @@ function CareerSidebar({
         title={label}
       >
         {icon}
-        <span>{label}</span>
+        <span className="truncate">{label}</span>
         {archived && <Badge variant="secondary">Archived</Badge>}
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -148,23 +181,124 @@ function CareerSidebar({
               )}
             </SidebarMenu>
           </SidebarCollection>
-          {document.resumes.length > 0 && (
-            <SidebarCollection
-              label="Resumes"
-              active={destination.startsWith("selection/")}
-              onOpen={() => go("overview")}
-            >
-              <SidebarMenu>
-                {document.resumes.map((resume) =>
-                  item(
-                    `selection/${resume.id}`,
-                    resume.name || "Untitled resume",
-                    <FileText aria-hidden="true" />,
-                  ),
-                )}
-              </SidebarMenu>
-            </SidebarCollection>
-          )}
+          <SidebarCollection
+            label="Resumes"
+            active={
+              destination === "resumes" || destination === "resume-compare"
+            }
+            onOpen={() => go("resumes")}
+            onCreate={() => {
+              setOpenMobile(false);
+              addResume();
+            }}
+            createLabel="Create resume"
+            createDisabled={
+              document.resumes.length >= 120 ||
+              !document.languages.some((item) => item.active)
+            }
+          >
+            <SidebarMenu>
+              {document.resumes.map((resume) => {
+                const name = resume.name || "Untitled resume";
+                const active =
+                  destination.startsWith("resume-") &&
+                  destination.split("/")[1] === resume.id;
+                const expanded = expandedId === resume.id;
+                return (
+                  <SidebarMenuItem key={resume.id}>
+                    <div className="relative">
+                      <SidebarMenuButton
+                        className="ps-7 pe-10"
+                        isActive={active}
+                        aria-current={
+                          destination === `resume-overview/${resume.id}`
+                            ? "page"
+                            : undefined
+                        }
+                        title={`${name} (${resume.language})`}
+                        onClick={() => {
+                          setExpansion({
+                            destination: `resume-overview/${resume.id}`,
+                            id: resume.id,
+                          });
+                          go(`resume-overview/${resume.id}`);
+                        }}
+                      >
+                        <FileText
+                          aria-hidden="true"
+                          className="resume-color text-(--resume-color)"
+                          data-resume-color={resume.color ?? "indigo"}
+                        />
+                        <span className="truncate">{name}</span>
+                        <span className="sr-only">({resume.language})</span>
+                      </SidebarMenuButton>
+                      <SidebarMenuAction
+                        className={cn(
+                          disclosureChevronTriggerClassName,
+                          "start-1 end-auto",
+                        )}
+                        aria-label={`${expanded ? "Collapse" : "Expand"} ${name} pages`}
+                        aria-expanded={expanded}
+                        aria-controls={`resume-pages-${resume.id}`}
+                        onClick={() =>
+                          setExpansion({
+                            destination,
+                            id: expanded ? null : resume.id,
+                          })
+                        }
+                      >
+                        <DisclosureChevron />
+                      </SidebarMenuAction>
+                      <ResumeActionsMenu
+                        document={document}
+                        resume={resume}
+                        actions={resumeActions}
+                        trigger={
+                          <SidebarMenuAction
+                            showOnHover
+                            className="[@media(hover:none)]:opacity-100"
+                            aria-label={`Actions for ${name}`}
+                          />
+                        }
+                      />
+                    </div>
+                    {expanded && (
+                      <SidebarMenuSub
+                        id={`resume-pages-${resume.id}`}
+                        className="ms-3.5 me-3.5 border-border ps-4 pe-0"
+                      >
+                        {(
+                          [
+                            ["resume-overview", "Overview", LayoutDashboard],
+                            ["resume-content", "Content & order", ListOrdered],
+                            ["resume-wording", "Wording", Languages],
+                          ] as const
+                        ).map(([prefix, label, Icon]) => (
+                          <SidebarMenuSubItem key={prefix}>
+                            <SidebarMenuSubButton
+                              render={<button type="button" />}
+                              isActive={
+                                destination === `${prefix}/${resume.id}`
+                              }
+                              aria-current={
+                                destination === `${prefix}/${resume.id}`
+                                  ? "page"
+                                  : undefined
+                              }
+                              onClick={() => go(`${prefix}/${resume.id}`)}
+                            >
+                              <Icon aria-hidden="true" />
+                              <span className="truncate">{label}</span>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    )}
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarCollection>
         </div>
       </SidebarContent>
       <SidebarSeparator className="mx-5 shrink-0" />
@@ -203,6 +337,8 @@ export function CareerWorkspaceShell({
   destination,
   navigate,
   addSection,
+  addResume,
+  resumeActions,
   language,
   setLanguage,
   status,
@@ -225,7 +361,17 @@ export function CareerWorkspaceShell({
   const { layout, changeLayout } = useWorkspaceLayout();
   const desktop = useMediaQuery("(min-width: 1024px)");
   const [mobilePanel, setMobilePanel] = useState("editor");
-  const fullWidth = ["overview", "backups", "languages"].includes(destination);
+  const fullWidth = [
+    "overview",
+    "backups",
+    "languages",
+    "resumes",
+    "resume-compare",
+  ].includes(destination);
+  const resume = document.resumes.find(
+    (item) =>
+      item.id === destination.split("/")[1] && destination.startsWith("resume"),
+  );
   const previewAvailable = document.resumes.length > 0 && !fullWidth;
   const languageItems = document.languages.map((item) => ({
     value: item.tag,
@@ -250,7 +396,9 @@ export function CareerWorkspaceShell({
     </div>
   );
   const preview = (
-    <div className="h-full overflow-auto bg-muted/30 p-4 sm:p-6">{output}</div>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/30">
+      {output}
+    </div>
   );
   const open = (next: string) => {
     setMobilePanel("editor");
@@ -289,6 +437,8 @@ export function CareerWorkspaceShell({
               destination={destination}
               navigate={open}
               addSection={addSection}
+              addResume={addResume}
+              resumeActions={resumeActions}
             />
           }
           toolbar={
@@ -302,9 +452,27 @@ export function CareerWorkspaceShell({
                     ? "Data & backups"
                     : destination === "languages"
                       ? "Content languages"
-                      : "Career details"
+                      : resume
+                        ? resume.name || "Untitled resume"
+                        : destination === "resumes" ||
+                            destination === "resume-compare"
+                          ? "Resumes"
+                          : "Career details"
                 }
                 shortcuts={{ undo: "Ctrl/⌘ Z", redo: "Ctrl/⌘ Shift Z" }}
+                viewTitle={
+                  resume
+                    ? destination.startsWith("resume-overview/")
+                      ? "Overview"
+                      : destination.startsWith("resume-content/")
+                        ? "Content & order"
+                        : destination.startsWith("resume-wording/")
+                          ? "Wording"
+                          : destination.startsWith("resume-details/")
+                            ? "Name & color"
+                            : undefined
+                    : undefined
+                }
                 history={history}
                 status={
                   <span role="status" className="text-xs text-muted-foreground">
@@ -323,40 +491,51 @@ export function CareerWorkspaceShell({
                   )
                 }
               />
-              {!["overview", "backups", "languages", "sections"].includes(
-                destination,
-              ) && (
-                <div className="flex min-w-0 flex-wrap items-center gap-3 border-t px-4 py-3 md:px-6">
-                  <Label htmlFor="wording-language">
-                    Editing career wording language
-                  </Label>
-                  <Select
-                    items={languageItems}
-                    value={language}
-                    onValueChange={(value) => {
-                      if (value) setLanguage(value);
-                    }}
-                  >
-                    <SelectTrigger
-                      appearance="utility"
-                      id="wording-language"
-                      className="max-w-full"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {languageItems.map((item) => (
-                          <SelectItem key={item.value} value={item.value}>
-                            <Languages aria-hidden="true" />
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
+              {resume && (
+                <p className="border-t px-4 py-3 text-sm md:px-6">
+                  Resume language · {contentLanguageName(resume.language)}
+                </p>
               )}
+              {!resume &&
+                ![
+                  "overview",
+                  "backups",
+                  "languages",
+                  "sections",
+                  "resumes",
+                  "resume-compare",
+                ].includes(destination) && (
+                  <div className="flex min-w-0 flex-wrap items-center gap-3 border-t px-4 py-3 md:px-6">
+                    <Label htmlFor="wording-language">
+                      Editing career wording language
+                    </Label>
+                    <Select
+                      items={languageItems}
+                      value={language}
+                      onValueChange={(value) => {
+                        if (value) setLanguage(value);
+                      }}
+                    >
+                      <SelectTrigger
+                        appearance="utility"
+                        id="wording-language"
+                        className="max-w-full"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {languageItems.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>
+                              <Languages aria-hidden="true" />
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
             </header>
           }
           overlays={null}

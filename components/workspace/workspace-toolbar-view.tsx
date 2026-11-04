@@ -22,6 +22,7 @@ import {
 export function WorkspaceToolbarView({
   shortcuts,
   title,
+  viewTitle,
   preview,
   togglePreview,
   previewAvailable = true,
@@ -31,6 +32,7 @@ export function WorkspaceToolbarView({
 }: {
   shortcuts: { undo: string; redo: string };
   title: string;
+  viewTitle?: string;
   preview: boolean;
   togglePreview: () => void;
   previewAvailable?: boolean;
@@ -72,7 +74,23 @@ export function WorkspaceToolbarView({
             className="hidden size-3 text-muted-foreground sm:block"
             aria-hidden="true"
           />
-          <span className="truncate font-medium">{title}</span>
+          <span
+            className="truncate font-medium"
+            aria-current={viewTitle ? undefined : "page"}
+          >
+            {title}
+          </span>
+          {viewTitle && (
+            <>
+              <ChevronRight
+                className="size-3 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <span className="shrink-0 font-medium" aria-current="page">
+                {viewTitle}
+              </span>
+            </>
+          )}
         </div>
         <Separator orientation="vertical" />
         <div

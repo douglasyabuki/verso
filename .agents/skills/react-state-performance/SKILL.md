@@ -16,9 +16,9 @@ Inspect the installed React/Next.js/store versions, providers, consumers, derive
 
 Report measured gains separately from hypotheses. If no bottleneck is established, a scoped finding without a refactor is a valid outcome.
 
-## Verso target editing boundary
+## Verso editing boundary
 
-Follow docs/requirements.md: explicit form Save/Cancel is an accepted product
+Explicit form Save/Cancel is an accepted product
 choice, not evidence of a performance fix. Measure typing, draft selection/reorder,
 committed saves, recovery writes, and PDF work separately. Unsaved drafts must not
 feed compilation or committed workspace subscriptions. Existing provider topology
