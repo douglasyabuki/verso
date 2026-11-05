@@ -40,14 +40,10 @@ export function ResumeReadiness({
   return (
     <section
       aria-label="Active resume readiness"
-      className="flex min-w-0 flex-col gap-2 border-t pt-3"
+      className="flex min-w-0 shrink-0 flex-col border-t"
     >
-      <p className="text-xs wrap-anywhere text-muted-foreground">
-        {resume.name || "Untitled resume"} ({resume.language}) · Saved content
-        only
-      </p>
-      <Collapsible defaultOpen>
-        <div className="flex flex-wrap items-center gap-2">
+      <Collapsible>
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2">
           <CollapsibleTrigger
             render={
               <Button
@@ -74,9 +70,13 @@ export function ResumeReadiness({
             )}
           </span>
         </div>
-        <CollapsibleContent>
+        <CollapsibleContent className="max-h-[40dvh] overflow-auto overscroll-contain border-t px-4 py-3">
+          <p className="mb-3 text-xs wrap-anywhere text-muted-foreground">
+            {resume.name || "Untitled resume"} ({resume.language}) · Saved
+            content only
+          </p>
           {!assessment.ready && (
-            <ul className="mt-3 flex max-h-64 flex-col gap-3 overflow-y-auto">
+            <ul className="flex flex-col gap-3">
               {assessment.issues.map((issue) => (
                 <li
                   key={issue.id}
@@ -101,6 +101,7 @@ export function ResumeReadiness({
               ))}
             </ul>
           )}
+          {assessment.ready && <p className="text-sm">No blocking issues.</p>}
         </CollapsibleContent>
       </Collapsible>
     </section>

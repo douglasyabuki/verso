@@ -126,14 +126,28 @@ short windows and long collections retain independent scrolling.
 The committed-snapshot output panel manually compiles the pinned template for
 English/Portuguese; unsupported languages have no PDF output. Save never compiles
 a draft. The Verso-styled PDF.js viewer provides page navigation, percentage zoom,
-Fit width/Fit page with resize updates, on-demand thumbnails, embedded document
-outline, search, download, and a document-properties dialog. Its navigation starts
-closed and overlays the PDF in narrow panes. Search opens through its button;
+separate Fit width/Fit page buttons with resize updates, on-demand thumbnails,
+embedded document outline, search, download, and a document-properties dialog.
+Page navigation uses a compact direct-entry field without spinner or previous/next
+buttons. The zoom uses a compact percentage input without spinner arrows (25-400%,
+committed on Enter or blur); grouped toolbar controls wrap
+with navigation at the start, the remaining controls centered, and the actions
+menu at the far right. Document navigation starts closed and
+overlays the PDF in narrow panes. Its left utility rail uses Images/Summary icon
+tabs, tooltips, and the same animated selection surface and vertical bar as the
+workspace navbar; the selected content scrolls independently beside it.
+Search opens through its button;
 Ctrl/Cmd+F is left to the browser. Native browser Find across unrendered pages is
 not guaranteed. Compilation
 failure retains the labeled last successful PDF. Viewer replacement cancels its
 owned rendering tasks and releases workers; compiler and URL ownership remain
 with the committed-output coordinator.
+
+Before the first PDF, an illustrated document placeholder offers **Generate preview**
+or directs blocked resumes to Issues. Preparation, generation, viewer loading, and
+first-page rendering have distinct status messages; loading motion respects reduced
+motion. Refresh keeps the last successful PDF visible and downloadable. Failed
+generation offers retry; viewer failures retain download access through PDF actions.
 
 Entry search uses a conditional inline X that clears the query and restores
 input focus. Resume selection checkboxes and sorting controls align with the
@@ -159,8 +173,12 @@ are shared with the active schema-2 composition.
 
 ## Resume output readiness
 
-Resume Overview and the PDF panel share an Issues disclosure for the selected
-resume's **saved content only**. It lists all blockers in output order: unverified
+The PDF preview panel alone has an Issues footer for the selected resume's
+**saved content only**. Its count/status row remains visible before compilation
+and alongside retained PDFs. It starts collapsed, preserves the toggle choice
+while mounted, and expands into a separately bordered body with independent
+scrolling capped at 40% of the dynamic viewport height. Overview has no Issues
+disclosure. The footer lists all blockers in output order: unverified
 PDF language, missing full name, missing heading for a rendered custom section,
 empty selected title/degree, and empty selected achievements. Other empty values
 remain optional; built-in section headings and blank link-label URL fallback are

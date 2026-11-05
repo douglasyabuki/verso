@@ -1317,7 +1317,6 @@ export function CareerWorkspace({
                 <ResumeOverview
                   document={documentValue}
                   resume={activeResume}
-                  onIssue={openOutputIssue}
                 />
               ) : destination === "resume-compare" ? (
                 <ResumeComparison document={documentValue} />

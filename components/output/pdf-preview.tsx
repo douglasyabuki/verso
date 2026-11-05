@@ -4,18 +4,23 @@ import {
   ArrowLeft,
   ArrowRight,
   Download,
+  Images,
   Info,
   Minus,
   MoreHorizontal,
+  MoveHorizontal,
   PanelLeft,
   Plus,
+  Scan,
   Search,
+  Summary,
   X,
 } from "lucide-react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { PDFDateString } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
 
+import { PdfPreviewPlaceholder } from "@/components/output/pdf-preview-placeholder";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,12 +47,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -55,15 +54,14 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { SidebarSelection } from "@/components/ui/sidebar-selection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { usePdfDocument } from "@/hooks/output/use-pdf-document";
 import type { PdfOutline, PdfSource } from "@/types-and-constants/pdf-preview";
 
@@ -280,24 +278,11 @@ function LoadedPreview({ source }: { source: PdfSource }) {
   useEffect(() => () => cancelAnimationFrame(focusFrame.current), []);
   const pdf = usePdfDocument({ source, container, pages });
   const [navigation, setNavigation] = useState(false);
+  const [navigationTab, setNavigationTab] = useState("thumbnails");
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
   const [properties, setProperties] = useState(false);
   const count = pdf.pdf?.numPages ?? 0;
-  const zoom =
-    pdf.scale.value === "page-width" || pdf.scale.value === "page-fit"
-      ? pdf.scale.value
-      : String(pdf.scale.percent / 100);
-  const zoomItems = [
-    { value: "page-width", label: "Fit width" },
-    { value: "page-fit", label: "Fit page" },
-    ...[25, 50, 75, 100, 125, 150, 200, 300, 400].map((percent) => ({
-      value: String(percent / 100),
-      label: `${percent}%`,
-    })),
-  ];
-  if (!zoomItems.some((item) => item.value === zoom))
-    zoomItems.push({ value: zoom, label: `${pdf.scale.percent}%` });
   const { setScale, go, find } = pdf;
   const closeSearch = () => {
     pdf.closeFind();
@@ -311,127 +296,162 @@ function LoadedPreview({ source }: { source: PdfSource }) {
       aria-label="PDF viewer"
     >
       <div
-        className="flex shrink-0 flex-wrap items-center gap-1 border-b px-2 py-1.5"
+        className="grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 border-b px-2 py-1.5"
         aria-label="PDF controls"
       >
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="PDF navigation"
-          aria-expanded={navigation}
-          aria-controls="pdf-navigation"
-          disabled={!count}
-          onClick={() => setNavigation(!navigation)}
-        >
-          <PanelLeft />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Previous PDF page"
-          disabled={pdf.page <= 1}
-          onClick={() => go(pdf.page - 1)}
-        >
-          <ArrowLeft />
-        </Button>
-        <Input
-          key={pdf.page}
-          appearance="utility"
-          type="number"
-          min={1}
-          max={count || 1}
-          className="w-14"
-          aria-label="PDF page number"
-          defaultValue={pdf.page}
-          disabled={!count}
-          onBlur={(event) => {
-            const value = Number(event.target.value);
-            event.target.value = String(
-              go(Number.isInteger(value) && value > 0 ? value : pdf.page),
-            );
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
-          }}
-        />
-        <span className="text-xs" aria-live="polite">
-          / {count || "..."}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Next PDF page"
-          disabled={pdf.page >= count}
-          onClick={() => go(pdf.page + 1)}
-        >
-          <ArrowRight />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Zoom out PDF"
-          disabled={!count || pdf.scale.percent <= 25}
-          onClick={() =>
-            setScale(String(Math.max(25, pdf.scale.percent - 10) / 100))
-          }
-        >
-          <Minus />
-        </Button>
-        <Select
-          items={zoomItems}
-          value={zoom}
-          disabled={!count}
-          onValueChange={(value) => {
-            if (value) setScale(value);
-          }}
-        >
-          <SelectTrigger appearance="utility" size="sm" aria-label="PDF zoom">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {zoomItems.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <span className="sr-only" role="status">
-          PDF zoom {pdf.scale.percent}%
-        </span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Zoom in PDF"
-          disabled={!count || pdf.scale.percent >= 400}
-          onClick={() =>
-            setScale(String(Math.min(400, pdf.scale.percent + 10) / 100))
-          }
-        >
-          <Plus />
-        </Button>
-        <Button
-          ref={searchButton}
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Search PDF"
-          aria-expanded={search}
-          aria-controls="pdf-search"
-          disabled={!count}
-          onClick={() => {
-            if (search) closeSearch();
-            else {
-              setSearch(true);
-              focusFrame.current = requestAnimationFrame(() =>
-                searchInput.current?.focus(),
-              );
-            }
-          }}
-        >
-          <Search />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="PDF navigation"
+            aria-expanded={navigation}
+            aria-controls="pdf-navigation"
+            disabled={!count}
+            onClick={() => {
+              if (!navigation) setNavigationTab("thumbnails");
+              setNavigation(!navigation);
+            }}
+          >
+            <PanelLeft />
+          </Button>
+          <Separator
+            orientation="vertical"
+            className="h-4 data-vertical:self-center"
+          />
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center justify-center gap-x-3 gap-y-2">
+          <div className="flex items-center gap-1.5">
+            <Input
+              key={pdf.page}
+              appearance="utility"
+              type="text"
+              inputMode="numeric"
+              className="h-7 min-w-9 px-1.5 py-0.5 text-center"
+              style={{ width: `${Math.max(1, String(count).length) + 2}ch` }}
+              aria-label="PDF page number"
+              defaultValue={pdf.page}
+              disabled={!count}
+              onBlur={(event) => {
+                const text = event.target.value.trim();
+                const value = Number(text);
+                event.target.value = String(
+                  go(
+                    /^\d+$/.test(text) &&
+                      Number.isSafeInteger(value) &&
+                      value > 0
+                      ? value
+                      : pdf.page,
+                  ),
+                );
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+              }}
+            />
+            <span className="text-xs" aria-live="polite">
+              / {count || "..."}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Zoom out PDF"
+              disabled={!count || pdf.scale.percent <= 25}
+              onClick={() =>
+                setScale(String(Math.max(25, pdf.scale.percent - 10) / 100))
+              }
+            >
+              <Minus />
+            </Button>
+            <Input
+              key={`${pdf.scale.value}:${pdf.scale.percent}`}
+              appearance="utility"
+              type="text"
+              inputMode="decimal"
+              aria-label="PDF zoom"
+              className="h-7 w-18 px-1.5 py-0.5 text-center"
+              defaultValue={`${pdf.scale.percent}%`}
+              disabled={!count}
+              onBlur={(event) => {
+                const text = event.target.value.trim();
+                const value = Number(text.replace(/%$/, ""));
+                if (
+                  !/^\d+(?:\.\d+)?%?$/.test(text) ||
+                  !Number.isFinite(value) ||
+                  value <= 0
+                ) {
+                  event.target.value = `${pdf.scale.percent}%`;
+                  return;
+                }
+                const percent = Math.max(25, Math.min(400, value));
+                event.target.value = `${Math.round(percent)}%`;
+                setScale(String(percent / 100));
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+              }}
+            />
+            <span className="sr-only" role="status">
+              PDF zoom {pdf.scale.percent}%
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Zoom in PDF"
+              disabled={!count || pdf.scale.percent >= 400}
+              onClick={() =>
+                setScale(String(Math.min(400, pdf.scale.percent + 10) / 100))
+              }
+            >
+              <Plus />
+            </Button>
+            {[
+              { value: "page-width", label: "Fit width", Icon: MoveHorizontal },
+              { value: "page-fit", label: "Fit page", Icon: Scan },
+            ].map(({ value, label, Icon }) => (
+              <Tooltip key={value}>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant={
+                        pdf.scale.value === value ? "secondary" : "ghost"
+                      }
+                      size="icon-sm"
+                      aria-label={label}
+                      aria-pressed={pdf.scale.value === value}
+                      disabled={!count}
+                      onClick={() => setScale(value)}
+                    />
+                  }
+                >
+                  <Icon aria-hidden="true" />
+                </TooltipTrigger>
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+          <Button
+            ref={searchButton}
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Search PDF"
+            aria-expanded={search}
+            aria-controls="pdf-search"
+            disabled={!count}
+            onClick={() => {
+              if (search) closeSearch();
+              else {
+                setSearch(true);
+                focusFrame.current = requestAnimationFrame(() =>
+                  searchInput.current?.focus(),
+                );
+              }
+            }}
+          >
+            <Search />
+          </Button>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -536,41 +556,73 @@ function LoadedPreview({ source }: { source: PdfSource }) {
           <AlertDescription>{pdf.error}</AlertDescription>
         </Alert>
       )}
-      {!count && !pdf.error && (
-        <p role="status" className="p-3 text-sm">
-          Loading PDF...
-        </p>
-      )}
       <div className="@container/pdf relative isolate flex min-h-0 min-w-0 flex-1 overflow-hidden bg-preview-surface">
         {navigation && pdf.pdf && (
           <aside
             id="pdf-navigation"
             aria-label="PDF document navigation"
-            className="absolute inset-y-0 start-0 z-10 flex w-60 shrink-0 flex-col border-e bg-background shadow-md @min-[36rem]/pdf:static @min-[36rem]/pdf:shadow-none"
+            className="absolute inset-y-0 start-0 z-10 flex w-60 shrink-0 border-e bg-background shadow-md @min-[36rem]/pdf:static @min-[36rem]/pdf:shadow-none"
           >
-            <div className="flex items-center justify-between px-2 py-1">
-              <span className="text-sm">Document navigation</span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Close PDF navigation"
-                onClick={() => setNavigation(false)}
-              >
-                <X />
-              </Button>
-            </div>
             <Tabs
-              defaultValue="thumbnails"
-              className="flex min-h-0 flex-1 flex-col gap-2 p-2"
+              orientation="vertical"
+              value={navigationTab}
+              onValueChange={(value) => setNavigationTab(String(value))}
+              className="min-h-0 min-w-0 flex-1 gap-0"
             >
-              <TabsList className="w-full">
-                <TabsTrigger value="thumbnails">Thumbnails</TabsTrigger>
-                <TabsTrigger value="outline">Document outline</TabsTrigger>
-              </TabsList>
+              <div className="flex w-12 shrink-0 flex-col items-center gap-2 border-e py-2">
+                <SidebarSelection
+                  activeItemSelector='[role="tab"][data-active]'
+                  className="w-9"
+                >
+                  <TabsList
+                    aria-label="PDF navigation views"
+                    activateOnFocus
+                    variant="line"
+                    className="gap-2 rounded-none bg-transparent p-0"
+                  >
+                    {[
+                      {
+                        value: "thumbnails",
+                        label: "Thumbnails",
+                        Icon: Images,
+                      },
+                      {
+                        value: "outline",
+                        label: "Document outline",
+                        Icon: Summary,
+                      },
+                    ].map(({ value, label, Icon }) => (
+                      <Tooltip key={value}>
+                        <TooltipTrigger
+                          render={
+                            <TabsTrigger
+                              value={value}
+                              aria-label={label}
+                              className="h-9 w-9 flex-none p-0 group-data-vertical/tabs:w-9 group-data-vertical/tabs:justify-center after:hidden"
+                            />
+                          }
+                        >
+                          <Icon aria-hidden="true" />
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{label}</TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </TabsList>
+                </SidebarSelection>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="mt-auto size-9 rounded-md"
+                  aria-label="Close PDF navigation"
+                  onClick={() => setNavigation(false)}
+                >
+                  <X />
+                </Button>
+              </div>
               <TabsContent
                 value="thumbnails"
                 data-pdf-navigation
-                className="min-h-0 flex-1 overflow-auto"
+                className="min-h-0 min-w-0 flex-1 overflow-auto p-2"
                 aria-label="PDF thumbnails"
               >
                 {Array.from({ length: count }, (_, index) => (
@@ -585,7 +637,7 @@ function LoadedPreview({ source }: { source: PdfSource }) {
               </TabsContent>
               <TabsContent
                 value="outline"
-                className="min-h-0 flex-1 overflow-auto"
+                className="min-h-0 min-w-0 flex-1 overflow-auto p-2"
                 aria-label="Document outline"
               >
                 {pdf.outline.length ? (
@@ -614,6 +666,23 @@ function LoadedPreview({ source }: { source: PdfSource }) {
           >
             <div ref={pages} className="pdfViewer" />
           </div>
+          {!pdf.rendered && (
+            <div className="absolute inset-0 z-10 flex">
+              <PdfPreviewPlaceholder
+                busy={!pdf.error}
+                title={
+                  pdf.error
+                    ? "Your PDF could not be displayed"
+                    : "Opening your PDF"
+                }
+                description={
+                  pdf.error
+                    ? "Try refreshing the preview, or download the PDF from the actions menu."
+                    : "Loading the pages and getting them ready to read."
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
       <Dialog open={properties} onOpenChange={setProperties}>
@@ -637,13 +706,6 @@ export default function PdfPreview({ document }: { document?: PdfSource }) {
   return document ? (
     <LoadedPreview key={`${document.key}:${document.url}`} source={document} />
   ) : (
-    <Empty>
-      <EmptyHeader>
-        <EmptyTitle>Your document starts here</EmptyTitle>
-        <EmptyDescription>
-          Refresh the preview to display your saved resume.
-        </EmptyDescription>
-      </EmptyHeader>
-    </Empty>
+    <PdfPreviewPlaceholder />
   );
 }

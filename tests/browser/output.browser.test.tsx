@@ -6,9 +6,16 @@ import { ResumeOverview } from "@/components/career/resume-workspace";
 import { createCareerDocument } from "@/lib/career/model";
 import type { CareerHead } from "@/stores/career/persistence";
 
-const runtime = vi.hoisted(() => ({ compile: vi.fn(), close: vi.fn() }));
+const runtime = vi.hoisted(() => ({
+  compile: vi.fn(),
+  close: vi.fn(),
+  onState: vi.fn<(state: string) => void>(),
+}));
 vi.mock("@/tools/compiler-proof/compiler.mjs", () => ({
   BrowserCompiler: class {
+    constructor(options: { onState?: (state: string) => void }) {
+      runtime.onState.mockImplementation(options.onState ?? (() => {}));
+    }
     compile = runtime.compile;
     close = runtime.close;
   },
@@ -28,6 +35,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   runtime.compile.mockReset();
   runtime.close.mockReset();
+  runtime.onState.mockReset();
 });
 
 /** A committed bilingual fixture with independent resume identities. */
@@ -107,7 +115,7 @@ it("refreshes manually, retains captured download identity after switching, and 
     await screen.getByRole("button", { name: "Refresh preview" }).click();
     await expect
       .element(screen.getByRole("alert"))
-      .toHaveTextContent("Error: Compilation timed out");
+      .toHaveTextContent(/Error: Compilation timed out/);
     expect(revoke).not.toHaveBeenCalledWith("blob:first");
     await screen.getByRole("button", { name: "Refresh preview" }).click();
     await expect
@@ -120,6 +128,106 @@ it("refreshes manually, retains captured download identity after switching, and 
   }
   expect(revoke).toHaveBeenCalledWith("blob:second");
   expect(runtime.close).toHaveBeenCalled();
+});
+
+it("shows preparation and generation before the first PDF, supports retry, and keeps a PDF visible during refresh", async () => {
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:generated");
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  let fail!: (error: Error) => void;
+  runtime.compile.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  const screen = await render(
+    <CommittedOutput head={head()} onIssue={() => {}} />,
+  );
+  await expect
+    .element(screen.getByText("Your resume, ready to preview", { exact: true }))
+    .toBeVisible();
+  expect(runtime.compile).not.toHaveBeenCalled();
+  await screen
+    .getByRole("button", { name: "Generate preview", exact: true })
+    .click();
+  await expect
+    .element(
+      screen.getByRole("status").filter({ hasText: "Preparing your preview" }),
+    )
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole("button", { name: /Refreshing/ }))
+    .toBeDisabled();
+  runtime.onState("compiling");
+  await expect
+    .element(
+      screen.getByRole("status").filter({ hasText: "Generating your PDF" }),
+    )
+    .toBeVisible();
+  fail(new Error("Please retry"));
+  await expect
+    .element(screen.getByRole("alert"))
+    .toHaveTextContent(/Please retry/);
+  runtime.compile.mockResolvedValueOnce({
+    bytes: new Uint8Array([37, 80, 68, 70]),
+  });
+  await screen.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect
+    .element(screen.getByRole("link", { name: "Download PDF" }))
+    .toBeVisible();
+  runtime.compile.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  await screen
+    .getByRole("button", { name: "Refresh preview", exact: true })
+    .click();
+  await expect
+    .element(
+      screen
+        .getByRole("status")
+        .filter({ hasText: "Your last successful preview stays available." }),
+    )
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole("link", { name: "Download PDF" }))
+    .toBeVisible();
+  fail(new Error("Refresh failed"));
+  await expect
+    .element(screen.getByRole("alert"))
+    .toHaveTextContent(/Refresh failed/);
+  await expect
+    .element(screen.getByRole("link", { name: "Download PDF" }))
+    .toBeVisible();
+  await screen.unmount();
+});
+
+it("explains missing wording before generation without offering an unusable generate action", async () => {
+  const blocked = head();
+  blocked.document.profile.fields[0].wording = {};
+  const screen = await render(
+    <CommittedOutput head={blocked} onIssue={() => {}} />,
+  );
+  await expect
+    .element(screen.getByText("A few details need attention", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(
+      screen.getByRole("button", { name: "Refresh preview", exact: true }),
+    )
+    .toBeDisabled();
+  await expect
+    .element(
+      screen.getByRole("button", { name: "Generate preview", exact: true }),
+    )
+    .not.toBeInTheDocument();
+  await expect
+    .element(screen.getByText("1 blocking", { exact: true }))
+    .toBeVisible();
+  expect(runtime.compile).not.toHaveBeenCalled();
+  await screen.unmount();
 });
 
 it("rejects late compilation after replacement and after unmount without creating URLs", async () => {
@@ -155,7 +263,7 @@ it("rejects late compilation after replacement and after unmount without creatin
   expect(runtime.close).toHaveBeenCalled();
 });
 
-it("shows the same actionable saved-content issues in Overview and PDF while retaining the last successful PDF", async () => {
+it("shows saved-content issues only in the PDF footer while retaining the last successful PDF", async () => {
   vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:ready");
   vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
   runtime.compile.mockResolvedValue({
@@ -166,6 +274,12 @@ it("shows the same actionable saved-content issues in Overview and PDF while ret
   const screen = await render(
     <CommittedOutput head={committed} onIssue={onIssue} />,
   );
+  await expect
+    .element(screen.getByRole("button", { name: "Issues (0)", exact: true }))
+    .toHaveAttribute("aria-expanded", "false");
+  await expect
+    .element(screen.getByText("Ready for PDF", { exact: true }))
+    .toBeVisible();
   await screen.getByRole("button", { name: "Refresh preview" }).click();
   await expect
     .element(screen.getByRole("link", { name: "Download PDF" }))
@@ -188,6 +302,10 @@ it("shows the same actionable saved-content issues in Overview and PDF while ret
   const message = `Add full name wording in en-US before output.`;
   await expect
     .element(screen.getByText(message, { exact: true }))
+    .not.toBeInTheDocument();
+  await screen.getByRole("button", { name: "Issues (1)", exact: true }).click();
+  await expect
+    .element(screen.getByText(message, { exact: true }))
     .toBeVisible();
   await screen
     .getByRole("button", { name: "Edit wording", exact: true })
@@ -201,7 +319,6 @@ it("shows the same actionable saved-content issues in Overview and PDF while ret
       <ResumeOverview
         document={blocked.document}
         resume={blocked.document.resumes[0]}
-        onIssue={onIssue}
       />
     </section>,
   );
@@ -210,12 +327,19 @@ it("shows the same actionable saved-content issues in Overview and PDF while ret
       name: "Overview readiness test",
     });
     await expect
-      .element(overviewRegion.getByText(message, { exact: true }))
-      .toBeVisible();
-    await overviewRegion
-      .getByRole("button", { name: "Edit wording", exact: true })
-      .click();
-    expect(onIssue).toHaveBeenCalledTimes(2);
+      .element(
+        overviewRegion.getByRole("region", { name: "Active resume readiness" }),
+      )
+      .not.toBeInTheDocument();
+    await expect
+      .element(
+        overviewRegion.getByRole("button", {
+          name: "Edit wording",
+          exact: true,
+        }),
+      )
+      .not.toBeInTheDocument();
+    expect(onIssue).toHaveBeenCalledTimes(1);
   } finally {
     await overview.unmount();
   }
@@ -223,6 +347,13 @@ it("shows the same actionable saved-content issues in Overview and PDF while ret
   await expect
     .element(screen.getByText("Ready for PDF", { exact: true }))
     .toBeVisible();
+  await expect
+    .element(screen.getByRole("button", { name: "Issues (0)", exact: true }))
+    .toHaveAttribute("aria-expanded", "true");
+  await screen.getByRole("button", { name: "Issues (0)", exact: true }).click();
+  await expect
+    .element(screen.getByRole("button", { name: "Issues (0)", exact: true }))
+    .toHaveAttribute("aria-expanded", "false");
   expect(runtime.compile).toHaveBeenCalledTimes(1);
   await screen.unmount();
 });

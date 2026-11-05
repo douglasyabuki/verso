@@ -38,15 +38,24 @@ it("navigates a real PDF using pages, thumbnails and its embedded outline", asyn
         .getByText("First page search needle"),
     )
     .toBeVisible();
+  await expect
+    .element(page.getByText("Opening your PDF", { exact: true }))
+    .not.toBeInTheDocument();
   await page
     .getByRole("button", { name: "PDF navigation", exact: true })
     .click();
+  await expect
+    .element(page.getByRole("tablist", { name: "PDF navigation views" }))
+    .toHaveAttribute("aria-orientation", "vertical");
+  await expect
+    .element(page.getByRole("tab", { name: "Thumbnails", exact: true }))
+    .toHaveAttribute("aria-selected", "true");
   await page
     .getByRole("button", { name: "Go to PDF page 2", exact: true })
     .click();
   await expect
-    .element(page.getByRole("spinbutton", { name: "PDF page number" }))
-    .toHaveValue(2);
+    .element(page.getByRole("textbox", { name: "PDF page number" }))
+    .toHaveValue("2");
   await page
     .getByRole("tab", { name: "Document outline", exact: true })
     .click();
@@ -54,16 +63,73 @@ it("navigates a real PDF using pages, thumbnails and its embedded outline", asyn
     .getByRole("button", { name: "Final bookmark", exact: true })
     .click();
   await expect
-    .element(page.getByRole("spinbutton", { name: "PDF page number" }))
-    .toHaveValue(3);
-  await page.getByRole("spinbutton", { name: "PDF page number" }).fill("1");
+    .element(page.getByRole("textbox", { name: "PDF page number" }))
+    .toHaveValue("3");
+  await page.getByRole("tab", { name: "Thumbnails", exact: true }).click();
+  await userEvent.keyboard("{ArrowDown}");
+  await expect
+    .element(page.getByRole("tab", { name: "Document outline", exact: true }))
+    .toHaveAttribute("aria-selected", "true");
+  await page.getByRole("textbox", { name: "PDF page number" }).fill("1");
   await userEvent.keyboard("{Enter}");
   await expect
-    .element(page.getByRole("spinbutton", { name: "PDF page number" }))
-    .toHaveValue(1);
+    .element(page.getByRole("textbox", { name: "PDF page number" }))
+    .toHaveValue("1");
+  for (const invalid of ["", "0", "-1", "1.5", "abc", "1e2"]) {
+    await page.getByRole("textbox", { name: "PDF page number" }).fill(invalid);
+    await userEvent.keyboard("{Enter}");
+    await expect
+      .element(page.getByRole("textbox", { name: "PDF page number" }))
+      .toHaveValue("1");
+  }
+  await page.getByRole("textbox", { name: "PDF page number" }).fill("999");
+  await userEvent.tab();
+  await expect
+    .element(page.getByRole("textbox", { name: "PDF page number" }))
+    .toHaveValue("3");
+  await expect
+    .element(
+      page.getByRole("button", { name: "Previous PDF page", exact: true }),
+    )
+    .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: "Next PDF page", exact: true }))
+    .not.toBeInTheDocument();
   await expect
     .element(page.getByRole("link", { name: "https://example.com/" }))
     .toHaveAttribute("rel", "noopener noreferrer");
+  await page
+    .getByRole("button", { name: "Close PDF navigation", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "PDF navigation", exact: true })
+    .click();
+  await expect
+    .element(page.getByRole("tab", { name: "Thumbnails", exact: true }))
+    .toHaveAttribute("aria-selected", "true");
+});
+
+it("explains a viewer load failure instead of leaving its loading placeholder spinning", async () => {
+  const url = URL.createObjectURL(
+    new Blob(["not a PDF"], { type: "application/pdf" }),
+  );
+  urls.push(url);
+  await render(
+    <div style={{ height: 600, display: "flex" }}>
+      <PdfPreview document={{ url, key: "invalid", fileName: "invalid.pdf" }} />
+    </div>,
+  );
+  await expect.element(page.getByRole("alert")).toBeVisible();
+  await expect
+    .element(page.getByText("Your PDF could not be displayed", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("Opening your PDF", { exact: true }))
+    .not.toBeInTheDocument();
+  await page.getByRole("button", { name: "PDF actions", exact: true }).click();
+  await expect
+    .element(page.getByRole("menuitem", { name: "Download PDF", exact: true }))
+    .toHaveAttribute("download", "invalid.pdf");
 });
 
 it("searches all pages, restores focus, and leaves native browser Find shortcuts untouched", async () => {
@@ -124,8 +190,10 @@ it("fits on resize, synchronizes percentage zoom, and reads the current document
   await expect
     .element(page.getByRole("button", { name: "Search PDF", exact: true }))
     .toBeEnabled();
-  await page.getByRole("combobox", { name: "PDF zoom" }).click();
-  await page.getByRole("option", { name: "Fit page", exact: true }).click();
+  await page.getByRole("button", { name: "Fit page", exact: true }).click();
+  await expect
+    .element(page.getByRole("button", { name: "Fit page", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
   const height = () =>
     document.querySelector(".pdfViewer .page")!.getBoundingClientRect().height;
   const before = height();
@@ -135,8 +203,46 @@ it("fits on resize, synchronizes percentage zoom, and reads the current document
     </div>,
   );
   await expect.poll(height).toBeLessThan(before);
-  await page.getByRole("combobox", { name: "PDF zoom" }).click();
-  await page.getByRole("option", { name: "125%", exact: true }).click();
+  await page.getByRole("button", { name: "Fit width", exact: true }).click();
+  await expect
+    .element(page.getByRole("button", { name: "Fit width", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  const width = () =>
+    document.querySelector(".pdfViewer .page")!.getBoundingClientRect().width;
+  const beforeWidth = width();
+  await screen.rerender(
+    <div style={{ height: 450, width: 600, display: "flex" }}>
+      <PdfPreview document={initial} />
+    </div>,
+  );
+  await expect.poll(width).toBeLessThan(beforeWidth);
+  const zoomInput = page.getByRole("textbox", {
+    name: "PDF zoom",
+    exact: true,
+  });
+  await expect.element(zoomInput).toHaveAttribute("type", "text");
+  await zoomInput.fill("125");
+  await userEvent.keyboard("{Enter}");
+  await expect.element(zoomInput).toHaveValue("125%");
+  for (const invalid of ["", "abc", "0", "-20", "1e2"]) {
+    await zoomInput.fill(invalid);
+    await userEvent.keyboard("{Enter}");
+    await expect.element(zoomInput).toHaveValue("125%");
+  }
+  await zoomInput.fill("500%");
+  await userEvent.tab();
+  await expect.element(zoomInput).toHaveValue("400%");
+  await zoomInput.fill("10");
+  await userEvent.keyboard("{Enter}");
+  await expect.element(zoomInput).toHaveValue("25%");
+  await zoomInput.fill("125%");
+  await userEvent.keyboard("{Enter}");
+  await expect
+    .element(page.getByRole("button", { name: "Fit width", exact: true }))
+    .toHaveAttribute("aria-pressed", "false");
+  await expect
+    .element(page.getByRole("button", { name: "Fit page", exact: true }))
+    .toHaveAttribute("aria-pressed", "false");
   await expect
     .element(page.getByRole("status").filter({ hasText: "PDF zoom 125%" }))
     .toBeVisible();

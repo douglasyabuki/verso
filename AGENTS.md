@@ -91,7 +91,10 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
   headings, URL-label fallback, and explicit empty overrides without cross-language
   fallback. Excluded/hidden content and archive/deactivation status alone do not
   block output. Save validation remains independent of readiness.
-- Overview and PDF use the shared Issues presentation. Wording issue actions use
+- Issues appear only in the PDF preview footer, never Overview. The count/status
+  row remains visible before compilation and with retained PDFs. Start collapsed
+  and preserve the toggle choice while mounted; cap the expanded body at 40dvh
+  with independent scrolling. Wording issue actions use
   guarded navigation, reveal Editor after successful navigation, and focus exact
   wording cards without changing text. Targets are transient; keep durable scope
   URLs free of private wording. Failed/canceled navigation retains drafts.

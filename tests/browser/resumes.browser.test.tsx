@@ -133,6 +133,9 @@ describe("resume editing and transactional lifecycle", () => {
       name: "Active resume readiness",
     });
     await readiness
+      .getByRole("button", { name: "Issues (1)", exact: true })
+      .click();
+    await readiness
       .getByRole("button", { name: "Edit wording", exact: true })
       .click();
     await page
@@ -184,6 +187,9 @@ describe("resume editing and transactional lifecycle", () => {
     const readiness = page.getByRole("region", {
       name: "Active resume readiness",
     });
+    await readiness
+      .getByRole("button", { name: "Issues (1)", exact: true })
+      .click();
     await readiness
       .getByRole("button", { name: "Edit wording", exact: true })
       .click();

@@ -20,7 +20,7 @@ type PdfDocumentOptions = {
 
 /** Load one PDF and coordinate its viewer, links, search events, and fit-on-resize lifecycle.
  * @param options Source identity/URL and the mounted page-container refs.
- * @returns Loaded PDF (null while loading), viewer services, page/scale/search status, outline, and any load failure.
+ * @returns Loaded PDF (null while loading), whether a page has rendered, viewer services, page/scale/search status, outline, and any load/render failure.
  * @example const pdf = usePdfDocument({ source, container, pages });
  */
 export function usePdfDocument({
@@ -34,6 +34,7 @@ export function usePdfDocument({
     links: PDFLinkService;
   } | null>(null);
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
+  const [rendered, setRendered] = useState(false);
   const [page, setPage] = useState(1);
   const [scale, setScaleState] = useState({
     value: "page-width",
@@ -77,6 +78,18 @@ export function usePdfDocument({
       });
       links.setViewer(viewer);
       instance.current = { viewer, bus, links };
+      bus.on(
+        "pagerendered",
+        (event: { error?: unknown }) => {
+          if (cancelled) return;
+          if (event.error)
+            setError(
+              "A PDF page could not be displayed. Try refreshing the preview.",
+            );
+          else setRendered(true);
+        },
+        { signal: abort.signal },
+      );
       bus.on(
         "pagesinit",
         () => {
@@ -197,6 +210,7 @@ export function usePdfDocument({
   };
   return {
     pdf,
+    rendered,
     page,
     scale,
     outline,

@@ -5,7 +5,8 @@ import { type ComponentProps, useLayoutEffect, useRef } from "react";
 
 /**
  * Decorates the active sidebar rows without changing their navigation or focus.
- * Children contain normal sidebar buttons; className controls the scope layout.
+ * Children contain sidebar buttons, or items matched by activeItemSelector;
+ * className controls the scope layout. Returns decorative selection surfaces.
  * Each scope clips and scrolls with its collection. Nested pages have a separate
  * surface and snap when their resume changes. For example:
  * `<SidebarSelection><SidebarMenu>…</SidebarMenu></SidebarSelection>`.
@@ -13,8 +14,9 @@ import { type ComponentProps, useLayoutEffect, useRef } from "react";
 export function SidebarSelection({
   children,
   className,
+  activeItemSelector = '[data-sidebar="menu-button"][data-active], [data-sidebar="group-label"][data-active]',
   ...props
-}: ComponentProps<"div">) {
+}: ComponentProps<"div"> & { activeItemSelector?: string }) {
   const root = useRef<HTMLDivElement>(null);
   const main = useRef<HTMLSpanElement>(null);
   const nested = useRef<HTMLSpanElement>(null);
@@ -66,9 +68,7 @@ export function SidebarSelection({
     const surfaces = [main.current!, nested.current!];
     const measure = (animate: boolean) => {
       const targets = [
-        container.querySelector<HTMLElement>(
-          '[data-sidebar="menu-button"][data-active], [data-sidebar="group-label"][data-active]',
-        ),
+        container.querySelector<HTMLElement>(activeItemSelector),
         container.querySelector<HTMLElement>(
           '[data-sidebar="menu-sub-button"][data-active]',
         ),
@@ -193,6 +193,7 @@ export function SidebarSelection({
       ...container.querySelectorAll<HTMLElement>(
         '[data-sidebar="menu-button"], [data-sidebar="menu-sub-button"], [data-sidebar="group-label"]',
       ),
+      ...container.querySelectorAll<HTMLElement>(activeItemSelector),
     ]);
     for (const target of observed.current) {
       if (!targets.has(target)) resize.current?.unobserve(target);

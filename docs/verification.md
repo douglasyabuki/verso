@@ -7,12 +7,31 @@ contracts are maintained in [AGENTS.md](../AGENTS.md).
 
 ## Resume readiness and PDF acceptance
 
-Manual visual/PDF acceptance remains with the owner. In a disposable workspace,
+Manual visual/PDF acceptance and browser execution for the PDF footer/control
+refactor remain with the owner; its updated browser-component and production E2E
+test sources have not been executed for this change. In a disposable workspace,
 check the following in your usual browsers, at desktop and phone widths:
 
 - Clear and Save full name, a selected title/degree or achievement, and a rendered
-  custom-section heading. Overview and PDF should show the same blockers; Refresh
-  preview should be disabled. Optional empty values should remain allowed.
+  custom-section heading. Issues should appear only in the PDF footer, never
+  Overview; Refresh preview should be disabled. Optional empty values should
+  remain allowed.
+- Before compiling, check the collapsed Issues count/status row at the PDF panel
+  bottom. Expand/collapse with mouse and keyboard; verify the choice survives
+  saved-content updates, long lists scroll within 40dvh, and the PDF keeps its own
+  scrolling area. Repeat with loading/failure and a retained outdated PDF.
+- Review the illustrated placeholder in light/dark appearance and short/narrow panes.
+  Generate explicitly; check preparation, generation, viewer loading and first-page
+  rendering states, reduced motion, blocked guidance, retry after failure, and
+  retained PDF/download access during refresh. Updated browser tests for these
+  states remain unexecuted until owner validation.
+- Check compact page entry (Enter/blur, invalid input, upper-bound clamping),
+  spinner-free percentage zoom entry (Enter/blur, invalid input and 25-400% bounds), separate active Fit width/Fit page buttons on resize,
+  toolbar grouping/wrapping, navigation separator, and right-aligned actions.
+- Open PDF navigation: verify Images/Summary icon tabs in the left rail, tooltips,
+  vertical keyboard navigation, navbar-style moving selection surface/bar, reduced
+  motion, independently scrolling thumbnails/outline, bottom Close, and narrow
+  overlay behavior. Check thumbnail and outline destinations still navigate.
 - Follow **Edit wording** to the exact card, including from narrow PDF view and
   when Wording is already open. Check visible focus, scrolling, keyboard operation,
   disclosure expansion, long issue labels, and light/dark appearance.

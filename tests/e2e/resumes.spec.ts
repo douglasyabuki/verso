@@ -72,14 +72,19 @@ test("follows a readiness issue from narrow PDF view, saves its repair and resto
   await seed(page, document, `resume-overview/${resume.id}`);
   await expect(
     page
-      .getByRole("region", { name: "Active resume readiness" })
-      .getByText("1 blocking"),
-  ).toBeVisible();
+      .getByRole("main")
+      .getByRole("button", { name: "Issues (1)", exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("tab", { name: "PDF preview", exact: true }).click();
   const pdf = page.getByRole("region", { name: "Committed resume output" });
   await expect(
     pdf.getByRole("button", { name: "Refresh preview" }),
   ).toBeDisabled();
+  await expect(pdf.getByText("1 blocking", { exact: true })).toBeVisible();
+  await expect(
+    pdf.getByRole("button", { name: "Issues (1)", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await pdf.getByRole("button", { name: "Issues (1)", exact: true }).click();
   await pdf.getByRole("button", { name: "Edit wording", exact: true }).click();
   await expect(
     page.getByRole("tab", { name: "Editor", exact: true }),
@@ -532,8 +537,7 @@ for (const language of ["en-US", "pt-BR"]) {
     await viewer
       .getByRole("button", { name: "Close PDF navigation", exact: true })
       .click();
-    await viewer.getByRole("combobox", { name: "PDF zoom" }).click();
-    await page.getByRole("option", { name: "Fit page", exact: true }).click();
+    await viewer.getByRole("button", { name: "Fit page", exact: true }).click();
     await viewer
       .getByRole("button", { name: "PDF actions", exact: true })
       .click();

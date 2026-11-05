@@ -1,10 +1,13 @@
 "use client";
 
-import { FileText } from "lucide-react";
+import { cn } from "cn";
+import { FileText, RefreshCw } from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 import { ResumeReadiness } from "@/components/career/resume-readiness";
 import PdfPreview from "@/components/output/lazy-pdf-preview";
+import { PdfPreviewPlaceholder } from "@/components/output/pdf-preview-placeholder";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -41,6 +44,9 @@ export const CommittedOutput = memo(function CommittedOutput({
     generation: number;
   } | null>(null);
   const [pending, setPending] = useState(false);
+  const [phase, setPhase] = useState<"initializing" | "compiling">(
+    "initializing",
+  );
   const [error, setError] = useState("");
   const compiler = useRef<BrowserCompiler | null>(null);
   const latest = useRef("");
@@ -86,6 +92,7 @@ export const CommittedOutput = memo(function CommittedOutput({
   const compile = async () => {
     if (!active || !source || pending) return;
     setPending(true);
+    setPhase(compiler.current ? "compiling" : "initializing");
     setError("");
     const jobKey = key;
     try {
@@ -93,6 +100,13 @@ export const CommittedOutput = memo(function CommittedOutput({
         assetBase: "/compiler/",
         initializationTimeoutMs: 120_000,
         compilationTimeoutMs: 30_000,
+        onState: (state) => {
+          if (
+            mounted.current &&
+            (state === "initializing" || state === "compiling")
+          )
+            setPhase(state);
+        },
       });
       const result = await compiler.current.compile({
         source,
@@ -121,18 +135,26 @@ export const CommittedOutput = memo(function CommittedOutput({
   if (!active) return null;
   return (
     <section
-      className="flex h-full min-h-0 flex-1 flex-col gap-3"
+      className="flex h-full min-h-0 flex-1 flex-col"
       aria-label="Committed resume output"
     >
-      <div className="flex shrink-0 flex-col gap-3 px-3 pt-3">
+      <div className="flex shrink-0 flex-col gap-3 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-medium">PDF preview</h2>
           <Button
+            variant="ghost"
             size="sm"
             disabled={pending || !source}
+            aria-busy={pending}
             onClick={() => void compile()}
           >
-            {pending ? "Compiling committed snapshot..." : "Refresh preview"}
+            <RefreshCw
+              aria-hidden="true"
+              data-icon="inline-start"
+              className={cn(pending && "motion-safe:animate-spin")}
+            />
+            {pending ? "Refreshing…" : "Refresh"}
+            <span className="sr-only"> preview</span>
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -179,29 +201,79 @@ export const CommittedOutput = memo(function CommittedOutput({
             </Select>
           </Field>
         )}
-        <ResumeReadiness
-          document={head.document}
-          resume={active}
-          onIssue={onIssue}
-        />
-        {(sourceError || error) && <p role="alert">{sourceError || error}</p>}
+        {(sourceError || error) && (
+          <Alert variant="destructive">
+            <AlertTitle>Preview could not be generated</AlertTitle>
+            <AlertDescription className="wrap-anywhere">
+              {sourceError || error}
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
-      {output && (
-        <>
-          <p className="shrink-0 px-3 text-xs text-muted-foreground">
-            Last successful preview · {output.resumeName} ({output.language}) ·
-            revision {output.revision} · generation {output.generation}
-            {output.key !== key ? " · Outdated" : " · Current"}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {pending && output && (
+          <p
+            role="status"
+            className="shrink-0 px-3 pb-2 text-xs text-muted-foreground"
+          >
+            {phase === "initializing"
+              ? "Preparing your preview..."
+              : "Generating your PDF..."}{" "}
+            Your last successful preview stays available.
           </p>
-          <PdfPreview
-            document={{
-              key: output.key,
-              url: output.url,
-              fileName: `verso-${output.resumeId}-${output.language}-${output.revision}.pdf`,
-            }}
-          />
-        </>
-      )}
+        )}
+        {!output &&
+          (pending ? (
+            <PdfPreviewPlaceholder
+              busy
+              title={
+                phase === "initializing"
+                  ? "Preparing your preview"
+                  : "Generating your PDF"
+              }
+              description={
+                phase === "initializing"
+                  ? "The first preview can take a moment to prepare. You can keep editing while we get things ready."
+                  : "Turning your saved resume into a PDF. You can keep editing while it finishes."
+              }
+            />
+          ) : sourceError || error ? (
+            <PdfPreviewPlaceholder
+              title="Let's try that again"
+              description="Your saved content is safe. Try refreshing the preview again."
+              onGenerate={source ? () => void compile() : undefined}
+              actionLabel="Try again"
+            />
+          ) : !source ? (
+            <PdfPreviewPlaceholder
+              title="A few details need attention"
+              description="Open Issues below to see what needs wording before this resume can become a PDF."
+            />
+          ) : (
+            <PdfPreviewPlaceholder onGenerate={() => void compile()} />
+          ))}
+        {output && (
+          <>
+            <p className="shrink-0 px-3 text-xs text-muted-foreground">
+              Last successful preview · {output.resumeName} ({output.language})
+              · revision {output.revision} · generation {output.generation}
+              {output.key !== key ? " · Outdated" : " · Current"}
+            </p>
+            <PdfPreview
+              document={{
+                key: output.key,
+                url: output.url,
+                fileName: `verso-${output.resumeId}-${output.language}-${output.revision}.pdf`,
+              }}
+            />
+          </>
+        )}
+      </div>
+      <ResumeReadiness
+        document={head.document}
+        resume={active}
+        onIssue={onIssue}
+      />
     </section>
   );
 });

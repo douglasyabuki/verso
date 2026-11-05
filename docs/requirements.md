@@ -578,11 +578,26 @@ overflow. Choice controls align to the first title line. Entry search uses a
 conditional inline clear action and restores input focus.
 
 The committed PDF viewer uses existing Verso controls around pinned PDF.js:
-page navigation, fit/percentage zoom, thumbnails, embedded outline, button-opened
-search, download, and on-demand properties. Native browser Find shortcuts remain
+compact direct page entry without spinner or previous/next buttons, a compact spinner-free
+percentage zoom input (25-400%, committed on Enter or blur) with separate Fit width/Fit page buttons, thumbnails, embedded
+outline, button-opened search, download, and on-demand properties. Group toolbar
+controls with the navigation toggle and separator at the start, the actions menu
+at the far right, and the remaining controls centered between them. Allow groups
+to wrap in narrow panes. Document navigation has no
+visible title: a left utility rail uses Lucide Images/Summary icon tabs and the
+navbar's translucent animated selection surface with its leading vertical bar.
+Keep accessible vertical-tab behavior, tooltips, independently scrolling content,
+a bottom Close action, and the existing narrow-pane overlay. Native browser Find
+shortcuts remain
 untouched; manual browser-specific acceptance remains separate. Viewer changes
 preserve explicit refresh, saved-content-only output, stale-job rejection, and
 last-successful-preview labeling. No schema or dependency versions change.
+
+Before initial generation, show an illustrated document placeholder with an explicit
+Generate preview action, or guidance to Issues when output is blocked. Distinguish
+compiler preparation, generation, viewer loading, and first-page rendering. Announce
+loading accessibly, respect reduced motion, retain the last successful PDF during
+refresh, and show errors with retry guidance rather than indefinite loading.
 
 Presentation-refactor verification on 2026-11-03: formatting, lint, generated route
 types/TypeScript, 40 Node tests (9 files), 67 Chromium component tests (7 files),
@@ -660,7 +675,11 @@ these and all other browser/manual checks remain unexecuted for this slice.
 - [x] P3.6 Show active-resume readiness issues with editor navigation.
 
 Implementation adds one committed-output assessment shared by rendering and the
-Overview/PDF Issues disclosure. Repair links open exact resume Wording cards through
+PDF-only Issues footer. Overview has no Issues disclosure. The persistent
+count/status row starts collapsed; expansion is user-controlled while mounted,
+with a separately bordered scrolling body capped at 40dvh. The footer remains
+available before compilation, during failures, and alongside the last successful
+PDF. Repair links open exact resume Wording cards through
 existing draft guards and reveal Editor on narrow screens after navigation succeeds.
 Shared URL validation and checkbox presentation no longer import retired workflows.
 Readiness preserves existing PDF blocking rules and does not constrain incomplete
