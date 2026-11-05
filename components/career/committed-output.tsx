@@ -1,8 +1,9 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
+import { ResumeReadiness } from "@/components/career/resume-readiness";
 import PdfPreview from "@/components/output/lazy-pdf-preview";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -14,16 +15,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { outputCapabilities, renderCareerResume } from "@/lib/career/output";
+import { renderCareerResume } from "@/lib/career/output";
+import { assessResumeOutput } from "@/lib/career/readiness";
 import type { CareerHead } from "@/stores/career/persistence";
 import { BrowserCompiler } from "@/tools/compiler-proof/compiler.mjs";
+import type { ResumeOutputTarget } from "@/types-and-constants/career";
 
 export const CommittedOutput = memo(function CommittedOutput({
   head,
   activeResumeId,
+  onIssue,
 }: {
   head: CareerHead;
   activeResumeId?: string;
+  onIssue: (target: ResumeOutputTarget) => void;
 }) {
   const [resumeId, setResumeId] = useState("");
   const [output, setOutput] = useState<{
@@ -44,14 +49,18 @@ export const CommittedOutput = memo(function CommittedOutput({
     head.document.resumes.find(
       (resume) => resume.id === (activeResumeId ?? resumeId),
     ) ?? head.document.resumes[0];
-  let source = "";
-  let sourceError = "";
-  try {
-    if (active)
-      source = renderCareerResume(head.document, active.id, head.revision);
-  } catch (error) {
-    sourceError = String(error);
-  }
+  const { source, sourceError } = useMemo(() => {
+    if (!active || !assessResumeOutput(head.document, active.id).ready)
+      return { source: "", sourceError: "" };
+    try {
+      return {
+        source: renderCareerResume(head.document, active.id, head.revision),
+        sourceError: "",
+      };
+    } catch (error) {
+      return { source: "", sourceError: String(error) };
+    }
+  }, [head.document, head.revision, active]);
   const key = JSON.stringify([head.generation, active?.id, source]);
   useEffect(() => {
     latest.current = key;
@@ -170,9 +179,11 @@ export const CommittedOutput = memo(function CommittedOutput({
             </Select>
           </Field>
         )}
-        {!outputCapabilities[active.language] && (
-          <p>PDF unavailable · language rendering is unverified.</p>
-        )}
+        <ResumeReadiness
+          document={head.document}
+          resume={active}
+          onIssue={onIssue}
+        />
         {(sourceError || error) && <p role="alert">{sourceError || error}</p>}
       </div>
       {output && (

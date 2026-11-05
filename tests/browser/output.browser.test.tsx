@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { CommittedOutput } from "@/components/career/committed-output";
+import { ResumeOverview } from "@/components/career/resume-workspace";
 import { createCareerDocument } from "@/lib/career/model";
 import type { CareerHead } from "@/stores/career/persistence";
 
@@ -63,7 +64,9 @@ it("refreshes manually, retains captured download identity after switching, and 
   });
   const committed = head();
   committed.document.resumes[1].color = "rose";
-  const screen = await render(<CommittedOutput head={committed} />);
+  const screen = await render(
+    <CommittedOutput onIssue={() => {}} head={committed} />,
+  );
   try {
     expect(runtime.compile).not.toHaveBeenCalled();
     await screen.getByRole("button", { name: "Refresh preview" }).click();
@@ -129,10 +132,15 @@ it("rejects late compilation after replacement and after unmount without creatin
       }),
   );
   const original = head();
-  const screen = await render(<CommittedOutput head={original} />);
+  const screen = await render(
+    <CommittedOutput onIssue={() => {}} head={original} />,
+  );
   await screen.getByRole("button", { name: "Refresh preview" }).click();
   await screen.rerender(
-    <CommittedOutput head={{ ...original, generation: 3, revision: 8 }} />,
+    <CommittedOutput
+      onIssue={() => {}}
+      head={{ ...original, generation: 3, revision: 8 }}
+    />,
   );
   finish({ bytes: new Uint8Array([1]) });
   await expect
@@ -145,4 +153,76 @@ it("rejects late compilation after replacement and after unmount without creatin
   await Promise.resolve();
   expect(create).not.toHaveBeenCalled();
   expect(runtime.close).toHaveBeenCalled();
+});
+
+it("shows the same actionable saved-content issues in Overview and PDF while retaining the last successful PDF", async () => {
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:ready");
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  runtime.compile.mockResolvedValue({
+    bytes: new Uint8Array([37, 80, 68, 70]),
+  });
+  const committed = head();
+  const onIssue = vi.fn();
+  const screen = await render(
+    <CommittedOutput head={committed} onIssue={onIssue} />,
+  );
+  await screen.getByRole("button", { name: "Refresh preview" }).click();
+  await expect
+    .element(screen.getByRole("link", { name: "Download PDF" }))
+    .toBeVisible();
+  const blocked = structuredClone(committed);
+  blocked.revision++;
+  const name = blocked.document.profile.fields[0];
+  blocked.document.resumes[0].overrides[name.id] = "";
+  await screen.rerender(<CommittedOutput head={blocked} onIssue={onIssue} />);
+  await expect
+    .element(screen.getByRole("button", { name: "Refresh preview" }))
+    .toBeDisabled();
+  await expect.element(screen.getByText("1 blocking")).toBeVisible();
+  await expect
+    .element(screen.getByText(/Last successful preview/))
+    .toHaveTextContent(/Outdated/);
+  await expect
+    .element(screen.getByRole("link", { name: "Download PDF" }))
+    .toBeVisible();
+  const message = `Add full name wording in en-US before output.`;
+  await expect
+    .element(screen.getByText(message, { exact: true }))
+    .toBeVisible();
+  await screen
+    .getByRole("button", { name: "Edit wording", exact: true })
+    .click();
+  expect(onIssue).toHaveBeenLastCalledWith({
+    destination: "resume-wording/resume-0",
+    fieldId: name.id,
+  });
+  const overview = await render(
+    <section aria-label="Overview readiness test">
+      <ResumeOverview
+        document={blocked.document}
+        resume={blocked.document.resumes[0]}
+        onIssue={onIssue}
+      />
+    </section>,
+  );
+  try {
+    const overviewRegion = overview.getByRole("region", {
+      name: "Overview readiness test",
+    });
+    await expect
+      .element(overviewRegion.getByText(message, { exact: true }))
+      .toBeVisible();
+    await overviewRegion
+      .getByRole("button", { name: "Edit wording", exact: true })
+      .click();
+    expect(onIssue).toHaveBeenCalledTimes(2);
+  } finally {
+    await overview.unmount();
+  }
+  await screen.rerender(<CommittedOutput head={committed} onIssue={onIssue} />);
+  await expect
+    .element(screen.getByText("Ready for PDF", { exact: true }))
+    .toBeVisible();
+  expect(runtime.compile).toHaveBeenCalledTimes(1);
+  await screen.unmount();
 });

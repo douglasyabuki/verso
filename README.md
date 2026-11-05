@@ -14,6 +14,8 @@ Independent resumes expose Content and Wording forms and committed-only output i
 the resizable desktop preview panel or narrow-screen Editor/PDF preview tabs.
 Layout and appearance preferences remain device-only. Data & backups opens the
 schema-2 backup/recovery/replacement controls; it offers no retired reset/autosave actions.
+Light/dark appearance changes suppress color transitions through the next paint,
+then restore normal interaction transitions; system-theme changes follow the same path.
 
 The editor uses the previous career overview card grid, destination headings/icons,
 entry-list card, and grouped form layout. Schema-2 drafts supply these views without
@@ -37,12 +39,11 @@ colors and navigation icons remain separate. Built-in section icons are fixed.
 Section icons are required in the current development model and portable section
 and starter definitions. Earlier development data without icons is unsupported;
 there is no conversion or silent reseeding. Workspace schema 2 and recovery
-format 1 remain the target formats. Icons survive recovery, history,
+format 1 are the supported formats. Icons survive recovery, history,
 archive/restore, and workspace replacement/rollback. They do not add PDF graphics
 or readiness requirements. An icon Save still advances workspace revision and
 can mark the preview stale through its existing PDF revision metadata.
-Starter definitions carry icon choices for future structure copying; starter
-workflows remain planned. Appearance presets do not overwrite shared icons.
+Portable starter definitions also carry icon choices.
 
 Create sections/entries explicitly, then edit their wording and facts. Ordinary
 forms, ordering, and language changes stay uncommitted until Save. Cancel discards
@@ -97,8 +98,7 @@ readable English field labels. Wording source badges sit beside card titles;
 expanded read-only references use the shared nested list-card surface with compact
 Open Career details navigation links and the shared list entrance animation. Card icons align with the
 first title line, including wrapped titles. Comparison separates resume identity, inclusion/source metadata,
-and values. Owner browser, E2E, and visual validation of these presentation
-changes remains outstanding.
+and values.
 
 The sidebar restores each resume's tree: its name opens and selects the read-only
 Overview child, above Content & order and Wording. Individual resume views use
@@ -130,7 +130,7 @@ Fit width/Fit page with resize updates, on-demand thumbnails, embedded document
 outline, search, download, and a document-properties dialog. Its navigation starts
 closed and overlays the PDF in narrow panes. Search opens through its button;
 Ctrl/Cmd+F is left to the browser. Native browser Find across unrendered pages is
-not guaranteed and still needs manual browser-specific acceptance. Compilation
+not guaranteed. Compilation
 failure retains the labeled last successful PDF. Viewer replacement cancels its
 owned rendering tasks and releases workers; compiler and URL ownership remain
 with the committed-output coordinator.
@@ -138,12 +138,6 @@ with the committed-output coordinator.
 Entry search uses a conditional inline X that clears the query and restores
 input focus. Resume selection checkboxes and sorting controls align with the
 first title line, including multiline labels.
-
-Independent-resume PDF fixtures produced English/Portuguese PDFs in Chromium,
-Firefox, and WebKit. Automated text/font/link/metadata inspection uses pinned
-PDF.js. See the verification section for the current refactor checks; historical
-fixture checks do not prove the new viewer's acceptance. Visual PDF acceptance
-remains with the owner.
 
 New workspaces start with empty Experience, Projects, Education, Skills, and
 Certifications sections. Existing saved workspaces are not reseeded. Summaries
@@ -161,52 +155,40 @@ The former bilingual schema-1 editor, translation-review queues, automatic
 workspace autosaving, and full resume/layout controls are retired from the active
 root page. Schema-1 workflow/state modules remain unmounted reference assets;
 their reusable shell, sidebar collection, toolbar presentation, and UI primitives
-are shared with the active schema-2 composition. Presets/starters, layout editing,
-readiness dashboards, and the broader settings experience are not delivered.
-Outstanding verification is listed below; it does
-not block subsequent user-authorized development and is not passed acceptance.
+are shared with the active schema-2 composition.
 
-## Planned capabilities
+## Resume output readiness
 
-These are accepted directions, not available features or authorization to start
-new work. Update this list and Current capabilities as implementation ships.
+Resume Overview and the PDF panel share an Issues disclosure for the selected
+resume's **saved content only**. It lists all blockers in output order: unverified
+PDF language, missing full name, missing heading for a rendered custom section,
+empty selected title/degree, and empty selected achievements. Other empty values
+remain optional; built-in section headings and blank link-label URL fallback are
+preserved. Excluded sections, hidden entries, unselected children, unrelated
+resumes, archive status, and language deactivation alone do not block output.
+Language activation does not grant verified PDF support.
 
-- Readiness: save valid incomplete work; reject malformed values with retained
-  drafts. Only selected output blocks export. Provide issues with editor links;
-  unused records, inactive languages, and archive status alone do not block output.
-- Layout: control typography, positioning, paper, spacing, and colors. Presets
-  contain appearance; starters contain empty structure/default visibility/layout.
-  Applying either copies settings without live inheritance. Use Duplicate resume
-  for content-bearing reuse. Include supported configuration in backups and undo.
-- Settings/navigation: consolidate appearance, content languages, editing/preview,
-  data/backups, and defaults. Distinguish device-only from workspace settings.
-  Durable validated routes support reload and Back/Forward while preserving
-  drafts, focus, scroll, keyboard access, and narrow layouts. URLs contain no private text.
-- Preview: manual by default, optional automatic refresh of committed output changes,
-  truthful save/recovery/preview status, bounded queued work, deterministic cleanup,
-  and a labeled last successful PDF with stale state, diagnostics, and retry.
-- Local acceptance: verify independent-language editing, ordering, wording, layouts,
-  settings, navigation, backup/recovery, and browser behavior. Inspect real PDFs for
-  labels, dates, fonts, links, metadata, selectable text, accents, long content,
-  omissions, and overflow. Disable unsupported output explicitly.
-- Future accounts, after explicit activation: Better Auth GitHub/Google and
-  Prisma/PostgreSQL, with server ownership checks, isolated local recovery, reviewed
-  guest import, and immediate explicit Saves confirmed only by server acknowledgment.
-  Immutable request IDs and atomic server receipts protect retries and uncertain work.
-- Future sync: preserve dirty drafts and both conflict versions across tabs,
-  browsers, devices, offline use, reconnect, expiry, and account changes. Define
-  measured freshness; local notifications do not replace server revision checks.
-- Future public releases/hosting: explicitly reviewed immutable PDFs, pinned/latest
-  URLs, atomic latest advancement, rollback/revocation, access/privacy and cache
-  policies. Verify hosted anonymous/private access and recovery procedures; local
-  compilation is not publication. Typing and imports never publish.
+**Edit wording** opens that resume's Wording view and focuses the affected card.
+Customize repairs only that resume; the existing Career wording link opens shared
+content. Issue navigation uses the ordinary dirty-form guard and reveals Editor on
+narrow screens only after navigation succeeds. Cancel or failed Save retains the
+draft. Focus targets stay local; durable scope URLs support reload and Back/Forward.
+Saving within the current resume editor reopens the saved form without adding a
+duplicate browser-history entry.
 
-Translation tracking, groups, user-defined field types, content-bearing starters,
-freeform/template marketplaces, arbitrary LaTeX imports, AI rewriting, coauthoring,
-billing, portfolio/LinkedIn integration, and public content APIs remain outside scope
-unless separately requested. No universal ATS, all-script, or formal PDF/UA promise.
+Readiness and TeX rendering use the same assessment. Incomplete valid content can
+still be saved; malformed values retain the failed draft. Typing, recovery
+restoration, and unsaved wording never update readiness or compile a PDF. Refresh
+preview is disabled while blocked, and compilation errors remain separate. A last
+successful PDF remains labeled and downloadable, becoming outdated after saved
+output changes. Ready for PDF establishes content eligibility, not visual layout,
+clipping, PDF/UA, or ATS acceptance.
 
-## Data limits and performance targets
+Shared rich-text URL validation and the entry-search checkbox are independent of
+retired review and workspace-state modules. The retired schema-1 assets remain
+unmounted references, with no active counterpart or translation-review workflow.
+
+## Data formats and limits
 
 The supported format is UTF-8 `verso.workspace` schema 2; recovery uses a separate
 `verso.recovery` schema 1. Unsupported versions are rejected without changing saved
@@ -231,105 +213,10 @@ per file and 64 MiB per draft including its baseline. Limits never permit trunca
 or automatic eviction of unresolved recovery. In-memory undo is bounded to 100
 steps or 32 MiB; undo is not a backup. Browser clearing/eviction can still remove data.
 
-These are production acceptance targets, not verified performance claims:
-
-| Measurement                                                    | Normal-speed target                                                      |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Input, selection, reorder                                      | p95 <=100 ms                                                             |
-| Save click to committed acknowledgment                         | p95 <=500 ms representative / <=2 s capacity                             |
-| Workspace open, excluding compiler initialization              | p95 <=2 s representative / <=5 s capacity                                |
-| Recovery acknowledgment during continuous input                | <=3 s; report storage failure within 1 s of detection                    |
-| Capacity import preview                                        | <=5 s; progress after 500 ms; no recurring parsing/transfer tasks >50 ms |
-| Cached warm compilation / cold initialization plus compilation | <=5 s / <=20 s on representative 1–3-page output                         |
-
-Measure production small (20 entries/3 resumes), representative (300/30),
-multi-resume (60 independently configured resumes), and near-limit capacity
-fixtures. Record hardware/browser/build, p50/p95/max, failures, at least 100
-interactions and 30 Saves/opens per data fixture, plus 10 warm and 5 cached-cold
-compiler runs. Separate normal/4x CPU results and uncached downloads; comparisons
-use the same build/fixtures or disclose their limitations.
-
 Compiler defaults are a 120-second initialization timeout, 30-second compilation
-timeout, and 1,000,000-byte source limit. Bound work to one active compilation and
+timeout, and 1,000,000-byte source limit. Compilation uses one active request and
 one replaceable queued request, one compiler/worker pair per tab, and one retained
-successful PDF plus an in-flight result. Verify settled cleanup deterministically;
-there is no mandatory duration soak. Detailed engineering safeguards live in
-[AGENTS.md](AGENTS.md).
-
-## Outstanding verification
-
-Custom-section icon non-browser verification on 2026-11-04 passed formatting,
-lint, generated route types / TypeScript, 58 unit tests across 10 files, and a
-production build. Controller unit cases use explicit session-only behavior;
-they do not prove real IndexedDB transaction behavior. Browser test sources cover
-picker Save/Cancel, distinct section icons across views, and durable retry/rollback,
-but were not executed for this change.
-
-Custom-section icon browser and manual acceptance belongs to the owner. Updated
-browser test source is not execution evidence. Check:
-
-- Picker keyboard navigation, selection, Escape/focus return, and narrow screens.
-- Draft isolation, disabled unchanged/saving actions, Cancel, successful Save,
-  failed Save retention, Undo/Redo, and independent entry ordering.
-- Distinct icons through career overview/sidebar/section destinations and every
-  existing section representation in resume Content & order, Wording, shared
-  references, and comparison; preserve resume colors and generic navigation icons.
-- Navigation, Back/Forward, reload, recovery restoration, workspace/recovery
-  imports, replacement/rollback, and rejected imports preserving stored data.
-- PDF appearance stays unchanged; revision metadata may mark preview stale, and
-  Save never automatically compiles.
-
-Resume navigation and icon updates on 2026-11-04 have updated browser-component
-and E2E test sources. Browser tests and manual validation were left to the owner;
-the earlier results below do not verify these updates.
-
-Independent-resume verification on 2026-11-03 passed formatting, lint, route generation /
-TypeScript, and the complete `npm test` chain: 40 Node tests in 9 files, 59
-Chromium component tests in 6 files, and 43 production E2E cases across Chromium,
-Firefox, and WebKit, including a fresh production build and actual English /
-Portuguese PDF checks. These functional results do not establish performance,
-manual round-trip acceptance, actual Safari behavior, or owner visual sign-off.
-
-Presentation-refactor verification on 2026-11-03 passed formatting, lint, generated
-route types / TypeScript, 40 Node tests (9 files), 67 Chromium component tests
-(7 files), and 46 production E2E cases across Chromium, Firefox, and WebKit with a
-fresh build. The three suites ran sequentially, with `test:e2e -- --workers=1`
-after overlapping verification runs encountered host resource contention. Coverage
-includes the real PDF viewer, thumbnails/outline/search/zoom/properties, worker
-cleanup, overview/details navigation, checkbox alignment, inline search clearing,
-ellipsis labels, and tall/short sidebar overflow.
-
-Development-server visual checks of an English fixture at 1440×900 and 390×900
-covered light/dark themes and open/closed PDF navigation. They showed no page
-errors, horizontal overflow, or unnecessary desktop sidebar scrolling. These
-spot checks remain separate from owner visual/PDF acceptance.
-
-Native desktop Find acceptance remains unverified: the Computer Use helper could
-not connect to its native pipe after retry and reinitialization. Component checks
-verify that the viewer does not intercept the browser's Find shortcut; that does
-not prove native Find coverage of unrendered PDF pages.
-
-These items are deferred rather than passed. Complete them before claiming full
-local acceptance, or explicitly agree a revised scope. They do not block further
-authorized feature development.
-
-- Reconcile inherited import/discard acceptance with current automated evidence.
-  The current regression run does not retroactively close the deferred historical
-  acceptance record or establish unexecuted manual/capacity/failure scenarios.
-- Verify batched import Unicode/prototype safety and cancellation/error cleanup;
-  verify discard exact-version/newer-draft safety, receipt resolution, restart
-  recovery, and interrupted Save/history retries.
-- Reverify automated workspace/recovery round trips and obtain manual disposable-
-  workspace acceptance for identities, wording, customizations, selection/order,
-  appearance, capacity, and rejection without mutation.
-- Complete affected/missing performance rows with the enriched multi-resume fixture.
-  Historical measurements are partial; collecting reports does not prove budgets.
-  Close Save click-to-acknowledgment, continuous-input recovery, failure-announcement,
-  real import long-task/progress, and cached-cold/warm compiler measurement gaps.
-- Obtain owner presentation review and English/Portuguese PDF layout/clipping
-  acceptance, separately from automated text/font/link/metadata checks.
-- Update these current-capability, target, and limitation statements after verified
-  changes so they remain accurate without temporary planning/evidence documents.
+successful PDF plus an in-flight result.
 
 ## Setup and checks
 
@@ -354,16 +241,14 @@ Vitest 4.1.0, renderer 2.2.0, Vite 7.3.1 and a Tailwind Vite adapter are scoped 
 testing and preserve the selected Next/React versions. Test browsers live in
 `.cache/ms-playwright`. Test against disposable origins; browser storage belongs
 to the origin/profile. Tests do not establish Safari support, PDF/UA, universal
-ATS compatibility, production deployment, or the performance targets listed above.
+ATS compatibility, or production deployment.
 
 Install the pinned browser engines with `PLAYWRIGHT_BROWSERS_PATH` set to
 `.cache/ms-playwright` before running cross-browser checks. E2E runs Chromium,
 Firefox, and WebKit; the Chromium quota case waits for the browser's 30-second
 quota cache to expire. Measurements run separately with one worker and write
 raw samples under `.cache/performance/`; their recorded evidence includes reference
-hardware, browser version, normal/4× CPU runs, and sample counts. There is no
-mandatory 30-minute resource soak.
+hardware, browser version, normal/4x CPU runs, and sample counts.
 
-The application sends no resume content to a backend. Accounts, synchronization,
-public downloads, and deployment remain future scope. Compiler maintenance is
+The application sends no resume content to a backend. Compiler maintenance is
 covered in [compilation proof](docs/compilation-proof.md).

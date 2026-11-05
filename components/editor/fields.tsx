@@ -4,7 +4,6 @@ import { useId } from "react";
 
 import { TextEditor } from "@/components/editor/text/text-editor";
 import { ContentStatusBadge } from "@/components/shared/semantic-badges/content-status-badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
   FieldDescription,
@@ -68,31 +67,6 @@ export function TextField({
       ) : description ? (
         <FieldDescription id={id + "-help"}>{description}</FieldDescription>
       ) : null}
-    </Field>
-  );
-}
-
-export function CheckField({
-  label,
-  checked,
-  onChange,
-  disabled = false,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
-}) {
-  const id = useId();
-  return (
-    <Field orientation="horizontal" data-disabled={disabled}>
-      <Checkbox
-        id={id}
-        checked={checked}
-        onCheckedChange={onChange}
-        disabled={disabled}
-      />
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
     </Field>
   );
 }

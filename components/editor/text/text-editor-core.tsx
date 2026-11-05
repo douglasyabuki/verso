@@ -28,7 +28,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Toggle } from "@/components/ui/toggle";
-import { urlError } from "@/lib/review/validation";
+import { urlError } from "@/lib/url-validation";
 import { equivalentSpans } from "@/lib/wording/spans";
 import type { Span } from "@/types-and-constants/resume";
 import type { EditGroup } from "@/types-and-constants/workspace";

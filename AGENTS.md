@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Application agent guidance
 
-Active configurations and agent skills live at the application root. This file records lasting engineering and product contracts; README.md records current behavior, planned capabilities, and outstanding verification. Keep both current as work ships. New product scope requires user direction.
+Active configurations and agent skills live at the application root. This file records lasting engineering and product contracts; README.md records only current code behavior, limitations, setup, and available checks; keep plans, outstanding work, acceptance checklists, and dated verification reports out of it. Keep both current as work ships. New product scope requires user direction.
 
 Keep maintained artifacts self-contained: state applicable behavior, contracts, limitations, and instructions directly in README.md, agent guidance, skills, and permanent reference docs. Do not rely on phase numbers or temporary requirements, evidence, or handoff files for essential context. Those planning files will be deleted after implementation; preserve lasting guidance and outstanding acceptance in maintained artifacts before removing them. Links to maintained source or permanent references may supplement that context.
 
@@ -43,7 +43,7 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 
 - Use npm and the existing package-lock.json. The application uses Next.js 16.4.2, React 19.3, Tailwind 4, TypeScript, and root app/ routes; @/* resolves from the repository root.
 - Preserve next.config.ts framework and Turbopack settings. Generate route helpers with next typegen before standalone type checks.
-- The active app provides career forms, extensible languages, separate recovery, IndexedDB Saves, schema-2 backups, and minimal imported-resume output; the former schema-1 editor is unmounted. README.md distinguishes delivered capabilities from planned work. Authentication, account persistence, publication, public APIs, portfolio/LinkedIn integration, and deployment remain future scope until activated. Automated behavior and regression tests are in scope.
+- The active app provides career forms, extensible languages, separate recovery, IndexedDB Saves, schema-2 backups, and minimal imported-resume output; the former schema-1 editor is unmounted. README.md describes implemented capabilities only. Authentication, account persistence, publication, public APIs, portfolio/LinkedIn integration, and deployment remain future scope until activated. Automated behavior and regression tests are in scope.
 - Future authenticated storage is Prisma/Postgres with Better Auth GitHub/Google. Keep this preparation conceptual; do not add empty modules or unused account adapters. Inspect the selected versions, their official documentation, deployment runtime, and provider requirements before implementation.
 - Run npm run format:check, npm run lint, npm run typecheck, and npm test for tooling changes. npm test runs unit and browser suites, then builds and starts a fresh production server on localhost:3100 for Chromium, Firefox, and WebKit E2E coverage; this is not complete product acceptance coverage.
 - Vitest Node/browser projects are configured with target behavior coverage. Add meaningful cases alongside changes. Do not add empty suites or passWithNoTests.
@@ -52,7 +52,7 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 
 ## Accepted target architecture
 
-- Preserve the contracts in this file when extending the app. Planned capabilities and deferred acceptance in README.md are not claims of delivered or verified behavior. Deferred verification does not block subsequent user-authorized development; do not silently count it as passed.
+- Preserve the contracts in this file when extending the app. Target capabilities in this file and deferred acceptance in docs/verification.md are not claims of delivered or verified behavior. Deferred verification does not block subsequent user-authorized development; do not silently count it as passed.
 - One language per resume; English UI; extensible content languages with verified English/Portuguese PDF output. Defer translation tracking, review acknowledgments, groups, and user-defined field types. Built-in fields and custom sections remain in scope.
 - Language deactivation hides creation choices while retaining wording and usable existing resumes; activation, interface language, and verified PDF support are separate. Use Create copy in another language with destination career wording, copied selection/order, compatible layout, and font/rendering warnings; no silent wording fallback or identical-appearance promise. Defer in-place language changes and permanent language-wording erasure.
 - Career details own shared facts and reusable wording. All display wording can be customized per resume; shared edits never overwrite customizations. Use career wording removes the override. Starters copy empty structure/default visibility/layout; presets copy appearance, without live inheritance.
@@ -78,9 +78,27 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 - Independent resumes use exact `resume-details/<id>` (name/color), `resume-content/<id>` (selection/contact order/summary visibility), and `resume-wording/<id>` (overrides) scopes. Nullable `resume/<id>` is only for single-resume creation/deletion and their history, never ordinary record replacement. Undo resume creation removes that resume; Undo deletion restores its identity/configuration without touching career content. Keep older `selection/<id>` requests executable and their fingerprints unchanged. Optional schema-2 resume configuration resolves prior defaults without load-time writes; new resumes explicitly start with no optional selections. Prepared lifecycle retries check receipts before attempting creation again. Missing-resume recovery requires explicit restore-as-new with validated references or export/reconciliation; retain original recovery separately.
 - Workspace schema 2 and recovery format 1 are the sole portable formats. No schema-1 migration/compatibility. The former `lib/resume`, `stores/workspace`, and schema-1 workflow contexts remain unmounted reference assets, not active behavior or target constraints. The active career editor reuses `WorkspaceShell`, the utility rail, extracted sidebar collections/toolbar presentation, layout preferences, and responsive UI primitives through `components/career/career-workspace-shell.tsx`; do not mount schema-1 providers to use that presentation. Do not add retired features for parity.
 - `lib/output/template.ts` assembles the unchanged pinned template independently of content schemas; `lib/output/encoding.ts` escapes text. `lib/career/output.ts` resolves selected schema-2 wording/facts using explicit output capabilities. Output consumes committed content only. Existing selected archived content remains rendered. Minimal output does not establish full resume-editor delivery or PDF acceptance.
-- Preserve the generated Next.js blocks below and above. Keep current limitations and outstanding verification in README.md so they remain usable without temporary planning or handoff documents.
+- Preserve the generated Next.js blocks below and above. Keep current code behavior and limitations in README.md, and acceptance checklists in docs/verification.md, so they remain usable without temporary planning or handoff documents.
 - Preserve the established presentation. Exact-version discard cleanup intents use the existing IndexedDB preferences store; completed receipts stay protected until acknowledgment, with interrupted requests available for explicit recovery. Imports validate in a disposable worker. `npm run test:measure` runs explicit production measurements separately from routine `npm test`. Owner visual/PDF and manual round-trip acceptance remain separate from automated evidence.
 - Vitest Node and real Chromium Browser Mode are configured with actual cases. Run `test:unit` and `test:browser` non-watch, plus relevant Playwright checks. Preserve npm and selected framework versions. Test harness versions are Vitest 4.1.0 / vitest-browser-react 2.2.0, rather than the newer versions described by skill reference notes.
+
+## Active output readiness
+
+- `lib/career/readiness.ts` assesses committed effective selections for one resume;
+  the UI and `renderCareerResume` share its blockers: unverified PDF language,
+  missing full name, rendered custom heading, selected title/degree, or selected
+  achievement wording. Other empty values remain optional. Preserve built-in
+  headings, URL-label fallback, and explicit empty overrides without cross-language
+  fallback. Excluded/hidden content and archive/deactivation status alone do not
+  block output. Save validation remains independent of readiness.
+- Overview and PDF use the shared Issues presentation. Wording issue actions use
+  guarded navigation, reveal Editor after successful navigation, and focus exact
+  wording cards without changing text. Targets are transient; keep durable scope
+  URLs free of private wording. Failed/canceled navigation retains drafts.
+- Keep reusable checkbox presentation and rich-text URL validation independent of
+  retired editor/review/state modules. Do not mount schema-1 providers or introduce
+  translation tracking to reuse UI. Manual/browser readiness acceptance belongs to
+  the owner; document unexecuted coverage separately from non-browser results.
 
 ## Editing and portable-data contracts
 

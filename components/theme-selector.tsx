@@ -10,6 +10,8 @@ type ThemePreference = "system" | "light" | "dark";
 const storageKey = "verso-theme";
 const changeEvent = "verso-theme-change";
 
+let transitionFrame: number | null = null;
+
 /** Read the preference initialized before paint. Returns system when unset. @example getPreference() */
 function getPreference(): ThemePreference {
   const value = document.documentElement.dataset.themePreference;
@@ -19,13 +21,25 @@ function getPreference(): ThemePreference {
 /** Apply a preference, resolving system against the current OS theme. @param preference User choice. @example applyTheme("system") */
 function applyTheme(preference: ThemePreference) {
   const root = document.documentElement;
-  root.dataset.themePreference = preference;
-  root.classList.toggle(
-    "dark",
+  const dark =
     preference === "dark" ||
-      (preference === "system" &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches),
-  );
+    (preference === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  if (root.classList.contains("dark") !== dark) {
+    if (transitionFrame !== null) cancelAnimationFrame(transitionFrame);
+    root.dataset.themeSwitching = "";
+    // Keep transitions disabled through the next paint. A single frame callback
+    // could restore them before the browser has painted the new theme.
+    transitionFrame = requestAnimationFrame(() => {
+      transitionFrame = requestAnimationFrame(() => {
+        delete root.dataset.themeSwitching;
+        transitionFrame = null;
+      });
+    });
+  }
+  root.dataset.themePreference = preference;
+  root.classList.toggle("dark", dark);
 }
 
 /** Subscribe to local choices, other tabs, and OS theme changes. @param notify React store callback. @returns Listener cleanup. @example subscribe(() => render()) */

@@ -28,6 +28,7 @@ import {
   CareerTextField,
   contentLanguageName,
 } from "@/components/career/career-fields";
+import { ResumeReadiness } from "@/components/career/resume-readiness";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { EntrySearch } from "@/components/content/entry-search";
 import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
@@ -104,6 +105,7 @@ import {
 } from "@/lib/career/resumes";
 import { type RichText, wordingText } from "@/lib/career/wording";
 import { reorderVisible } from "@/lib/ordering";
+import type { ResumeOutputTarget } from "@/types-and-constants/career";
 import type {
   CareerDocument,
   CareerResume,
@@ -654,9 +656,11 @@ export function ResumeViewTabs({
 export function ResumeOverview({
   document,
   resume,
+  onIssue,
 }: {
   document: CareerDocument;
   resume: CareerResume;
+  onIssue: (target: ResumeOutputTarget) => void;
 }) {
   const content = effectiveResume(document, resume);
   const sections = content.selection.filter((section) => !section.hidden);
@@ -687,6 +691,11 @@ export function ResumeOverview({
           <dt>Selected entries</dt>
           <dd>{entryCount}</dd>
         </dl>
+        <ResumeReadiness
+          document={document}
+          resume={resume}
+          onIssue={onIssue}
+        />
       </CardContent>
     </Card>
   );
@@ -1415,7 +1424,14 @@ export function ResumeWordingEditor({
       {fields.map((field) => {
         const custom = Object.hasOwn(values, field.id);
         return (
-          <Card key={field.id} size="sm" role="group" aria-label={field.label}>
+          <Card
+            key={field.id}
+            id={`resume-wording-${resume.id}-${field.id}`}
+            tabIndex={-1}
+            size="sm"
+            role="group"
+            aria-label={field.label}
+          >
             <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
               <CardTitle className="flex min-w-0 flex-1 basis-48 items-start gap-2">
                 <ResumeFieldIcon owner={field.owner} icon={field.icon} />

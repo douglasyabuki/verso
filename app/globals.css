@@ -4,6 +4,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Switch appearance in one paint while retaining normal interaction transitions. */
+html[data-theme-switching],
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  transition: none !important;
+}
+
 /* PDF.js sizes pages by their content; Preflight's border-box shrinks only
    the canvas beneath its independently sized text and annotation layers. */
 .pdfViewer .page {

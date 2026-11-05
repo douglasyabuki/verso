@@ -4,6 +4,7 @@ import { cleanup, render } from "vitest-browser-react";
 
 import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspace } from "@/components/career/career-workspace";
+import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
 import {
   ResumeComparison,
   ResumeContentEditor,
@@ -66,6 +67,171 @@ afterEach(async () => {
 });
 
 describe("resume editing and transactional lifecycle", () => {
+  it("preserves narrow PDF selection when an issue request clears and reveals Editor for a new request", async () => {
+    await page.viewport(390, 844);
+    const { document, resume } = fixture();
+    const renderShell = (editorRequest: object | null) => (
+      <CareerWorkspaceShell
+        document={document}
+        destination={`resume-wording/${resume.id}`}
+        navigate={vi.fn()}
+        addSection={vi.fn()}
+        addResume={vi.fn()}
+        resumeActions={{
+          create: vi.fn(),
+          edit: vi.fn(),
+          duplicate: vi.fn(),
+          copy: vi.fn(),
+          delete: vi.fn(),
+        }}
+        language="en-US"
+        setLanguage={vi.fn()}
+        status="Saved locally"
+        history={{
+          undo: vi.fn(),
+          redo: vi.fn(),
+          canUndo: false,
+          canRedo: false,
+        }}
+        editorRequest={editorRequest}
+        output={<p>Saved PDF surface</p>}
+      >
+        <p>Wording editor surface</p>
+      </CareerWorkspaceShell>
+    );
+    const screen = await render(renderShell({ fieldId: "name" }));
+    const pdfTab = page.getByRole("tab", { name: "PDF preview", exact: true });
+    const editorTab = page.getByRole("tab", { name: "Editor", exact: true });
+    await pdfTab.click();
+    await expect
+      .element(page.getByText("Saved PDF surface", { exact: true }))
+      .toBeVisible();
+    await screen.rerender(renderShell(null));
+    await expect.element(pdfTab).toHaveAttribute("aria-selected", "true");
+    await expect
+      .element(page.getByText("Saved PDF surface", { exact: true }))
+      .toBeVisible();
+    await screen.rerender(renderShell({ fieldId: "name" }));
+    await expect.element(editorTab).toHaveAttribute("aria-selected", "true");
+    await expect
+      .element(page.getByText("Wording editor surface", { exact: true }))
+      .toBeVisible();
+  });
+
+  it("retains a malformed entry when saving from an issue guard fails, then navigates after a valid incomplete Save", async () => {
+    await page.viewport(1440, 900);
+    const { document, resume, entry } = fixture();
+    document.profile.fields[0].wording = {};
+    const controller = await owner(document);
+    window.history.replaceState({}, "", `?scope=entry/${entry.id}`);
+    await render(<CareerWorkspace controller={controller} />);
+    const invalid = structuredClone(entry);
+    invalid.fields.find((field) => field.key === "start")!.fact = "2023-02-29";
+    controller.change(invalid);
+    const saved = controller.getSnapshot().head;
+    const readiness = page.getByRole("region", {
+      name: "Active resume readiness",
+    });
+    await readiness
+      .getByRole("button", { name: "Edit wording", exact: true })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Unsaved form" })
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+    await expect.poll(() => controller.getSnapshot().saving).toBe(false);
+    expect(controller.getSnapshot().head).toEqual(saved);
+    expect(controller.getSnapshot().draft?.values).toEqual(invalid);
+    expect(controller.getSnapshot().draft?.scope).toBe(`entry/${entry.id}`);
+    expect(controller.getSnapshot().undoCount).toBe(0);
+    expect(controller.getSnapshot().error).toMatch(/valid.*date/);
+    await page
+      .getByRole("dialog", { name: "Unsaved form" })
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
+    const valid = structuredClone(invalid);
+    valid.fields.find((field) => field.key === "start")!.fact = "";
+    valid.name = "Incomplete but saved";
+    controller.change(valid);
+    await readiness
+      .getByRole("button", { name: "Edit wording", exact: true })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Unsaved form" })
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+    await expect
+      .element(
+        page.getByRole("group", { name: "Profile · Full name", exact: true }),
+      )
+      .toHaveFocus();
+    expect(controller.getSnapshot().draft?.scope).toBe(
+      `resume-wording/${resume.id}`,
+    );
+    expect(controller.getSnapshot().undoCount).toBe(1);
+  });
+
+  it("keeps readiness committed-only and guards issue navigation before focusing the exact Wording card", async () => {
+    await page.viewport(1440, 900);
+    const { document, resume } = fixture();
+    document.profile.fields[0].wording = {};
+    const controller = await owner(document);
+    window.history.replaceState({}, "", `?scope=resume-content/${resume.id}`);
+    await render(<CareerWorkspace controller={controller} />);
+    await page
+      .getByRole("checkbox", { name: "Include Profile · email", exact: true })
+      .click();
+    const readiness = page.getByRole("region", {
+      name: "Active resume readiness",
+    });
+    await readiness
+      .getByRole("button", { name: "Edit wording", exact: true })
+      .click();
+    const guard = page.getByRole("dialog", { name: "Unsaved form" });
+    await guard.getByRole("button", { name: "Cancel", exact: true }).click();
+    expect(controller.getSnapshot().draft?.scope).toBe(
+      `resume-content/${resume.id}`,
+    );
+    expect(controller.isDirty()).toBe(true);
+    await readiness
+      .getByRole("button", { name: "Edit wording", exact: true })
+      .click();
+    await guard.getByRole("button", { name: "Discard", exact: true }).click();
+    const card = page.getByRole("group", {
+      name: "Profile · Full name",
+      exact: true,
+    });
+    await expect.element(card).toHaveFocus();
+    await card.getByRole("button", { name: "Customize", exact: true }).click();
+    await card
+      .getByRole("textbox", { name: "Profile · Full name", exact: true })
+      .fill("Ana");
+    await expect
+      .element(readiness.getByText("1 blocking", { exact: true }))
+      .toBeVisible();
+    await readiness
+      .getByRole("button", { name: "Edit wording", exact: true })
+      .click();
+    await expect.element(card).toHaveFocus();
+    expect(controller.isDirty()).toBe(true);
+    const historyLength = window.history.length;
+    const historyIndex = window.history.state.versoIndex;
+    await page
+      .getByRole("region", { name: "Editing form" })
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+    await expect
+      .element(readiness.getByText("Ready for PDF", { exact: true }))
+      .toBeVisible();
+    expect(window.history.length).toBe(historyLength);
+    expect(window.history.state.versoIndex).toBe(historyIndex);
+    expect(controller.getSnapshot().undoCount).toBe(1);
+    await card
+      .getByRole("button", { name: "Use career wording", exact: true })
+      .click();
+    expect(controller.isDirty()).toBe(true);
+  });
+
   it("shows shared facts read-only in Wording and navigates to their career owner", async () => {
     const { document, resume, entry } = fixture();
     entry.fields.find((field) => field.key === "start")!.fact = "2024-01";

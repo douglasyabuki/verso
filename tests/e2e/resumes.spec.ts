@@ -60,6 +60,62 @@ async function seed(
   await page.goto(`/?scope=${destination}`);
 }
 
+test("follows a readiness issue from narrow PDF view, saves its repair and restores durable navigation", async ({
+  page,
+}) => {
+  const { document } = fixture();
+  const resume = createResume(document, "en-US");
+  resume.name = "Readiness application";
+  document.resumes = [resume];
+  document.profile.fields[0].wording = {};
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seed(page, document, `resume-overview/${resume.id}`);
+  await expect(
+    page
+      .getByRole("region", { name: "Active resume readiness" })
+      .getByText("1 blocking"),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "PDF preview", exact: true }).click();
+  const pdf = page.getByRole("region", { name: "Committed resume output" });
+  await expect(
+    pdf.getByRole("button", { name: "Refresh preview" }),
+  ).toBeDisabled();
+  await pdf.getByRole("button", { name: "Edit wording", exact: true }).click();
+  await expect(
+    page.getByRole("tab", { name: "Editor", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  const card = page.getByRole("group", {
+    name: "Profile · Full name",
+    exact: true,
+  });
+  await expect(card).toBeFocused();
+  await card.getByRole("button", { name: "Customize", exact: true }).click();
+  await card
+    .getByRole("textbox", { name: "Profile · Full name", exact: true })
+    .fill("Ana Silva");
+  await page
+    .getByRole("region", { name: "Editing form" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await page.getByRole("tab", { name: "PDF preview", exact: true }).click();
+  await expect(pdf.getByText("Ready for PDF", { exact: true })).toBeVisible();
+  await expect(
+    pdf.getByRole("button", { name: "Refresh preview" }),
+  ).toBeEnabled();
+  await page.reload();
+  await expect(
+    page.getByRole("main").getByRole("tab", { name: "Wording", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.goBack();
+  await expect(
+    page.getByRole("main").getByRole("tab", { name: "Overview", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.goForward();
+  await expect(
+    page.getByRole("main").getByRole("tab", { name: "Wording", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+});
+
 test("creates, tailors, duplicates, copies languages, compares and deletes independent resumes", async ({
   page,
 }, testInfo) => {

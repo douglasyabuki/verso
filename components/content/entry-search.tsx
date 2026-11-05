@@ -3,7 +3,7 @@
 import { Search, X } from "lucide-react";
 import { useId, useRef } from "react";
 
-import { CheckField } from "@/components/editor/fields";
+import { CheckField } from "@/components/editor/check-field";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
 import {

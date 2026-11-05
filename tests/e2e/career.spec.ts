@@ -397,7 +397,16 @@ for (const width of [1440, 390]) {
     const field = page.getByRole("textbox", {
       name: "Summary",
     });
-    await field.fill("Retain my draft");
+    // Use the editor's native selection path after the mobile drawer closes.
+    // Scripted contenteditable fill can race ProseMirror's focus selection in Firefox.
+    const replaceSummary = async (value: string) => {
+      await field.click();
+      await expect(field).toBeFocused();
+      await field.press("ControlOrMeta+A");
+      await page.keyboard.insertText(value);
+      await expect(field).toHaveText(value);
+    };
+    await replaceSummary("Retain my draft");
     if (mobile)
       await expect(
         page.getByRole("dialog", { name: "Verso workspace" }),
@@ -427,7 +436,7 @@ for (const width of [1440, 390]) {
     await openNavigation();
     await page.getByRole("button", { name: "Summary", exact: true }).click();
     await expect(field).toHaveText("Retain my draft");
-    await field.fill("Discard this edit");
+    await replaceSummary("Discard this edit");
     await page
       .getByRole("region", { name: "Editing form" })
       .getByRole("button", { name: "Cancel", exact: true })
@@ -435,7 +444,7 @@ for (const width of [1440, 390]) {
     await openNavigation();
     await page.getByRole("button", { name: "Summary", exact: true }).click();
     await expect(field).toHaveText("Retain my draft");
-    await field.fill("Discard through navigation");
+    await replaceSummary("Discard through navigation");
     await openNavigation();
     await page
       .getByRole("button", { name: "Data & backups", exact: true })

@@ -11,7 +11,7 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 
 import { editorContentToSpans } from "@/components/editor/text/text-editor-model";
-import { urlError } from "@/lib/review/validation";
+import { urlError } from "@/lib/url-validation";
 
 export const textAction = "verso.textAction";
 export const textBoundary = "verso.textBoundary";

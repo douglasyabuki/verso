@@ -345,6 +345,7 @@ export function CareerWorkspaceShell({
   history,
   children,
   output,
+  editorRequest,
 }: CareerNavigation & {
   language: string;
   setLanguage: (language: string) => void;
@@ -357,10 +358,21 @@ export function CareerWorkspaceShell({
   };
   children: ReactNode;
   output: ReactNode;
+  editorRequest?: object | null;
 }) {
   const { layout, changeLayout } = useWorkspaceLayout();
   const desktop = useMediaQuery("(min-width: 1024px)");
-  const [mobilePanel, setMobilePanel] = useState("editor");
+  const [panel, setPanel] = useState({
+    value: "editor",
+    request: editorRequest,
+  });
+  const requestedPanel = editorRequest ? "editor" : panel.value;
+  const mobilePanel =
+    panel.request === editorRequest ? panel.value : requestedPanel;
+  if (panel.request !== editorRequest)
+    setPanel({ value: requestedPanel, request: editorRequest });
+  const setMobilePanel = (value: string) =>
+    setPanel({ value, request: editorRequest });
   const fullWidth = [
     "overview",
     "backups",

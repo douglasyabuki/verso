@@ -1,3 +1,4 @@
+import { assessResumeOutput } from "@/lib/career/readiness";
 import { effectiveResume, resolveResumeWording } from "@/lib/career/resumes";
 import {
   renderWording,
@@ -26,21 +27,18 @@ export function renderCareerResume(
   resumeId: string,
   revision: number,
 ): string {
+  const assessment = assessResumeOutput(document, resumeId);
+  if (!assessment.ready)
+    throw new Error(assessment.issues.map((issue) => issue.message).join("\n"));
   const stored = document.resumes.find((item) => item.id === resumeId);
   if (!stored) throw new Error("Resume not found.");
   const resume = effectiveResume(document, stored);
   const capability = outputCapabilities[resume.language];
-  if (!capability)
-    throw new Error(
-      "PDF unavailable: language rendering has not been verified.",
-    );
   const wording = (id: string, values: Record<string, RichText>) =>
     resolveResumeWording(resume, id, values);
   const fields = document.profile.fields;
   const nameField = fields.find((field) => field.key === "fullName")!;
   const name = wordingText(wording(nameField.id, nameField.wording));
-  if (!name.trim())
-    throw new Error("Add the selected language's full name before output.");
   const contacts = resume
     .profileSelection!.map((id) => {
       const field = fields.find((item) => item.id === id);
@@ -70,10 +68,6 @@ export function renderCareerResume(
     const heading =
       wordingText(wording(section.id, section.heading)) ||
       capability.labels[section.kind];
-    if (!heading)
-      throw new Error(
-        "Add this custom section's heading in the selected language before output.",
-      );
     body.push(
       `\\section{${escapeLatex(heading.toLocaleUpperCase(resume.language))}}`,
     );
@@ -88,10 +82,6 @@ export function renderCareerResume(
       const titleText = title
         ? wordingText(wording(title.id, title.wording))
         : "";
-      if (title && !titleText.trim())
-        throw new Error(
-          `Add selected ${title.key} wording in ${resume.language} before output.`,
-        );
       if (titleText) body.push(`\\subsection{${escapeLatex(titleText)}}`);
       const details = selectedFields
         .filter((field) => field !== title)
@@ -121,10 +111,6 @@ export function renderCareerResume(
         .filter((item) => item !== undefined);
       if (achievements.length) {
         const text = achievements.map((item) => wording(item.id, item.wording));
-        if (text.some((value) => !wordingText(value).trim()))
-          throw new Error(
-            `Add selected achievement wording in ${resume.language} before output.`,
-          );
         body.push(
           `\\begin{achievements}\n${text.map((value) => `\\item ${renderWording(value)}`).join("\n")}\n\\end{achievements}`,
         );

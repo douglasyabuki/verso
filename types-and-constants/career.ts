@@ -14,6 +14,21 @@ export type CareerField = z.infer<typeof fieldSchema>;
 export type CareerSection = z.infer<typeof sectionSchema>;
 export type CareerDraft = z.infer<typeof draftSchema>;
 export type CareerResume = CareerDocument["resumes"][number];
+
+export type ResumeOutputTarget = { destination: string; fieldId: string };
+
+export type ResumeOutputIssue = {
+  id: string;
+  code: "missing-resume" | "unverified-language" | "missing-wording";
+  message: string;
+  recordId: string;
+  target?: ResumeOutputTarget;
+};
+
+export type ResumeOutputAssessment = {
+  ready: boolean;
+  issues: ResumeOutputIssue[];
+};
 export const CAREER_FIELD_LABELS: Readonly<Record<string, string>> = {
   fullName: "Full name",
   email: "Email",

@@ -104,6 +104,7 @@ import type {
   CareerEntry,
   CareerResume,
   CareerSection,
+  ResumeOutputTarget,
 } from "@/types-and-constants/career";
 import {
   SECTION_KINDS,
@@ -582,6 +583,21 @@ export function CareerWorkspace({
     [state.head, state.orderDraft],
   );
   const [destination, setDestination] = useState("overview");
+  const [issueFocus, setIssueFocus] = useState<{
+    fieldId: string;
+    resumeId: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!issueFocus) return;
+    const frame = requestAnimationFrame(() => {
+      const card = window.document.getElementById(
+        `resume-wording-${issueFocus.resumeId}-${issueFocus.fieldId}`,
+      );
+      card?.focus({ preventScroll: true });
+      card?.scrollIntoView({ block: "center", behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [issueFocus]);
   const [language, setLanguage] = useState("");
   const [kind, setKind] = useState<CareerSection["kind"]>("experience");
   const [guard, setGuard] = useState<{
@@ -740,17 +756,30 @@ export function CareerWorkspace({
     language ||
     documentValue?.languages[0].tag ||
     "en-US";
-  const navigate = (incoming: string, initialValues?: unknown) => {
+  const navigate = (
+    incoming: string,
+    initialValues?: unknown,
+    focusFieldId?: string,
+  ) => {
     const next = incoming.replace(/^selection\//, "resume-content/");
-    const perform = () => {
-      route.current.index++;
-      const url = new URL(window.location.href);
-      url.searchParams.set("scope", next);
-      window.history.pushState(
-        { ...window.history.state, versoIndex: route.current.index },
-        "",
-        url,
+    const focusIssue = () =>
+      setIssueFocus(
+        focusFieldId
+          ? { fieldId: focusFieldId, resumeId: next.split("/")[1] }
+          : null,
       );
+    const perform = () => {
+      focusIssue();
+      if (destination !== next) {
+        route.current.index++;
+        const url = new URL(window.location.href);
+        url.searchParams.set("scope", next);
+        window.history.pushState(
+          { ...window.history.state, versoIndex: route.current.index },
+          "",
+          url,
+        );
+      }
       setDestination(next);
       setCompare(false);
       if (
@@ -770,10 +799,14 @@ export function CareerWorkspace({
       destination === next &&
       controller.getSnapshot().draft?.scope === next &&
       initialValues === undefined
-    )
+    ) {
+      focusIssue();
       return;
+    }
     resolveTargets(controller.navigationTargets(next), perform);
   };
+  const openOutputIssue = (target: ResumeOutputTarget) =>
+    navigate(target.destination, undefined, target.fieldId);
   const exportWorkspace = (head = state.head!) => {
     const content = JSON.stringify({
       format: "verso.workspace",
@@ -1039,6 +1072,7 @@ export function CareerWorkspace({
             document={documentValue}
             resumeActions={resumeActions}
             destination={destination}
+            editorRequest={issueFocus}
             navigate={navigate}
             addSection={() =>
               resolveTargets(controller.navigationTargets(), () => {
@@ -1071,6 +1105,7 @@ export function CareerWorkspace({
               <CommittedOutput
                 head={state.head!}
                 activeResumeId={activeResume?.id}
+                onIssue={openOutputIssue}
               />
             }
           >
@@ -1282,6 +1317,7 @@ export function CareerWorkspace({
                 <ResumeOverview
                   document={documentValue}
                   resume={activeResume}
+                  onIssue={openOutputIssue}
                 />
               ) : destination === "resume-compare" ? (
                 <ResumeComparison document={documentValue} />

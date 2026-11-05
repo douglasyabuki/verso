@@ -3,7 +3,8 @@
 import { useState } from "react";
 
 import { CertificationDatesEditor } from "@/components/content/certification-dates-editor";
-import { CheckField, TextField } from "@/components/editor/fields";
+import { CheckField } from "@/components/editor/check-field";
+import { TextField } from "@/components/editor/fields";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,

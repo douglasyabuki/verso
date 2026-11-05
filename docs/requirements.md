@@ -652,12 +652,71 @@ these and all other browser/manual checks remain unexecuted for this slice.
 
 ## Phase 3 — Output readiness
 
-- [ ] P3.1 Remove compulsory counterpart tasks and translation confirmations.
-- [ ] P3.2 Remove obsolete translation tracking/review dependencies.
-- [ ] P3.3 Label inherited/custom wording and preserve customizations after shared edits.
-- [ ] P3.4 Save valid incomplete content; reject malformed values and retain failed drafts.
-- [ ] P3.5 Validate selected output only; unused/inactive/archived status alone never blocks it.
-- [ ] P3.6 Show active-resume readiness issues with editor navigation.
+- [x] P3.1 Remove compulsory counterpart tasks and translation confirmations.
+- [x] P3.2 Remove obsolete translation tracking/review dependencies.
+- [x] P3.3 Label inherited/custom wording and preserve customizations after shared edits.
+- [x] P3.4 Save valid incomplete content; reject malformed values and retain failed drafts.
+- [x] P3.5 Validate selected output only; unused/inactive/archived status alone never blocks it.
+- [x] P3.6 Show active-resume readiness issues with editor navigation.
+
+Implementation adds one committed-output assessment shared by rendering and the
+Overview/PDF Issues disclosure. Repair links open exact resume Wording cards through
+existing draft guards and reveal Editor on narrow screens after navigation succeeds.
+Shared URL validation and checkbox presentation no longer import retired workflows.
+Readiness preserves existing PDF blocking rules and does not constrain incomplete
+valid Saves. Workspace schema 2 and recovery format 1 remain unchanged.
+
+Owner visual/manual acceptance remains open: visual consistency with existing UI,
+keyboard/focus, narrow layouts, dirty navigation and failed Saves, committed-only
+updates, retained preview/download, and English/Portuguese PDF behavior.
+Automated Browser Mode and production E2E results are recorded below.
+Previous deferred acceptance is unchanged and is not counted as passed.
+
+Initial non-browser verification on 2026-11-04: formatting, lint, generated route
+types / TypeScript, 64 unit tests across 12 files, and production build passed. The initial
+format check hit a sandbox directory-scan EPERM; the initial unit run hit a
+subprocess EPERM. Both passed after sandbox retries. Three new Browser Mode cases
+and one production E2E case were added, type-checked, and left unexecuted for the
+owner. Static runtime-import inspection of the active page found no retired
+review/workspace workflow imports after shared-helper extraction. No browser,
+computer-use, visual, or manual PDF validation was performed.
+
+Browser-regression follow-up on 2026-11-04: fixed three test failures caused by
+implicit narrow viewports and unscoped duplicate issue text. Production checks
+then exposed duplicate history entries when Save reopened the current resume
+editor, plus a narrow-panel race where clearing a completed issue-focus request
+could undo a manual switch to PDF. Reopening the same destination now preserves
+its history entry; clearing a request preserves the selected panel, while a new
+issue request still reveals Editor. Added direct history and panel regression
+assertions without changing the readiness UI presentation.
+
+Final follow-up verification: 64 unit tests across 12 files, 75 Chromium Browser
+Mode tests across 7 files, and all 49 production E2E cases across
+Chromium/Firefox/WebKit passed. Formatting, lint, generated route types/TypeScript,
+and the fresh production build passed. E2E used one worker, separately from Browser
+Mode. Initial component runs had three test-setup failures; the first production
+run had three history-regression failures and the second had one narrow-panel
+failure. The final run passed without skips or configured retries. This executes
+the previously deferred icon-specific browser cases as well; owner visual/PDF
+acceptance, manual round trips, and deferred performance/safety acceptance remain
+open. Seven local documentation links were checked successfully.
+
+Firefox shell-test follow-up on 2026-11-04: reproduced a scripted rich-text fill
+inserting replacement text before existing summary text, already visible before
+Data & backups navigation. The restored-shell tests now click/focus the editor,
+select all with the native keyboard path, insert text, and immediately assert the
+exact replacement. Existing Save/Cancel, guard, and draft-retention assertions stay
+in place. No application behavior, timeout, skip, or retry settings changed.
+
+All six shell cases (desktop/phone across Chromium/Firefox/WebKit) passed with the
+normal two-worker configuration. Ten isolated Firefox phone repetitions had nine
+passes and one overall 30-second timeout during a slow run, without recurrence of
+the original appended-text error. The baseline had three failures out of five
+attempts, including timeouts. An intermediate per-character typing experiment was
+interrupted after a timeout; final input uses one text event after native selection.
+Changed-test lint/format checks, generated route types/TypeScript, and fresh
+production builds passed. Full unit/component/E2E suites were not rerun for this
+test-only follow-up; earlier complete runs remain separate historical evidence.
 
 ## Phase 4 — Layout presets and starters
 

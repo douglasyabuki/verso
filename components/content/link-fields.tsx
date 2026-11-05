@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { urlError } from "@/lib/review/validation";
+import { urlError } from "@/lib/url-validation";
 import {
   linkTypeNames,
   linkTypes,
