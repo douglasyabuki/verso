@@ -64,35 +64,6 @@ const choices: Record<string, readonly string[]> = {
 };
 const groups = [
   {
-    name: "Page",
-    keys: [
-      "paper",
-      "marginTop",
-      "marginBottom",
-      "marginLeft",
-      "marginRight",
-      "pageNumbering",
-      "pageNumberAlignment",
-      "pageNumberFormat",
-      "targetPages",
-    ],
-  },
-  {
-    name: "Header & profile",
-    keys: [
-      "nameSize",
-      "nameWeight",
-      "headerAlignment",
-      "nameContactGap",
-      "headerGap",
-      "contactIcons",
-      "contactRows",
-      "contactRowSizes",
-      "contactRowGap",
-      "contactSeparator",
-    ],
-  },
-  {
     name: "Typography",
     keys: [
       "font",
@@ -107,6 +78,36 @@ const groups = [
       "entryTitleWeight",
       "entrySubtitleSize",
       "entrySubtitleWeight",
+    ],
+  },
+
+  {
+    name: "Page & margins",
+    keys: [
+      "paper",
+      "marginTop",
+      "marginBottom",
+      "marginLeft",
+      "marginRight",
+      "pageNumbering",
+      "pageNumberAlignment",
+      "pageNumberFormat",
+      "targetPages",
+    ],
+  },
+  {
+    name: "Header & contacts",
+    keys: [
+      "nameSize",
+      "nameWeight",
+      "headerAlignment",
+      "nameContactGap",
+      "headerGap",
+      "contactIcons",
+      "contactRows",
+      "contactRowSizes",
+      "contactRowGap",
+      "contactSeparator",
     ],
   },
   {
@@ -172,8 +173,8 @@ export function LayoutFields({
 }) {
   const id = useId();
   const [opened, setOpened] = useState<Record<string, boolean>>({
-    Page: true,
-    "Header & profile": true,
+    Typography: true,
+    "Page & margins": true,
   });
   const data = (values && typeof values === "object" ? values : {}) as Record<
     string,
@@ -206,7 +207,7 @@ export function LayoutFields({
           </CollapsibleTrigger>
           <CollapsibleContent keepMounted>
             <DisclosureGuide>
-              {group.name === "Header & profile" && (
+              {group.name === "Header & contacts" && (
                 <div className="mb-4 flex flex-col items-start gap-2">
                   <p className="text-xs text-muted-foreground">
                     Full name is required. Selected contacts:{" "}
@@ -219,13 +220,13 @@ export function LayoutFields({
                   )}
                 </div>
               )}
-              {group.name === "Page" && parsed.success && (
+              {group.name === "Page & margins" && parsed.success && (
                 <MarginGuide
                   values={templateSettings(parsed.data)}
                   active={null}
                 />
               )}
-              {group.name === "Header & profile" &&
+              {group.name === "Header & contacts" &&
                 data.contactRows === "custom" &&
                 parsed.success &&
                 contacts.length > 1 && (

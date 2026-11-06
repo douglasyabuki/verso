@@ -12,7 +12,7 @@ spacing, bullets, colors, dividers, and page numbering. The page-count threshold
 is a warning, not automatic fitting or content removal. The established
 single-column template remains; free positioning and arbitrary fonts are unsupported.
 
-**Header & profile** controls alignment, contact icons, separators, row spacing,
+**Header & contacts** controls alignment, contact icons, separators, row spacing,
 automatic wrapping, one to four contacts per row, and custom row sizes such as
 `3, 2`. Remaining contacts occupy a final wrapping row; unused rows have no
 effect. Empty values are omitted. Contact inclusion and order stay in
@@ -25,10 +25,16 @@ uses saved content. Save does not compile: use Refresh preview. The labeled last
 successful PDF remains available if new output fails. Its page warning uses the
 threshold associated with that PDF, including when the preview is outdated.
 
-**Presets** contain named appearance only. In Layout, search and select a preset,
-then **Load into layout** and Save. **Save as preset** captures saved appearance,
+**Presets** contain named appearance only and are optional. Edit Layout directly,
+or expand the initially collapsed **Layout presets (optional)** disclosure,
+select a preset, then **Load into layout** and Save. Selecting alone changes
+nothing; no preset is required to edit or save layout. With no presets, the
+disclosure explains direct editing instead of showing an empty selector.
+The unsaved-load announcement remains visible when the disclosure is collapsed.
+
+**Save as preset** captures saved appearance,
 resolving dirty changes first. Manage, edit, duplicate, or confirm deletion from
-Layout or **Reusable setups** on the resume collection. Matching is determined
+**Library > Layout presets**, also linked by Manage presets in Layout. Matching is determined
 by settings values; there is no live connection to a preset.
 
 **Save as starter** in a resume's actions captures empty section structure,
@@ -37,15 +43,50 @@ starter editor can add/remove/reorder sections and change these settings. It
 copies no entries, achievements, links, contact selections, or localized wording.
 Structural labels identify empty sections; newly created custom sections still
 need career heading wording before output. Use **Duplicate resume** to reuse
-content. Starters can also be created from scratch through Reusable setups.
+content. Starters can also be created from scratch through **Library > Resume starters**.
 
-Create resume defaults to Blank resume. Choosing a starter reviews which active
-Career sections to reuse or create. Ambiguous matches require a choice; archived
+Create resume explicitly offers **Blank resume / From starter**, defaulting to
+Blank resume. From starter shows the ordered empty structure, summary/field
+visibility defaults and illustrative style before reviewing which active Career
+sections to reuse or create. **Create resume…** on a starter card opens the same
+flow with that starter selected. A missing starter blocks creation rather than
+silently creating blank content. Ambiguous matches require a choice; archived
 sections must be restored separately. Creation commits the resume and any missing
 empty sections atomically. Selecting entries later uses the copied field defaults;
 explicit subsequent visibility edits remain independent. Undo removes the resume
 and archives only the sections created by that operation. Redo preserves identities.
 Later edits or deletion of a starter/preset never change existing resumes.
+
+The sidebar order is **Career details > Library > Resumes**. Clicking **Library**
+opens its overview with collection descriptions, icons, and Edit links to
+Layout presets and Resume starters. The overview uses the durable `?scope=library`
+destination. Both collection links remain visible when empty, with selection and
+guarded Library/collection parent location links; reload and Back/Forward restore
+the destination. Collection creation sits at the far end of the page title row, matching Career details. Preset/starter search is omitted throughout collections
+and contextual pickers. Library item footers order Edit, Duplicate, Use/Create,
+then Delete; destructive actions remain last in keyboard and visual order,
+including wrapping. Delete confirmation uses Cancel / Delete.
+
+Library views use the full editor width without an unrelated
+resume PDF, career-language selector, or career-editor return links; the existing
+Style sample remains illustrative. Library navigation never expands/selects a
+resume or replays its entrance animation. Resume rows remain mounted, retaining
+scroll and entrance history; only explicit resume navigation or Apply preset crosses
+into resume editing. Collection space reserves Library access, with independent collection scrolling and an outer
+sidebar scroll area for exceptionally short windows.
+
+**Apply preset…** on a library card requires an explicit target resume, resolves
+pending forms, and rechecks both records before opening that resume's Layout
+draft. Loading is announced as unsaved; Cancel restores saved appearance and Save
+commits one history step. A matching preset creates no change. With no resumes,
+the dialog offers ordinary creation without automatically applying the preset.
+Neither preset loading nor the Style sample compiles. Existing resumes retain
+independent copies after library edits or deletion.
+
+Layout groups follow **Typography > Page & margins > Header & contacts >
+Spacing & details > Colors**. Typography and Page & margins initially expand;
+validation reveals other groups as needed. The resume workflow remains Overview,
+Content & order, Wording, Layout, with free guarded navigation between views.
 
 **Load sample workspace** in Data & backups opens the normal replacement review.
 The sample contains complete fictional English/Portuguese resumes using the

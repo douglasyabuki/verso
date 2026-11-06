@@ -8,7 +8,7 @@ import { LayoutFields } from "@/components/career/layout-editor";
 import { PresetPicker } from "@/components/career/setup-library";
 import { createCareerDocument, readScope } from "@/lib/career/model";
 import { createResume } from "@/lib/career/resumes";
-import { prepareStarterResume } from "@/lib/career/starters";
+import { captureStarter, prepareStarterResume } from "@/lib/career/starters";
 import { CareerController } from "@/stores/career/controller";
 import { CareerStorage, openCareerStorage } from "@/stores/career/persistence";
 import type { CareerDocument } from "@/types-and-constants/career";
@@ -69,6 +69,9 @@ it("keeps invalid layout values visible and reveals their group", async () => {
   await margin.fill("18");
   await expect.element(margin).toHaveAttribute("aria-invalid", "false");
   await page
+    .getByRole("button", { name: "Header & contacts", exact: true })
+    .click();
+  await page
     .getByRole("button", { name: "Contacts per row: Custom rows", exact: true })
     .click();
   await page
@@ -80,6 +83,446 @@ it("keeps invalid layout values visible and reveals their group", async () => {
     )
     .toHaveValue("3, 2");
 });
+
+/** Supply saved reusable configurations without coupling UI expectations to their implementation. */
+function libraryFixture() {
+  const { document, resume } = fixture();
+  document.presets = [
+    {
+      id: "compact",
+      name: "Compact",
+      template: resume.template,
+      layout: { ...resume.layout, marginLeft: 18 },
+    },
+  ];
+  const starter = captureStarter(document, resume);
+  starter.name = "Project focused";
+  starter.layout.paper = "letter";
+  document.starters = [starter];
+  return { document, resume, starter };
+}
+
+/** Open a durable destination with a desktop sidebar and an isolated real controller. */
+async function libraryWorkspace(document: CareerDocument, scope: string) {
+  await page.viewport(1440, 900);
+  const controller = await owner(document);
+  window.history.replaceState({}, "", `?scope=${scope}`);
+  await render(<CareerWorkspace controller={controller} />);
+  return controller;
+}
+
+it("keeps both empty library destinations visible with the matching location and selection", async () => {
+  await libraryWorkspace(createCareerDocument(), "presets");
+  const navigation = page.getByRole("navigation", {
+    name: "Workspace navigation",
+  });
+  await expect
+    .element(
+      navigation.getByRole("button", { name: "Layout presets", exact: true }),
+    )
+    .toHaveAttribute("aria-current", "page");
+  await expect
+    .element(page.getByRole("navigation", { name: "Location" }))
+    .toHaveTextContent(/Library.*Layout presets/);
+  await navigation
+    .getByRole("button", { name: "Resume starters", exact: true })
+    .click();
+  await expect
+    .element(page.getByRole("navigation", { name: "Location" }))
+    .toHaveTextContent(/Library.*Resume starters/);
+  await expect
+    .element(page.getByText("No saved starters yet", { exact: true }))
+    .toBeVisible();
+  await navigation
+    .getByRole("button", { name: "Layout presets", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Create preset", exact: true })
+    .click();
+  await expect
+    .element(page.getByRole("navigation", { name: "Location" }))
+    .toHaveTextContent(/Library.*Layout presets.*New preset/);
+});
+
+it.each(["library", "presets", "starters"] as const)(
+  "isolates %s navigation without remounting, expanding, selecting or animating resume rows",
+  async (destination) => {
+    const { document, resume } = libraryFixture();
+    await libraryWorkspace(document, `resume-overview/${resume.id}`);
+    const navigation = page.getByRole("navigation", {
+      name: "Workspace navigation",
+    });
+    const row = navigation
+      .getByRole("button", { name: "Collapse Application pages", exact: true })
+      .element()
+      .closest("li");
+    const animate = vi.spyOn(Element.prototype, "animate");
+    await navigation
+      .getByRole("button", {
+        name:
+          destination === "library"
+            ? "Library"
+            : destination === "presets"
+              ? "Layout presets"
+              : "Resume starters",
+        exact: true,
+      })
+      .click();
+    await expect
+      .element(page.getByRole("navigation", { name: "Location" }))
+      .toHaveTextContent(
+        destination === "library"
+          ? /^Library$/
+          : destination === "presets"
+            ? /Library.*Layout presets/
+            : /Library.*Resume starters/,
+      );
+    const expand = navigation.getByRole("button", {
+      name: "Expand Application pages",
+      exact: true,
+    });
+    await expect.element(expand).toHaveAttribute("aria-expanded", "false");
+    expect(expand.element().closest("li")).toBe(row);
+    expect(
+      navigation
+        .element()
+        .querySelector('[data-sidebar-collection="Resumes"] [data-active]'),
+    ).toBeNull();
+    expect(
+      animate.mock.contexts.filter(
+        (element) =>
+          element instanceof Element &&
+          element.closest('[data-sidebar-collection="Resumes"]'),
+      ),
+    ).toHaveLength(0);
+    expect(
+      page.getByRole("tablist", { name: "Resume views" }).elements(),
+    ).toHaveLength(0);
+    expect(
+      page
+        .getByText("Editing career wording language", { exact: true })
+        .elements(),
+    ).toHaveLength(0);
+    if (destination === "presets") {
+      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      await expect
+        .element(
+          page.getByRole("textbox", { name: "Preset name", exact: true }),
+        )
+        .toBeVisible();
+      expect(
+        page
+          .getByRole("button", { name: "Back to Career details", exact: true })
+          .elements(),
+      ).toHaveLength(0);
+      expect(
+        animate.mock.contexts.filter(
+          (element) =>
+            element instanceof Element &&
+            element.closest('[data-sidebar-collection="Resumes"]'),
+        ),
+      ).toHaveLength(0);
+      expect(expand.element().closest("li")).toBe(row);
+    }
+  },
+);
+
+it("loads a library preset only into a chosen resume draft and preserves committed content until Save", async () => {
+  const { document, resume } = libraryFixture();
+  const controller = await libraryWorkspace(document, "presets");
+  await page
+    .getByRole("button", { name: "Apply preset…", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect
+    .element(dialog.getByRole("button", { name: "Load into layout" }))
+    .toBeDisabled();
+  await dialog.getByRole("combobox", { name: "Resume", exact: true }).click();
+  await page.getByRole("option", { name: "Application", exact: true }).click();
+  await dialog.getByRole("button", { name: "Load into layout" }).click();
+  await expect
+    .element(
+      page.getByRole("textbox", { name: "Left margin (mm)", exact: true }),
+    )
+    .toHaveValue("18");
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: "Layout presets (optional)",
+        exact: true,
+      }),
+    )
+    .toHaveAttribute("aria-expanded", "false");
+  await expect
+    .element(
+      page.getByText(
+        "Preset loaded into unsaved layout. Save to keep these changes.",
+        { exact: true },
+      ),
+    )
+    .toBeVisible();
+  expect(controller.getSnapshot().head?.document).toEqual(document);
+  expect(controller.getSnapshot().undoCount).toBe(0);
+  await expect
+    .element(page.getByRole("navigation", { name: "Location" }))
+    .toHaveTextContent(/Resumes.*Application.*Layout/);
+  await page
+    .getByRole("region", { name: "Editing form" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await expect
+    .poll(
+      () =>
+        controller.getSnapshot().head?.document.resumes[0].layout.marginLeft,
+    )
+    .toBe(18);
+  expect(controller.getSnapshot().head?.document.resumes[0].selection).toEqual(
+    resume.selection,
+  );
+  expect(controller.getSnapshot().undoCount).toBe(1);
+  const undo = page.getByRole("button", { name: "Undo", exact: true });
+  await expect.element(undo).toBeEnabled();
+  await page
+    .getByRole("navigation", { name: "Workspace navigation" })
+    .getByRole("button", { name: "Library", exact: true })
+    .click();
+  await expect
+    .element(page.getByRole("heading", { name: "Library", exact: true }))
+    .toBeVisible();
+  await undo.click();
+  await expect
+    .poll(() => controller.getSnapshot().head?.document.resumes[0].layout)
+    .toEqual(resume.layout);
+  expect(controller.getSnapshot().undoCount).toBe(0);
+});
+
+it.each(["Library", "Layout presets"])(
+  "retains dirty layout on canceled %s navigation and blocks navigation when Save fails",
+  async (label) => {
+    const { document, resume } = libraryFixture();
+    const controller = await libraryWorkspace(
+      document,
+      `resume-layout/${resume.id}`,
+    );
+    const margin = page.getByRole("textbox", {
+      name: "Left margin (mm)",
+      exact: true,
+    });
+    await margin.fill("invalid");
+    const link = page
+      .getByRole("navigation", { name: "Workspace navigation" })
+      .getByRole("button", { name: label, exact: true });
+    await link.click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
+    await expect.element(margin).toHaveValue("invalid");
+    await link.click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+    expect(window.location.search).toContain(`resume-layout/${resume.id}`);
+    expect(controller.isDirty()).toBe(true);
+    expect(controller.getSnapshot().head?.document).toEqual(document);
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Discard", exact: true })
+      .click();
+    await expect
+      .element(page.getByRole("heading", { name: label, exact: true }))
+      .toBeVisible();
+  },
+);
+
+it("keeps library editors selected and guards their parent location link", async () => {
+  const { document } = libraryFixture();
+  const controller = await libraryWorkspace(document, "preset/compact");
+  const location = page.getByRole("navigation", { name: "Location" });
+  await expect
+    .element(location)
+    .toHaveTextContent(/Library.*Layout presets.*Compact/);
+  await expect
+    .element(
+      page
+        .getByRole("navigation", { name: "Workspace navigation" })
+        .getByRole("button", { name: "Layout presets", exact: true }),
+    )
+    .toHaveAttribute("data-active");
+  await page
+    .getByRole("textbox", { name: "Preset name", exact: true })
+    .fill("Changed");
+  await location
+    .getByRole("button", { name: "Layout presets", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  expect(controller.isDirty()).toBe(true);
+  expect(window.location.search).toContain("preset/compact");
+});
+
+it.each(["preset", "resume"] as const)(
+  "does not apply a preset when the selected %s disappears before confirmation",
+  async (missing) => {
+    const { document, resume } = libraryFixture();
+    const controller = await libraryWorkspace(document, "presets");
+    await page
+      .getByRole("button", { name: "Apply preset…", exact: true })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByRole("combobox", { name: "Resume", exact: true })
+      .click();
+    await page
+      .getByRole("option", { name: "Application", exact: true })
+      .click();
+    // Leave another resume so the dialog retains its target selector and confirmation.
+    const other = createResume(document, "en-US");
+    expect(await controller.command(`resume/${other.id}`, other)).toBe(true);
+    expect(
+      await controller.command(
+        missing === "resume" ? `resume/${resume.id}` : "preset/compact",
+        null,
+        missing === "resume" ? resume : document.presets[0],
+      ),
+    ).toBe(true);
+    const committed = structuredClone(controller.getSnapshot().head);
+    const undoCount = controller.getSnapshot().undoCount;
+    const load = page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Load into layout" });
+    if (missing === "resume") {
+      // Base UI clears a value whose option disappears. Loading must remain
+      // unavailable until the user explicitly selects another existing resume.
+      await expect.element(load).toBeDisabled();
+      await page
+        .getByRole("dialog")
+        .getByRole("combobox", { name: "Resume", exact: true })
+        .click();
+      expect(
+        page
+          .getByRole("option", { name: "Application", exact: true })
+          .elements(),
+      ).toHaveLength(0);
+      await page
+        .getByRole("option", { name: "Untitled resume", exact: true })
+        .click();
+      await expect.element(load).toBeEnabled();
+    } else {
+      await load.click();
+      await expect
+        .element(
+          page
+            .getByRole("alert")
+            .filter({ hasText: "preset or resume is unavailable" }),
+        )
+        .toBeVisible();
+    }
+    expect(controller.getSnapshot().head).toEqual(committed);
+    expect(controller.getSnapshot().draft).toBeNull();
+    expect(controller.getSnapshot().undoCount).toBe(undoCount);
+    expect(window.location.search).toContain("scope=presets");
+  },
+);
+
+it("does not create an unsaved change or history step when a library preset already matches", async () => {
+  const { document, resume } = libraryFixture();
+  document.presets[0].layout = structuredClone(resume.layout);
+  const controller = await libraryWorkspace(document, "presets");
+  await page
+    .getByRole("button", { name: "Apply preset…", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("combobox", { name: "Resume", exact: true })
+    .click();
+  await page.getByRole("option", { name: "Application", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Load into layout" })
+    .click();
+  await expect
+    .element(
+      page
+        .getByRole("region", { name: "Editing form" })
+        .getByRole("button", { name: "Save", exact: true }),
+    )
+    .toBeDisabled();
+  expect(controller.isDirty()).toBe(false);
+  expect(controller.getSnapshot().undoCount).toBe(0);
+});
+
+it("opens the ordinary creation flow when a preset has no target resumes", async () => {
+  const { document } = libraryFixture();
+  document.resumes = [];
+  const controller = await libraryWorkspace(document, "presets");
+  await page
+    .getByRole("button", { name: "Apply preset…", exact: true })
+    .click();
+  await expect
+    .element(page.getByText("Create a resume before using a preset."))
+    .toBeVisible();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Create resume…", exact: true })
+    .click();
+  await expect
+    .element(
+      page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Blank resume", exact: true }),
+    )
+    .toHaveAttribute("aria-pressed", "true");
+  expect(controller.getSnapshot().head?.document.resumes).toEqual([]);
+});
+
+it("preselects a library starter and reviews its structure without creating until confirmation", async () => {
+  const { document, starter } = libraryFixture();
+  const controller = await libraryWorkspace(document, "starters");
+  await page
+    .getByRole("button", { name: "Create resume…", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect
+    .element(dialog.getByRole("button", { name: "From starter", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect
+    .element(dialog.getByRole("combobox", { name: "Starter", exact: true }))
+    .toHaveTextContent(starter.name);
+  await expect
+    .element(dialog.getByText(/Section order and field defaults/))
+    .toBeVisible();
+  expect(controller.getSnapshot().head?.document.resumes).toHaveLength(1);
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(controller.getSnapshot().head?.document.resumes).toHaveLength(1);
+});
+
+it("blocks starter creation when the chosen starter is deleted while reviewing", async () => {
+  const { document, starter } = libraryFixture();
+  const controller = await libraryWorkspace(document, "starters");
+  await page
+    .getByRole("button", { name: "Create resume…", exact: true })
+    .click();
+  expect(await controller.command(`starter/${starter.id}`, null, starter)).toBe(
+    true,
+  );
+  await expect
+    .element(
+      page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Create resume", exact: true }),
+    )
+    .toBeDisabled();
+  await expect
+    .element(
+      page.getByRole("alert").filter({ hasText: "starter is unavailable" }),
+    )
+    .toBeVisible();
+  expect(controller.getSnapshot().head?.document.resumes).toHaveLength(1);
+});
 it("loads a preset into a draft without changing committed layout or selections", async () => {
   const { document, resume } = fixture();
   document.presets = [
@@ -90,6 +533,11 @@ it("loads a preset into a draft without changing committed layout or selections"
       layout: { ...resume.layout, paper: "letter" },
     },
   ];
+  document.presets.push({
+    ...document.presets[0],
+    id: "other",
+    name: "Other preset",
+  });
   function Form() {
     const [values, setValues] = useState<unknown>(resume.layout);
     return (
@@ -107,14 +555,23 @@ it("loads a preset into a draft without changing committed layout or selections"
   }
   await render(<Form />);
   await page
+    .getByRole("button", { name: "Layout presets (optional)", exact: true })
+    .click();
+  await page
     .getByRole("combobox", { name: "Layout preset", exact: true })
     .click();
+  await expect
+    .element(page.getByRole("option", { name: "Other preset", exact: true }))
+    .toBeVisible();
   await page.getByRole("option", { name: "Compact", exact: true }).click();
+  await expect
+    .element(page.getByRole("status").filter({ hasText: '"paper"' }))
+    .toHaveTextContent('"paper":"a4"');
   await page
     .getByRole("button", { name: "Load into layout", exact: true })
     .click();
   await expect
-    .element(page.getByRole("status"))
+    .element(page.getByRole("status").filter({ hasText: '"paper"' }))
     .toHaveTextContent('"paper":"letter"');
   expect(resume.layout.paper).toBe("a4");
   expect(resume.selection).toEqual([]);
@@ -338,4 +795,207 @@ it("round-trips saved setups and separate layout recovery through replacement an
     /changed since review/,
   );
   expect((await storage.load()).document.presets).toEqual(document.presets);
+});
+
+it("opens the Library overview with icon cards and guarded Edit destinations", async () => {
+  await libraryWorkspace(createCareerDocument(), "library");
+  const navigation = page.getByRole("navigation", {
+    name: "Workspace navigation",
+  });
+  await expect
+    .element(navigation.getByRole("button", { name: "Library", exact: true }))
+    .toHaveAttribute("aria-current", "page");
+  await expect
+    .element(page.getByRole("heading", { name: "Library", exact: true }))
+    .toBeVisible();
+  for (const label of ["Layout presets", "Resume starters"]) {
+    const heading = page
+      .getByRole("heading", { name: label, exact: true })
+      .element();
+    expect(heading.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+  }
+  expect(
+    page.getByText(/\d+ saved (presets|starters)/).elements(),
+  ).toHaveLength(0);
+  expect(page.getByRole("combobox").elements()).toHaveLength(0);
+  expect(
+    page.getByRole("group", { name: "PDF preview controls" }).elements(),
+  ).toHaveLength(0);
+  await page.getByRole("button", { name: "Edit", exact: true }).nth(0).click();
+  expect(window.location.search).toContain("scope=presets");
+  await page
+    .getByRole("navigation", { name: "Location" })
+    .getByRole("button", { name: "Library", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Edit", exact: true }).nth(1).click();
+  expect(window.location.search).toContain("scope=starters");
+});
+
+it.each(["presets", "starters"] as const)(
+  "keeps %s creation above cards and Delete last without search",
+  async (destination) => {
+    const { document } = libraryFixture();
+    await libraryWorkspace(document, destination);
+    const create = page.getByRole("button", {
+      name: destination === "presets" ? "Create preset" : "Create starter",
+      exact: true,
+    });
+    const heading = page
+      .getByRole("heading", {
+        name: destination === "presets" ? "Layout presets" : "Resume starters",
+        exact: true,
+      })
+      .element();
+    expect(
+      heading.parentElement?.querySelector('svg[aria-hidden="true"]'),
+    ).not.toBeNull();
+    const edit = page.getByRole("button", { name: "Edit", exact: true });
+    expect(create.element().closest('[data-slot="card"]')).toBeNull();
+    expect(
+      heading.parentElement?.parentElement?.parentElement?.contains(
+        create.element(),
+      ),
+    ).toBe(true);
+    expect(
+      create.element().compareDocumentPosition(edit.element()) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(page.getByRole("textbox").elements()).toHaveLength(0);
+    const footer = edit.element().closest('[data-slot="card-footer"]')!;
+    expect(
+      [...footer.querySelectorAll("button")].map((button) =>
+        button.textContent?.trim(),
+      ),
+    ).toEqual([
+      "Edit",
+      "Duplicate",
+      destination === "presets" ? "Apply preset…" : "Create resume…",
+      "Delete",
+    ]);
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    expect(
+      dialog
+        .getByRole("button")
+        .elements()
+        .map((button) => button.textContent?.trim()),
+    ).toEqual(["Cancel", "Delete"]);
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  },
+);
+
+it.each(["Cancel", "Discard", "Save"] as const)(
+  "guards the Library parent breadcrumb with %s",
+  async (choice) => {
+    const { document } = libraryFixture();
+    const controller = await libraryWorkspace(document, "preset/compact");
+    await page
+      .getByRole("textbox", { name: "Preset name", exact: true })
+      .fill("Revised preset");
+    await page
+      .getByRole("navigation", { name: "Location" })
+      .getByRole("button", { name: "Library", exact: true })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: choice, exact: true })
+      .click();
+    if (choice === "Cancel") {
+      await expect
+        .element(
+          page.getByRole("textbox", { name: "Preset name", exact: true }),
+        )
+        .toHaveValue("Revised preset");
+      expect(controller.isDirty()).toBe(true);
+      expect(window.location.search).toContain("preset/compact");
+    } else {
+      await expect
+        .element(page.getByRole("heading", { name: "Library", exact: true }))
+        .toBeVisible();
+      expect(controller.getSnapshot().head?.document.presets[0].name).toBe(
+        choice === "Save" ? "Revised preset" : "Compact",
+      );
+      expect(controller.getSnapshot().undoCount).toBe(
+        choice === "Save" ? 1 : 0,
+      );
+    }
+  },
+);
+
+it("edits and saves layout without choosing a preset and keeps load announcements outside the disclosure", async () => {
+  const { document, resume } = libraryFixture();
+  const controller = await libraryWorkspace(
+    document,
+    `resume-layout/${resume.id}`,
+  );
+  const disclosure = page.getByRole("button", {
+    name: "Layout presets (optional)",
+    exact: true,
+  });
+  await expect.element(disclosure).toHaveAttribute("aria-expanded", "false");
+  expect(
+    page
+      .getByRole("combobox", { name: "Layout preset", exact: true })
+      .elements(),
+  ).toHaveLength(0);
+  await page
+    .getByRole("textbox", { name: "Left margin (mm)", exact: true })
+    .fill("19");
+  await page
+    .getByRole("region", { name: "Editing form" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await expect
+    .poll(
+      () =>
+        controller.getSnapshot().head?.document.resumes[0].layout.marginLeft,
+    )
+    .toBe(19);
+  await disclosure.click();
+  expect(
+    page
+      .getByRole("textbox", { name: "Search presets", exact: true })
+      .elements(),
+  ).toHaveLength(0);
+  await page
+    .getByRole("combobox", { name: "Layout preset", exact: true })
+    .click();
+  await page.getByRole("option", { name: "Compact", exact: true }).click();
+  expect(controller.isDirty()).toBe(false);
+  await page
+    .getByRole("button", { name: "Load into layout", exact: true })
+    .click();
+  await disclosure.click();
+  await expect
+    .element(
+      page.getByText(
+        "Preset loaded into unsaved layout. Save to keep these changes.",
+        { exact: true },
+      ),
+    )
+    .toBeVisible();
+  expect(
+    controller.getSnapshot().head?.document.resumes[0].layout.marginLeft,
+  ).toBe(19);
+});
+
+it("offers direct layout editing and an explanatory empty optional preset disclosure", async () => {
+  const { document, resume } = fixture();
+  await libraryWorkspace(document, `resume-layout/${resume.id}`);
+  await page
+    .getByRole("button", { name: "Layout presets (optional)", exact: true })
+    .click();
+  await expect
+    .element(page.getByText("No saved presets yet", { exact: true }))
+    .toBeVisible();
+  expect(
+    page
+      .getByRole("combobox", { name: "Layout preset", exact: true })
+      .elements(),
+  ).toHaveLength(0);
+  await expect
+    .element(
+      page.getByRole("textbox", { name: "Left margin (mm)", exact: true }),
+    )
+    .toBeVisible();
 });

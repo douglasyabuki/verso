@@ -2028,7 +2028,19 @@ describe("custom-section icon properties", () => {
     expect(controller.getSnapshot().head!.document.sections.at(-1)?.icon).toBe(
       "file-text",
     );
-    controller.open("section/custom-icon");
+    // Cancel finishes by navigating back to the list. Reopen properties through
+    // that settled destination so its pending cleanup cannot cancel a new draft.
+    await expect
+      .element(
+        screen.getByRole("searchbox", { name: "Search entries", exact: true }),
+      )
+      .toBeVisible();
+    await screen
+      .getByRole("button", { name: "Section actions", exact: true })
+      .click();
+    await page
+      .getByRole("menuitem", { name: "Edit section properties", exact: true })
+      .click();
     await screen
       .getByRole("button", { name: "Choose section icon", exact: true })
       .click();

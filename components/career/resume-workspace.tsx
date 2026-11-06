@@ -29,6 +29,7 @@ import {
   CareerTextField,
   contentLanguageName,
 } from "@/components/career/career-fields";
+import { StyleSample } from "@/components/career/layout-editor";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { EntrySearch } from "@/components/content/entry-search";
 import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
@@ -89,6 +90,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ResumeColorPicker } from "@/components/variants/resume-color-picker";
 import { useListEntrance } from "@/hooks/use-list-entrance";
 import { outputCapabilities } from "@/lib/career/output";
@@ -114,6 +116,7 @@ import type {
   CareerDocument,
   CareerResume,
 } from "@/types-and-constants/career";
+import { CAREER_FIELD_LABELS } from "@/types-and-constants/career";
 import type { SectionIconId } from "@/types-and-constants/section-icons";
 
 export function ResumeIdentityFields({
@@ -148,8 +151,12 @@ export function ResumeManager({
   children,
   guard,
   getResume,
+  getDocument,
+  createStarter,
   saveStarter,
 }: {
+  getDocument: () => CareerDocument;
+  createStarter: () => void;
   saveStarter: (resume: CareerResume) => void;
   getResume: (id: string) => CareerResume | undefined;
   guard: (action: () => void) => void;
@@ -172,6 +179,7 @@ export function ResumeManager({
   const [color, setColor] = useState<CareerResume["color"]>("indigo");
   const [language, setLanguage] = useState("");
   const [starterId, setStarterId] = useState("");
+  const [creationMode, setCreationMode] = useState("blank");
   const [mapping, setMapping] = useState<string[]>([]);
   const starter = document.starters.find((item) => item.id === starterId);
   const [busy, setBusy] = useState(false);
@@ -183,6 +191,7 @@ export function ResumeManager({
   const selectedLanguage = language || languages[0]?.tag || "";
   const close = () => {
     setStarterId("");
+    setCreationMode("blank");
     setMapping([]);
     setCreating(false);
     onCreateHandled();
@@ -195,17 +204,35 @@ export function ResumeManager({
   const save = async () => {
     setBusy(true);
     try {
-      if (!languages.some((item) => item.tag === selectedLanguage))
+      const currentDocument = getDocument();
+      const currentStarter = currentDocument.starters.find(
+        (item) => item.id === starterId,
+      );
+      if (
+        !currentDocument.languages.some(
+          (item) => item.active && item.tag === selectedLanguage,
+        ) ||
+        !languages.some((item) => item.tag === selectedLanguage)
+      )
         throw new Error("Choose an active destination language.");
+      if (!source && creationMode === "starter" && !currentStarter)
+        throw new Error(
+          "Choose an available starter before creating this resume.",
+        );
       const prepared =
-        !source && starter
-          ? prepareStarterResume(document, starter, mapping, selectedLanguage)
+        !source && currentStarter
+          ? prepareStarterResume(
+              currentDocument,
+              currentStarter,
+              mapping,
+              selectedLanguage,
+            )
           : null;
       const resume = prepared
         ? { ...prepared.resume, name, color }
         : source
           ? copyResume(source, selectedLanguage)
-          : { ...createResume(document, selectedLanguage), name, color };
+          : { ...createResume(currentDocument, selectedLanguage), name, color };
       await commit(
         prepared ? `starter-create/${resume.id}` : `resume/${resume.id}`,
         prepared ? { ...prepared, resume } : resume,
@@ -221,8 +248,15 @@ export function ResumeManager({
   const actions: ResumeActions = {
     saveStarter,
     edit: (resume) => navigate(`resume-details/${resume.id}`),
-    create: () =>
+    create: (requestedStarterId?: string) =>
       guard(() => {
+        const latest = getDocument();
+        const chosen = latest.starters.find(
+          (item) => item.id === requestedStarterId,
+        );
+        setCreationMode(requestedStarterId ? "starter" : "blank");
+        setStarterId(requestedStarterId ?? "");
+        setMapping(chosen ? starterMappings(latest, chosen) : []);
         setCreating(true);
         setError("");
       }),
@@ -258,7 +292,7 @@ export function ResumeManager({
           if (!value && !busy) close();
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {source ? "Create copy in another language" : "Create resume"}
@@ -311,115 +345,184 @@ export function ResumeManager({
             {!source && (
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="new-resume-starter">Starter</FieldLabel>
-                  <Select
-                    items={[
-                      { value: "blank", label: "Blank resume" },
-                      ...document.starters.map((item) => ({
-                        value: item.id,
-                        label: item.name,
-                      })),
-                    ]}
-                    value={starterId || "blank"}
-                    onValueChange={(value) => {
-                      const chosen = document.starters.find(
-                        (item) => item.id === value,
-                      );
-                      setStarterId(chosen?.id ?? "");
-                      setMapping(
-                        chosen ? starterMappings(document, chosen) : [],
-                      );
+                  <FieldLabel>Start with</FieldLabel>
+                  <ToggleGroup
+                    multiple={false}
+                    value={[creationMode]}
+                    onValueChange={(values) => {
+                      const mode = values[0];
+                      if (mode) {
+                        setCreationMode(mode);
+                        if (mode === "blank") {
+                          setStarterId("");
+                          setMapping([]);
+                        }
+                      }
                     }}
+                    aria-label="Resume starting point"
                   >
-                    <SelectTrigger id="new-resume-starter">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="blank">Blank resume</SelectItem>
-                        {document.starters.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                    <ToggleGroupItem value="blank">
+                      Blank resume
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="starter">
+                      From starter
+                    </ToggleGroupItem>
+                  </ToggleGroup>
                 </Field>
-                {starter && (
+                {creationMode === "starter" && (
                   <>
-                    <p className="text-xs text-muted-foreground">
-                      Review the Career sections to reuse or create. No entries
-                      or wording are copied. Custom headings need career wording
-                      before PDF output.
-                    </p>
-                    {starter.sections.map((definition, index) => (
-                      <Field key={definition.id}>
-                        <FieldLabel htmlFor={`starter-mapping-${index}`}>
-                          {definition.label}
-                        </FieldLabel>
-                        <Select
-                          items={[
-                            { value: "new", label: "Create empty section" },
-                            ...document.sections
-                              .filter(
-                                (section) =>
-                                  !section.archived &&
-                                  section.kind === definition.kind,
-                              )
-                              .map((section) => ({
-                                value: section.id,
-                                label: section.name || section.kind,
-                              })),
-                          ]}
-                          value={mapping[index] || null}
-                          onValueChange={(value) =>
-                            setMapping(
-                              mapping.map((prior, i) =>
-                                i === index ? (value ?? "") : prior,
-                              ),
-                            )
-                          }
+                    {!document.starters.length && (
+                      <div className="flex flex-col items-start gap-2">
+                        <p className="text-sm text-muted-foreground">
+                          No resume starters yet. Create one with empty
+                          sections, field defaults, and layout.
+                        </p>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            close();
+                            createStarter();
+                          }}
                         >
-                          <SelectTrigger id={`starter-mapping-${index}`}>
-                            <SelectValue placeholder="Choose a section" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem value="new">
-                                Create empty section
+                          Create starter…
+                        </Button>
+                      </div>
+                    )}
+                    <Field>
+                      <FieldLabel htmlFor="new-resume-starter">
+                        Starter
+                      </FieldLabel>
+                      <Select
+                        items={[
+                          ...document.starters.map((item) => ({
+                            value: item.id,
+                            label: item.name || "Untitled starter",
+                          })),
+                        ]}
+                        value={starterId || null}
+                        onValueChange={(value) => {
+                          const chosen = document.starters.find(
+                            (item) => item.id === value,
+                          );
+                          setStarterId(chosen?.id ?? "");
+                          setMapping(
+                            chosen ? starterMappings(document, chosen) : [],
+                          );
+                        }}
+                      >
+                        <SelectTrigger id="new-resume-starter">
+                          <SelectValue placeholder="Choose a starter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {document.starters.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.name || "Untitled starter"}
                               </SelectItem>
-                              {document.sections
-                                .filter(
-                                  (section) =>
-                                    !section.archived &&
-                                    section.kind === definition.kind,
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    {starter && (
+                      <>
+                        <StyleSample values={starter.layout} />
+                        <p className="text-xs text-muted-foreground">
+                          Summary:{" "}
+                          {starter.summaryIncluded ? "included" : "hidden"}.
+                          Section order and field defaults:
+                        </p>
+                        <ol className="flex list-decimal flex-col gap-1 ps-5 text-sm">
+                          {starter.sections.map((section) => (
+                            <li key={section.id}>
+                              {section.label} /{" "}
+                              {section.hidden ? "Hidden" : "Visible"} /{" "}
+                              {section.visibleFields
+                                .map((key) => CAREER_FIELD_LABELS[key])
+                                .join(", ") || "No optional fields"}
+                            </li>
+                          ))}
+                        </ol>
+                        <p className="text-xs text-muted-foreground">
+                          Review the Career sections to reuse or create. No
+                          entries or wording are copied. Custom headings need
+                          career wording before PDF output.
+                        </p>
+                        {starter.sections.map((definition, index) => (
+                          <Field key={definition.id}>
+                            <FieldLabel htmlFor={`starter-mapping-${index}`}>
+                              {definition.label}
+                            </FieldLabel>
+                            <Select
+                              items={[
+                                { value: "new", label: "Create empty section" },
+                                ...document.sections
+                                  .filter(
+                                    (section) =>
+                                      !section.archived &&
+                                      section.kind === definition.kind,
+                                  )
+                                  .map((section) => ({
+                                    value: section.id,
+                                    label: section.name || section.kind,
+                                  })),
+                              ]}
+                              value={mapping[index] || null}
+                              onValueChange={(value) =>
+                                setMapping(
+                                  mapping.map((prior, i) =>
+                                    i === index ? (value ?? "") : prior,
+                                  ),
                                 )
-                                .map((section) => (
-                                  <SelectItem
-                                    key={section.id}
-                                    value={section.id}
-                                  >
-                                    {section.name || section.kind}
+                              }
+                            >
+                              <SelectTrigger id={`starter-mapping-${index}`}>
+                                <SelectValue placeholder="Choose a section" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectItem value="new">
+                                    Create empty section
                                   </SelectItem>
-                                ))}
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                    ))}
+                                  {document.sections
+                                    .filter(
+                                      (section) =>
+                                        !section.archived &&
+                                        section.kind === definition.kind,
+                                    )
+                                    .map((section) => (
+                                      <SelectItem
+                                        key={section.id}
+                                        value={section.id}
+                                      >
+                                        {section.name || section.kind}
+                                      </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        ))}
+                      </>
+                    )}
+                    <Button
+                      variant="ghost"
+                      className="self-start"
+                      onClick={() => {
+                        close();
+                        navigate("starters");
+                      }}
+                    >
+                      Manage starters
+                    </Button>
+                    {starterId && !starter && (
+                      <p role="alert">
+                        This starter is unavailable. Choose another starter or
+                        start blank.
+                      </p>
+                    )}
                   </>
                 )}
-                <Button
-                  variant="ghost"
-                  className="self-start"
-                  onClick={() => {
-                    close();
-                    navigate("starters");
-                  }}
-                >
-                  Manage starters
-                </Button>
               </FieldGroup>
             )}
             {source && (
@@ -441,6 +544,7 @@ export function ResumeManager({
                 busy ||
                 !selectedLanguage ||
                 document.resumes.length >= 120 ||
+                (!source && creationMode === "starter" && !starter) ||
                 (!!starter && mapping.some((value) => !value))
               }
               onClick={() => void save()}
@@ -631,7 +735,7 @@ export function CareerResumeCollection({
 }
 
 export type ResumeActions = {
-  create: () => void;
+  create: (starterId?: string) => void;
   edit: (resume: CareerResume) => void;
   duplicate: (resume: CareerResume) => void;
   copy: (resume: CareerResume) => void;

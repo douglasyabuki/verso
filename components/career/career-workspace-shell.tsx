@@ -14,6 +14,7 @@ import { type ReactNode, useRef, useState } from "react";
 
 import { BrandLockup } from "@/components/brand/brand";
 import { contentLanguageName } from "@/components/career/career-fields";
+import { libraryDestinationKind } from "@/components/career/library-navigation";
 import {
   type ResumeActions,
   ResumeActionsMenu,
@@ -43,6 +44,8 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
@@ -54,6 +57,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { SidebarSelection } from "@/components/ui/sidebar-selection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarCollection } from "@/components/workspace/sidebar-collection";
@@ -74,6 +78,151 @@ type CareerNavigation = {
   resumeActions: ResumeActions;
 };
 
+/** Keep resume expansion local without remounting rows or replaying their entrances during Library navigation. */
+function ResumeSidebarCollection({
+  document,
+  destination,
+  go,
+  addResume,
+  resumeActions,
+}: Pick<
+  CareerNavigation,
+  "document" | "destination" | "addResume" | "resumeActions"
+> & { go: (next: string) => void }) {
+  const { setOpenMobile } = useSidebar();
+  const [expansion, setExpansion] = useState<{
+    destination: string;
+    id: string | null;
+  }>({ destination: "", id: null });
+  const libraryDestination = libraryDestinationKind(destination) !== null;
+  if (libraryDestination && expansion.destination !== destination) {
+    setExpansion({ destination, id: null });
+  }
+  const expandedId =
+    expansion.destination === destination
+      ? expansion.id
+      : destination.startsWith("resume-")
+        ? destination.split("/")[1]
+        : null;
+  return (
+    <SidebarCollection
+      label="Resumes"
+      active={destination === "resumes" || destination === "resume-compare"}
+      onOpen={() => go("resumes")}
+      onCreate={() => {
+        setOpenMobile(false);
+        addResume();
+      }}
+      createLabel="Create resume"
+      createDisabled={
+        document.resumes.length >= 120 ||
+        !document.languages.some((item) => item.active)
+      }
+    >
+      <SidebarMenu>
+        {document.resumes.map((resume) => {
+          const name = resume.name || "Untitled resume";
+          const active =
+            destination.startsWith("resume-") &&
+            destination.split("/")[1] === resume.id;
+          const expanded = expandedId === resume.id;
+          return (
+            <SidebarMenuItem key={resume.id}>
+              <div className="relative">
+                <SidebarMenuButton
+                  className="ps-7 pe-10"
+                  isActive={active}
+                  aria-current={
+                    destination === `resume-overview/${resume.id}`
+                      ? "page"
+                      : undefined
+                  }
+                  title={`${name} (${resume.language})`}
+                  onClick={() => {
+                    setExpansion({
+                      destination: `resume-overview/${resume.id}`,
+                      id: resume.id,
+                    });
+                    go(`resume-overview/${resume.id}`);
+                  }}
+                >
+                  <FileText
+                    aria-hidden="true"
+                    className="resume-color text-(--resume-color)"
+                    data-resume-color={resume.color ?? "indigo"}
+                  />
+                  <span className="truncate">{name}</span>
+                  <span className="sr-only">({resume.language})</span>
+                </SidebarMenuButton>
+                <SidebarMenuAction
+                  className={cn(
+                    disclosureChevronTriggerClassName,
+                    "start-1 end-auto",
+                  )}
+                  aria-label={`${expanded ? "Collapse" : "Expand"} ${name} pages`}
+                  aria-expanded={expanded}
+                  aria-controls={`resume-pages-${resume.id}`}
+                  onClick={() =>
+                    setExpansion({
+                      destination,
+                      id: expanded ? null : resume.id,
+                    })
+                  }
+                >
+                  <DisclosureChevron />
+                </SidebarMenuAction>
+                <ResumeActionsMenu
+                  document={document}
+                  resume={resume}
+                  actions={resumeActions}
+                  trigger={
+                    <SidebarMenuAction
+                      showOnHover
+                      className="[@media(hover:none)]:opacity-100"
+                      aria-label={`Actions for ${name}`}
+                    />
+                  }
+                />
+              </div>
+              {expanded && (
+                <SidebarMenuSub
+                  id={`resume-pages-${resume.id}`}
+                  className="ms-3.5 me-3.5 border-border ps-4 pe-0"
+                >
+                  {(
+                    [
+                      ["resume-overview", "Overview", LayoutDashboard],
+                      ["resume-content", "Content & order", ListOrdered],
+                      ["resume-wording", "Wording", Languages],
+                      ["resume-layout", "Layout", Palette],
+                    ] as const
+                  ).map(([prefix, label, Icon]) => (
+                    <SidebarMenuSubItem key={prefix}>
+                      <SidebarMenuSubButton
+                        render={<button type="button" />}
+                        isActive={destination === `${prefix}/${resume.id}`}
+                        aria-current={
+                          destination === `${prefix}/${resume.id}`
+                            ? "page"
+                            : undefined
+                        }
+                        onClick={() => go(`${prefix}/${resume.id}`)}
+                      >
+                        <Icon aria-hidden="true" />
+                        <span className="truncate">{label}</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  ))}
+                </SidebarMenuSub>
+              )}
+            </SidebarMenuItem>
+          );
+        })}
+      </SidebarMenu>
+    </SidebarCollection>
+  );
+}
+
 function CareerSidebar({
   document,
   destination,
@@ -88,25 +237,22 @@ function CareerSidebar({
     open: sidebarOpen,
     setOpenMobile,
   } = useSidebar();
-  const [expansion, setExpansion] = useState<{
-    destination: string;
-    id: string | null;
-  }>({ destination: "", id: null });
-  const expandedId =
-    expansion.destination === destination
-      ? expansion.id
-      : destination.startsWith("resume-")
-        ? destination.split("/")[1]
-        : null;
+  const libraryDestination = libraryDestinationKind(destination) !== null;
   const collectionsRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
   useListEntrance({
     getElements: () =>
-      [collectionsRef.current, footerRef.current].flatMap((container) => [
-        ...(container?.querySelectorAll<HTMLElement>(
-          '[data-sidebar="group-label"], [data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]',
-        ) ?? []),
-      ]),
+      [collectionsRef.current, footerRef.current]
+        .flatMap((container) => [
+          ...(container?.querySelectorAll<HTMLElement>(
+            '[data-sidebar="group-label"], [data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]',
+          ) ?? []),
+        ])
+        .filter(
+          (element) =>
+            !libraryDestination ||
+            !element.closest('[data-sidebar-collection="Resumes"]'),
+        ),
     contextKey: `sidebar:${isMobile}:${isMobile ? openMobile : sidebarOpen}`,
     disabled: !(isMobile ? openMobile : sidebarOpen),
     mode: "all",
@@ -123,7 +269,11 @@ function CareerSidebar({
   ) => (
     <SidebarMenuItem key={value}>
       <SidebarMenuButton
-        isActive={destination === value}
+        isActive={
+          destination === value ||
+          (value === "presets" && destination.startsWith("preset/")) ||
+          (value === "starters" && destination.startsWith("starter/"))
+        }
         aria-current={destination === value ? "page" : undefined}
         onClick={() => go(value)}
         title={label}
@@ -153,10 +303,10 @@ function CareerSidebar({
           </Button>
         )}
       </SidebarHeader>
-      <SidebarContent className="overflow-hidden">
+      <SidebarContent className="overflow-y-auto">
         <div
           ref={collectionsRef}
-          className="flex min-h-0 flex-1 flex-col gap-2 py-3"
+          className="flex min-h-80 flex-1 flex-col gap-2 py-3"
         >
           <SidebarCollection
             label="Career details"
@@ -182,125 +332,40 @@ function CareerSidebar({
               )}
             </SidebarMenu>
           </SidebarCollection>
-          <SidebarCollection
-            label="Resumes"
-            active={
-              destination === "resumes" || destination === "resume-compare"
-            }
-            onOpen={() => go("resumes")}
-            onCreate={() => {
-              setOpenMobile(false);
-              addResume();
-            }}
-            createLabel="Create resume"
-            createDisabled={
-              document.resumes.length >= 120 ||
-              !document.languages.some((item) => item.active)
-            }
-          >
-            <SidebarMenu>
-              {document.resumes.map((resume) => {
-                const name = resume.name || "Untitled resume";
-                const active =
-                  destination.startsWith("resume-") &&
-                  destination.split("/")[1] === resume.id;
-                const expanded = expandedId === resume.id;
-                return (
-                  <SidebarMenuItem key={resume.id}>
-                    <div className="relative">
-                      <SidebarMenuButton
-                        className="ps-7 pe-10"
-                        isActive={active}
-                        aria-current={
-                          destination === `resume-overview/${resume.id}`
-                            ? "page"
-                            : undefined
-                        }
-                        title={`${name} (${resume.language})`}
-                        onClick={() => {
-                          setExpansion({
-                            destination: `resume-overview/${resume.id}`,
-                            id: resume.id,
-                          });
-                          go(`resume-overview/${resume.id}`);
-                        }}
-                      >
-                        <FileText
-                          aria-hidden="true"
-                          className="resume-color text-(--resume-color)"
-                          data-resume-color={resume.color ?? "indigo"}
-                        />
-                        <span className="truncate">{name}</span>
-                        <span className="sr-only">({resume.language})</span>
-                      </SidebarMenuButton>
-                      <SidebarMenuAction
-                        className={cn(
-                          disclosureChevronTriggerClassName,
-                          "start-1 end-auto",
-                        )}
-                        aria-label={`${expanded ? "Collapse" : "Expand"} ${name} pages`}
-                        aria-expanded={expanded}
-                        aria-controls={`resume-pages-${resume.id}`}
-                        onClick={() =>
-                          setExpansion({
-                            destination,
-                            id: expanded ? null : resume.id,
-                          })
-                        }
-                      >
-                        <DisclosureChevron />
-                      </SidebarMenuAction>
-                      <ResumeActionsMenu
-                        document={document}
-                        resume={resume}
-                        actions={resumeActions}
-                        trigger={
-                          <SidebarMenuAction
-                            showOnHover
-                            className="[@media(hover:none)]:opacity-100"
-                            aria-label={`Actions for ${name}`}
-                          />
-                        }
-                      />
-                    </div>
-                    {expanded && (
-                      <SidebarMenuSub
-                        id={`resume-pages-${resume.id}`}
-                        className="ms-3.5 me-3.5 border-border ps-4 pe-0"
-                      >
-                        {(
-                          [
-                            ["resume-overview", "Overview", LayoutDashboard],
-                            ["resume-content", "Content & order", ListOrdered],
-                            ["resume-wording", "Wording", Languages],
-                            ["resume-layout", "Layout", Palette],
-                          ] as const
-                        ).map(([prefix, label, Icon]) => (
-                          <SidebarMenuSubItem key={prefix}>
-                            <SidebarMenuSubButton
-                              render={<button type="button" />}
-                              isActive={
-                                destination === `${prefix}/${resume.id}`
-                              }
-                              aria-current={
-                                destination === `${prefix}/${resume.id}`
-                                  ? "page"
-                                  : undefined
-                              }
-                              onClick={() => go(`${prefix}/${resume.id}`)}
-                            >
-                              <Icon aria-hidden="true" />
-                              <span className="truncate">{label}</span>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    )}
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarCollection>
+          <SidebarGroup data-sidebar-fixed-group className="shrink-0 px-3 py-0">
+            <SidebarSelection className="shrink-0">
+              <SidebarGroupLabel
+                render={<button type="button" />}
+                aria-current={destination === "library" ? "page" : undefined}
+                data-active={destination === "library" || undefined}
+                className="h-9 w-full hover:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                onClick={() => go("library")}
+              >
+                Library
+              </SidebarGroupLabel>
+            </SidebarSelection>
+            <SidebarSelection>
+              <SidebarMenu>
+                {item(
+                  "presets",
+                  "Layout presets",
+                  <Palette aria-hidden="true" />,
+                )}
+                {item(
+                  "starters",
+                  "Resume starters",
+                  <FileText aria-hidden="true" />,
+                )}
+              </SidebarMenu>
+            </SidebarSelection>
+          </SidebarGroup>
+          <ResumeSidebarCollection
+            document={document}
+            destination={destination}
+            go={go}
+            addResume={addResume}
+            resumeActions={resumeActions}
+          />
         </div>
       </SidebarContent>
       <SidebarSeparator className="mx-5 shrink-0" />
@@ -348,6 +413,7 @@ export function CareerWorkspaceShell({
   children,
   output,
   editorRequest,
+  libraryItemState,
 }: CareerNavigation & {
   language: string;
   setLanguage: (language: string) => void;
@@ -361,6 +427,7 @@ export function CareerWorkspaceShell({
   children: ReactNode;
   output: ReactNode;
   editorRequest?: object | null;
+  libraryItemState?: "new" | "missing";
 }) {
   const { layout, changeLayout } = useWorkspaceLayout();
   const desktop = useMediaQuery("(min-width: 1024px)");
@@ -375,13 +442,22 @@ export function CareerWorkspaceShell({
     setPanel({ value: requestedPanel, request: editorRequest });
   const setMobilePanel = (value: string) =>
     setPanel({ value, request: editorRequest });
-  const fullWidth = [
-    "overview",
-    "backups",
-    "languages",
-    "resumes",
-    "resume-compare",
-  ].includes(destination);
+  const libraryDestination = libraryDestinationKind(destination);
+  const libraryKind =
+    libraryDestination === "overview" ? null : libraryDestination;
+  const libraryCollection = libraryKind === "preset" ? "presets" : "starters";
+  const libraryLabel =
+    libraryKind === "preset" ? "Layout presets" : "Resume starters";
+  const libraryItem = libraryKind
+    ? document[libraryCollection].find(
+        (item) => item.id === destination.split("/")[1],
+      )
+    : undefined;
+  const fullWidth =
+    Boolean(libraryDestination) ||
+    ["overview", "backups", "languages", "resumes", "resume-compare"].includes(
+      destination,
+    );
   const resume = document.resumes.find(
     (item) =>
       item.id === destination.split("/")[1] && destination.startsWith("resume"),
@@ -473,6 +549,59 @@ export function CareerWorkspaceShell({
                           ? "Resumes"
                           : "Career details"
                 }
+                location={
+                  libraryDestination === "overview"
+                    ? [{ label: "Library" }]
+                    : libraryKind
+                      ? [
+                          { label: "Library", onClick: () => open("library") },
+                          {
+                            label: libraryLabel,
+                            onClick: destination.includes("/")
+                              ? () => open(libraryCollection)
+                              : undefined,
+                          },
+                          ...(destination.includes("/")
+                            ? [
+                                {
+                                  label:
+                                    libraryItem?.name ||
+                                    (libraryItem
+                                      ? `Untitled ${libraryKind}`
+                                      : libraryItemState === "new"
+                                        ? `New ${libraryKind}`
+                                        : `Unavailable ${libraryKind}`),
+                                },
+                              ]
+                            : []),
+                        ]
+                      : resume
+                        ? [
+                            {
+                              label: "Resumes",
+                              onClick: () => open("resumes"),
+                            },
+                            {
+                              label: resume.name || "Untitled resume",
+                              onClick:
+                                destination !== `resume-overview/${resume.id}`
+                                  ? () => open(`resume-overview/${resume.id}`)
+                                  : undefined,
+                            },
+                            {
+                              label: destination.startsWith("resume-layout/")
+                                ? "Layout"
+                                : destination.startsWith("resume-content/")
+                                  ? "Content & order"
+                                  : destination.startsWith("resume-wording/")
+                                    ? "Wording"
+                                    : destination.startsWith("resume-details/")
+                                      ? "Name & color"
+                                      : "Overview",
+                            },
+                          ]
+                        : undefined
+                }
                 shortcuts={{ undo: "Ctrl/⌘ Z", redo: "Ctrl/⌘ Shift Z" }}
                 viewTitle={
                   resume
@@ -511,6 +640,7 @@ export function CareerWorkspaceShell({
                 </p>
               )}
               {!resume &&
+                !libraryDestination &&
                 ![
                   "overview",
                   "backups",

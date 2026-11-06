@@ -1,6 +1,14 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Copy,
+  FileText,
+  Palette,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 
 import { LayoutFields, StyleSample } from "@/components/career/layout-editor";
@@ -35,6 +43,12 @@ import {
   DisclosureLabel,
   disclosureTriggerClassName,
 } from "@/components/ui/disclosure";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -58,30 +72,57 @@ type Navigate = (scope: string, values?: unknown) => void;
 type Setup =
   CareerDocument["presets"][number] | CareerDocument["starters"][number];
 
-/** Link to reusable configurations without adding a top-level navigation group. */
-export function ReusableSetups({ navigate }: { navigate: Navigate }) {
+/** Browse reusable configuration collections without opening an editing scope.
+ * @param props Guarded destination navigation.
+ * @returns Collection descriptions, icons, and Edit navigation actions.
+ * @example <LibraryOverview navigate={navigate} />
+ */
+export function LibraryOverview({ navigate }: { navigate: Navigate }) {
   return (
-    <Collapsible>
-      <CollapsibleTrigger
-        render={<Button variant="ghost" />}
-        className={disclosureTriggerClassName}
-      >
-        <DisclosureChevron />
-        <DisclosureLabel>Reusable setups</DisclosureLabel>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <DisclosureGuide>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => navigate("presets")}>
-              Layout presets
-            </Button>
-            <Button variant="outline" onClick={() => navigate("starters")}>
-              Resume starters
-            </Button>
-          </div>
-        </DisclosureGuide>
-      </CollapsibleContent>
-    </Collapsible>
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-muted-foreground">
+        Reuse appearance or empty structure. To copy selected content and custom
+        wording, use Duplicate resume from Resumes. Editing or deleting library
+        items does not update existing resumes.
+      </p>
+      <div className="grid gap-4 @2xl:grid-cols-2">
+        {(
+          [
+            [
+              "presets",
+              "Layout presets",
+              "Reuse fonts, colors, spacing, and page settings.",
+              Palette,
+            ],
+            [
+              "starters",
+              "Resume starters",
+              "Create a resume with empty sections, field defaults, and layout.",
+              FileText,
+            ],
+          ] as const
+        ).map(([destination, label, description, Icon]) => (
+          <Card key={destination} size="sm">
+            <CardHeader>
+              <CardTitle
+                size="section"
+                className="flex items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
+              >
+                <Icon aria-hidden="true" />
+                {label}
+              </CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button variant="outline" onClick={() => navigate(destination)}>
+                <Pencil data-icon="inline-start" />
+                Edit
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -92,7 +133,15 @@ export function SetupLibrary({
   navigate,
   commit,
   disabled,
+  createResume,
+  onUsePreset,
 }: {
+  createResume: (starterId?: string) => void;
+  onUsePreset: (
+    presetId: string,
+    resumeId: string,
+    complete: (error?: string) => void,
+  ) => void;
   kind: "preset" | "starter";
   document: CareerDocument;
   navigate: Navigate;
@@ -103,115 +152,165 @@ export function SetupLibrary({
   ) => Promise<boolean>;
   disabled: boolean;
 }) {
-  const [query, setQuery] = useState("");
+  const [usingId, setUsingId] = useState<string | null>(null);
+  const [resumeId, setResumeId] = useState("");
+  const [useError, setUseError] = useState("");
   const [deleting, setDeleting] = useState<Setup | null>(null);
   const records = kind === "preset" ? document.presets : document.starters;
-  const create = () => {
-    const base = {
-      id: crypto.randomUUID(),
-      name: "",
-      template: "yabuki-reference@1.0.3",
-      layout: structuredClone(document.defaults),
-    };
-    navigate(
-      `${kind}/${base.id}`,
-      kind === "starter"
-        ? { ...base, sections: [], summaryIncluded: false }
-        : base,
-    );
-  };
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle size="section">
-            {kind === "preset" ? "Layout presets" : "Resume starters"}
-          </CardTitle>
-          <CardDescription>
-            {kind === "preset"
-              ? "Appearance only. Loading a preset copies its settings into a Layout draft."
-              : "Empty structure, field defaults, and layout. Use Duplicate resume to reuse content."}{" "}
-            Existing resumes keep independent copies.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Field>
-            <FieldLabel htmlFor="setup-search">Search {kind}s</FieldLabel>
-            <Input
-              id="setup-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </Field>
-        </CardContent>
-        <CardFooter>
-          <Button variant="outline" onClick={() => navigate("resumes")}>
-            Back to resumes
-          </Button>
-          <Button disabled={disabled || records.length >= 100} onClick={create}>
-            <Plus data-icon="inline-start" />
-            Create {kind}
-          </Button>
-        </CardFooter>
-      </Card>
+      <p className="text-sm text-muted-foreground">
+        {kind === "preset"
+          ? "Reuse fonts, colors, spacing, and page settings. Loading copies appearance into an unsaved Layout draft."
+          : "Create a resume with empty sections, field defaults, and layout. Use Duplicate resume to copy selected content and custom wording."}{" "}
+        Editing or deleting library items does not update existing resumes.
+      </p>
       {!records.length && (
-        <p className="text-xs text-muted-foreground">
-          No saved {kind}s yet. Create one here or capture it from a saved
-          resume.
-        </p>
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>No saved {kind}s yet</EmptyTitle>
+            <EmptyDescription>
+              Create one here or capture it from a saved resume.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
-      {records
-        .filter((item) =>
-          item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
-        )
-        .map((item) => (
-          <Card size="sm" key={item.id}>
-            <CardHeader>
-              <CardTitle>{item.name}</CardTitle>
-              <CardDescription>
-                {kind === "starter" &&
-                "sections" in item &&
-                Array.isArray(item.sections)
-                  ? `${item.sections.length} empty sections / `
-                  : ""}
-                {item.layout.paper.toUpperCase()} / {item.layout.font}
-              </CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <Button
-                variant="outline"
-                disabled={disabled}
-                onClick={() => navigate(`${kind}/${item.id}`)}
+      {records.map((item) => (
+        <Card size="sm" key={item.id}>
+          <CardHeader>
+            <CardTitle>{item.name || `Untitled ${kind}`}</CardTitle>
+            <CardDescription>
+              {kind === "starter" &&
+              "sections" in item &&
+              Array.isArray(item.sections)
+                ? `${item.sections.length} empty sections / `
+                : ""}
+              {item.layout.paper.toUpperCase()} / {item.layout.font}
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="justify-end">
+            <Button
+              variant="outline"
+              disabled={disabled}
+              onClick={() => navigate(`${kind}/${item.id}`)}
+            >
+              <Pencil data-icon="inline-start" />
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              disabled={disabled || records.length >= 100}
+              onClick={() => {
+                const copy = {
+                  ...structuredClone(item),
+                  id: crypto.randomUUID(),
+                  name: `${item.name || `Untitled ${kind}`} copy`.slice(0, 500),
+                };
+                navigate(`${kind}/${copy.id}`, copy);
+              }}
+            >
+              <Copy data-icon="inline-start" />
+              Duplicate
+            </Button>
+            <Button
+              disabled={disabled}
+              onClick={() => {
+                if (kind === "starter") createResume(item.id);
+                else {
+                  setUsingId(item.id);
+                  setResumeId("");
+                  setUseError("");
+                }
+              }}
+            >
+              {kind === "preset" ? "Apply preset…" : "Create resume…"}
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={disabled}
+              onClick={() => setDeleting(structuredClone(item))}
+            >
+              <Trash2 data-icon="inline-start" />
+              Delete
+            </Button>
+          </CardFooter>
+        </Card>
+      ))}
+      <Dialog
+        open={usingId !== null}
+        onOpenChange={(open) => {
+          if (!open) setUsingId(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Apply preset</DialogTitle>
+            <DialogDescription>
+              Load appearance into a resume’s Layout draft, then Save to keep
+              it. Content and wording stay unchanged.
+            </DialogDescription>
+          </DialogHeader>
+          {document.resumes.length ? (
+            <Field>
+              <FieldLabel htmlFor="preset-target">Resume</FieldLabel>
+              <Select
+                value={resumeId || null}
+                onValueChange={(value) => setResumeId(value ?? "")}
+                items={document.resumes.map((resume) => ({
+                  value: resume.id,
+                  label: resume.name || "Untitled resume",
+                }))}
               >
-                <Pencil data-icon="inline-start" />
-                Edit
-              </Button>
+                <SelectTrigger id="preset-target">
+                  <SelectValue placeholder="Choose a resume" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {document.resumes.map((resume) => (
+                      <SelectItem key={resume.id} value={resume.id}>
+                        {resume.name || "Untitled resume"}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Create a resume before using a preset.
+            </p>
+          )}
+          {useError && <p role="alert">{useError}</p>}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUsingId(null)}>
+              Cancel
+            </Button>
+            {document.resumes.length ? (
               <Button
-                variant="outline"
-                disabled={disabled || records.length >= 100}
+                disabled={disabled || !resumeId}
+                onClick={() =>
+                  usingId &&
+                  onUsePreset(usingId, resumeId, (error) => {
+                    if (error) setUseError(error);
+                    else setUsingId(null);
+                  })
+                }
+              >
+                Load into layout
+              </Button>
+            ) : (
+              <Button
                 onClick={() => {
-                  const copy = {
-                    ...structuredClone(item),
-                    id: crypto.randomUUID(),
-                    name: `${item.name} copy`.slice(0, 500),
-                  };
-                  navigate(`${kind}/${copy.id}`, copy);
+                  setUsingId(null);
+                  createResume();
                 }}
               >
-                <Copy data-icon="inline-start" />
-                Duplicate
+                Create resume…
               </Button>
-              <Button
-                variant="ghost"
-                disabled={disabled}
-                onClick={() => setDeleting(structuredClone(item))}
-              >
-                <Trash2 data-icon="inline-start" />
-                Delete
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={!!deleting}
         onOpenChange={(open) => !open && !disabled && setDeleting(null)}
@@ -220,8 +319,8 @@ export function SetupLibrary({
           <DialogHeader>
             <DialogTitle>Delete {kind}?</DialogTitle>
             <DialogDescription>
-              Delete {deleting?.name}? Existing resumes keep their copied
-              settings.
+              Delete {deleting?.name || `Untitled ${kind}`}? Existing resumes
+              keep their copied settings.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -517,96 +616,146 @@ export function SetupEditor({
   );
 }
 
-/** Copy appearance into the mounted layout draft without committing it. */
+/** Offer optional preset reuse without requiring a preset to edit layout.
+ * @param props Committed presets, current draft, guarded actions, and an optional load-announcement callback.
+ * @returns A collapsed preset disclosure with a load status outside its contents.
+ * @example <PresetPicker document={document} values={draft} onChange={change} navigate={navigate} capture={capture} />
+ */
 export function PresetPicker({
   document,
   values,
   onChange,
   navigate,
   capture,
+  savedValues,
+  onLoaded,
 }: {
   document: CareerDocument;
   values: unknown;
   onChange: (value: unknown) => void;
   navigate: Navigate;
   capture: () => void;
+  savedValues?: unknown;
+  onLoaded?: () => void;
 }) {
-  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const item = document.presets.find((item) => item.id === selected);
   const matching = document.presets.find(
     (item) => JSON.stringify(item.layout) === JSON.stringify(values),
   );
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle>Presets</CardTitle>
-        <CardDescription>
-          {matching
-            ? `Matches ${matching.name}`
-            : "Load appearance only, then Save layout. Content selections and wording stay independent."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="preset-search">Search presets</FieldLabel>
-            <Input
-              id="preset-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="layout-preset">Layout preset</FieldLabel>
-            <Select
-              items={document.presets.map((item) => ({
-                value: item.id,
-                label: item.name,
-              }))}
-              value={selected || null}
-              onValueChange={(value) => setSelected(value ?? "")}
-            >
-              <SelectTrigger id="layout-preset">
-                <SelectValue placeholder="Choose a preset" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {document.presets
-                    .filter((item) =>
-                      item.name.toLowerCase().includes(query.toLowerCase()),
-                    )
-                    .map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-          {item && <StyleSample values={item.layout} />}
-        </FieldGroup>
-      </CardContent>
-      <CardFooter>
-        <Button variant="ghost" onClick={() => navigate("presets")}>
-          Manage presets
-        </Button>
-        <Button
-          variant="outline"
-          disabled={document.presets.length >= 100}
-          onClick={capture}
+    <>
+      <p className="text-sm text-muted-foreground">
+        Adjust layout below, or optionally load a preset.
+      </p>
+      {!onLoaded &&
+        loaded &&
+        (savedValues === undefined ||
+          JSON.stringify(savedValues) !== JSON.stringify(values)) && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Preset loaded into unsaved layout. Save to keep these changes.
+          </p>
+        )}
+      <Collapsible defaultOpen={false}>
+        <CollapsibleTrigger
+          render={<Button variant="ghost" />}
+          className={disclosureTriggerClassName}
         >
-          Save as preset
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!item}
-          onClick={() => item && onChange(structuredClone(item.layout))}
-        >
-          Load into layout
-        </Button>
-      </CardFooter>
-    </Card>
+          <DisclosureChevron />
+          <DisclosureLabel>Layout presets (optional)</DisclosureLabel>
+        </CollapsibleTrigger>
+        <CollapsibleContent keepMounted>
+          <DisclosureGuide>
+            <Card size="sm">
+              <CardHeader>
+                <CardTitle>Saved appearance</CardTitle>
+                <CardDescription>
+                  {matching
+                    ? `Current appearance matches ${matching.name || "Untitled preset"}. `
+                    : ""}
+                  Loading copies appearance only. Save layout to keep changes.
+                  Save as preset captures saved appearance after resolving
+                  unsaved changes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {document.presets.length ? (
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="layout-preset">
+                        Layout preset
+                      </FieldLabel>
+                      <Select
+                        items={document.presets.map((preset) => ({
+                          value: preset.id,
+                          label: preset.name || "Untitled preset",
+                        }))}
+                        value={selected || null}
+                        onValueChange={(value) => setSelected(value ?? "")}
+                      >
+                        <SelectTrigger id="layout-preset">
+                          <SelectValue placeholder="Choose a preset to load" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {document.presets.map((preset) => (
+                              <SelectItem key={preset.id} value={preset.id}>
+                                {preset.name || "Untitled preset"}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    {item && <StyleSample values={item.layout} />}
+                  </FieldGroup>
+                ) : (
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyTitle>No saved presets yet</EmptyTitle>
+                      <EmptyDescription>
+                        Edit layout directly below. You can save its appearance
+                        as a preset for reuse.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button variant="ghost" onClick={() => navigate("presets")}>
+                  Manage presets
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={document.presets.length >= 100}
+                  onClick={capture}
+                >
+                  Save as preset…
+                </Button>
+                {document.presets.length > 0 && (
+                  <Button
+                    variant="outline"
+                    disabled={!item}
+                    onClick={() => {
+                      if (
+                        item &&
+                        JSON.stringify(item.layout) !== JSON.stringify(values)
+                      ) {
+                        onChange(structuredClone(item.layout));
+                        setLoaded(true);
+                        onLoaded?.();
+                      }
+                    }}
+                  >
+                    Load into layout
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          </DisclosureGuide>
+        </CollapsibleContent>
+      </Collapsible>
+    </>
   );
 }

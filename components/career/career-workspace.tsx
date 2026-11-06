@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   FileText,
   MoreHorizontal,
+  Palette,
   Pencil,
   Plus,
 } from "lucide-react";
@@ -32,6 +33,7 @@ import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
 import { CommittedOutput } from "@/components/career/committed-output";
 import { LayoutFields } from "@/components/career/layout-editor";
+import { libraryDestinationKind } from "@/components/career/library-navigation";
 import {
   CareerResumeCollection,
   ResumeActionsMenu,
@@ -45,8 +47,8 @@ import {
 } from "@/components/career/resume-workspace";
 import { ScopeComparison } from "@/components/career/scope-comparison";
 import {
+  LibraryOverview,
   PresetPicker,
-  ReusableSetups,
   SetupEditor,
   SetupLibrary,
 } from "@/components/career/setup-library";
@@ -668,6 +670,10 @@ export function CareerWorkspace({
   const [compare, setCompare] = useState(false);
   const [addingSection, setAddingSection] = useState(false);
   const [addingResume, setAddingResume] = useState(false);
+  const [libraryEditorRequest, setLibraryEditorRequest] = useState<
+    object | null
+  >(null);
+  const [presetNotice, setPresetNotice] = useState<string | null>(null);
   const [exportChoice, setExportChoice] = useState(false);
   const [rawExport, setRawExport] = useState(false);
   const [loadingSample, setLoadingSample] = useState(false);
@@ -825,6 +831,7 @@ export function CareerWorkspace({
       );
     const perform = () => {
       focusIssue();
+      setPresetNotice(null);
       if (destination !== next) {
         route.current.index++;
         const url = new URL(window.location.href);
@@ -978,14 +985,19 @@ export function CareerWorkspace({
 
   const scope =
     destination === "backups" ? "backups" : (state.draft?.scope ?? destination);
+  const libraryKind = libraryDestinationKind(destination);
+  const libraryDestination = libraryKind !== null;
   const scopeId = scope.split("/")[1];
-  const entrySection = documentValue.sections.find((section) =>
-    section.entries.some((entry) => entry.id === scopeId),
-  );
-  const contextSection =
-    selectedSection ??
-    entrySection ??
-    documentValue.sections.find((section) => section.id === scopeId);
+  const entrySection = libraryDestination
+    ? undefined
+    : documentValue.sections.find((section) =>
+        section.entries.some((entry) => entry.id === scopeId),
+      );
+  const contextSection = libraryDestination
+    ? undefined
+    : (selectedSection ??
+      entrySection ??
+      documentValue.sections.find((section) => section.id === scopeId));
   const orderDraft = state.orderDraft;
   const listSection =
     selectedSection ??
@@ -1012,6 +1024,7 @@ export function CareerWorkspace({
       "backups",
       "resumes",
       "resume-compare",
+      "library",
       "presets",
       "starters",
     ].includes(destination) &&
@@ -1025,35 +1038,37 @@ export function CareerWorkspace({
           : readScope(documentValue, destination) === undefined) &&
       state.draft?.scope !== destination);
   const title =
-    destination === "presets"
-      ? "Layout presets"
-      : destination === "starters"
-        ? "Resume starters"
-        : destination.startsWith("preset/")
-          ? "Layout preset"
-          : destination.startsWith("starter/")
-            ? "Resume starter"
-            : destination === "resumes"
-              ? "Resumes"
-              : destination === "resume-compare"
-                ? "Compare resumes"
-                : activeResume
-                  ? activeResume.name || "Untitled resume"
-                  : scope === "profile"
-                    ? "Profile"
-                    : scope === "summary"
-                      ? "Summary"
-                      : scope === "languages"
-                        ? "Content languages"
-                        : scope === "backups"
-                          ? "Backups & settings"
-                          : scope === "sections"
-                            ? "Section order"
-                            : scope.startsWith("selection/")
-                              ? "Resume content & order"
-                              : contextSection
-                                ? contextSection.name || contextSection.kind
-                                : "Career details · Overview";
+    destination === "library"
+      ? "Library"
+      : destination === "presets"
+        ? "Layout presets"
+        : destination === "starters"
+          ? "Resume starters"
+          : destination.startsWith("preset/")
+            ? "Layout preset"
+            : destination.startsWith("starter/")
+              ? "Resume starter"
+              : destination === "resumes"
+                ? "Resumes"
+                : destination === "resume-compare"
+                  ? "Compare resumes"
+                  : activeResume
+                    ? activeResume.name || "Untitled resume"
+                    : scope === "profile"
+                      ? "Profile"
+                      : scope === "summary"
+                        ? "Summary"
+                        : scope === "languages"
+                          ? "Content languages"
+                          : scope === "backups"
+                            ? "Backups & settings"
+                            : scope === "sections"
+                              ? "Section order"
+                              : scope.startsWith("selection/")
+                                ? "Resume content & order"
+                                : contextSection
+                                  ? contextSection.name || contextSection.kind
+                                  : "Career details · Overview";
   const iconKind =
     scope === "profile"
       ? "profile"
@@ -1109,6 +1124,38 @@ export function CareerWorkspace({
       };
       navigate(`preset/${item.id}`, item);
     });
+
+  /** Resolve drafts and load copied appearance into an uncommitted Layout scope.
+   * @param presetId Saved appearance to recheck after resolving drafts.
+   * @param resumeId Explicitly selected target resume to recheck before navigation.
+   * @param complete Called after loading, or with an error if either record is unavailable; canceled navigation does not call it.
+   * @returns Nothing; loading changes only the recoverable draft, never committed content or history.
+   * @example loadLibraryPreset(preset.id, resume.id, error => setLocalError(error ?? ""))
+   */
+  const loadLibraryPreset = (
+    presetId: string,
+    resumeId: string,
+    complete: (error?: string) => void,
+  ): void => {
+    resolveTargets(controller.navigationTargets(), () => {
+      const document = controller.getSnapshot().head?.document;
+      const preset = document?.presets.find((item) => item.id === presetId);
+      const resume = document?.resumes.find((item) => item.id === resumeId);
+      if (!preset || !resume) {
+        complete(
+          "The preset or resume is unavailable. Choose an available record and try again.",
+        );
+        return;
+      }
+      const next = `resume-layout/${resume.id}`;
+      const changed =
+        JSON.stringify(preset.layout) !== JSON.stringify(resume.layout);
+      navigate(next, changed ? structuredClone(preset.layout) : undefined);
+      setPresetNotice(changed ? next : null);
+      setLibraryEditorRequest({});
+      complete();
+    });
+  };
   const libraryCommand = async (
     scope: string,
     values: unknown,
@@ -1157,6 +1204,20 @@ export function CareerWorkspace({
             }
           })
         }
+        createStarter={() => {
+          const document = controller.getSnapshot().head!.document;
+          if (document.starters.length >= 100) return;
+          const id = crypto.randomUUID();
+          navigate(`starter/${id}`, {
+            id,
+            name: "",
+            template: "yabuki-reference@1.0.3",
+            layout: structuredClone(document.defaults),
+            sections: [],
+            summaryIncluded: false,
+          });
+        }}
+        getDocument={() => controller.getSnapshot().head!.document}
         getResume={(id) =>
           controller
             .getSnapshot()
@@ -1192,7 +1253,12 @@ export function CareerWorkspace({
             document={documentValue}
             resumeActions={resumeActions}
             destination={destination}
-            editorRequest={issueFocus}
+            editorRequest={issueFocus ?? libraryEditorRequest}
+            libraryItemState={
+              state.draft?.values && typeof state.draft.values === "object"
+                ? "new"
+                : "missing"
+            }
             navigate={navigate}
             addSection={() =>
               resolveTargets(controller.navigationTargets(), () => {
@@ -1238,6 +1304,10 @@ export function CareerWorkspace({
                       className="resume-color text-(--resume-color)"
                       data-resume-color={activeResume.color ?? "indigo"}
                     />
+                  ) : libraryKind === "preset" ? (
+                    <Palette aria-hidden="true" />
+                  ) : libraryKind === "starter" ? (
+                    <FileText aria-hidden="true" />
                   ) : iconKind ? (
                     <CareerSectionIcon
                       kind={iconKind}
@@ -1254,9 +1324,11 @@ export function CareerWorkspace({
                     : destination === "resumes" ||
                         destination === "resume-compare"
                       ? "Resumes · Independent content and wording"
-                      : destination === "backups"
-                        ? "Workspace"
-                        : "Career details · Shared content"}
+                      : libraryDestination
+                        ? "Library - Reusable configurations"
+                        : destination === "backups"
+                          ? "Workspace"
+                          : "Career details · Shared content"}
                 </p>
               </div>
               {activeResume && (
@@ -1265,6 +1337,32 @@ export function CareerWorkspace({
                   resume={activeResume}
                   actions={resumeActions}
                 />
+              )}
+              {(destination === "presets" || destination === "starters") && (
+                <Button
+                  disabled={
+                    state.saving || documentValue[destination].length >= 100
+                  }
+                  onClick={() => {
+                    const kind =
+                      destination === "presets" ? "preset" : "starter";
+                    const base = {
+                      id: crypto.randomUUID(),
+                      name: "",
+                      template: "yabuki-reference@1.0.3",
+                      layout: structuredClone(documentValue.defaults),
+                    };
+                    navigate(
+                      `${kind}/${base.id}`,
+                      kind === "starter"
+                        ? { ...base, sections: [], summaryIncluded: false }
+                        : base,
+                    );
+                  }}
+                >
+                  <Plus data-icon="inline-start" />
+                  Create {destination === "presets" ? "preset" : "starter"}
+                </Button>
               )}
               {destination === "overview" && !state.draft && (
                 <Button
@@ -1315,6 +1413,7 @@ export function CareerWorkspace({
               )}
             </div>
             {!activeResume &&
+              !libraryDestination &&
               (state.draft ||
                 (destination === "backups" && state.orderDraft)) && (
                 <Button
@@ -1427,17 +1526,20 @@ export function CareerWorkspace({
               saving={state.saving}
               navigate={navigate}
             >
-              {destination === "presets" || destination === "starters" ? (
+              {destination === "library" ? (
+                <LibraryOverview navigate={navigate} />
+              ) : destination === "presets" || destination === "starters" ? (
                 <SetupLibrary
                   kind={destination === "presets" ? "preset" : "starter"}
                   document={documentValue}
                   navigate={navigate}
                   disabled={state.saving}
                   commit={libraryCommand}
+                  createResume={resumeActions.create}
+                  onUsePreset={loadLibraryPreset}
                 />
               ) : destination === "resumes" ? (
                 <>
-                  <ReusableSetups navigate={navigate} />
                   <CareerResumeCollection
                     document={documentValue}
                     navigate={navigate}
@@ -1558,9 +1660,11 @@ export function CareerWorkspace({
                       <CardDescription>
                         {activeResume
                           ? `Editing this resume only · ${activeResume.language}`
-                          : scope === "profile"
-                            ? "Shared contact details"
-                            : "Shared text and facts. Individual resumes can use customized wording."}
+                          : libraryDestination
+                            ? "Reusable configuration only. Existing resumes keep independent copies."
+                            : scope === "profile"
+                              ? "Shared contact details"
+                              : "Shared text and facts. Individual resumes can use customized wording."}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-5">
@@ -1580,12 +1684,23 @@ export function CareerWorkspace({
                         ) : activeResume &&
                           scope.startsWith("resume-layout/") ? (
                           <>
+                            {presetNotice === scope && controller.isDirty() && (
+                              <p
+                                role="status"
+                                className="text-sm text-muted-foreground"
+                              >
+                                Preset loaded into unsaved layout. Save to keep
+                                these changes.
+                              </p>
+                            )}
                             <PresetPicker
                               document={documentValue}
                               values={state.draft.values}
                               onChange={(values) => controller.change(values)}
                               navigate={navigate}
                               capture={capturePreset}
+                              savedValues={activeResume.layout}
+                              onLoaded={() => setPresetNotice(scope)}
                             />
                             <p className="text-xs text-muted-foreground">
                               Save layout to update PDF output. The PDF pane

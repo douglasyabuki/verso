@@ -58,11 +58,22 @@ export function SidebarCollection({
       )!.offsetHeight;
       const height = content.offsetHeight;
       const styles = getComputedStyle(collections);
+      const siblings = [...collections.children] as HTMLElement[];
+      const collectionCount = Math.max(
+        1,
+        siblings.filter(
+          (item) => !item.hasAttribute("data-sidebar-fixed-group"),
+        ).length,
+      );
+      const reservedHeight = siblings
+        .filter((item) => item.hasAttribute("data-sidebar-fixed-group"))
+        .reduce((sum, item) => sum + item.offsetHeight, 0);
       const available =
         collections.clientHeight -
         parseFloat(styles.paddingTop) -
         parseFloat(styles.paddingBottom) -
-        parseFloat(styles.rowGap);
+        parseFloat(styles.rowGap) * Math.max(0, siblings.length - 1) -
+        reservedHeight;
       const rowHeight =
         content.querySelector<HTMLElement>('[data-sidebar="menu-button"]')
           ?.offsetHeight ?? 32;
@@ -70,7 +81,10 @@ export function SidebarCollection({
         parseFloat(getComputedStyle(content.querySelector("ul")!).rowGap) || 0;
       const minimum = Math.max(
         0,
-        Math.min(rowHeight * 4 + menuGap * 3, available / 2 - heading),
+        Math.min(
+          rowHeight * 4 + menuGap * 3,
+          available / collectionCount - heading,
+        ),
       );
       const basis = `${heading + height}px`;
       const minHeight = `${heading + Math.min(height, minimum)}px`;
@@ -86,6 +100,10 @@ export function SidebarCollection({
     );
     observer.observe(content);
     observer.observe(collections);
+    for (const sibling of collections.children) {
+      if (sibling.hasAttribute("data-sidebar-fixed-group"))
+        observer.observe(sibling);
+    }
     return () => {
       observer.disconnect();
       pendingCollectionMeasurements.delete(measure);
@@ -96,7 +114,11 @@ export function SidebarCollection({
     };
   }, []);
   return (
-    <SidebarGroup ref={groupRef} className="min-h-0 shrink px-3 py-0">
+    <SidebarGroup
+      ref={groupRef}
+      data-sidebar-collection={label}
+      className="min-h-0 shrink px-3 py-0"
+    >
       <SidebarSelection className="shrink-0">
         <SidebarGroupLabel
           render={<button type="button" />}

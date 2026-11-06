@@ -718,7 +718,7 @@ it("opens a read-only overview from the resume tree and edits details through th
   expect(
     main.element().querySelector('header[aria-label="Workspace controls"]')
       ?.textContent,
-  ).toMatch(/Workspace\s*Application\s*Overview/);
+  ).toMatch(/Resumes\s*Application\s*Overview/);
   const heading = main.getByRole("heading", {
     name: "Application",
     level: 1,
@@ -765,7 +765,7 @@ it("opens a read-only overview from the resume tree and edits details through th
   expect(
     main.element().querySelector('header[aria-label="Workspace controls"]')
       ?.textContent,
-  ).toMatch(/Workspace\s*Application\s*Name & color/);
+  ).toMatch(/Resumes\s*Application\s*Name & color/);
   expect(
     main
       .getByRole("button", { name: "Compare resumes", exact: true })

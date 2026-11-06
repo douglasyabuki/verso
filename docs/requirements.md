@@ -765,14 +765,76 @@ Browser Mode cases and two desktop/phone E2E definitions were type-checked and
 left unexecuted for the owner. No visual, computer-use, or manual/PDF validation
 was performed. Maintained documentation links and diff whitespace were checked.
 
+## Phase 4.5 — Library navigation and workflow clarity
+
+- [x] P4.5.1 Add a permanent navigable Library group between Career details and Resumes.
+      Its durable overview shows Layout presets and Resume starters descriptions,
+      matching card icons, and Edit links without saved-item counts. Collection
+      headings use the same icon sizing as other workspace views. Retain presentation, selection, utility access,
+      and scrolling on short screens and long collections.
+- [x] P4.5.2 Replace Reusable setups discovery with direct library destinations,
+      accurate guarded Library/collection parent location trails, full-width views,
+      and missing/new
+      item labels. Keep contextual Manage links. Library browsing must not remount,
+      expand/select, or replay entrance animations on resume rows; omit unrelated
+      career-language/editor controls and resume return links.
+- [x] P4.5.3 Explain appearance-only presets, empty-structure starters, and
+      content-bearing Duplicate resume; library changes never update existing copies.
+- [x] P4.5.4 Load a library preset into an explicitly chosen resume's Layout draft,
+      rechecking identities after draft resolution; announce unsaved changes and
+      require a separate Save. Capture presets from saved appearance only.
+- [x] P4.5.5 Share explicit Blank resume / From starter creation across entry points;
+      review structure, field defaults, style and section mappings. Missing starters
+      block creation instead of silently falling back to blank.
+- [x] P4.5.6 Order layout groups Typography, Page & margins, Header & contacts,
+      Spacing & details, Colors. Initially expand the first two; reveal invalid
+      fields without changing their meaning or Save/Cancel boundaries.
+- [x] P4.5.7 Author/update browser regression coverage and maintained behavior docs;
+      preserve portable formats, controller operations, recovery and history.
+- [x] P4.5.8 Record executed non-browser checks separately from owner browser,
+      visual/manual and PDF acceptance. Authored tests are not passing evidence.
+- [x] P4.5.9 Place collection creation at the end of the page title row; remove duplicate intro-card titles
+      and all preset/starter search. Item footer order is Edit / Duplicate / Apply or
+      Create / Delete; confirmation is Cancel / Delete, with DOM and visual order
+      agreeing through wrapping. Use consistent untitled-item labels.
+- [x] P4.5.10 Make Resume Layout presets optional in an initially collapsed disclosure.
+      Keep direct controls usable without a preset; selecting a candidate changes
+      nothing until Load. Keep capture/manage actions, explanatory empty state, and
+      an unsaved-load announcement outside the disclosure. No preset is required
+      for Save. Retain appearance matching and no-op loading semantics.
+
+The Library overview and optional-preset corrections are implemented with authored
+regression coverage. Automated browser regression results for the corrections
+are recorded in docs/verification.md; prior results remain separate. Owner
+manual/visual/PDF acceptance remains open.
+
+This is a UX follow-up to the implemented layout/configuration slice. It does not
+reopen Phase 4's implementation record or claim its outstanding acceptance passed.
+Use the existing Verso views and UI primitives as visual references. No new storage
+schema, template identity, migration, dependencies, live inheritance, or account
+scope is introduced. Library dialogs are transient; durable destinations retain
+existing opaque-ID scope URLs. Canceling navigation or a failed Save prevents the
+requested follow-up action and retains drafts. Loading presets never commits or
+compiles. Successful starter creation retains the existing atomic lifecycle.
+
+The owner subsequently requested automated failing-test repair; executed Browser
+Mode and Playwright evidence is recorded separately from screenshot/computer-use,
+manual interaction, and visual/PDF acceptance, which remain with the owner.
+See README for delivered behavior and
+[verification](verification.md) for the self-contained owner checklist and actual
+non-browser results. Existing deferred acceptance remains open.
+
 ## Phase 5 — Settings and navigation
 
 - [ ] P5.1 Provide appearance, content-language, editing/preview, data/backup, and default settings.
 - [ ] P5.2 Identify device-only versus workspace settings and their backup/sync scope.
 - [ ] P5.3 Provide durable validated routes, reload, Back/Forward, and missing-resource states;
-      never put private text or secrets in URLs.
+      extend the established Library overview/collection/editor destinations alongside
+      all other navigation;
+      never put private text or secrets in URLs. Library work covers only its slice.
 - [ ] P5.4 Preserve drafts, focus, scroll, issue navigation, and narrow-screen access;
-      keep transient controls local and guard dirty navigation.
+      extend the established Library behavior across the workspace; keep transient
+      controls local and guard dirty navigation. Broader settings work remains open.
 
 ## Phase 6 — Saving and bounded PDF resources
 
@@ -783,6 +845,8 @@ was performed. Maintained documentation links and diff whitespace were checked.
       define hidden-preview behavior.
 - [ ] P6.5 Retain a labeled last successful preview on failure with revision/staleness and retry.
 - [ ] P6.6 Verify draft/Save/recovery/conflict/history boundaries; Save never requires compilation.
+      Include library entry points and Style samples: unsaved actions never compile
+      or change committed output. Existing resource/safety obligations remain open.
 - [ ] P6.7 Verify conditional guest writes, generation checks, other-tab conflicts, and
       clearly disclosed session-only recovery when durable storage is unavailable.
 - [ ] P6.8 Manually exercise rapid edits/switches, hidden previews, failures, and cleanup.
@@ -793,6 +857,9 @@ was performed. Maintained documentation links and diff whitespace were checked.
 - [ ] P7.2 Verify language labels, dates/regions, fonts, direction/hyphenation as applicable,
       metadata, links, selectable text, and layout; disable unsupported PDF output.
 - [ ] P7.3 Verify presets/starters, settings/routes, save/preview/history, keyboard, and narrow layouts.
+      Include Library discovery, reuse-option clarity, contextual/library entry points,
+      guarded location trails, optional preset/direct layout editing, destructive-action
+      order and wrapping, and short-screen navigation.
 - [ ] P7.4 Restore workspace/recovery exports on disposable origins; rejected imports preserve work.
 - [ ] P7.5 Inspect actual PDFs for accents, long text/URLs, omissions, overflow, and stale failures.
       Page counts do not establish clipping, PDF/UA, or ATS compatibility.

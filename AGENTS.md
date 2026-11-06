@@ -109,6 +109,29 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
   versions. Library configuration participates in backups, recovery, history, and
   previous-workspace replacement/rollback; device preferences remain separate.
 
+- Library is a permanent, navigable sidebar group between Career details and Resumes.
+  Its `?scope=library` overview shows descriptions, icons, and Edit links to Layout presets
+  and Resume starters; descendant location trails use guarded Library parent links.
+  Collection creation aligns to the end of the page title row; omit preset/starter search throughout collections
+  and contextual pickers. Library footers place destructive actions last in DOM,
+  keyboard, and visual order, overriding primary-rightmost where both occur.
+  Resume Layout remains directly editable without a preset. Its initially collapsed
+  Layout presets (optional) disclosure contains selection, sample, load/capture/manage
+  actions, or an explanatory empty state. Selection alone does not load; explicit
+  loading remains uncommitted and its announcement stays visible outside the disclosure.
+  Library collection/editor views use the full editor width and no
+  unrelated resume PDF. Follow existing Verso text/color/action hierarchy and UI
+  primitives. Keep Library accessible alongside independently scrolling collections.
+  Keep resume rows mounted during library navigation; do not use route-dependent
+  keys to reset expansion. Library navigation must not expand/select resumes or
+  replay their entrance animation, or expose career-language/editor controls.
+- Library preset use requires an explicit target, guarded draft resolution and
+  identity rechecks; it opens an uncommitted resume Layout draft. Starter cards
+  share explicit Blank resume / From starter creation and mapping review. Never
+  silently create blank when a chosen starter is missing. Loading appearance does
+  not compile or commit; explicit creation retains its atomic lifecycle. Existing
+  Save/recovery contracts remain authoritative.
+
 ## Active output readiness
 
 - `lib/career/readiness.ts` assesses committed effective selections for one resume;

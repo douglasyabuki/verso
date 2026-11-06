@@ -158,3 +158,144 @@ command. All 58 targeted rendering/sample unit tests across three files passed;
 changed-code lint/format and generated route types/TypeScript passed. The full
 unit and browser suites were not rerun for this correction. Existing owner
 browser/PDF acceptance remains open.
+
+## Library navigation and reuse workflows: owner acceptance
+
+The Library/navigation follow-up retains the current Verso presentation and
+workspace schema 2/recovery format 1. Initial browser cases were authored and
+left for owner execution; the automated regression follow-up below records later
+execution requested by the owner. Computer-use, manual interactions, and
+visual/PDF acceptance remain with the owner. Earlier open acceptance and
+historical results above remain separate.
+
+- [x] Run `npm run test:browser` and `npm run test:e2e -- tests/e2e/layout-setups.spec.ts`
+      on isolated test storage; record actual counts, failures and skips below.
+      Broader application regressions remain necessary before complete acceptance.
+- [ ] Compare Library, collections, editors, creation and use dialogs against current
+      Career details, Resumes, resume views and Data & backups: text hierarchy,
+      semantic colors, selection surfaces, spacing and primary/rightmost actions
+      except Library destructive actions, which must be last.
+      Check light/dark themes, long names, reduced motion and narrow/short screens.
+- [ ] With empty and many-item collections, reach both Library links and utilities;
+      verify active states, independent scrolling, location truncation, keyboard
+      focus, dialog scrolling, and Editor/PDF switching. Confirm the sidebar order
+      Career details > Library > Resumes, with Library in the normal flow. Clicking
+      either library item must not remount, expand/select, or replay pop animations
+      on resume rows. Library pages/editors omit unrelated career-language controls
+      and career/resume return links.
+- [ ] Navigate Library overview, both collections, and editors directly and by sidebar/contextual links;
+      reload and use Back/Forward. Check new/missing labels and guarded parent links.
+      Cancel must keep dirty drafts; failed Save must prevent the requested action.
+- [ ] Use a preset with an explicitly selected resume; loading changes only its
+      Layout draft, announces unsaved state, and leaves committed output unchanged.
+      Check no-op loading, Cancel, Save, Undo, recovery, and deleted source/target
+      records. No-resume use must offer ordinary creation without automatic apply.
+- [ ] Capture saved appearance after Save/Discard/Cancel resolution. Later edits
+      or deletion of a library item must not change existing copied configurations.
+- [ ] Create blank and from starter through both entry points. Review structure,
+      summary/field defaults, style and mappings. Cancellation creates nothing;
+      missing starters cannot silently fall back to blank. Verify failed-creation
+      recovery, atomic creation and Undo/Redo without changing shared content.
+- [ ] Verify layout group order/default expansion and automatic error revelation.
+      Typing, preset loading and Style samples must not compile. Saving remains
+      separate from PDF refresh; inspect real English/Portuguese output separately.
+
+- [ ] Open Library with keyboard/side navigation and check descriptions, icons, Edit links, and absence of saved-item counts,
+      collection links, and guarded Library breadcrumbs. Verify direct
+      `?scope=library`, reload, Back/Forward, empty collections, and short screens.
+- [ ] Check one page heading per collection and creation at the end of the page title row. Verify
+      Edit / Duplicate / Apply or Create / Delete footer order through wrapping and
+      keyboard traversal; confirmation remains Cancel / Delete. No preset/starter
+      search fields appear in collections or contextual pickers; all choices remain.
+- [ ] In Resume Layout, edit and Save directly without selecting a preset. Expand
+      initially collapsed Layout presets (optional); check the empty explanation
+      or complete preset choices. Selection alone changes nothing; Load opens an
+      unsaved change, whose announcement stays visible after collapsing. Check
+      matching/no-op loads, capture/manage actions, Cancel, Save, and Undo.
+
+### Library follow-up non-browser verification
+
+On 2026-11-06, formatting, ESLint, generated route types/TypeScript, all 117 unit
+tests across 13 files, and the production build passed. Initial sandbox-only
+failures prevented the unit runner's subprocess startup and the formatter's
+scan of a temporary directory; both commands passed on sandbox retries.
+Documentation links and diff whitespace were checked separately.
+
+Twelve new Browser Mode cases cover library navigation/new items, stable resume
+rows without expansion/selection or repeated entrances, parent guards, preset draft isolation and Undo, failed Saves, missing source/target records,
+no-op loading, no-resume creation, starter preselection and missing starters.
+Existing layout/disclosure and resume-location assertions were updated. Two
+parameterized desktop/phone production E2E definitions now cover library entry
+points, ordinary creation, reload/Back navigation, many resumes and short screens;
+they remain configured across Chromium/Firefox/WebKit. These cases were
+source-reviewed and type-checked only. No Browser Mode, Playwright, browser launch,
+computer-use, screenshot, manual interaction, or PDF validation was executed.
+All owner acceptance checkboxes above remain open.
+
+### Library overview and optional-preset correction verification
+
+The correction adds authored Browser Mode coverage for overview icons/Edit links without counts,
+resume-row isolation, collection title-row creation/footer order, Library parent draft
+guards, direct layout Save without a preset, explicit loading and announcements,
+and the empty optional disclosure. Production desktop/phone definitions include
+overview reload, Back/Forward, parent navigation, and optional disclosure
+access. At this initial handoff, these cases were left for owner execution;
+no browser/manual/visual/PDF checks were performed then. Automated execution
+requested later is recorded below; earlier results remain historical.
+
+Non-browser checks for this correction on 2026-11-06: formatting, ESLint,
+generated route types/TypeScript, 117 unit tests across 13 files (all passed),
+and production build passed. Eight local documentation links and both staged
+and working-tree diff whitespace checks passed. Initial unit subprocess startup
+and formatter directory scanning were blocked by sandbox EPERM; both passed
+outside the sandbox. After the final presentation edits, the production build
+also hit sandbox EPERM when starting its TypeScript subprocess and passed in
+full outside the sandbox. Final formatting, lint, and route types/TypeScript
+checks passed. An initial import-order lint error was corrected before
+the passing check. No browser suite was launched and no tests were skipped to
+obtain these results. Owner acceptance remains open.
+
+The final presentation follow-up adds Palette/FileText icons to Library overview
+cards and collection/editor headings using existing card/page icon sizes. Overview
+actions are Edit and omit counts. Collection creation aligns to the end of the
+page title row, matching Career details. Authored regression assertions reflect
+these changes. Browser execution was left with the owner at that handoff and
+subsequently requested below; manual visual validation remains with the owner.
+
+### Library automated regression fixes
+
+On 2026-11-06, the owner requested failing-test repair and automated browser
+execution. The initial complete Chromium Browser Mode run had 105 passing and
+five failing cases across ten files. The failures were test assumptions about
+EmptyTitle rendering plain text, Base UI using presence-only active attributes,
+role locators excluding collapsed content, and Select clearing a removed option.
+Assertions now match those contracts while verifying that unavailable selections
+cannot mutate committed content, drafts, or workspace history. All 29 Library
+component cases then passed.
+
+Production Library E2E initially failed all six cases: mobile navigation is a
+named dialog rather than the desktop navigation region, and the complete select
+trigger text includes its decorative arrow. The next run passed two cases and
+exposed a mobile sheet-close race and WebKit reload before Save acknowledgment.
+Tests now wait for sheet closure before reopening and the committed revision
+before reload. The final focused run passed all six desktop/phone cases across
+Chromium, Firefox, and WebKit using the normal two workers, no configured retries,
+and no skips. Each production run built and started a fresh server.
+
+Complete component reruns also exposed Cancel/reopen and Save/Undo races in
+older test code that directly reopened or canceled controller drafts before UI
+navigation completed. The icon test now waits for the entry-list search control
+and reopens properties through its menu. The Library test waits for enabled
+history, resolves the clean form through Library navigation, and invokes Undo
+through the toolbar. An intermediate Entries-heading assertion failed because
+the heading includes an accessible help control; the settled-list assertion uses
+the searchbox instead. Intermediate full runs had 109/110 and 108/110 passing
+cases; the final full run passed all 110 cases across ten files, without skips
+or configured retries.
+
+Application behavior and test timeouts were unchanged. Changed-test ESLint and
+formatting, generated route types/TypeScript, and the production build passed.
+Unit tests and unrelated production E2E cases were not rerun for these test-only
+changes. The initial sandbox browser launch was blocked at compiler subprocess
+startup with EPERM; execution succeeded outside the sandbox. Failure screenshots
+were inspected only for diagnosis; this is not visual or PDF acceptance.

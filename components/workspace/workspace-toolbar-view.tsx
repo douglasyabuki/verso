@@ -23,6 +23,7 @@ export function WorkspaceToolbarView({
   shortcuts,
   title,
   viewTitle,
+  location,
   preview,
   togglePreview,
   previewAvailable = true,
@@ -31,6 +32,7 @@ export function WorkspaceToolbarView({
   status,
 }: {
   shortcuts: { undo: string; redo: string };
+  location?: { label: string; onClick?: () => void }[];
   title: string;
   viewTitle?: string;
   preview: boolean;
@@ -67,28 +69,72 @@ export function WorkspaceToolbarView({
         {!expanded && <BrandMark className="size-6 shrink-0 text-primary" />}
         <Separator orientation="vertical" />
         <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-          <span className="hidden text-muted-foreground sm:inline">
-            Workspace
-          </span>
-          <ChevronRight
-            className="hidden size-3 text-muted-foreground sm:block"
-            aria-hidden="true"
-          />
-          <span
-            className="truncate font-medium"
-            aria-current={viewTitle ? undefined : "page"}
-          >
-            {title}
-          </span>
-          {viewTitle && (
+          {location ? (
+            <nav
+              aria-label="Location"
+              className="flex min-w-0 items-center gap-2"
+            >
+              {location.map((item, index) => (
+                <span key={index} className="flex min-w-0 items-center gap-2">
+                  {index > 0 && (
+                    <ChevronRight
+                      className="size-3 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {item.onClick ? (
+                    <button
+                      type="button"
+                      onClick={item.onClick}
+                      title={item.label}
+                      className="truncate text-muted-foreground hover:text-foreground focus-visible:outline-ring"
+                    >
+                      {item.label}
+                    </button>
+                  ) : (
+                    <span
+                      title={item.label}
+                      aria-current={
+                        index === location.length - 1 ? "page" : undefined
+                      }
+                      className={
+                        index === location.length - 1
+                          ? "truncate font-medium"
+                          : "truncate text-muted-foreground"
+                      }
+                    >
+                      {item.label}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </nav>
+          ) : (
             <>
+              <span className="hidden text-muted-foreground sm:inline">
+                Workspace
+              </span>
               <ChevronRight
-                className="size-3 shrink-0 text-muted-foreground"
+                className="hidden size-3 text-muted-foreground sm:block"
                 aria-hidden="true"
               />
-              <span className="shrink-0 font-medium" aria-current="page">
-                {viewTitle}
+              <span
+                className="truncate font-medium"
+                aria-current={viewTitle ? undefined : "page"}
+              >
+                {title}
               </span>
+              {viewTitle && (
+                <>
+                  <ChevronRight
+                    className="size-3 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="shrink-0 font-medium" aria-current="page">
+                    {viewTitle}
+                  </span>
+                </>
+              )}
             </>
           )}
         </div>
