@@ -1,3 +1,4 @@
+import { contactRows, templateSettings } from "@/lib/career/layout";
 import { assessResumeOutput } from "@/lib/career/readiness";
 import { effectiveResume, resolveResumeWording } from "@/lib/career/resumes";
 import {
@@ -11,7 +12,6 @@ import {
   CAREER_OUTPUT_CAPABILITIES,
   type CareerDocument,
 } from "@/types-and-constants/career";
-import { defaultSettings } from "@/types-and-constants/output";
 
 export const outputCapabilities = CAREER_OUTPUT_CAPABILITIES;
 
@@ -42,15 +42,23 @@ export function renderCareerResume(
   const contacts = resume
     .profileSelection!.map((id) => {
       const field = fields.find((item) => item.id === id);
-      if (field)
-        return escapeLatex(
+      if (field) {
+        const value =
           field.type === "text"
             ? wordingText(wording(field.id, field.wording))
-            : field.fact,
-        );
+            : field.fact;
+        if (!value.trim()) return "";
+        const icon =
+          field.key === "email"
+            ? "Envelope"
+            : field.key === "phone"
+              ? "Phone"
+              : "MapMarker*";
+        return `${resume.layout.contactIcons === "on" ? `{\\color{icnclr}\\fa${icon}}\\enspace ` : ""}${escapeLatex(value)}`;
+      }
       const link = document.profile.links.find((item) => item.id === id);
       return link?.url
-        ? `\\href{${escapeLatexUrl(link.url)}}{${escapeLatex(wordingText(wording(link.id, link.label)) || link.url)}}`
+        ? `${resume.layout.contactIcons === "on" ? "{\\color{icnclr}\\faLink}\\enspace " : ""}\\href{${escapeLatexUrl(link.url)}}{${escapeLatex(wordingText(wording(link.id, link.label)) || link.url)}}`
         : "";
     })
     .filter(Boolean);
@@ -58,7 +66,7 @@ export function renderCareerResume(
   const summary = wording(document.summary.id, document.summary.wording);
   if (resume.summaryIncluded && wordingText(summary).trim())
     body.push(
-      `\\section{${escapeLatex(capability.summaryLabel.toLocaleUpperCase(resume.language))}}\n${renderWording(summary)}\\par`,
+      `\\section{${escapeLatex(resume.layout.sectionCasing === "uppercase" ? capability.summaryLabel.toLocaleUpperCase(resume.language) : capability.summaryLabel)}}\n${renderWording(summary)}\\par`,
     );
   for (const selection of resume.selection) {
     const section = document.sections.find(
@@ -69,7 +77,7 @@ export function renderCareerResume(
       wordingText(wording(section.id, section.heading)) ||
       capability.labels[section.kind];
     body.push(
-      `\\section{${escapeLatex(heading.toLocaleUpperCase(resume.language))}}`,
+      `\\section{${escapeLatex(resume.layout.sectionCasing === "uppercase" ? heading.toLocaleUpperCase(resume.language) : heading)}}`,
     );
     for (const entryId of selection.entryIds) {
       const entry = section.entries.find((item) => item.id === entryId)!;
@@ -83,8 +91,16 @@ export function renderCareerResume(
         ? wordingText(wording(title.id, title.wording))
         : "";
       if (titleText) body.push(`\\subsection{${escapeLatex(titleText)}}`);
+      const subtitle = selectedFields.find((field) =>
+        ["organization", "institution"].includes(field.key),
+      );
+      const subtitleText = subtitle
+        ? wordingText(wording(subtitle.id, subtitle.wording))
+        : "";
+      if (subtitleText)
+        body.push(`\\subsubsection{${escapeLatex(subtitleText)}}`);
       const details = selectedFields
-        .filter((field) => field !== title)
+        .filter((field) => field !== title && field !== subtitle)
         .map((field) => {
           const value =
             field.type === "text"
@@ -109,6 +125,11 @@ export function renderCareerResume(
       const achievements = selection.achievementIds
         .map((id) => entry.achievements.find((item) => item.id === id))
         .filter((item) => item !== undefined);
+      if (
+        (achievements.length || selection.linkIds.length) &&
+        resume.layout.beforeDetailsGap !== "template-default"
+      )
+        body.push(`\\vspace{${resume.layout.beforeDetailsGap}pt}`);
       if (achievements.length) {
         const text = achievements.map((item) => wording(item.id, item.wording));
         body.push(
@@ -122,27 +143,28 @@ export function renderCareerResume(
             `\\noindent \\href{${escapeLatexUrl(link.url)}}{${escapeLatex(wordingText(wording(link.id, link.label)) || link.url)}}\\par`,
           );
       }
-      body.push("\\par\\vspace{0.7em}");
+      body.push(
+        `\\par\\vspace{${resume.layout.entryGap === "template-default" ? "0.7em" : `${resume.layout.entryGap}pt`}}`,
+      );
     }
   }
   return renderTemplate({
-    settings: {
-      ...defaultSettings,
-      pageSize: resume.layout.paper,
-      fontSize: resume.layout.fontSize,
-      fontFamily:
-        resume.layout.font === "inter"
-          ? "inter"
-          : resume.layout.font === "source-sans"
-            ? "source-sans-3"
-            : "source-serif-4",
-    },
+    settings: templateSettings(resume.layout),
     name,
     resumeName: resume.name,
     revision,
     locale: resume.language,
     ...capability,
-    contacts,
+    contacts: contactRows(contacts, resume.layout).map((row) =>
+      row.join(
+        resume.layout.contactSeparator === "dot"
+          ? " \\enspace \u00b7 \\enspace "
+          : resume.layout.contactSeparator === "bar"
+            ? " \\enspace | \\enspace "
+            : " \\quad ",
+      ),
+    ),
+    contactRowGap: resume.layout.contactRowGap,
     body,
   });
 }

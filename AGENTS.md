@@ -77,10 +77,37 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 - Order scopes contain IDs only; independent wording changes do not change order baselines. Shared identities cannot be removed or retyped by ordinary Saves. Creation uses distinct scopes; Undo archives created content and Redo restores its identities. Whole-document replacement must use the reviewed atomic head/previous-workspace path, never an editing scope.
 - Independent resumes use exact `resume-details/<id>` (name/color), `resume-content/<id>` (selection/contact order/summary visibility), and `resume-wording/<id>` (overrides) scopes. Nullable `resume/<id>` is only for single-resume creation/deletion and their history, never ordinary record replacement. Undo resume creation removes that resume; Undo deletion restores its identity/configuration without touching career content. Keep older `selection/<id>` requests executable and their fingerprints unchanged. Optional schema-2 resume configuration resolves prior defaults without load-time writes; new resumes explicitly start with no optional selections. Prepared lifecycle retries check receipts before attempting creation again. Missing-resume recovery requires explicit restore-as-new with validated references or export/reconciliation; retain original recovery separately.
 - Workspace schema 2 and recovery format 1 are the sole portable formats. No schema-1 migration/compatibility. The former `lib/resume`, `stores/workspace`, and schema-1 workflow contexts remain unmounted reference assets, not active behavior or target constraints. The active career editor reuses `WorkspaceShell`, the utility rail, extracted sidebar collections/toolbar presentation, layout preferences, and responsive UI primitives through `components/career/career-workspace-shell.tsx`; do not mount schema-1 providers to use that presentation. Do not add retired features for parity.
-- `lib/output/template.ts` assembles the unchanged pinned template independently of content schemas; `lib/output/encoding.ts` escapes text. `lib/career/output.ts` resolves selected schema-2 wording/facts using explicit output capabilities. Output consumes committed content only. Existing selected archived content remains rendered. Minimal output does not establish full resume-editor delivery or PDF acceptance.
+- `lib/output/template.ts` assembles the pinned template independently of content schemas; `lib/output/encoding.ts` escapes text. `lib/career/output.ts` resolves selected schema-2 wording/facts using explicit output capabilities. Output consumes committed content only. Existing selected archived content remains rendered. Minimal output does not establish full resume-editor delivery or PDF acceptance.
 - Preserve the generated Next.js blocks below and above. Keep current code behavior and limitations in README.md, and acceptance checklists in docs/verification.md, so they remain usable without temporary planning or handoff documents.
 - Preserve the established presentation. Exact-version discard cleanup intents use the existing IndexedDB preferences store; completed receipts stay protected until acknowledgment, with interrupted requests available for explicit recovery. Imports validate in a disposable worker. `npm run test:measure` runs explicit production measurements separately from routine `npm test`. Owner visual/PDF and manual round-trip acceptance remain separate from automated evidence.
 - Vitest Node and real Chromium Browser Mode are configured with actual cases. Run `test:unit` and `test:browser` non-watch, plus relevant Playwright checks. Preserve npm and selected framework versions. Test harness versions are Vitest 4.1.0 / vitest-browser-react 2.2.0, rather than the newer versions described by skill reference notes.
+
+## Resume layout and reusable configurations
+
+- Resume appearance uses the canonical complete layout schema, with exact
+  `resume-layout/<id>` Saves. `preset/<id>` and `starter/<id>` are independently
+  recoverable nullable library scopes. Presets carry template identity and
+  appearance only; starters add empty structural row identities, labels, kind,
+  icon, visibility, supported field-key defaults, and summary visibility.
+- Applying configurations copies values, never live references. Profile selections
+  and ordering remain in Content & order; Layout owns positional contact-row sizes,
+  icons/separators/spacing and alignment. Empty contact values produce no empty rows.
+  New entry selections use copied field defaults without overwriting prior explicit
+  selections. Duplicate resume clears composite-creation provenance.
+- `starter-create/<resumeId>` is a dedicated composite lifecycle scope, never a
+  whole-workspace editing scope. One validated transaction rechecks reviewed
+  section metadata, creates missing empty sections and the independent resume,
+  and commits its receipt. Prepared identities survive retries. History records
+  committed values; Undo removes that resume and archives its created sections,
+  while Redo restores identities and rejects changed/conflicting sections.
+- Appearance schemas are independent of retired schema-1 state. Output consumes
+  committed settings only; the fictional style sample never compiles or promises
+  pagination. Page warnings describe the PDF being viewed, including retained PDFs.
+- Only template `yabuki-reference@1.0.3` and the complete current development layout
+  model are supported. No earlier layout/template migration, automatic reset, or
+  storage clearing. Workspace schema 2 and recovery format 1 retain their envelope
+  versions. Library configuration participates in backups, recovery, history, and
+  previous-workspace replacement/rollback; device preferences remain separate.
 
 ## Active output readiness
 
@@ -114,7 +141,7 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
   overrides and PDF graphics/readiness. Revision metadata can still stale preview.
   Include icons in scope baselines, recovery, history, backups, and rollback. No
   compatibility or migration for earlier development icon data; never silently
-  reseed it. Starter workflows remain future work; presets do not change shared icons.
+  reseed it. Starters copy structural icons into newly created sections; presets do not change shared icons.
 
 - New workspaces start with empty Experience, Projects, Education, Skills, and Certifications sections; never reseed existing content. Rich prose belongs in summaries and achievements/details; names, headings, facts, short values, and link labels use plain controls.
 - Entry forms and section entry-order drafts are independent. Sorting preserves the entry draft, selection, search/filter, scroll, and hidden-ID slots. Save/Cancel affects only its scope. Leaving a section resolves each applicable draft independently; later cancellation never undoes an earlier explicit resolution. Data & backups remains accessible without resolving drafts.

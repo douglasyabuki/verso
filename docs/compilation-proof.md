@@ -245,3 +245,36 @@ bytes, and a 13,764,920-byte compressed bundle, SHA-256
 `bb17934203d93c9cbedbed5ad34022f65c7f42487b8e17abd84d211a44ab2f3e`.
 Browser access was unavailable for this change, so rendered-PDF and editor visual
 acceptance remain unverified. No automated tests were added or run.
+
+## Active career appearance template
+
+The active career renderer uses `yabuki-reference@1.0.3`, including complete
+appearance settings, contact rows/separators/icons, subtitle roles, section
+casing, and committed spacing. Earlier development template/layout data is
+unsupported without conversion. Appearance validation lives independently of the
+retired editor model. The single-column design, safe text encoding, verified
+language capability gating, and bundled fonts/packages remain.
+
+Compiler preparation regenerated current metadata and verified the existing
+121-resource bundle, SHA-256
+`bb17934203d93c9cbedbed5ad34022f65c7f42487b8e17abd84d211a44ab2f3e`.
+A manifest-only refresh rejected the older identity; full preparation passed.
+This is asset verification, not compilation or rendered-PDF evidence. Browser
+initialization/compilation and visual/text/font/link/metadata acceptance of the
+current output are explicitly delegated to the owner in
+[verification guidance](verification.md).
+
+### Location icon command
+
+The pinned Font Awesome 5 XeTeX helper exposes alternate icons through starred
+commands. City/country contacts use `\faMapMarker*`; `\faMapMarkerAlt` is not
+defined by that package. No font/package changes are needed for this correction.
+The template remains `yabuki-reference@1.0.3`; this repairs its intended location
+icon behavior without changing the workspace format or requiring another reset.
+
+The English sample's reported status-1 failure was reproduced in the bundled
+XeTeX WASM engine outside a browser, with an undefined-control-sequence error at
+the location icon. The Portuguese sample reproduced the same failure. After the
+correction, both samples completed both XeTeX passes with status 0. This verifies
+the TeX-to-XDV stage only, not XDV-to-PDF conversion, browser integration, or
+rendered layout. Those acceptance checks remain with the owner.

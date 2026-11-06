@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   ListOrdered,
   MoreHorizontal,
+  Palette,
   Pencil,
   Plus,
   Trash2,
@@ -102,6 +103,11 @@ import {
   type ResumeFieldOwner,
   resumeWordingFields,
 } from "@/lib/career/resumes";
+import {
+  fieldsForNewEntries,
+  prepareStarterResume,
+  starterMappings,
+} from "@/lib/career/starters";
 import { type RichText, wordingText } from "@/lib/career/wording";
 import { reorderVisible } from "@/lib/ordering";
 import type {
@@ -142,7 +148,9 @@ export function ResumeManager({
   children,
   guard,
   getResume,
+  saveStarter,
 }: {
+  saveStarter: (resume: CareerResume) => void;
   getResume: (id: string) => CareerResume | undefined;
   guard: (action: () => void) => void;
   children: (actions: ResumeActions) => ReactNode;
@@ -163,6 +171,9 @@ export function ResumeManager({
   const [name, setName] = useState("");
   const [color, setColor] = useState<CareerResume["color"]>("indigo");
   const [language, setLanguage] = useState("");
+  const [starterId, setStarterId] = useState("");
+  const [mapping, setMapping] = useState<string[]>([]);
+  const starter = document.starters.find((item) => item.id === starterId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const open = creating || createRequested || Boolean(source);
@@ -171,6 +182,8 @@ export function ResumeManager({
   );
   const selectedLanguage = language || languages[0]?.tag || "";
   const close = () => {
+    setStarterId("");
+    setMapping([]);
     setCreating(false);
     onCreateHandled();
     setSource(null);
@@ -184,17 +197,21 @@ export function ResumeManager({
     try {
       if (!languages.some((item) => item.tag === selectedLanguage))
         throw new Error("Choose an active destination language.");
-      const resume = source
-        ? copyResume(source, selectedLanguage)
-        : { ...createResume(document, selectedLanguage), name, color };
-      if (
-        await commit(
-          `resume/${resume.id}`,
-          resume,
-          `resume-content/${resume.id}`,
-        )
-      )
-        close();
+      const prepared =
+        !source && starter
+          ? prepareStarterResume(document, starter, mapping, selectedLanguage)
+          : null;
+      const resume = prepared
+        ? { ...prepared.resume, name, color }
+        : source
+          ? copyResume(source, selectedLanguage)
+          : { ...createResume(document, selectedLanguage), name, color };
+      await commit(
+        prepared ? `starter-create/${resume.id}` : `resume/${resume.id}`,
+        prepared ? { ...prepared, resume } : resume,
+        `resume-content/${resume.id}`,
+      );
+      close();
     } catch (error) {
       setError(String(error));
     } finally {
@@ -202,6 +219,7 @@ export function ResumeManager({
     }
   };
   const actions: ResumeActions = {
+    saveStarter,
     edit: (resume) => navigate(`resume-details/${resume.id}`),
     create: () =>
       guard(() => {
@@ -248,7 +266,7 @@ export function ResumeManager({
             <DialogDescription>
               {source
                 ? "The copy uses destination career wording. Missing wording remains missing; source customizations are not copied."
-                : "Start with required full name only. Select optional content after creation."}
+                : "Start blank or copy a starter’s empty structure and layout. Select optional content after creation."}
             </DialogDescription>
           </DialogHeader>
           <fieldset disabled={busy} className="flex flex-col gap-4">
@@ -290,6 +308,120 @@ export function ResumeManager({
                 </SelectContent>
               </Select>
             </Field>
+            {!source && (
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="new-resume-starter">Starter</FieldLabel>
+                  <Select
+                    items={[
+                      { value: "blank", label: "Blank resume" },
+                      ...document.starters.map((item) => ({
+                        value: item.id,
+                        label: item.name,
+                      })),
+                    ]}
+                    value={starterId || "blank"}
+                    onValueChange={(value) => {
+                      const chosen = document.starters.find(
+                        (item) => item.id === value,
+                      );
+                      setStarterId(chosen?.id ?? "");
+                      setMapping(
+                        chosen ? starterMappings(document, chosen) : [],
+                      );
+                    }}
+                  >
+                    <SelectTrigger id="new-resume-starter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="blank">Blank resume</SelectItem>
+                        {document.starters.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                {starter && (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Review the Career sections to reuse or create. No entries
+                      or wording are copied. Custom headings need career wording
+                      before PDF output.
+                    </p>
+                    {starter.sections.map((definition, index) => (
+                      <Field key={definition.id}>
+                        <FieldLabel htmlFor={`starter-mapping-${index}`}>
+                          {definition.label}
+                        </FieldLabel>
+                        <Select
+                          items={[
+                            { value: "new", label: "Create empty section" },
+                            ...document.sections
+                              .filter(
+                                (section) =>
+                                  !section.archived &&
+                                  section.kind === definition.kind,
+                              )
+                              .map((section) => ({
+                                value: section.id,
+                                label: section.name || section.kind,
+                              })),
+                          ]}
+                          value={mapping[index] || null}
+                          onValueChange={(value) =>
+                            setMapping(
+                              mapping.map((prior, i) =>
+                                i === index ? (value ?? "") : prior,
+                              ),
+                            )
+                          }
+                        >
+                          <SelectTrigger id={`starter-mapping-${index}`}>
+                            <SelectValue placeholder="Choose a section" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem value="new">
+                                Create empty section
+                              </SelectItem>
+                              {document.sections
+                                .filter(
+                                  (section) =>
+                                    !section.archived &&
+                                    section.kind === definition.kind,
+                                )
+                                .map((section) => (
+                                  <SelectItem
+                                    key={section.id}
+                                    value={section.id}
+                                  >
+                                    {section.name || section.kind}
+                                  </SelectItem>
+                                ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    ))}
+                  </>
+                )}
+                <Button
+                  variant="ghost"
+                  className="self-start"
+                  onClick={() => {
+                    close();
+                    navigate("starters");
+                  }}
+                >
+                  Manage starters
+                </Button>
+              </FieldGroup>
+            )}
             {source && (
               <p className="text-xs text-muted-foreground">
                 Compatible layout is copied. Font metrics and line wrapping can
@@ -306,7 +438,10 @@ export function ResumeManager({
             </Button>
             <Button
               disabled={
-                busy || !selectedLanguage || document.resumes.length >= 120
+                busy ||
+                !selectedLanguage ||
+                document.resumes.length >= 120 ||
+                (!!starter && mapping.some((value) => !value))
               }
               onClick={() => void save()}
             >
@@ -501,6 +636,7 @@ export type ResumeActions = {
   duplicate: (resume: CareerResume) => void;
   copy: (resume: CareerResume) => void;
   delete: (resume: CareerResume) => void;
+  saveStarter?: (resume: CareerResume) => void;
 };
 
 export function ResumeActionsMenu({
@@ -554,6 +690,15 @@ export function ResumeActionsMenu({
             <Languages />
             Create copy in another language
           </DropdownMenuItem>
+          {actions.saveStarter && (
+            <DropdownMenuItem
+              disabled={document.starters.length >= 100}
+              onClick={() => actions.saveStarter?.(resume)}
+            >
+              <Copy />
+              Save as starter
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             variant="destructive"
             onClick={() => actions.delete(resume)}
@@ -602,6 +747,7 @@ export function ResumeViewTabs({
     ["resume-overview", "Overview", LayoutDashboard],
     ["resume-content", "Content & order", ListOrdered],
     ["resume-wording", "Wording", Languages],
+    ["resume-layout", "Layout", Palette],
   ] as const;
   const active = views.some(
     ([prefix]) => destination === `${prefix}/${resume.id}`,
@@ -883,6 +1029,12 @@ export function ResumeContentEditor({
   ];
   return (
     <div className="flex flex-col gap-5">
+      {values.selection.some((section) => section.fieldDefaults) && (
+        <p className="text-xs text-muted-foreground">
+          Starter structure is ready. Select entries below; copied field
+          defaults apply to new selections. All choices remain independent.
+        </p>
+      )}
       <Card>
         <CardHeader>
           <CardTitle size="section">Profile</CardTitle>
@@ -1063,6 +1215,11 @@ export function ResumeContentEditor({
                             ];
                             return {
                               ...current,
+                              fieldIds: fieldsForNewEntries(
+                                section,
+                                current,
+                                ids,
+                              ),
                               entryIds,
                               hiddenEntryIds: entryIds.filter(
                                 (id) => !ids.includes(id),

@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 DEST = ROOT / '.cache/compiler-proof/assets'
 CACHE = ROOT / '.cache/compiler-proof/downloads'
-TEMPLATE = {'id': 'yabuki-reference', 'version': '1.0.2'}
+TEMPLATE = {'id': 'yabuki-reference', 'version': '1.0.3'}
 
 
 def digest(data):

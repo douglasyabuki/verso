@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
@@ -23,17 +25,20 @@ export function CareerSectionIconPicker({
   value,
   onChange,
   disabled = false,
+  description = "Choose an icon shared across Career details and your resumes. Save section properties to apply it.",
 }: {
   value: SectionIconId;
   onChange: (icon: SectionIconId) => void;
   disabled?: boolean;
+  description?: string;
 }) {
+  const id = useId();
   return (
     <Field>
-      <FieldLabel htmlFor="section-icon">Section icon</FieldLabel>
+      <FieldLabel htmlFor={id}>Section icon</FieldLabel>
       <Popover>
         <PopoverTrigger
-          id="section-icon"
+          id={id}
           aria-label="Choose section icon"
           disabled={disabled}
           render={<Button variant="outline" />}
@@ -51,10 +56,7 @@ export function CareerSectionIconPicker({
         >
           <PopoverHeader>
             <PopoverTitle>Section icon</PopoverTitle>
-            <PopoverDescription>
-              Choose an icon shared across Career details and your resumes. Save
-              section properties to apply it.
-            </PopoverDescription>
+            <PopoverDescription>{description}</PopoverDescription>
           </PopoverHeader>
           <ToggleGroup
             multiple={false}

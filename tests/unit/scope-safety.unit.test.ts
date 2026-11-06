@@ -122,7 +122,7 @@ it("rejects retyping built-in fields and permits archive without changing select
     id: "resume",
     name: "",
     language: "en-US",
-    template: "yabuki-reference@1.0.2",
+    template: "yabuki-reference@1.0.3",
     selection: [
       {
         sectionId: "section",

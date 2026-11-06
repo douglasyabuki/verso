@@ -4,15 +4,71 @@ Local career information and resume editor. The active application uses workspac
 explicit form Save/Cancel, and transactional IndexedDB. Schema-1 development data
 and backups are unsupported and are never loaded or converted.
 
+## Resume layout and reusable setups
+
+Each resume has an independent **Layout** view with explicit Cancel / Save.
+Controls cover A4/Letter, margins, bundled fonts, body and heading typography,
+spacing, bullets, colors, dividers, and page numbering. The page-count threshold
+is a warning, not automatic fitting or content removal. The established
+single-column template remains; free positioning and arbitrary fonts are unsupported.
+
+**Header & profile** controls alignment, contact icons, separators, row spacing,
+automatic wrapping, one to four contacts per row, and custom row sizes such as
+`3, 2`. Remaining contacts occupy a final wrapping row; unused rows have no
+effect. Empty values are omitted. Contact inclusion and order stay in
+**Content & order**, linked directly from Header. Full name remains required.
+Custom rows store positions, never contact identities.
+
+The fictional **Style sample** responds immediately without compiling; it is not
+a PDF and does not predict pagination or exact font metrics. The real PDF always
+uses saved content. Save does not compile: use Refresh preview. The labeled last
+successful PDF remains available if new output fails. Its page warning uses the
+threshold associated with that PDF, including when the preview is outdated.
+
+**Presets** contain named appearance only. In Layout, search and select a preset,
+then **Load into layout** and Save. **Save as preset** captures saved appearance,
+resolving dirty changes first. Manage, edit, duplicate, or confirm deletion from
+Layout or **Reusable setups** on the resume collection. Matching is determined
+by settings values; there is no live connection to a preset.
+
+**Save as starter** in a resume's actions captures empty section structure,
+order, visibility, icons, field defaults, summary visibility, and layout. The
+starter editor can add/remove/reorder sections and change these settings. It
+copies no entries, achievements, links, contact selections, or localized wording.
+Structural labels identify empty sections; newly created custom sections still
+need career heading wording before output. Use **Duplicate resume** to reuse
+content. Starters can also be created from scratch through Reusable setups.
+
+Create resume defaults to Blank resume. Choosing a starter reviews which active
+Career sections to reuse or create. Ambiguous matches require a choice; archived
+sections must be restored separately. Creation commits the resume and any missing
+empty sections atomically. Selecting entries later uses the copied field defaults;
+explicit subsequent visibility edits remain independent. Undo removes the resume
+and archives only the sections created by that operation. Redo preserves identities.
+Later edits or deletion of a starter/preset never change existing resumes.
+
+**Load sample workspace** in Data & backups opens the normal replacement review.
+The sample contains complete fictional English/Portuguese resumes using the
+Classic and Compact navy presets, plus Complete career and Project focused
+structure-only starters. Project focused demonstrates creating a missing empty
+Research section; both starters retain field defaults without selecting entries.
+
+The current development format requires the complete layout model and template
+`yabuki-reference@1.0.3`. Earlier layout/template data is rejected without migration,
+automatic storage clearing, or reseeding. Export anything needed using the previous
+application before upgrading; use an explicitly cleared or disposable browser
+origin for a fresh workspace. Browser clearing removes local recovery too. Current
+workspace schema 2 and recovery format 1 remain the portable envelope versions.
+
 ## Current capabilities
 
 The schema-2 career editor runs inside the retained workspace shell: utility rail,
 collapsible branded sidebar, workspace toolbar/history/status, and wording-language
 header. Career navigation uses the schema-2 dirty-form guard. Narrow screens use
 the existing navigation drawer, with Data & backups and Appearance in its footer.
-Independent resumes expose Content and Wording forms and committed-only output in
+Independent resumes expose Content, Wording, and Layout forms and committed-only output in
 the resizable desktop preview panel or narrow-screen Editor/PDF preview tabs.
-Layout and appearance preferences remain device-only. Data & backups opens the
+Workspace panel arrangement and interface appearance remain device-only. Resume PDF layout is saved in the workspace. Data & backups opens the
 schema-2 backup/recovery/replacement controls; it offers no retired reset/autosave actions.
 Light/dark appearance changes suppress color transitions through the next paint,
 then restore normal interaction transitions; system-theme changes follow the same path.

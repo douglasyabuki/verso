@@ -269,7 +269,13 @@ function Properties({
   );
 }
 
-function LoadedPreview({ source }: { source: PdfSource }) {
+function LoadedPreview({
+  source,
+  pageWarningThreshold,
+}: {
+  source: PdfSource;
+  pageWarningThreshold?: number;
+}) {
   const container = useRef<HTMLDivElement>(null);
   const pages = useRef<HTMLDivElement>(null);
   const searchButton = useRef<HTMLButtonElement>(null);
@@ -295,6 +301,15 @@ function LoadedPreview({ source }: { source: PdfSource }) {
       className="flex min-h-0 min-w-0 flex-1 flex-col"
       aria-label="PDF viewer"
     >
+      {pageWarningThreshold && count > pageWarningThreshold ? (
+        <p
+          role="status"
+          className="shrink-0 border-b bg-attention px-3 py-2 text-xs text-attention-foreground"
+        >
+          This PDF has {count} pages, above its {pageWarningThreshold}-page
+          warning threshold. Content has not been removed or fitted.
+        </p>
+      ) : null}
       <div
         className="grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 border-b px-2 py-1.5"
         aria-label="PDF controls"
@@ -702,9 +717,19 @@ function LoadedPreview({ source }: { source: PdfSource }) {
   );
 }
 
-export default function PdfPreview({ document }: { document?: PdfSource }) {
+export default function PdfPreview({
+  document,
+  pageWarningThreshold,
+}: {
+  document?: PdfSource;
+  pageWarningThreshold?: number;
+}) {
   return document ? (
-    <LoadedPreview key={`${document.key}:${document.url}`} source={document} />
+    <LoadedPreview
+      key={`${document.key}:${document.url}`}
+      source={document}
+      pageWarningThreshold={pageWarningThreshold}
+    />
   ) : (
     <PdfPreviewPlaceholder />
   );

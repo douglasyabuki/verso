@@ -39,7 +39,7 @@ export function outputFixture(language = "en-US") {
     id: "resume",
     name: "Application",
     language,
-    template: "yabuki-reference@1.0.2",
+    template: "yabuki-reference@1.0.3",
     selection: [
       {
         sectionId: "section",

@@ -6,6 +6,7 @@ import type {
   entrySchema,
   fieldSchema,
   sectionSchema,
+  starterCreationSchema,
 } from "@/lib/career/model";
 
 export type CareerDocument = z.infer<typeof careerDocumentSchema>;
@@ -14,6 +15,7 @@ export type CareerField = z.infer<typeof fieldSchema>;
 export type CareerSection = z.infer<typeof sectionSchema>;
 export type CareerDraft = z.infer<typeof draftSchema>;
 export type CareerResume = CareerDocument["resumes"][number];
+export type StarterCreationRequest = z.infer<typeof starterCreationSchema>;
 
 export type ResumeOutputTarget = { destination: string; fieldId: string };
 

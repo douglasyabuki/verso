@@ -122,7 +122,7 @@ describe("schema-2 career information", () => {
       id: `resume-${index}`,
       name: "Resume",
       language,
-      template: "yabuki-reference@1.0.2",
+      template: "yabuki-reference@1.0.3",
       selection: [
         {
           sectionId: "section",
@@ -134,6 +134,7 @@ describe("schema-2 career information", () => {
       ],
       overrides: { [entry.fields[0].id]: "Customized" },
       layout: {
+        ...document.defaults,
         paper: index ? "letter" : "a4",
         font: "inter",
         fontSize: index ? 12 : 10,

@@ -47,7 +47,7 @@ function head(): CareerHead {
     id: `resume-${index}`,
     name: `Application ${index}`,
     language,
-    template: "yabuki-reference@1.0.2",
+    template: "yabuki-reference@1.0.3",
     selection: [],
     overrides: {},
     layout: { ...document.defaults },

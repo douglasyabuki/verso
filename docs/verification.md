@@ -82,3 +82,79 @@ authorized feature development.
 
 Native desktop Find coverage of unrendered PDF pages is unverified. Component
 checks establish only that the viewer leaves the browser Find shortcut intact.
+
+## Layout, presets, and starters: owner acceptance
+
+Browser Mode, production Playwright, screenshots/computer-use, and manual/PDF
+checks for the layout/reusable-configuration implementation have not been run by
+the implementation agent. Their execution and visual acceptance belong to the
+owner. Added cases in `tests/browser/layout-setups.browser.test.tsx` and
+`tests/e2e/layout-setups.spec.ts` are authored/type-checked coverage, not passing
+browser evidence. Earlier deferred acceptance above remains open.
+
+- [ ] Run `npm run test:browser` and `npm run test:e2e` on an isolated origin; record
+      file/test counts, failures, and skips. E2E includes a fresh production build.
+- [ ] Review Layout and setup collections in light/dark themes, narrow Editor/PDF
+      panes, long labels, and reduced motion. Verify hierarchy, semantic colors,
+      independent scrolling, keyboard focus and disclosure controls.
+- [ ] Exercise Cancel/Save and dirty navigation Cancel/Discard/Save, invalid numeric
+      text and decimals, Back/Forward/reload, missing records, and recovery restore.
+      Save must not compile. The illustrative sample must remain clearly distinct
+      from saved PDF output and produce no compiler work while typing.
+- [ ] Select/order contacts in Content & order. Check icons off/on, separators,
+      automatic wrapping, 1-4 contacts per row, custom sizes, excess contacts,
+      empty values and unused rows. Full name must remain required.
+- [ ] Create/name/edit/duplicate/delete presets and starters; load presets into a
+      draft, cancel and undo. Confirm copied settings never change after later
+      library edits/deletion and presets never change content or shared icons.
+- [ ] Capture starter structure without wording/entries/contact selections. Edit
+      structure/icons/order/default fields, review ambiguous/reused/new/archived
+      mappings, and create a resume. New entries must use copied defaults without
+      reversing explicit deselections. Custom heading wording must stay empty.
+- [ ] Verify real IndexedDB transaction abort/quota handling, two-tab mapping and
+      layout conflicts, uncertain acknowledgment/restart/retry, exact recovery
+      cleanup, one-step creation Undo/Redo, and stable section identities.
+- [ ] Round-trip workspaces and separate malformed/recoverable layout/library
+      drafts. Rejected imports write nothing; replacement/rollback retain library
+      configuration, one previous workspace, recovery and device preferences.
+- [ ] Compile English and Portuguese with Inter, Source Sans 3, and Source Serif 4.
+      Inspect every page for clipping, overlap, unwanted blanks, detached headings,
+      long contacts/URLs/titles, accents, selected fields, inline emphasis, and
+      near-boundary content. Inspect extracted text, links, fonts and metadata.
+- [ ] Exercise typography, spacing, bullets, colors, dividers, page numbering and
+      page-warning threshold. Retained PDFs must keep their original threshold
+      and identity. Confirm counts alone do not imply correct layout or PDF/UA.
+- [ ] Test fresh development workspaces and explicit rejection of older layouts/
+      templates. Rejection must not clear storage, recovery, or silently reseed.
+
+### Non-browser implementation checks, 2026-11-05
+
+Formatting, ESLint, generated Next.js route types/TypeScript, 115 unit tests
+across 13 files, and the production build passed for the layout/configuration
+implementation. This adds 51 unit cases. Seven Browser Mode cases and two
+parameterized production E2E definitions (desktop/phone, configured across three
+browser projects) were added and type-checked, but not executed. No browser,
+computer-use, screenshot, visual, or manual/PDF validation was performed.
+
+Initial checks found an outdated sample workspace and a Zod refinement-composition
+error in composite creation; both were fixed and the final unit suite passed.
+The initial unit startup and formatting directory scan hit sandbox EPERM errors;
+permission retries passed. Compiler preparation passed with the existing bundle
+and updated template metadata; manifest-only refresh initially rejected the old
+identity. Four local links across five maintained documents were checked, and
+`git diff --check` passed. These checks do not establish actual IndexedDB quota,
+transactional browser acceptance, rendered PDF correctness, or performance budgets.
+Earlier deferred acceptance remains open.
+
+### Location-icon compilation correction, 2026-11-05
+
+The English sample's reported LaTeX failure and the corresponding Portuguese
+failure were reproduced using the pinned XeTeX WASM engine in a non-browser
+Node VM. The undefined `\faMapMarkerAlt` command was replaced by the bundled
+package's `\faMapMarker*` command. Both samples subsequently completed both
+XeTeX passes successfully. No browser, PDF conversion, screenshot, or visual
+validation was performed. The sample regression now asserts the supported
+command. All 58 targeted rendering/sample unit tests across three files passed;
+changed-code lint/format and generated route types/TypeScript passed. The full
+unit and browser suites were not rerun for this correction. Existing owner
+browser/PDF acceptance remains open.

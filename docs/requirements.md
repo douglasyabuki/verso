@@ -739,13 +739,31 @@ test-only follow-up; earlier complete runs remain separate historical evidence.
 
 ## Phase 4 — Layout presets and starters
 
-- [ ] P4.1 Control positioning, typography, paper, spacing, and colors; layout changes
+- [x] P4.1 Control positioning, typography, paper, spacing, and colors; layout changes
       preserve data/selections and explain unsupported fields.
-- [ ] P4.2 Save/name/apply/duplicate/delete appearance-only presets with preview/undo.
-- [ ] P4.3 Create structure-only starters with section/order/field defaults and layout.
-- [ ] P4.4 Use Duplicate resume for content-bearing reuse; defer content-bearing starters.
-- [ ] P4.5 Copy settings on apply; no live inheritance from starters or presets.
-- [ ] P4.6 Offer starters in Create resume and presets in Layout; include them in backup/undo.
+- [x] P4.2 Save/name/apply/duplicate/delete appearance-only presets with preview/undo.
+- [x] P4.3 Create structure-only starters with section/order/field defaults and layout.
+- [x] P4.4 Use Duplicate resume for content-bearing reuse; defer content-bearing starters.
+- [x] P4.5 Copy settings on apply; no live inheritance from starters or presets.
+- [x] P4.6 Offer starters in Create resume and presets in Layout; include them in backup/undo.
+
+Implemented Layout, appearance-only presets, editable empty starters, reviewed
+atomic starter creation, and copied future-selection field defaults. Current
+development data requires template `yabuki-reference@1.0.3` and the complete
+layout model; no earlier layout/template compatibility or automatic reset.
+Browser Mode, production E2E, visual and manual/PDF acceptance are delegated to
+the owner and remain unexecuted for this implementation. Authored browser cases
+are not passing evidence. See maintained README and docs/verification.md for
+behavior and remaining acceptance; earlier deferred work remains open.
+
+Non-browser verification on 2026-11-05: formatting, lint, generated route types /
+TypeScript, 115 unit tests across 13 files, and production build passed. Compiler
+preparation verified the unchanged font/package bundle and updated template
+metadata. Initial stale-sample and schema-composition failures were fixed;
+sandbox retries resolved unit-startup and formatter-scan EPERM errors. Seven new
+Browser Mode cases and two desktop/phone E2E definitions were type-checked and
+left unexecuted for the owner. No visual, computer-use, or manual/PDF validation
+was performed. Maintained documentation links and diff whitespace were checked.
 
 ## Phase 5 — Settings and navigation
 

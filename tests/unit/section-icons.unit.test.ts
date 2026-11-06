@@ -115,9 +115,21 @@ describe("shared custom-section icons", () => {
       {
         id: "starter",
         name: "Research",
+        template: "yabuki-reference@1.0.3",
+        summaryIncluded: false,
         sections: [
-          { kind: "custom", icon: "flask-conical", visibleFields: ["title"] },
           {
+            id: "custom-slot",
+            label: "Custom",
+            hidden: false,
+            kind: "custom",
+            icon: "flask-conical",
+            visibleFields: ["title"],
+          },
+          {
+            id: "experience-slot",
+            label: "Experience",
+            hidden: false,
             kind: "experience",
             icon: "briefcase-business",
             visibleFields: ["title"],
@@ -215,7 +227,18 @@ describe("shared custom-section icons", () => {
     document.starters.push({
       id: "starter",
       name: "Custom",
-      sections: [{ kind: "custom", icon: "rocket", visibleFields: [] }],
+      template: "yabuki-reference@1.0.3",
+      summaryIncluded: false,
+      sections: [
+        {
+          id: "custom-slot",
+          label: "Custom",
+          hidden: false,
+          kind: "custom",
+          icon: "rocket",
+          visibleFields: [],
+        },
+      ],
       layout: document.defaults,
     });
     const envelope = {

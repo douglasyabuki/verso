@@ -65,3 +65,45 @@ Icons participate in section-property conflicts and history; entry-order scopes
 remain IDs only. Workspace backups, the one previous workspace, and rollback
 preserve committed icon choices. Recovery uses format 1 and workspace backups use
 schema 2; no compatibility format or migration is added.
+
+## Layout, presets, starters, and atomic creation
+
+Workspace envelopes remain `verso.workspace`, schemaVersion 2, with `exportedAt`,
+`workspaceId`, and `document`. Documents include full resume layout, independent
+appearance presets, empty starters, and workspace defaults. Every resume, preset,
+and starter pins `yabuki-reference@1.0.3`. Earlier development layouts/templates
+are rejected, never converted or silently reset. The current complete layout is
+required even when library collections are empty.
+
+Layout contains paper/font identities, bounded typography/margins/spacing/colors,
+numbering and its warning threshold, and contact-row configuration. Contact rows
+use automatic wrapping, a fixed count from one to four, or positive custom row
+sizes up to 60 items/60 rows; row gaps allow 0-24 pt. Custom overflow forms another
+wrapping row and unused rows are ignored. Layout never selects profile records.
+Presets contain only ID, name, template, and layout. Starter sections have fresh
+structural row IDs, labels, built-in kind/custom icon, visibility, and supported
+field-key defaults. Starters also contain summary visibility and layout. They
+carry no entry identities, language wording, achievements, or personal values.
+Copied field defaults are stored with a resume's empty section selections and
+apply only to newly selected entries. Created-section provenance on a resume
+supports atomic creation history; duplicates clear it.
+
+Recovery envelopes remain `verso.recovery`, schemaVersion 1, with `exportedAt`,
+`sourceWorkspaceId`, and `drafts`. Exact editing scopes include
+`resume-layout/<id>`, `preset/<id>`, and `starter/<id>`. Values and baselines remain
+separate; malformed field values are preserved for editing. Layout/library drafts
+use the existing scheduling, immutable operation IDs, exact-version cleanup,
+comparison/reconciliation, and non-expiring unresolved retention contracts.
+
+`starter-create/<resumeId>` holds one prepared composite request: the new resume,
+missing empty sections with preallocated IDs, and reviewed metadata for reused
+Career sections. The transaction rechecks reviewed metadata and all capacity and
+reference constraints before committing any content. Retries retain the same
+IDs and request identity. A lost response does not prove failure. Confirm the
+receipt or reconcile before creating another operation. Undo archives created
+sections and removes the resume; reused sections remain untouched. Recovery
+exports retain this prepared request separately from saved workspace backups.
+Importing recovery never commits it or treats imported receipts as proof of a
+local commit. Library/resume layout and structural defaults survive the one
+previous workspace and rollback; device preferences and compiler/PDF bytes do not
+enter either portable format.

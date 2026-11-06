@@ -89,7 +89,7 @@ describe("career wording and recovery files", () => {
       id: "resume",
       name: "",
       language: "en-US",
-      template: "yabuki-reference@1.0.2",
+      template: "yabuki-reference@1.0.3",
       selection: [],
       overrides: { [document.profile.fields[0].id]: spans },
       layout: document.defaults,

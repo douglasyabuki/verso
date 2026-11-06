@@ -43,12 +43,12 @@ export function createResume(
     name: "",
     color: "indigo",
     language,
-    template: "yabuki-reference@1.0.2",
+    template: "yabuki-reference@1.0.3",
     selection: [],
     profileSelection: [],
     summaryIncluded: false,
     overrides: {},
-    layout: { ...document.defaults },
+    layout: structuredClone(document.defaults),
   };
 }
 
@@ -64,6 +64,7 @@ export function copyResume(
 ): CareerResume {
   return {
     ...structuredClone(source),
+    createdSectionIds: undefined,
     id: crypto.randomUUID(),
     language,
     name: `${source.name || "Untitled resume"} ${language === source.language ? "copy" : `(${language})`}`.slice(
@@ -478,4 +479,29 @@ export function resumeComparisonRows(
   }
   rows.unshift(...orderRows);
   return rows;
+}
+
+/** Describe nonempty committed contacts in the same order as output, for layout row controls.
+ * @param document Committed shared career records.
+ * @param resume Independent resume with selections and wording overrides.
+ * @returns {string[]} Effective displayed contact values, omitting empty items without cross-language fallback.
+ * @example profileContactLabels(document, resume)
+ */
+export function profileContactLabels(
+  document: CareerDocument,
+  resume: CareerResume,
+): string[] {
+  return effectiveResume(document, resume)
+    .profileSelection!.map((id) => {
+      const field = document.profile.fields.find((item) => item.id === id);
+      if (field)
+        return field.type === "text"
+          ? wordingText(resolveResumeWording(resume, id, field.wording))
+          : field.fact;
+      const link = document.profile.links.find((item) => item.id === id);
+      return link?.url
+        ? wordingText(resolveResumeWording(resume, id, link.label)) || link.url
+        : "";
+    })
+    .filter((value) => !!value.trim());
 }

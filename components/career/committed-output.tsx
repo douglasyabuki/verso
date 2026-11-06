@@ -42,6 +42,7 @@ export const CommittedOutput = memo(function CommittedOutput({
     resumeName: string;
     language: string;
     generation: number;
+    targetPages: number;
   } | null>(null);
   const [pending, setPending] = useState(false);
   const [phase, setPhase] = useState<"initializing" | "compiling">(
@@ -125,6 +126,7 @@ export const CommittedOutput = memo(function CommittedOutput({
         resumeName: active.name,
         language: active.language,
         generation: head.generation,
+        targetPages: active.layout.targetPages,
       });
     } catch (error) {
       if (mounted.current && latest.current === jobKey) setError(String(error));
@@ -260,6 +262,7 @@ export const CommittedOutput = memo(function CommittedOutput({
               {output.key !== key ? " · Outdated" : " · Current"}
             </p>
             <PdfPreview
+              pageWarningThreshold={output.targetPages}
               document={{
                 key: output.key,
                 url: output.url,

@@ -1,4 +1,4 @@
-import { settingsSchema } from "@/lib/resume/model";
+import { settingsSchema } from "@/lib/output/schema";
 import type { Locale } from "@/types-and-constants/languages";
 import type {
   numericLayoutControls,

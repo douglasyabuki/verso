@@ -281,7 +281,9 @@ export class CareerController {
             generation: 0,
             document: createCareerDocument(),
           },
-          status: "Not saved · browser storage unavailable",
+          status: String(error).includes("unsupported layout format")
+            ? "Not saved: unsupported development workspace"
+            : "Not saved · browser storage unavailable",
           error: String(error),
           durable: false,
         });
@@ -601,7 +603,11 @@ export class CareerController {
       if (!this.committedIds.has(operationId)) {
         let scope = draft.scope;
         let before = structuredClone(draft.baseline);
-        const after = structuredClone(draft.values);
+        const after = structuredClone(
+          draft.scope.startsWith("starter-create/")
+            ? readScope(next.document, draft.scope)
+            : draft.values,
+        );
         if (scope.startsWith("new-entry/")) {
           scope = `entry/${scope.split("/")[2]}`;
           before = { ...(after as object), archived: true };
@@ -973,17 +979,19 @@ export class CareerController {
                   })
                   .parse(draft.values),
               }
-            : kind === "resume-wording"
-              ? {
-                  ...created,
-                  overrides: schema.shape.overrides.parse(draft.values),
-                }
-              : {
-                  ...created,
-                  ...schema
-                    .pick({ name: true, color: true })
-                    .parse(draft.values),
-                };
+            : kind === "resume-layout"
+              ? { ...created, layout: schema.shape.layout.parse(draft.values) }
+              : kind === "resume-wording"
+                ? {
+                    ...created,
+                    overrides: schema.shape.overrides.parse(draft.values),
+                  }
+                : {
+                    ...created,
+                    ...schema
+                      .pick({ name: true, color: true })
+                      .parse(draft.values),
+                  };
       applyScope(head.document, `resume/${created.id}`, resume);
       await this.flushRecovery();
       if (this.state.draft !== draft) return false;

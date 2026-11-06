@@ -41,7 +41,7 @@ it("accepts 120 independent resumes, 10,000 entries, and maximum nested shapes w
     id: `resume-${index}`,
     name: "",
     language: "en-US",
-    template: "yabuki-reference@1.0.2",
+    template: "yabuki-reference@1.0.3",
     selection: [],
     overrides: {},
     layout: { ...document.defaults },

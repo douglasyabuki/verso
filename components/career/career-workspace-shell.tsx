@@ -7,6 +7,7 @@ import {
   Languages,
   LayoutDashboard,
   ListOrdered,
+  Palette,
   X,
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
@@ -272,6 +273,7 @@ function CareerSidebar({
                             ["resume-overview", "Overview", LayoutDashboard],
                             ["resume-content", "Content & order", ListOrdered],
                             ["resume-wording", "Wording", Languages],
+                            ["resume-layout", "Layout", Palette],
                           ] as const
                         ).map(([prefix, label, Icon]) => (
                           <SidebarMenuSubItem key={prefix}>

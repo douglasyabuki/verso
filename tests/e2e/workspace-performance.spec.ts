@@ -60,7 +60,7 @@ for (const cpuRate of [1, 4])
                 id: `resume-${i}`,
                 name: `Resume ${i}`,
                 language: "en-US",
-                template: "yabuki-reference@1.0.2" as const,
+                template: "yabuki-reference@1.0.3" as const,
                 selection: [],
                 overrides: {},
                 layout: { ...document.defaults },
@@ -442,7 +442,7 @@ for (const cpuRate of [1, 4])
             id: `resume-${i}`,
             name: "Measured application",
             language,
-            template: "yabuki-reference@1.0.2",
+            template: "yabuki-reference@1.0.3",
             selection: [
               {
                 sectionId: section.id,

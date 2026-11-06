@@ -2,15 +2,38 @@ import { escapeLatex } from "@/lib/output/encoding";
 import type { TemplateSettings } from "@/types-and-constants/output";
 import { pdfColorPresets } from "@/types-and-constants/output";
 
-const templateIdentity = { id: "yabuki-reference", version: "1.0.2" };
+const templateIdentity = { id: "yabuki-reference", version: "1.0.3" };
 
 /** Generate the pinned template independently of career/storage schemas.
  * @param options Escaped content blocks, contact markup, metadata, verified language capability, and resolved appearance.
  * @returns {string} Trusted generated LaTeX for the exact bundled template; user text must be escaped before passing body/contacts.
  * @example renderTemplate({ settings, name, resumeName, revision, locale, languageNumber: 0, pageLabel: "Page", ofLabel: "of", contacts, body })
  */
-export function renderTemplate(options: { settings: TemplateSettings; name: string; resumeName: string; revision: number; locale: string; languageNumber: number; pageLabel: string; ofLabel: string; contacts: string[]; body: string[] }): string {
-  const { settings, name, resumeName, revision, locale, languageNumber, pageLabel, ofLabel, contacts, body } = options;
+export function renderTemplate(options: {
+  settings: TemplateSettings;
+  name: string;
+  resumeName: string;
+  revision: number;
+  locale: string;
+  languageNumber: number;
+  pageLabel: string;
+  ofLabel: string;
+  contacts: string[];
+  contactRowGap?: number;
+  body: string[];
+}): string {
+  const {
+    settings,
+    name,
+    resumeName,
+    revision,
+    locale,
+    languageNumber,
+    pageLabel,
+    ofLabel,
+    contacts,
+    body,
+  } = options;
   const headingHex = pdfColorPresets[settings.headingColor].hex;
   const bodyHex = pdfColorPresets[settings.bodyColor].hex;
   const defaultValue = "template-default";
@@ -219,12 +242,13 @@ ${
 \language=${languageNumber}
 \normalsize
 \color{bodyclr}
+\setlength{\parskip}{${dimension(settings.paragraphGap, "0pt plus 1pt")}}
 ${settings.headerGap === defaultValue ? `\\begin{${settings.headerAlignment === "center" ? "center" : "flushleft"}}` : `\\par\\begingroup${settings.headerAlignment === "center" ? "\\centering" : "\\raggedright"}`}
 {${typography(settings.nameSize, "\\fontsize{20}{22}\\selectfont", 1.1)}${weight(settings.nameWeight)} ${escapeLatex(name)}\par}
 ${
   contacts.length
     ? String.raw`\vspace{${dimension(settings.nameContactGap, "8pt")}}
-${contacts.join(" \\quad ")}\par`
+${contacts.join(options.contactRowGap === undefined ? " \\quad " : `\\par\\vspace{${options.contactRowGap}pt}\n`)}\par`
     : ""
 }
 ${settings.headerGap === defaultValue ? `\\end{${settings.headerAlignment === "center" ? "center" : "flushleft"}}` : `\\endgroup\\vspace{${settings.headerGap}pt}`}

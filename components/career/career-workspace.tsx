@@ -31,6 +31,7 @@ import {
 import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
 import { CommittedOutput } from "@/components/career/committed-output";
+import { LayoutFields } from "@/components/career/layout-editor";
 import {
   CareerResumeCollection,
   ResumeActionsMenu,
@@ -43,6 +44,12 @@ import {
   ResumeWordingEditor,
 } from "@/components/career/resume-workspace";
 import { ScopeComparison } from "@/components/career/scope-comparison";
+import {
+  PresetPicker,
+  ReusableSetups,
+  SetupEditor,
+  SetupLibrary,
+} from "@/components/career/setup-library";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { CareerSectionIconPicker } from "@/components/content/career-section-icon-picker";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -90,10 +97,12 @@ import {
   entrySchema,
   readScope,
   sectionPropertiesSchema,
+  starterCreationSchema,
 } from "@/lib/career/model";
 import { importPortable } from "@/lib/career/portable-import";
 import { oversizedRecovery, recoveryFiles } from "@/lib/career/recovery-export";
-import type { ResumeContent } from "@/lib/career/resumes";
+import { profileContactLabels, type ResumeContent } from "@/lib/career/resumes";
+import { captureStarter } from "@/lib/career/starters";
 import {
   CareerController,
   type CareerDraftTarget,
@@ -144,6 +153,52 @@ function DraftEditor({
   onChange: (values: unknown) => void;
 }) {
   const [raw, setRaw] = useState<string | null>(null);
+  const creation = scope.startsWith("starter-create/")
+    ? starterCreationSchema.safeParse(values)
+    : null;
+  if (creation?.success)
+    return (
+      <FieldGroup>
+        <p className="text-sm">
+          Resume creation is pending. Save retries this same prepared creation;
+          Cancel discards it. No entries or personal wording are copied.
+        </p>
+        <dl className="grid grid-cols-[auto_1fr] gap-2 text-sm">
+          <dt>Resume</dt>
+          <dd>{creation.data.resume.name || "Untitled resume"}</dd>
+          <dt>Language</dt>
+          <dd>{creation.data.resume.language}</dd>
+          <dt>Paper</dt>
+          <dd>{creation.data.resume.layout.paper.toUpperCase()}</dd>
+        </dl>
+        {creation.data.resume.selection.map((selection) => {
+          const section =
+            creation.data.sections.find(
+              (item) => item.id === selection.sectionId,
+            ) ??
+            document.sections.find((item) => item.id === selection.sectionId);
+          return (
+            <p
+              key={selection.sectionId}
+              className="text-xs text-muted-foreground"
+            >
+              {section?.name || "Unavailable section"}:{" "}
+              {creation.data.sections.some(
+                (item) => item.id === selection.sectionId,
+              )
+                ? "Create empty section"
+                : "Reuse Career section"}
+            </p>
+          );
+        })}
+        <p className="text-xs text-muted-foreground">
+          If a mapped section changed, cancel this creation and review mappings
+          again in Create resume. Export recovery remains available in Data
+          &amp; backups.
+        </p>
+      </FieldGroup>
+    );
+
   const resume = document.resumes.find(
     (item) => item.id === scope.split("/")[1],
   );
@@ -696,7 +751,7 @@ export function CareerWorkspace({
       if (next.startsWith("new-") && !controller.getSnapshot().draft) return;
       if (
         ["profile", "summary", "languages", "sections"].includes(next) ||
-        /^(entry|section|entries|selection|new-entry|new-section|resume|resume-details|resume-content|resume-wording)\//.test(
+        /^(entry|section|entries|selection|new-entry|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\//.test(
           next,
         )
       )
@@ -747,7 +802,7 @@ export function CareerWorkspace({
   const activeResume = documentValue?.resumes.find(
     (item) =>
       item.id === destination.split("/")[1] &&
-      /^(resume|resume-overview|resume-details|resume-content|resume-wording|selection)\//.test(
+      /^(resume|resume-overview|resume-details|resume-content|resume-wording|resume-layout|selection)\//.test(
         destination,
       ),
   );
@@ -784,7 +839,7 @@ export function CareerWorkspace({
       setCompare(false);
       if (
         ["profile", "summary", "languages", "sections"].includes(next) ||
-        /^(entry|section|entries|selection|new-entry|new-section|resume|resume-details|resume-content|resume-wording)\//.test(
+        /^(entry|section|entries|selection|new-entry|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\//.test(
           next,
         )
       )
@@ -944,7 +999,11 @@ export function CareerWorkspace({
       : null;
   const beforeEntryReorder = () => !controller.getSnapshot().saving;
   const missingDestination =
-    ![
+    ((destination.startsWith("preset/") ||
+      destination.startsWith("starter/")) &&
+      state.draft?.values === null &&
+      state.draft.baseline === null) ||
+    (![
       "overview",
       "profile",
       "summary",
@@ -953,38 +1012,48 @@ export function CareerWorkspace({
       "backups",
       "resumes",
       "resume-compare",
+      "presets",
+      "starters",
     ].includes(destination) &&
-    !documentValue.sections.some(
-      (section) => destination === `list/${section.id}`,
-    ) &&
-    (destination.startsWith("new-")
-      ? state.draft?.scope !== destination
-      : destination.startsWith("resume-overview/")
-        ? !activeResume
-        : readScope(documentValue, destination) === undefined) &&
-    state.draft?.scope !== destination;
+      !documentValue.sections.some(
+        (section) => destination === `list/${section.id}`,
+      ) &&
+      (destination.startsWith("new-")
+        ? state.draft?.scope !== destination
+        : destination.startsWith("resume-overview/")
+          ? !activeResume
+          : readScope(documentValue, destination) === undefined) &&
+      state.draft?.scope !== destination);
   const title =
-    destination === "resumes"
-      ? "Resumes"
-      : destination === "resume-compare"
-        ? "Compare resumes"
-        : activeResume
-          ? activeResume.name || "Untitled resume"
-          : scope === "profile"
-            ? "Profile"
-            : scope === "summary"
-              ? "Summary"
-              : scope === "languages"
-                ? "Content languages"
-                : scope === "backups"
-                  ? "Backups & settings"
-                  : scope === "sections"
-                    ? "Section order"
-                    : scope.startsWith("selection/")
-                      ? "Resume content & order"
-                      : contextSection
-                        ? contextSection.name || contextSection.kind
-                        : "Career details · Overview";
+    destination === "presets"
+      ? "Layout presets"
+      : destination === "starters"
+        ? "Resume starters"
+        : destination.startsWith("preset/")
+          ? "Layout preset"
+          : destination.startsWith("starter/")
+            ? "Resume starter"
+            : destination === "resumes"
+              ? "Resumes"
+              : destination === "resume-compare"
+                ? "Compare resumes"
+                : activeResume
+                  ? activeResume.name || "Untitled resume"
+                  : scope === "profile"
+                    ? "Profile"
+                    : scope === "summary"
+                      ? "Summary"
+                      : scope === "languages"
+                        ? "Content languages"
+                        : scope === "backups"
+                          ? "Backups & settings"
+                          : scope === "sections"
+                            ? "Section order"
+                            : scope.startsWith("selection/")
+                              ? "Resume content & order"
+                              : contextSection
+                                ? contextSection.name || contextSection.kind
+                                : "Career details · Overview";
   const iconKind =
     scope === "profile"
       ? "profile"
@@ -1001,22 +1070,59 @@ export function CareerWorkspace({
   const formIcon = propertiesDraft?.success
     ? propertiesDraft.data.icon
     : contextSection?.icon;
-  const formTitle = scope.startsWith("resume-content/")
-    ? "Resume content & order"
-    : scope.startsWith("resume-wording/")
-      ? "Resume wording"
-      : scope === "profile"
-        ? "Your profile"
-        : scope === "summary"
-          ? "Summary"
-          : scope.startsWith("entry/")
-            ? "Entry details"
-            : scope.startsWith("entries/") || scope === "sections"
-              ? "Order"
-              : scope.startsWith("section/") || scope.startsWith("new-section/")
-                ? "Section details"
-                : title;
+  const formTitle = scope.startsWith("resume-layout/")
+    ? "Resume layout"
+    : scope.startsWith("preset/")
+      ? "Layout preset"
+      : scope.startsWith("starter/")
+        ? "Resume starter"
+        : scope.startsWith("starter-create/")
+          ? "Create resume from starter"
+          : scope.startsWith("resume-content/")
+            ? "Resume content & order"
+            : scope.startsWith("resume-wording/")
+              ? "Resume wording"
+              : scope === "profile"
+                ? "Your profile"
+                : scope === "summary"
+                  ? "Summary"
+                  : scope.startsWith("entry/")
+                    ? "Entry details"
+                    : scope.startsWith("entries/") || scope === "sections"
+                      ? "Order"
+                      : scope.startsWith("section/") ||
+                          scope.startsWith("new-section/")
+                        ? "Section details"
+                        : title;
 
+  const capturePreset = () =>
+    resolveTargets(controller.navigationTargets(), () => {
+      const current = controller
+        .getSnapshot()
+        .head?.document.resumes.find((item) => item.id === activeResume?.id);
+      if (!current) return;
+      const item = {
+        id: crypto.randomUUID(),
+        name: `${current.name || "Untitled resume"} appearance`.slice(0, 500),
+        template: current.template,
+        layout: structuredClone(current.layout),
+      };
+      navigate(`preset/${item.id}`, item);
+    });
+  const libraryCommand = async (
+    scope: string,
+    values: unknown,
+    reviewed: unknown,
+  ): Promise<boolean> => {
+    for (const target of controller.navigationTargets()) {
+      if (controller.isDirty(target)) return false;
+      await controller.cancel(target);
+    }
+    const saved = await controller.command(scope, values, reviewed);
+    if (saved) navigate(scope.startsWith("preset/") ? "presets" : "starters");
+    else navigate(scope);
+    return saved;
+  };
   return (
     <div
       onKeyDown={(event) => {
@@ -1037,6 +1143,20 @@ export function CareerWorkspace({
     >
       <ResumeManager
         document={documentValue}
+        saveStarter={(resume) =>
+          resolveTargets(controller.navigationTargets(), () => {
+            const current = controller
+              .getSnapshot()
+              .head?.document.resumes.find((item) => item.id === resume.id);
+            if (current) {
+              const starter = captureStarter(
+                controller.getSnapshot().head!.document,
+                current,
+              );
+              navigate(`starter/${starter.id}`, starter);
+            }
+          })
+        }
         getResume={(id) =>
           controller
             .getSnapshot()
@@ -1307,12 +1427,23 @@ export function CareerWorkspace({
               saving={state.saving}
               navigate={navigate}
             >
-              {destination === "resumes" ? (
-                <CareerResumeCollection
+              {destination === "presets" || destination === "starters" ? (
+                <SetupLibrary
+                  kind={destination === "presets" ? "preset" : "starter"}
                   document={documentValue}
                   navigate={navigate}
-                  actions={resumeActions}
+                  disabled={state.saving}
+                  commit={libraryCommand}
                 />
+              ) : destination === "resumes" ? (
+                <>
+                  <ReusableSetups navigate={navigate} />
+                  <CareerResumeCollection
+                    document={documentValue}
+                    navigate={navigate}
+                    actions={resumeActions}
+                  />
+                </>
               ) : destination.startsWith("resume-overview/") && activeResume ? (
                 <ResumeOverview
                   document={documentValue}
@@ -1399,6 +1530,16 @@ export function CareerWorkspace({
                 <section
                   className="flex flex-col gap-4"
                   aria-label="Editing form"
+                  onClickCapture={(event) => {
+                    if (
+                      event.target instanceof HTMLElement &&
+                      event.target.closest("button")?.textContent?.trim() ===
+                        "Save"
+                    )
+                      event.currentTarget
+                        .querySelector<HTMLElement>('[aria-invalid="true"]')
+                        ?.focus();
+                  }}
                 >
                   <Card>
                     <CardHeader>
@@ -1427,11 +1568,46 @@ export function CareerWorkspace({
                         disabled={state.saving}
                         className="flex flex-col gap-4"
                       >
-                        {activeResume &&
-                        scope.startsWith("resume-wording/") &&
-                        careerDocumentSchema.shape.resumes.element.shape.overrides.safeParse(
-                          state.draft.values,
-                        ).success ? (
+                        {scope.startsWith("preset/") ||
+                        scope.startsWith("starter/") ? (
+                          <SetupEditor
+                            kind={
+                              scope.startsWith("preset/") ? "preset" : "starter"
+                            }
+                            values={state.draft.values}
+                            onChange={(values) => controller.change(values)}
+                          />
+                        ) : activeResume &&
+                          scope.startsWith("resume-layout/") ? (
+                          <>
+                            <PresetPicker
+                              document={documentValue}
+                              values={state.draft.values}
+                              onChange={(values) => controller.change(values)}
+                              navigate={navigate}
+                              capture={capturePreset}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Save layout to update PDF output. The PDF pane
+                              continues to show saved content.
+                            </p>
+                            <LayoutFields
+                              values={state.draft.values}
+                              onChange={(values) => controller.change(values)}
+                              contacts={profileContactLabels(
+                                documentValue,
+                                activeResume,
+                              )}
+                              editContacts={() =>
+                                navigate(`resume-content/${activeResume.id}`)
+                              }
+                            />
+                          </>
+                        ) : activeResume &&
+                          scope.startsWith("resume-wording/") &&
+                          careerDocumentSchema.shape.resumes.element.shape.overrides.safeParse(
+                            state.draft.values,
+                          ).success ? (
                           <ResumeWordingEditor
                             document={documentValue}
                             resume={activeResume}
@@ -1580,11 +1756,17 @@ export function CareerWorkspace({
                               navigate(
                                 scope.startsWith("resume/")
                                   ? "resumes"
-                                  : activeResume
-                                    ? destination
-                                    : contextSection
-                                      ? `list/${contextSection.id}`
-                                      : "overview",
+                                  : scope.startsWith("preset/")
+                                    ? "presets"
+                                    : scope.startsWith("starter/")
+                                      ? "starters"
+                                      : scope.startsWith("starter-create/")
+                                        ? `resume-content/${scopeId}`
+                                        : activeResume
+                                          ? destination
+                                          : contextSection
+                                            ? `list/${contextSection.id}`
+                                            : "overview",
                               ),
                             )
                             .catch(() => {})
@@ -1606,11 +1788,17 @@ export function CareerWorkspace({
                                       )
                                     ? `resume-content/${scopeId}`
                                     : "resumes"
-                                  : activeResume
-                                    ? destination
-                                    : contextSection
-                                      ? `list/${contextSection.id}`
-                                      : "overview",
+                                  : scope.startsWith("preset/")
+                                    ? "presets"
+                                    : scope.startsWith("starter/")
+                                      ? "starters"
+                                      : scope.startsWith("starter-create/")
+                                        ? `resume-content/${scopeId}`
+                                        : activeResume
+                                          ? destination
+                                          : contextSection
+                                            ? `list/${contextSection.id}`
+                                            : "overview",
                               );
                           })
                         }
@@ -1671,13 +1859,20 @@ export function CareerWorkspace({
                                     })()
                                   : draft.scope.startsWith("resume") ||
                                       draft.scope.startsWith("selection/")
-                                    ? `${documentValue.resumes.find((resume) => resume.id === draft.scope.split("/")[1])?.name || "Unavailable resume"} · ${draft.scope.startsWith("resume-wording/") ? "Wording" : draft.scope.startsWith("resume-details/") ? "Name & color" : "Content"}`
-                                    : ({
-                                        profile: "Profile",
-                                        summary: "Summary",
-                                        languages: "Content languages",
-                                        sections: "Section order",
-                                      }[draft.scope] ?? "Unsaved form")}
+                                    ? `${documentValue.resumes.find((resume) => resume.id === draft.scope.split("/")[1])?.name || "Unavailable resume"} · ${draft.scope.startsWith("resume-wording/") ? "Wording" : draft.scope.startsWith("resume-details/") ? "Name & color" : draft.scope.startsWith("resume-layout/") ? "Layout" : "Content"}`
+                                    : draft.scope.startsWith("preset/") ||
+                                        draft.scope.startsWith("starter/")
+                                      ? `${draft.scope.startsWith("preset/") ? "Layout preset" : "Resume starter"} / ${draft.values && typeof draft.values === "object" && "name" in draft.values && typeof draft.values.name === "string" ? draft.values.name : "Unsaved setup"}`
+                                      : draft.scope.startsWith(
+                                            "starter-create/",
+                                          )
+                                        ? "Resume creation from starter"
+                                        : ({
+                                            profile: "Profile",
+                                            summary: "Summary",
+                                            languages: "Content languages",
+                                            sections: "Section order",
+                                          }[draft.scope] ?? "Unsaved form")}
                             </span>
                             <Button
                               variant="outline"

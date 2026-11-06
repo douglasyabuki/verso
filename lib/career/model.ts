@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { richTextSchema } from "@/lib/career/wording";
+import { settingsSchema } from "@/lib/output/schema";
 import type {
   CareerDocument,
   CareerEntry,
@@ -14,6 +15,7 @@ import {
   SECTION_KINDS,
   WORKSPACE_BYTES,
 } from "@/types-and-constants/career";
+import { defaultSettings } from "@/types-and-constants/output";
 import {
   defaultSectionIcons,
   sectionIconIds,
@@ -150,11 +152,16 @@ export const sectionPropertiesSchema = sectionIdentitySchema.safeExtend({
 export const sectionSchema = sectionPropertiesSchema.safeExtend({
   entries: z.array(entrySchema).max(300),
 });
-const layoutSchema = z.strictObject({
-  paper: z.enum(["a4", "letter"]),
-  font: z.enum(["inter", "source-sans", "source-serif"]),
-  fontSize: z.number().min(8).max(18),
-});
+export const layoutSchema = settingsSchema
+  .omit({ pageSize: true, fontFamily: true })
+  .extend({
+    paper: z.enum(["a4", "letter"]),
+    font: z.enum(["inter", "source-sans", "source-serif"]),
+    contactRows: z.enum(["auto", "1", "2", "3", "4", "custom"]),
+    contactRowSizes: z.array(z.number().int().min(1).max(60)).max(60),
+    contactRowGap: z.number().min(0).max(24),
+    contactSeparator: z.enum(["space", "dot", "bar"]),
+  });
 const selectionSchema = z.strictObject({
   sectionId: id,
   hidden: z.boolean().optional(),
@@ -163,18 +170,84 @@ const selectionSchema = z.strictObject({
   achievementIds: z.array(id).max(30_000),
   fieldIds: z.array(id).max(9000),
   linkIds: z.array(id).max(9000),
+  fieldDefaults: z.array(z.string().max(80)).max(30).optional(),
 });
 const resumeSchema = z.strictObject({
   id,
   name: z.string().max(500),
   color: z.enum(RESUME_COLORS).optional(),
   language,
-  template: z.literal("yabuki-reference@1.0.2"),
+  template: z.literal("yabuki-reference@1.0.3"),
   selection: z.array(selectionSchema).max(100),
   profileSelection: z.array(id).max(60).optional(),
   summaryIncluded: z.boolean().optional(),
   overrides: z.record(id, richTextSchema),
   layout: layoutSchema,
+  createdSectionIds: z.array(id).max(100).optional(),
+});
+
+export const presetSchema = z.strictObject({
+  id,
+  name: z
+    .string()
+    .min(1)
+    .max(500)
+    .refine((value) => !!value.trim(), "Enter a name."),
+  template: z.literal("yabuki-reference@1.0.3"),
+  layout: layoutSchema,
+});
+export const starterSectionSchema = sectionIdentitySchema
+  .safeExtend({
+    id,
+    label: z
+      .string()
+      .min(1)
+      .max(500)
+      .refine((value) => !!value.trim(), "Enter a name."),
+    hidden: z.boolean(),
+    visibleFields: z.array(z.string().max(80)).max(30),
+  })
+  .superRefine((section, ctx) => {
+    if (
+      new Set(section.visibleFields).size !== section.visibleFields.length ||
+      section.visibleFields.some(
+        (key) =>
+          !(BUILTIN_FIELDS[section.kind] as readonly string[]).includes(key),
+      )
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["visibleFields"],
+        message: "Choose distinct supported fields for this section.",
+      });
+  });
+export const starterSchema = presetSchema.extend({
+  sections: z
+    .array(starterSectionSchema)
+    .max(100)
+    .refine(
+      (sections) =>
+        new Set(sections.map((section) => section.id)).size === sections.length,
+      "Starter rows require distinct identities.",
+    ),
+  summaryIncluded: z.boolean(),
+});
+
+export const starterCreationSchema = z.strictObject({
+  resume: resumeSchema,
+  sections: z.array(sectionSchema).max(100),
+  reviewedSections: z
+    .array(
+      z.strictObject({
+        id,
+        kind: z.enum(SECTION_KINDS),
+        name: z.string().max(500),
+        icon: z.enum(sectionIconIds),
+        archived: z.boolean(),
+      }),
+    )
+    .max(100)
+    .optional(),
 });
 
 export const careerDocumentSchema = z
@@ -193,27 +266,8 @@ export const careerDocumentSchema = z
     }),
     sections: z.array(sectionSchema).max(100),
     resumes: z.array(resumeSchema).max(120),
-    starters: z
-      .array(
-        z.strictObject({
-          id,
-          name: z.string().max(500),
-          sections: z
-            .array(
-              sectionIdentitySchema.safeExtend({
-                visibleFields: z.array(z.string().max(80)).max(30),
-              }),
-            )
-            .max(100),
-          layout: layoutSchema,
-        }),
-      )
-      .max(100),
-    presets: z
-      .array(
-        z.strictObject({ id, name: z.string().max(500), layout: layoutSchema }),
-      )
-      .max(100),
+    starters: z.array(starterSchema).max(100),
+    presets: z.array(presetSchema).max(100),
     defaults: layoutSchema,
   })
   .superRefine((document, ctx) => {
@@ -360,6 +414,20 @@ export const careerDocumentSchema = z
             message: "Duplicate or dangling contact selection.",
           });
       }
+      if (
+        resume.createdSectionIds &&
+        (new Set(resume.createdSectionIds).size !==
+          resume.createdSectionIds.length ||
+          resume.createdSectionIds.some(
+            (id) =>
+              !resume.selection.some((section) => section.sectionId === id),
+          ))
+      )
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Created-section provenance must reference distinct configured sections.",
+        });
       if (!languages.has(resume.language))
         ctx.addIssue({
           code: "custom",
@@ -407,6 +475,21 @@ export const careerDocumentSchema = z
           });
           continue;
         }
+        if (
+          selected.fieldDefaults &&
+          (new Set(selected.fieldDefaults).size !==
+            selected.fieldDefaults.length ||
+            selected.fieldDefaults.some(
+              (key) =>
+                !(BUILTIN_FIELDS[section.kind] as readonly string[]).includes(
+                  key,
+                ),
+            ))
+        )
+          ctx.addIssue({
+            code: "custom",
+            message: "Invalid field defaults for section kind.",
+          });
         const entries = section.entries.filter((item) =>
           selected.entryIds.includes(item.id),
         );
@@ -450,7 +533,7 @@ export const draftSchema = z.strictObject({
     .string()
     .max(370)
     .regex(
-      /^(profile|summary|languages|sections|(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording)\/[A-Za-z0-9_-]{1,120}|new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120})$/,
+      /^(profile|summary|languages|sections|(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\/[A-Za-z0-9_-]{1,120}|new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120})$/,
       "Unsupported editing scope.",
     ),
   baseline: z.unknown(),
@@ -478,7 +561,29 @@ export function validateDocument(value: unknown): CareerDocument {
     new TextEncoder().encode(JSON.stringify(value)).byteLength > WORKSPACE_BYTES
   )
     throw new Error("Workspace exceeds 64 MiB.");
-  return careerDocumentSchema.parse(value);
+  const result = careerDocumentSchema.safeParse(value);
+  if (!result.success) {
+    if (
+      value &&
+      typeof value === "object" &&
+      (("defaults" in value &&
+        !layoutSchema.safeParse(value.defaults).success) ||
+        ("resumes" in value &&
+          Array.isArray(value.resumes) &&
+          value.resumes.some(
+            (resume) =>
+              resume &&
+              typeof resume === "object" &&
+              "template" in resume &&
+              resume.template !== "yabuki-reference@1.0.3",
+          )))
+    )
+      throw new Error(
+        "This development workspace uses an unsupported layout format. Start with a fresh workspace on an explicitly cleared or disposable origin. Existing storage was not changed; no migration is provided.",
+      );
+    throw result.error;
+  }
+  return result.data;
 }
 
 /** Parse portable workspace or recovery JSON without mutating storage.
@@ -493,9 +598,11 @@ export function parsePortable(source: string, kind: "workspace" | "recovery") {
     throw new Error("Import exceeds its byte limit.");
   const value: unknown = JSON.parse(source);
   if (kind === "workspace") {
-    const result = workspaceEnvelopeSchema.parse(value);
-    validateDocument(result.document);
-    return result;
+    const result = workspaceEnvelopeSchema
+      .omit({ document: true })
+      .extend({ document: z.unknown() })
+      .parse(value);
+    return { ...result, document: validateDocument(result.document) };
   }
   const result = recoveryEnvelopeSchema.parse(value);
   const ids = new Set<string>();
@@ -519,8 +626,15 @@ export function parsePortable(source: string, kind: "workspace" | "recovery") {
  * @example createCareerDocument("pt-BR")
  */
 export function createCareerDocument(tag = "en-US"): CareerDocument {
+  const { pageSize, fontFamily, ...appearance } = defaultSettings;
+  void fontFamily;
   const defaults = {
-    paper: "a4" as const,
+    ...appearance,
+    contactRows: "auto" as const,
+    contactRowSizes: [],
+    contactRowGap: 0,
+    contactSeparator: "space" as const,
+    paper: pageSize,
     font: "inter" as const,
     fontSize: 10,
   };
@@ -628,12 +742,19 @@ export function readScope(document: CareerDocument, scope: string): unknown {
   if (scope === "sections")
     return document.sections.map((section) => section.id);
   if (
-    !/^(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording)\/[A-Za-z0-9_-]{1,120}$|^new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120}$/.test(
+    !/^(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\/[A-Za-z0-9_-]{1,120}$|^new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120}$/.test(
       scope,
     )
   )
     return undefined;
   const [kind, target, child] = scope.split("/");
+  if (kind === "preset" || kind === "starter")
+    return (
+      document[kind === "preset" ? "presets" : "starters"].find(
+        (item) => item.id === target,
+      ) ?? null
+    );
+  if (kind === "starter-create") return readStarterCreation(document, target);
   if (kind.startsWith("resume")) {
     const resume = document.resumes.find((item) => item.id === target);
     if (kind === "resume") return resume ?? null;
@@ -641,6 +762,7 @@ export function readScope(document: CareerDocument, scope: string): unknown {
     if (kind === "resume-details")
       return { name: resume.name, color: resume.color ?? "indigo" };
     if (kind === "resume-wording") return resume.overrides;
+    if (kind === "resume-layout") return resume.layout;
     if (kind === "resume-content")
       return {
         selection: resume.selection,
@@ -743,7 +865,28 @@ export function applyScope(
     resumes: document.resumes.map((resume) => ({ ...resume })),
   };
   const [kind, target, child] = scope.split("/");
-  if (kind === "resume") {
+  if (kind === "starter-create")
+    return applyStarterCreation(document, target, values);
+  if (kind === "preset" || kind === "starter") {
+    const key = kind === "preset" ? "presets" : "starters";
+    const records = [...document[key]];
+    const index = records.findIndex((item) => item.id === target);
+    if (values === null) {
+      if (index >= 0) records.splice(index, 1);
+    } else {
+      const item = (kind === "preset" ? presetSchema : starterSchema).parse(
+        values,
+      );
+      if (item.id !== target) throw new Error("Identity must match its scope.");
+      if (index < 0) records.push(item);
+      else records[index] = item;
+    }
+    return validateDocument({ ...document, [key]: records });
+  }
+  if (kind === "resume-layout") {
+    next.resumes.find((item) => item.id === target)!.layout =
+      layoutSchema.parse(values);
+  } else if (kind === "resume") {
     if (values === null)
       next.resumes = next.resumes.filter((item) => item.id !== target);
     else {
@@ -914,4 +1057,115 @@ export function applyScope(
     }
   }
   return validateDocument(next);
+}
+
+/** Read a composite creation without unrelated workspace content.
+ * @param document Committed workspace.
+ * @param target New resume ID.
+ * @returns {unknown} Resume and its created sections, or null before creation.
+ * @example readStarterCreation(document, "resume-id")
+ */
+function readStarterCreation(
+  document: CareerDocument,
+  target: string,
+): unknown {
+  const resume = document.resumes.find((item) => item.id === target);
+  if (!resume) return null;
+  return {
+    resume,
+    sections: document.sections.filter((section) =>
+      resume.createdSectionIds?.includes(section.id),
+    ),
+  };
+}
+
+/** Apply or reverse one atomic starter creation while retaining shared identities.
+ * @param document Current committed workspace.
+ * @param target Stable resume ID.
+ * @param values Prepared creation or null for undo.
+ * @returns {CareerDocument} Validated workspace; throws on stale mappings or changed identities.
+ * @example applyStarterCreation(document, request.resume.id, request)
+ */
+function applyStarterCreation(
+  document: CareerDocument,
+  target: string,
+  values: unknown,
+): CareerDocument {
+  const prior = document.resumes.find((item) => item.id === target);
+  if (values === null)
+    return validateDocument({
+      ...document,
+      resumes: document.resumes.filter((item) => item.id !== target),
+      sections: document.sections.map((section) =>
+        prior?.createdSectionIds?.includes(section.id)
+          ? { ...section, archived: true }
+          : section,
+      ),
+    });
+  if (prior) throw new Error("Resume already exists.");
+  const input = starterCreationSchema.parse(values);
+  if (
+    input.resume.selection.some(
+      (selection) =>
+        selection.entryIds.length ||
+        selection.fieldIds.length ||
+        selection.achievementIds.length ||
+        selection.linkIds.length,
+    ) ||
+    (input.resume.profileSelection?.length ?? 0) > 0 ||
+    Object.keys(input.resume.overrides).length
+  )
+    throw new Error(
+      "Starter creation cannot copy content selections or custom wording.",
+    );
+  if (
+    input.resume.id !== target ||
+    JSON.stringify(input.resume.createdSectionIds ?? []) !==
+      JSON.stringify(input.sections.map((section) => section.id))
+  )
+    throw new Error("Creation identities must match.");
+  for (const reviewed of input.reviewedSections ?? []) {
+    const current = document.sections.find((item) => item.id === reviewed.id);
+    if (
+      !current ||
+      Object.entries(reviewed).some(
+        ([key, value]) => current[key as keyof typeof current] !== value,
+      )
+    )
+      throw new Error(
+        "A reviewed section changed. Review mappings again; no content was created.",
+      );
+  }
+  const sections = [...document.sections];
+  for (const section of input.sections) {
+    const index = sections.findIndex((item) => item.id === section.id);
+    if (
+      section.entries.length ||
+      Object.keys(section.heading).length ||
+      section.archived
+    )
+      throw new Error("Starter creation accepts empty active structure only.");
+    if (index < 0) sections.push(section);
+    else {
+      if (
+        !sections[index].archived ||
+        JSON.stringify({ ...sections[index], archived: false }) !==
+          JSON.stringify(section)
+      )
+        throw new Error(
+          "Created section changed; reconcile before retrying history.",
+        );
+      sections[index] = { ...sections[index], archived: false };
+    }
+  }
+  for (const selection of input.resume.selection)
+    if (sections.find((item) => item.id === selection.sectionId)?.archived)
+      throw new Error(
+        "A reviewed section was archived. Review mappings again.",
+      );
+  return validateDocument({
+    ...document,
+    sections,
+    resumes: [...document.resumes, input.resume],
+  });
 }
