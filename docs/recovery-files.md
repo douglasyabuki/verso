@@ -75,6 +75,30 @@ and starter pins `yabuki-reference@1.0.3`. Earlier development layouts/templates
 are rejected, never converted or silently reset. The current complete layout is
 required even when library collections are empty.
 
+Resume layout additionally allows `defaults`: a complete flat appearance snapshot
+with no nested `defaults` member. Blank creation copies workspace appearance into
+both values and defaults; starters and loaded presets copy their appearance into
+both. Presets and starters never contain resume baseline metadata, and capture
+copies appearance only. Library edits/deletion have no live effect on resumes.
+Duplicating a resume preserves an independent baseline copy.
+
+An otherwise-supported resume without this optional member uses its saved
+appearance as defaults. Opening, importing, and rendering do not rewrite it;
+the next successful layout Save records its baseline. This is the only baseline
+initialization allowance, not support for earlier templates, schema 1, or
+incomplete appearance models. Existing immutable requests/fingerprints remain
+unchanged. A request without baseline metadata preserves an existing baseline
+or initializes from pre-edit committed appearance. Recovered edits must not
+become their own defaults.
+
+The exact `resume-layout/<id>` scope includes appearance and defaults together.
+Save, conflicts, recovery, history, workspace backup, previous-workspace
+replacement, and rollback preserve that pair. Loading an identical appearance
+with different defaults is a meaningful draft change. Baseline-only metadata
+does not alter generated layout commands; revision metadata may stale a preview.
+Malformed recovered baseline metadata remains recoverable and blocks Save until
+corrected. Workspace/recovery envelope versions and template identity are unchanged.
+
 Layout contains paper/font identities, bounded typography/margins/spacing/colors,
 numbering and its warning threshold, and contact-row configuration. Contact rows
 use automatic wrapping, a fixed count from one to four, or positive custom row

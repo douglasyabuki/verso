@@ -1,8 +1,10 @@
+import { layoutDefaults, sameLayout } from "@/lib/career/layout";
 import {
   applyScope,
   careerDocumentSchema,
   createCareerDocument,
   readScope,
+  resumeLayoutSchema,
   validateDocument,
 } from "@/lib/career/model";
 import { createResume } from "@/lib/career/resumes";
@@ -382,6 +384,14 @@ export class CareerController {
   change(values: unknown, target: CareerDraftTarget = "form"): void {
     const draft = this.draftFor(target);
     if (!draft) return;
+    if (
+      draft.scope.startsWith("resume-layout/") &&
+      values &&
+      typeof values === "object" &&
+      !("defaults" in values) &&
+      resumeLayoutSchema.safeParse(draft.baseline).success
+    )
+      values = { ...values, defaults: layoutDefaults(draft.baseline) };
     this.pristineDraftIds.delete(draft.draftId);
     this.publishFor(target, {
       draft: {
@@ -410,6 +420,8 @@ export class CareerController {
    */
   isDirty(target: CareerDraftTarget = "form"): boolean {
     const draft = this.draftFor(target);
+    if (draft?.scope.startsWith("resume-layout/"))
+      return !sameLayout(draft.values, draft.baseline);
     return Boolean(draft && !sameScope(draft.values, draft.baseline));
   }
 
@@ -603,8 +615,11 @@ export class CareerController {
       if (!this.committedIds.has(operationId)) {
         let scope = draft.scope;
         let before = structuredClone(draft.baseline);
+        if (scope.startsWith("resume-layout/"))
+          before = { ...(before as object), defaults: layoutDefaults(before) };
         const after = structuredClone(
-          draft.scope.startsWith("starter-create/")
+          draft.scope.startsWith("starter-create/") ||
+            draft.scope.startsWith("resume-layout/")
             ? readScope(next.document, draft.scope)
             : draft.values,
         );
@@ -980,7 +995,15 @@ export class CareerController {
                   .parse(draft.values),
               }
             : kind === "resume-layout"
-              ? { ...created, layout: schema.shape.layout.parse(draft.values) }
+              ? {
+                  ...created,
+                  layout: {
+                    ...schema.shape.layout.parse(draft.values),
+                    defaults:
+                      schema.shape.layout.parse(draft.values).defaults ??
+                      layoutDefaults(draft.baseline),
+                  },
+                }
               : kind === "resume-wording"
                 ? {
                     ...created,

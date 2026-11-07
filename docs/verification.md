@@ -299,3 +299,103 @@ Unit tests and unrelated production E2E cases were not rerun for these test-only
 changes. The initial sandbox browser launch was blocked at compiler subprocess
 startup with EPERM; execution succeeded outside the sandbox. Failure screenshots
 were inspected only for diagnosis; this is not visual or PDF acceptance.
+
+## Layout editor refactoring and frozen defaults
+
+Implemented shared resume/preset/starter controls with concrete or readable
+relative default values, group resets, conditional dependent fields, margin
+hover/focus, inline guarded profile navigation, and named color popovers. Resume
+defaults are frozen appearance copies, independent of subsequent library edits.
+Existing supported layouts without baseline metadata initialize from saved
+appearance on their next layout Save, without load-time writes. Preset/starter
+authors reset to app defaults. See README and recovery-file documentation for
+the complete behavior and portable-data contracts.
+
+Non-browser verification on 2026-11-07: `npm run format:check`, `npm run lint`,
+`npm run typecheck`, `npm run test:unit`, and `npm run build` passed. The unit
+suite executed 125 tests across 13 files with no failures or skips. Added cases
+cover baseline-only changes, frozen copies, duplication, existing-data
+initialization, workspace/recovery preservation, unchanged generated output,
+atomic Save/Cancel/Undo/Redo, and relative/color default resolution. Existing
+expectations were updated for baseline metadata.
+
+Initial unit startup and formatting traversal encountered sandbox EPERM errors;
+both checks passed outside the sandbox. Intermediate unit assertions were
+updated for the new metadata, and an optional-property test type error was fixed
+before the final successful typecheck/build. These are non-browser results,
+not proof of real IndexedDB transactions or presentation acceptance.
+
+Browser Mode cases and desktop/phone production E2E cases were updated and
+type-checked. No browser suites, computer-use, screenshots, manual interaction,
+or PDF inspection were executed for this refactoring, at the owner's request.
+Earlier browser results do not establish acceptance of these changes.
+
+- [x] Run the affected Browser Mode and production E2E suites; inspect actual
+      counts and failures, including all three appearance editor contexts.
+- [ ] Review group icons, compact reset placement, default descriptions, spacing,
+      light/dark appearance, wrapping, and keyboard focus on desktop/narrow screens.
+- [ ] Verify relative-value focus/typing, hidden-value retention and actionable
+      errors, divider/numbering/contact checkboxes, and custom contact rows.
+- [ ] Verify Paper precedes and updates the guide; hover/focus highlights each
+      edge, hover wins, and leaving restores keyboard focus highlighting.
+- [ ] Verify named color selection/dismissal/focus return and disabled dependencies.
+      Selecting a color, resetting a group, and loading a preset remain drafts.
+- [ ] Apply a preset, customize/save/reload, and reset groups to its frozen defaults.
+      Edit/delete the library preset; existing resume defaults remain unchanged.
+      Verify starter/blank creation, duplication, and baseline-only preset loads.
+- [ ] Exercise Save/Cancel, history, uncertain prepared retries, recovery/restart,
+      two-tab conflicts, backup/import, previous-workspace replacement, and rollback
+      on disposable origins; preserve both appearance and defaults atomically.
+- [ ] Check English/Portuguese PDFs and confirm that default sentinels retain
+      template behavior, saved appearance renders correctly, and baseline-only
+      metadata changes no layout commands. Revision metadata can stale previews.
+
+All earlier deferred acceptance remains open.
+
+### Conditional layout control positioning
+
+Numbering alignment/format now stay beneath Show page numbers, with the page
+warning threshold alongside. Custom row sizes and row-break choices stay beneath
+Contacts per row; row spacing and separator stay together alongside that column.
+Divider thickness likewise stays beneath Section divider; toggling it preserves
+the neighboring title-size field's position. The authored 720/1000 px regression
+cases include this divider behavior.
+The warning explanation uses the existing label-sized InfoHint, and row-break
+checkboxes share one Start a new row before legend with contact-only labels.
+
+Changed-code ESLint, formatting, generated route types/TypeScript, local document
+links, and diff whitespace checks passed for this presentation correction.
+Authored Browser Mode cases check neighboring field positions at 720/1000 px,
+dependent control grouping, shared row-break labels, and warning-hint access.
+Browser/manual validation remains with the owner and was not run. Unit suites
+and production build were not rerun for this UI-only correction; earlier results
+remain separate.
+
+### Automated regression repair
+
+The owner subsequently authorized automated failing-test repair. The initial
+full run passed all 125 unit tests but failed three of 120 Browser Mode cases.
+Two divider-position assertions measured document coordinates: removing the
+Style sample's divider moved the entire form by one pixel. They now measure
+the title field relative to its Typography group, retaining the same tolerance
+and checks for thickness placement. This tests stable neighboring controls
+without treating the illustrative sample's size as fixed.
+
+The hint failure exposed missing tooltip semantics in the shared InfoHint.
+Its popup now has a stable ID and tooltip role, and its trigger references the
+open help using aria-describedby. The regression checks help text, accessible
+description, Escape dismissal, and removal of the closed description reference.
+Failure screenshots were inspected only for diagnosis, not visual acceptance.
+No test timeouts, configured retries, or skips were added.
+
+On 2026-11-07, the targeted layout Browser Mode run passed all 39 cases. The final
+`npm test` passed 125 unit tests across 13 files, 120 Chromium Browser Mode tests
+across ten files, and all 55 production E2E cases across Chromium, Firefox, and
+WebKit, with no failures or skips. The E2E runner built and started a fresh
+production server. Changed-code ESLint/formatting, generated route types /
+TypeScript, maintained-document links, and diff whitespace checks also passed.
+
+These automated results supersede the earlier unexecuted-browser status for the
+refactoring and positioning correction. Owner manual/visual/PDF acceptance and
+other deferred verification remain open; the tests do not establish complete
+product acceptance or performance measurements.

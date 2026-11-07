@@ -84,6 +84,26 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 
 ## Resume layout and reusable configurations
 
+- Resume layout has optional `defaults` containing a complete, nonrecursive flat
+  appearance snapshot. Blank creation copies workspace appearance; starter
+  creation and preset loading copy their appearance as both values and frozen
+  defaults. Later library changes never affect existing resumes. Presets,
+  starters, and workspace defaults remain flat appearance only; capture excludes
+  resume baseline metadata. Resume duplication retains an independent snapshot.
+- Existing otherwise-supported layouts without this optional baseline use saved
+  appearance and persist the baseline on the next layout Save, with no load-time
+  writes or broad legacy migration. Preserve immutable prepared requests and
+  fingerprints; missing baseline metadata in old requests initializes from
+  pre-edit committed appearance, never modified draft values. Recovery, history,
+  backups, replacement, and rollback retain values and defaults in the same scope.
+  Workspace schema 2, recovery format 1, and template identity stay unchanged.
+- Resume group resets use frozen layout defaults; preset/starter editors reset
+  to canonical app defaults. Keep automatic/relative template dimensions as
+  sentinels until explicitly edited. Baseline-only preset loads are meaningful
+  edits even when appearance matches. All resets and color selections remain
+  drafts; Save and compilation remain separate. Hidden dependent values are
+  retained, and invalid ones remain actionable. Keep profile navigation guarded.
+
 - Resume appearance uses the canonical complete layout schema, with exact
   `resume-layout/<id>` Saves. `preset/<id>` and `starter/<id>` are independently
   recoverable nullable library scopes. Presets carry template identity and

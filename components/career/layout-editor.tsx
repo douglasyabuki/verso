@@ -1,9 +1,20 @@
 "use client";
 
-import { Mail } from "lucide-react";
+import {
+  ArrowDownUp,
+  ContactRound,
+  File,
+  Mail,
+  Palette,
+  RotateCcw,
+  TextAlignCenter,
+  TextAlignEnd,
+  TextAlignStart,
+  Type,
+} from "lucide-react";
 import { useId, useState } from "react";
 
-import { LayoutColorField } from "@/components/output/layout/layout-color-field";
+import { LayoutColorPicker } from "@/components/career/layout-color-picker";
 import { LayoutFieldGrid } from "@/components/output/layout/layout-field-grid";
 import { MarginGuide } from "@/components/output/layout/margin-guide";
 import { Button } from "@/components/ui/button";
@@ -25,6 +36,7 @@ import {
   FieldError,
   FieldLabel,
 } from "@/components/ui/field";
+import { InfoHint } from "@/components/ui/info-hint";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -37,10 +49,17 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { templateSettings } from "@/lib/career/layout";
 import { contactRows } from "@/lib/career/layout";
-import { layoutSchema } from "@/lib/career/model";
+import {
+  type LayoutColor,
+  resolvedLayoutColor,
+  templateDimensionDisplay,
+  templateDimensionExplanation,
+} from "@/lib/career/layout-display";
+import { layoutSchema, resumeLayoutSchema } from "@/lib/career/model";
+import type { CareerResume } from "@/types-and-constants/career";
+import { appLayoutDefaults } from "@/types-and-constants/layout";
 import {
   numericLayoutControls,
-  pdfColorPresets,
   templateSettingLabels,
 } from "@/types-and-constants/output";
 
@@ -65,6 +84,7 @@ const choices: Record<string, readonly string[]> = {
 const groups = [
   {
     name: "Typography",
+    icon: Type,
     keys: [
       "font",
       "fontSize",
@@ -83,6 +103,7 @@ const groups = [
 
   {
     name: "Page & margins",
+    icon: File,
     keys: [
       "paper",
       "marginTop",
@@ -97,6 +118,7 @@ const groups = [
   },
   {
     name: "Header & contacts",
+    icon: ContactRound,
     keys: [
       "nameSize",
       "nameWeight",
@@ -112,6 +134,7 @@ const groups = [
   },
   {
     name: "Spacing & details",
+    icon: ArrowDownUp,
     keys: [
       "sectionGap",
       "sectionBelow",
@@ -129,6 +152,7 @@ const groups = [
   },
   {
     name: "Colors",
+    icon: Palette,
     keys: [
       "headingColor",
       "bodyColor",
@@ -139,6 +163,14 @@ const groups = [
     ],
   },
 ];
+const dependentFields: Record<string, readonly string[]> = {
+  sectionDivider: ["dividerThickness"],
+  pageNumbering: ["pageNumberAlignment", "pageNumberFormat"],
+  contactRows: ["contactRowSizes"],
+  contactRowGap: ["contactSeparator"],
+};
+const dependentKeys = Object.values(dependentFields).flat();
+
 const extraLabels: Record<string, string> = {
   paper: "Paper",
   font: "Font family",
@@ -155,38 +187,370 @@ const friendly: Record<string, string> = {
   "source-serif": "Source Serif 4",
   auto: "Automatic wrapping",
   custom: "Custom rows",
+  regular: "Regular",
+  bold: "Bold",
+  black: "Black",
+  original: "Original casing",
+  uppercase: "Uppercase",
   "page-x": "Page X",
   "page-x-of-y": "Page X of Y",
+  "hollow-circle": "Hollow circle",
 };
 
-/** Render appearance controls against the caller's uncommitted draft; no workspace or compiler writes. */
+/** Render draft appearance with group resets; only the caller can commit or compile it.
+ * @param props Draft values, immutable reset defaults, and optional guarded content navigation.
+ * @returns Shared controls for resume, preset, and starter appearance editors.
+ * @example <LayoutFields values={draft} defaults={savedDefaults} onChange={change} resumeLayout />
+ */
 export function LayoutFields({
   values,
   onChange,
   contacts = [],
   editContacts,
+  defaults = appLayoutDefaults,
+  resumeLayout = false,
 }: {
   values: unknown;
   onChange: (value: unknown) => void;
   contacts?: string[];
   editContacts?: () => void;
+  defaults?: CareerResume["layout"];
+  resumeLayout?: boolean;
 }) {
   const id = useId();
   const [opened, setOpened] = useState<Record<string, boolean>>({
     Typography: true,
     "Page & margins": true,
   });
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [focused, setFocused] = useState<string | null>(null);
   const data = (values && typeof values === "object" ? values : {}) as Record<
     string,
     unknown
   >;
-  const parsed = layoutSchema.safeParse(values);
+  const parsed = resumeLayoutSchema.safeParse(values);
   const issues = parsed.success ? [] : parsed.error.issues;
+  const copiedDefaults = layoutSchema.safeParse(data.defaults);
+  const baseline = (resumeLayout && copiedDefaults.success
+    ? copiedDefaults.data
+    : defaults) as unknown as Record<string, unknown>;
   const change = (key: string, value: unknown) =>
     onChange({ ...data, [key]: value });
+  const guide = layoutSchema.safeParse({
+    ...appLayoutDefaults,
+    ...Object.fromEntries(
+      ["paper", "marginTop", "marginBottom", "marginLeft", "marginRight"].map(
+        (key) => [key, data[key]],
+      ),
+    ),
+  });
+  const display = (key: string, value: unknown) =>
+    value === "template-default"
+      ? templateDimensionDisplay(key)
+      : Array.isArray(value)
+        ? value.length
+          ? value.join(", ")
+          : ""
+        : String(value ?? "");
+  const checks: Record<string, { label: string; on: string; off: string }> = {
+    sectionDivider: { label: "Section divider", on: "on", off: "off" },
+    pageNumbering: { label: "Show page numbers", on: "shown", off: "hidden" },
+    contactIcons: { label: "Contact icons", on: "on", off: "off" },
+  };
+  const renderField = (key: string) => {
+    const error = issues.find((issue) => issue.path[0] === key)?.message;
+    const numeric = numericLayoutControls.find(
+      (control) => control.key === key,
+    );
+    const color = key.endsWith("Color");
+    const inactive =
+      (key === "iconColor" && data.contactIcons === "off") ||
+      (["dividerThickness", "dividerColor"].includes(key) &&
+        data.sectionDivider === "off") ||
+      (["pageNumberAlignment", "pageNumberFormat"].includes(key) &&
+        data.pageNumbering === "hidden") ||
+      (key === "contactRowSizes" && data.contactRows !== "custom");
+    if (inactive && !color && !error) return null;
+    const label =
+      checks[key]?.label ??
+      extraLabels[key] ??
+      templateSettingLabels[key as keyof typeof templateSettingLabels] ??
+      key;
+    const fieldId = `${id}-${key}`;
+    if (color)
+      return (
+        <LayoutColorPicker
+          key={key}
+          id={fieldId}
+          label={label}
+          setting={key as LayoutColor}
+          layout={data as CareerResume["layout"]}
+          defaults={baseline as CareerResume["layout"]}
+          disabled={inactive}
+          error={error}
+          change={(value) => change(key, value)}
+        />
+      );
+    const options = choices[key];
+    const value = baseline[key];
+    const shownDefault =
+      value === "template-default"
+        ? templateDimensionDisplay(key)
+        : (friendly[String(value)] ?? display(key, value));
+    const defaultText = `${shownDefault}${numeric && (typeof value === "number" || typeof shownDefault === "number") ? ` ${numeric.unit}` : ""}`;
+    const AlignmentIcon = key.toLowerCase().includes("alignment")
+      ? {
+          left: TextAlignStart,
+          center: TextAlignCenter,
+          right: TextAlignEnd,
+        }
+      : undefined;
+    return (
+      <div
+        key={key}
+        className={
+          key === "paper" ? "col-span-full flex flex-col gap-4" : "min-w-0"
+        }
+      >
+        <Field
+          data-invalid={!!error}
+          onMouseEnter={() => key.startsWith("margin") && setHovered(key)}
+          onMouseLeave={() => key.startsWith("margin") && setHovered(null)}
+          onFocusCapture={() => key.startsWith("margin") && setFocused(key)}
+          onBlurCapture={(event) => {
+            if (
+              key.startsWith("margin") &&
+              !event.currentTarget.contains(event.relatedTarget)
+            )
+              setFocused(null);
+          }}
+        >
+          {checks[key] ? (
+            <FieldLabel htmlFor={fieldId}>
+              <Checkbox
+                id={fieldId}
+                checked={data[key] === checks[key].on}
+                aria-invalid={!!error}
+                aria-describedby={`${fieldId}-description`}
+                onCheckedChange={(checked) =>
+                  change(key, checked ? checks[key].on : checks[key].off)
+                }
+              />
+              {label}
+            </FieldLabel>
+          ) : (
+            <>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <FieldLabel htmlFor={fieldId}>
+                  {label}
+                  {numeric && !label.includes("(") ? ` (${numeric.unit})` : ""}
+                </FieldLabel>
+                {key === "targetPages" && (
+                  <InfoHint label={label}>
+                    Warning threshold only; content is never removed or
+                    automatically fitted.
+                  </InfoHint>
+                )}
+              </div>
+              {key === "contactRows" ? (
+                <Select
+                  items={options.map((value) => ({
+                    value,
+                    label: friendly[value] ?? value,
+                  }))}
+                  value={String(data[key] ?? "")}
+                  onValueChange={(value) => value && change(key, value)}
+                >
+                  <SelectTrigger
+                    id={fieldId}
+                    aria-invalid={!!error}
+                    aria-describedby={`${fieldId}-description`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {options.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {friendly[value] ?? value}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              ) : options ? (
+                <ToggleGroup
+                  multiple={false}
+                  aria-label={label}
+                  id={fieldId}
+                  variant="outline"
+                  size="sm"
+                  aria-describedby={`${fieldId}-description`}
+                  value={[String(data[key] ?? "")]}
+                  onValueChange={(value) =>
+                    value.length && change(key, value[0])
+                  }
+                  className="max-w-full flex-wrap"
+                >
+                  {options.map((option) => {
+                    const Icon =
+                      AlignmentIcon?.[option as "left" | "center" | "right"];
+                    return (
+                      <ToggleGroupItem
+                        key={option}
+                        value={option}
+                        aria-label={`${label}: ${friendly[option] ?? option}`}
+                      >
+                        {Icon && <Icon aria-hidden="true" />}
+                        {key === "bulletMarker" && (
+                          <span aria-hidden="true">
+                            {
+                              {
+                                disc: "\u2022",
+                                dash: "\u2014",
+                                "hollow-circle": "\u25cb",
+                              }[option]
+                            }
+                          </span>
+                        )}
+                        {friendly[option] ??
+                          option[0].toUpperCase() + option.slice(1)}
+                      </ToggleGroupItem>
+                    );
+                  })}
+                </ToggleGroup>
+              ) : (
+                <Input
+                  id={fieldId}
+                  aria-invalid={!!error}
+                  aria-describedby={`${fieldId}-description${error ? ` ${fieldId}-error` : ""}`}
+                  inputMode={key === "contactRowSizes" ? "text" : "decimal"}
+                  value={display(key, data[key])}
+                  onFocus={(event) => {
+                    if (data[key] === "template-default")
+                      event.currentTarget.select();
+                  }}
+                  onClick={(event) => {
+                    if (data[key] === "template-default")
+                      event.currentTarget.select();
+                  }}
+                  onChange={(event) => {
+                    const text = event.target.value;
+                    change(
+                      key,
+                      key === "contactRowSizes"
+                        ? text.trim() &&
+                          text
+                            .split(",")
+                            .every((part) => /^\s*\d+\s*$/.test(part))
+                          ? text.split(",").map(Number)
+                          : text.trim()
+                            ? text
+                            : []
+                        : text.trim() &&
+                            !text.endsWith(".") &&
+                            Number.isFinite(Number(text))
+                          ? Number(text)
+                          : text,
+                    );
+                  }}
+                />
+              )}
+            </>
+          )}
+          <FieldDescription id={`${fieldId}-description`}>
+            Default:{" "}
+            {checks[key]
+              ? baseline[key] === checks[key].on
+                ? "Enabled"
+                : "Disabled"
+              : defaultText}
+            .
+            {(data[key] === "template-default" ||
+              baseline[key] === "template-default") && (
+              <> {templateDimensionExplanation(key)}</>
+            )}
+          </FieldDescription>
+          {key === "contactRowSizes" && (
+            <FieldDescription>
+              Items in each row, e.g. 3, 2. Extra contacts wrap in a final row;
+              unused rows are ignored.
+            </FieldDescription>
+          )}
+          {inactive && error && (
+            <FieldDescription>
+              This retained value needs correction before Save, even while its
+              feature is disabled.
+            </FieldDescription>
+          )}
+          {error && <FieldError id={`${fieldId}-error`}>{error}</FieldError>}
+        </Field>
+        {key === "paper" &&
+          (guide.success ? (
+            <MarginGuide
+              values={templateSettings(guide.data)}
+              active={hovered ?? focused}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Correct paper and margin values to show the margin guide.
+            </p>
+          ))}
+        {key === "contactRowSizes" &&
+          data.contactRows === "custom" &&
+          parsed.success &&
+          contacts.length > 1 && (
+            <fieldset className="mt-3 flex flex-col gap-2">
+              <legend className="mb-2 text-sm font-medium">
+                Start a new row before
+              </legend>
+              {contacts.slice(1).map((contact, offset) => {
+                const position = offset + 1;
+                let total = 0;
+                const breaks = parsed.data.contactRowSizes
+                  .map((size) => (total += size))
+                  .filter((index) => index < contacts.length);
+                return (
+                  <Field key={position}>
+                    <FieldLabel>
+                      <Checkbox
+                        checked={breaks.includes(position)}
+                        onCheckedChange={(checked) => {
+                          const next = [
+                            ...new Set(
+                              checked
+                                ? [...breaks, position]
+                                : breaks.filter((index) => index !== position),
+                            ),
+                          ].sort((a, b) => a - b);
+                          const bounds = [0, ...next, contacts.length];
+                          change(
+                            "contactRowSizes",
+                            bounds
+                              .slice(1)
+                              .map((end, index) => end - bounds[index]),
+                          );
+                        }}
+                      />
+                      {contact}
+                    </FieldLabel>
+                  </Field>
+                );
+              })}
+            </fieldset>
+          )}
+      </div>
+    );
+  };
   return (
     <div className="flex flex-col gap-5">
       <StyleSample values={values} />
+      {issues.some((issue) => issue.path[0] === "defaults") && (
+        <FieldError>
+          Layout defaults are invalid. Load a valid preset or reconcile this
+          draft before saving.
+        </FieldError>
+      )}
       {groups.map((group) => (
         <Collapsible
           key={group.name}
@@ -203,281 +567,71 @@ export function LayoutFields({
             className={disclosureTriggerClassName}
           >
             <DisclosureChevron />
+            <group.icon aria-hidden="true" />
             <DisclosureLabel>{group.name}</DisclosureLabel>
           </CollapsibleTrigger>
           <CollapsibleContent keepMounted>
             <DisclosureGuide>
-              {group.name === "Header & contacts" && (
-                <div className="mb-4 flex flex-col items-start gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    Full name is required. Selected contacts:{" "}
-                    {contacts.join(" / ") || "None"}. Empty values are omitted.
-                  </p>
-                  {editContacts && (
-                    <Button variant="outline" size="sm" onClick={editContacts}>
-                      Edit profile content
-                    </Button>
+              <div className="mb-4 flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  aria-label={`Reset ${group.name} to ${resumeLayout ? "layout" : "app"} defaults`}
+                  disabled={group.keys.every(
+                    (key) =>
+                      JSON.stringify(data[key]) ===
+                      JSON.stringify(baseline[key]),
                   )}
-                </div>
+                  onClick={() =>
+                    onChange({
+                      ...data,
+                      ...Object.fromEntries(
+                        group.keys.map((key) => [
+                          key,
+                          structuredClone(baseline[key]),
+                        ]),
+                      ),
+                    })
+                  }
+                >
+                  <RotateCcw aria-hidden="true" data-icon="inline-start" />
+                  {resumeLayout ? "Reset group" : "Reset to app defaults"}
+                </Button>
+              </div>
+              {group.name === "Header & contacts" && (
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Full name is required. Selected contacts:{" "}
+                  {contacts.join(" / ") || "None"}. Empty values are omitted.
+                  {editContacts && (
+                    <>
+                      {" "}
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="xs"
+                        onClick={editContacts}
+                      >
+                        Edit profile content
+                      </Button>
+                    </>
+                  )}
+                </p>
               )}
-              {group.name === "Page & margins" && parsed.success && (
-                <MarginGuide
-                  values={templateSettings(parsed.data)}
-                  active={null}
-                />
-              )}
-              {group.name === "Header & contacts" &&
-                data.contactRows === "custom" &&
-                parsed.success &&
-                contacts.length > 1 && (
-                  <fieldset className="mb-4">
-                    <legend className="mb-2 text-sm font-medium">
-                      Custom row breaks
-                    </legend>
-                    {contacts.slice(1).map((contact, offset) => {
-                      const position = offset + 1;
-                      let total = 0;
-                      const breaks = parsed.data.contactRowSizes
-                        .map((size) => (total += size))
-                        .filter((index) => index < contacts.length);
-                      return (
-                        <Field key={position}>
-                          <FieldLabel>
-                            <Checkbox
-                              checked={breaks.includes(position)}
-                              onCheckedChange={(checked) => {
-                                const next = [
-                                  ...new Set(
-                                    checked
-                                      ? [...breaks, position]
-                                      : breaks.filter(
-                                          (index) => index !== position,
-                                        ),
-                                  ),
-                                ].sort((a, b) => a - b);
-                                const bounds = [0, ...next, contacts.length];
-                                change(
-                                  "contactRowSizes",
-                                  bounds
-                                    .slice(1)
-                                    .map((end, index) => end - bounds[index]),
-                                );
-                              }}
-                            />
-                            Start a new row before {contact}
-                          </FieldLabel>
-                        </Field>
-                      );
-                    })}
-                  </fieldset>
-                )}
               <LayoutFieldGrid layout="pair">
-                {group.keys.map((key) => {
-                  const error = issues.find(
-                    (issue) => issue.path[0] === key,
-                  )?.message;
-                  const numeric = numericLayoutControls.find(
-                    (control) => control.key === key,
-                  );
-                  const color = key.endsWith("Color");
-                  const options = color
-                    ? Object.keys(pdfColorPresets)
-                    : choices[key];
-                  const label =
-                    extraLabels[key] ??
-                    templateSettingLabels[
-                      key as keyof typeof templateSettingLabels
-                    ] ??
-                    key;
-                  const fieldId = `${id}-${key}`;
-                  const inactive =
-                    (key === "iconColor" && data.contactIcons === "off") ||
-                    (["dividerThickness", "dividerColor"].includes(key) &&
-                      data.sectionDivider === "off") ||
-                    (["pageNumberAlignment", "pageNumberFormat"].includes(
-                      key,
-                    ) &&
-                      data.pageNumbering === "hidden") ||
-                    (key === "contactRowSizes" &&
-                      data.contactRows !== "custom");
-                  if (color && !error)
-                    return (
-                      <LayoutColorField
-                        key={key}
-                        setting={key as "headingColor"}
-                        value={data[key] as keyof typeof pdfColorPresets}
-                        id={fieldId}
-                        disabled={inactive}
-                        explicit={true}
-                        change={(value) => change(key, value)}
-                        reset={() => change(key, "template-default")}
-                        source={
-                          inactive
-                            ? "Enable its related feature to use this color; the value is retained."
-                            : undefined
-                        }
-                      />
+                {group.keys
+                  .filter((key) => !dependentKeys.includes(key))
+                  .map((key) => {
+                    const children = dependentFields[key];
+                    return children ? (
+                      <div key={key} className="flex min-w-0 flex-col gap-4">
+                        {renderField(key)}
+                        {children.map(renderField)}
+                      </div>
+                    ) : (
+                      renderField(key)
                     );
-                  return (
-                    <Field
-                      key={key}
-                      data-invalid={!!error}
-                      data-disabled={inactive}
-                    >
-                      <FieldLabel htmlFor={fieldId}>
-                        {label}
-                        {numeric && !label.includes("(")
-                          ? ` (${numeric.unit})`
-                          : ""}
-                      </FieldLabel>
-                      {options ? (
-                        color ? (
-                          <Select
-                            items={options.map((value) => ({
-                              value,
-                              label:
-                                pdfColorPresets[
-                                  value as keyof typeof pdfColorPresets
-                                ].label,
-                            }))}
-                            value={String(data[key] ?? "")}
-                            onValueChange={(value) =>
-                              value && change(key, value)
-                            }
-                            disabled={inactive}
-                          >
-                            <SelectTrigger id={fieldId} aria-invalid={!!error}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                {options.map((value) => (
-                                  <SelectItem key={value} value={value}>
-                                    <span
-                                      aria-hidden="true"
-                                      className="size-3 rounded-full border"
-                                      style={{
-                                        background:
-                                          pdfColorPresets[
-                                            value as keyof typeof pdfColorPresets
-                                          ].hex ?? "transparent",
-                                      }}
-                                    />
-                                    {
-                                      pdfColorPresets[
-                                        value as keyof typeof pdfColorPresets
-                                      ].label
-                                    }
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <ToggleGroup
-                            multiple={false}
-                            aria-label={label}
-                            id={fieldId}
-                            variant="outline"
-                            size="sm"
-                            value={[String(data[key] ?? "")]}
-                            onValueChange={(value) =>
-                              value.length && change(key, value[0])
-                            }
-                            disabled={inactive}
-                            className="max-w-full flex-wrap"
-                          >
-                            {options.map((option) => (
-                              <ToggleGroupItem
-                                key={option}
-                                value={option}
-                                aria-label={`${label}: ${friendly[option] ?? option}`}
-                              >
-                                {friendly[option] ??
-                                  option[0].toUpperCase() + option.slice(1)}
-                              </ToggleGroupItem>
-                            ))}
-                          </ToggleGroup>
-                        )
-                      ) : (
-                        <Input
-                          id={fieldId}
-                          aria-invalid={!!error}
-                          aria-describedby={
-                            error ? `${fieldId}-error` : undefined
-                          }
-                          disabled={inactive}
-                          inputMode={
-                            key === "contactRowSizes" ? "text" : "decimal"
-                          }
-                          placeholder={
-                            numeric && "templateDefault" in numeric
-                              ? "Template default"
-                              : undefined
-                          }
-                          value={
-                            data[key] === "template-default"
-                              ? ""
-                              : Array.isArray(data[key])
-                                ? data[key].join(", ")
-                                : String(data[key] ?? "")
-                          }
-                          onChange={(event) => {
-                            const text = event.target.value;
-                            change(
-                              key,
-                              key === "contactRowSizes"
-                                ? text.trim() &&
-                                  text
-                                    .split(",")
-                                    .every((part) => /^\s*\d+\s*$/.test(part))
-                                  ? text.split(",").map(Number)
-                                  : text.trim()
-                                    ? text
-                                    : []
-                                : text.trim() &&
-                                    !text.endsWith(".") &&
-                                    Number.isFinite(Number(text))
-                                  ? Number(text)
-                                  : text,
-                            );
-                          }}
-                        />
-                      )}
-                      {numeric && "templateDefault" in numeric && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="self-start"
-                          onClick={() => change(key, "template-default")}
-                        >
-                          Use template default
-                        </Button>
-                      )}
-                      {key === "contactRowSizes" && (
-                        <FieldDescription>
-                          Items in each row, e.g. 3, 2. Extra contacts wrap in a
-                          final row; unused rows are ignored.
-                        </FieldDescription>
-                      )}
-                      {key === "targetPages" && (
-                        <FieldDescription>
-                          Warning threshold only; content is never removed or
-                          automatically fitted.
-                        </FieldDescription>
-                      )}
-                      {inactive && (
-                        <FieldDescription>
-                          Available when its related feature is enabled. Your
-                          value is retained.
-                        </FieldDescription>
-                      )}
-                      {error && (
-                        <FieldError id={`${fieldId}-error`}>{error}</FieldError>
-                      )}
-                    </Field>
-                  );
-                })}
+                  })}
               </LayoutFieldGrid>
             </DisclosureGuide>
           </CollapsibleContent>
@@ -489,7 +643,7 @@ export function LayoutFields({
 
 /** Show fictional appearance feedback without compiling or claiming PDF pagination. */
 export function StyleSample({ values }: { values: unknown }) {
-  const parsed = layoutSchema.safeParse(values);
+  const parsed = resumeLayoutSchema.safeParse(values);
   if (!parsed.success)
     return (
       <p className="text-xs text-muted-foreground">
@@ -497,8 +651,7 @@ export function StyleSample({ values }: { values: unknown }) {
       </p>
     );
   const value = parsed.data;
-  const color = (key: keyof typeof pdfColorPresets, fallback: string) =>
-    pdfColorPresets[key].hex ?? fallback;
+  const color = (key: LayoutColor) => resolvedLayoutColor(value, key).hex;
   return (
     <figure className="flex flex-col gap-2">
       <figcaption className="text-xs text-muted-foreground">
@@ -509,7 +662,7 @@ export function StyleSample({ values }: { values: unknown }) {
         className="overflow-hidden rounded-lg border p-4"
         style={{
           background: "white",
-          color: color(value.bodyColor, "#000000"),
+          color: color("bodyColor"),
           fontFamily: value.font === "source-serif" ? "serif" : "sans-serif",
           fontSize: value.fontSize,
           lineHeight: value.lineHeight,
@@ -578,7 +731,7 @@ export function StyleSample({ values }: { values: unknown }) {
                       <Mail
                         aria-hidden="true"
                         className="size-3"
-                        style={{ color: color(value.iconColor, "#808080") }}
+                        style={{ color: color("iconColor") }}
                       />
                     )}
                     {contact}
@@ -590,7 +743,7 @@ export function StyleSample({ values }: { values: unknown }) {
         </div>
         <div
           style={{
-            color: color(value.headingColor, "#704214"),
+            color: color("headingColor"),
             fontSize:
               value.sectionSize === "template-default" ? 12 : value.sectionSize,
             fontWeight:
@@ -601,7 +754,7 @@ export function StyleSample({ values }: { values: unknown }) {
                   : 900,
             borderBottom:
               value.sectionDivider === "on"
-                ? `${value.dividerThickness === "template-default" ? 1 : value.dividerThickness}px solid ${color(value.dividerColor, "#808080")}`
+                ? `${value.dividerThickness === "template-default" ? 1 : value.dividerThickness}px solid ${color("dividerColor")}`
                 : undefined,
           }}
         >
@@ -639,7 +792,7 @@ export function StyleSample({ values }: { values: unknown }) {
                 value.entrySubtitleSize === "template-default"
                   ? value.fontSize
                   : value.entrySubtitleSize,
-              color: color(value.secondaryColor, "#404040"),
+              color: color("secondaryColor"),
               fontWeight:
                 value.entrySubtitleWeight === "regular"
                   ? 400
@@ -665,9 +818,7 @@ export function StyleSample({ values }: { values: unknown }) {
                 : "\u2022"}{" "}
             Meaningful work and a measurable achievement.
           </p>
-          <span style={{ color: color(value.linkColor, "#704214") }}>
-            example.com/project
-          </span>
+          <span style={{ color: color("linkColor") }}>example.com/project</span>
         </div>
       </div>
     </figure>

@@ -1,4 +1,5 @@
 import { careerFieldLabel } from "@/lib/career/labels";
+import { layoutFromPreset } from "@/lib/career/layout";
 import type { RichText } from "@/lib/career/wording";
 import { wordingText } from "@/lib/career/wording";
 import type {
@@ -48,7 +49,7 @@ export function createResume(
     profileSelection: [],
     summaryIncluded: false,
     overrides: {},
-    layout: structuredClone(document.defaults),
+    layout: layoutFromPreset(document.defaults),
   };
 }
 

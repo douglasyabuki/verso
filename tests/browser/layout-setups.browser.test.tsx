@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 
 import { CareerWorkspace } from "@/components/career/career-workspace";
 import { LayoutFields } from "@/components/career/layout-editor";
 import { PresetPicker } from "@/components/career/setup-library";
+import { layoutAppearance, layoutFromPreset } from "@/lib/career/layout";
 import { createCareerDocument, readScope } from "@/lib/career/model";
 import { createResume } from "@/lib/career/resumes";
 import { captureStarter, prepareStarterResume } from "@/lib/career/starters";
@@ -17,6 +18,28 @@ const controllers: CareerController[] = [];
 const connections: CareerStorage[] = [];
 const initialUrl = window.location.href;
 const initialState = window.history.state;
+
+function AppearanceForm({
+  initial,
+  resume = true,
+}: {
+  initial: CareerDocument["resumes"][number]["layout"];
+  resume?: boolean;
+}) {
+  const [values, setValues] = useState<unknown>(initial);
+  return (
+    <>
+      <LayoutFields
+        values={values}
+        defaults={initial.defaults ?? initial}
+        resumeLayout={resume}
+        contacts={["Email", "City", "Website"]}
+        onChange={setValues}
+      />
+      <output aria-label="Draft appearance">{JSON.stringify(values)}</output>
+    </>
+  );
+}
 function fixture() {
   const document = createCareerDocument();
   const resume = createResume(document, "en-US");
@@ -52,6 +75,438 @@ afterEach(async () => {
   window.history.replaceState(initialState, "", initialUrl);
 });
 
+it("resets only one group to copied preset defaults, including retained hidden fields", async () => {
+  const { document } = fixture();
+  const initial = layoutFromPreset({
+    ...document.defaults,
+    marginLeft: 18,
+    sectionDivider: "off",
+    dividerThickness: 0.5,
+  });
+  initial.marginLeft = 20;
+  initial.fontSize = 11;
+  initial.dividerThickness = 1.5;
+  await render(<AppearanceForm initial={initial} />);
+  await expect
+    .element(
+      page.getByRole("textbox", {
+        name: "Divider thickness (pt)",
+        exact: true,
+      }),
+    )
+    .not.toBeInTheDocument();
+  await page
+    .getByRole("button", {
+      name: "Reset Typography to layout defaults",
+      exact: true,
+    })
+    .click();
+  await expect
+    .element(page.getByRole("textbox", { name: "Text size (pt)", exact: true }))
+    .toHaveValue("10");
+  await expect
+    .element(
+      page.getByRole("textbox", { name: "Left margin (mm)", exact: true }),
+    )
+    .toHaveValue("20");
+  await page
+    .getByRole("checkbox", { name: "Section divider", exact: true })
+    .click();
+  await expect
+    .element(
+      page.getByRole("textbox", {
+        name: "Divider thickness (pt)",
+        exact: true,
+      }),
+    )
+    .toHaveValue("0.5");
+  await page
+    .getByRole("button", {
+      name: "Reset Page & margins to layout defaults",
+      exact: true,
+    })
+    .click();
+  await expect
+    .element(
+      page.getByRole("textbox", { name: "Left margin (mm)", exact: true }),
+    )
+    .toHaveValue("18");
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: "Reset Page & margins to layout defaults",
+        exact: true,
+      }),
+    )
+    .toBeDisabled();
+});
+
+it("retains automatic dimension semantics on focus and reveals invalid disabled values", async () => {
+  const { resume } = fixture();
+  await render(<AppearanceForm initial={resume.layout} />);
+  const title = page.getByRole("textbox", {
+    name: "Title / organization size (pt)",
+    exact: true,
+  });
+  await expect.element(title).toHaveValue("Body text size");
+  await title.click();
+  await page
+    .getByRole("textbox", { name: "Text size (pt)", exact: true })
+    .click();
+  expect(
+    JSON.parse(
+      page.getByRole("status", { name: "Draft appearance" }).element()
+        .textContent!,
+    ).entryTitleSize,
+  ).toBe("template-default");
+  await title.fill("bad");
+  await expect.element(title).toHaveAttribute("aria-invalid", "true");
+  await title.fill("12");
+  await expect.element(title).toHaveValue("12");
+  const thickness = page.getByRole("textbox", {
+    name: "Divider thickness (pt)",
+    exact: true,
+  });
+  await thickness.fill("bad");
+  await page
+    .getByRole("checkbox", { name: "Section divider", exact: true })
+    .click();
+  await expect.element(thickness).toBeVisible();
+  await expect.element(thickness).toHaveAttribute("aria-invalid", "true");
+  await thickness.fill("1");
+  await expect.element(thickness).not.toBeInTheDocument();
+});
+
+it("reveals page numbering and custom rows only when enabled, retaining their values", async () => {
+  const { resume } = fixture();
+  await render(<AppearanceForm initial={resume.layout} />);
+  const numbering = page.getByRole("checkbox", {
+    name: "Show page numbers",
+    exact: true,
+  });
+  expect(
+    page
+      .getByRole("group", { name: "Numbering alignment", exact: true })
+      .elements(),
+  ).toHaveLength(0);
+  await numbering.click();
+  await page
+    .getByRole("button", { name: "Numbering alignment: right", exact: true })
+    .click();
+  await numbering.click();
+  await numbering.click();
+  expect(
+    JSON.parse(
+      page.getByRole("status", { name: "Draft appearance" }).element()
+        .textContent!,
+    ).pageNumberAlignment,
+  ).toBe("right");
+  await page
+    .getByRole("button", { name: "Header & contacts", exact: true })
+    .click();
+  const rows = page.getByRole("combobox", {
+    name: "Contacts per row",
+    exact: true,
+  });
+  await rows.click();
+  await page.getByRole("option", { name: "Custom rows", exact: true }).click();
+  const sizes = page.getByRole("textbox", {
+    name: "Custom row sizes",
+    exact: true,
+  });
+  await sizes.fill("2, 1");
+  await rows.click();
+  await page
+    .getByRole("option", { name: "Automatic wrapping", exact: true })
+    .click();
+  await expect.element(sizes).not.toBeInTheDocument();
+  await rows.click();
+  await page.getByRole("option", { name: "Custom rows", exact: true }).click();
+  await expect.element(sizes).toHaveValue("2, 1");
+});
+
+it.each([720, 1000])(
+  "keeps neighboring fields anchored when dependent controls expand at %i px",
+  async (width) => {
+    const { resume } = fixture();
+    await render(
+      <div style={{ width }}>
+        <AppearanceForm initial={resume.layout} />
+      </div>,
+    );
+    const divider = page.getByRole("checkbox", {
+      name: "Section divider",
+      exact: true,
+    });
+    const thickness = page.getByRole("textbox", {
+      name: "Divider thickness (pt)",
+      exact: true,
+    });
+    const titleSize = page.getByRole("textbox", {
+      name: "Title / organization size (pt)",
+      exact: true,
+    });
+    const typography = page.getByRole("button", {
+      name: "Typography",
+      exact: true,
+    });
+    const titleBefore = {
+      top:
+        titleSize.element().getBoundingClientRect().top -
+        typography.element().getBoundingClientRect().top,
+      left:
+        titleSize.element().getBoundingClientRect().left -
+        typography.element().getBoundingClientRect().left,
+    };
+    expect(thickness.element().getBoundingClientRect().top).toBeGreaterThan(
+      divider.element().getBoundingClientRect().bottom,
+    );
+    expect(thickness.element().getBoundingClientRect().left).toBeLessThan(
+      titleSize.element().getBoundingClientRect().left,
+    );
+    await divider.click();
+    await expect.element(thickness).not.toBeInTheDocument();
+    expect(
+      titleSize.element().getBoundingClientRect().top -
+        typography.element().getBoundingClientRect().top,
+    ).toBeCloseTo(titleBefore.top, 0);
+    expect(
+      titleSize.element().getBoundingClientRect().left -
+        typography.element().getBoundingClientRect().left,
+    ).toBeCloseTo(titleBefore.left, 0);
+    await divider.click();
+    const threshold = page.getByRole("textbox", {
+      name: "Page warning threshold (pages)",
+      exact: true,
+    });
+    const thresholdBefore = {
+      top: threshold.element().getBoundingClientRect().top + window.scrollY,
+      left: threshold.element().getBoundingClientRect().left + window.scrollX,
+    };
+    const numbering = page.getByRole("checkbox", {
+      name: "Show page numbers",
+      exact: true,
+    });
+    await numbering.click();
+    const thresholdAfter = threshold.element().getBoundingClientRect();
+    expect(thresholdAfter.top + window.scrollY).toBeCloseTo(
+      thresholdBefore.top,
+      0,
+    );
+    expect(thresholdAfter.left + window.scrollX).toBeCloseTo(
+      thresholdBefore.left,
+      0,
+    );
+    const alignment = page.getByRole("group", {
+      name: "Numbering alignment",
+      exact: true,
+    });
+    const format = page.getByRole("group", {
+      name: "Numbering format",
+      exact: true,
+    });
+    expect(alignment.element().getBoundingClientRect().top).toBeGreaterThan(
+      numbering.element().getBoundingClientRect().bottom,
+    );
+    expect(format.element().getBoundingClientRect().left).toBeLessThan(
+      thresholdAfter.left,
+    );
+
+    await page
+      .getByRole("button", { name: "Header & contacts", exact: true })
+      .click();
+    const gap = page.getByRole("textbox", {
+      name: "Between contact rows (pt)",
+      exact: true,
+    });
+    const separator = page.getByRole("group", {
+      name: "Contact separator",
+      exact: true,
+    });
+    const beforeGap = {
+      top: gap.element().getBoundingClientRect().top + window.scrollY,
+      left: gap.element().getBoundingClientRect().left + window.scrollX,
+    };
+    const beforeSeparator =
+      separator.element().getBoundingClientRect().top + window.scrollY;
+    await page
+      .getByRole("combobox", { name: "Contacts per row", exact: true })
+      .click();
+    await page
+      .getByRole("option", { name: "Custom rows", exact: true })
+      .click();
+    expect(
+      gap.element().getBoundingClientRect().top + window.scrollY,
+    ).toBeCloseTo(beforeGap.top, 0);
+    expect(
+      gap.element().getBoundingClientRect().left + window.scrollX,
+    ).toBeCloseTo(beforeGap.left, 0);
+    expect(
+      separator.element().getBoundingClientRect().top + window.scrollY,
+    ).toBeCloseTo(beforeSeparator, 0);
+    const breaks = page.getByRole("group", {
+      name: "Start a new row before",
+      exact: true,
+    });
+    await expect
+      .element(breaks.getByRole("checkbox", { name: "City", exact: true }))
+      .toBeVisible();
+    await expect
+      .element(breaks.getByRole("checkbox", { name: "Website", exact: true }))
+      .toBeVisible();
+  },
+);
+
+it("puts the warning explanation in the label's info hint", async () => {
+  const { resume } = fixture();
+  await render(<AppearanceForm initial={resume.layout} />);
+  const explanation =
+    "Warning threshold only; content is never removed or automatically fitted.";
+  await expect
+    .element(page.getByText(explanation, { exact: true }))
+    .not.toBeInTheDocument();
+  const hint = page.getByRole("button", {
+    name: "About Page warning threshold",
+    exact: true,
+  });
+  await hint.click();
+  await expect
+    .element(page.getByRole("tooltip"))
+    .toHaveTextContent(explanation);
+  await expect.element(hint).toHaveAccessibleDescription(explanation);
+  await userEvent.keyboard("{Escape}");
+  await expect.element(page.getByRole("tooltip")).not.toBeInTheDocument();
+  await expect.element(hint).not.toHaveAttribute("aria-describedby");
+});
+
+it("selects a named draft color and dismisses its popover without an enclosing Save", async () => {
+  const { resume } = fixture();
+  await render(<AppearanceForm initial={resume.layout} />);
+  await page.getByRole("button", { name: "Colors", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Section color: Sepia", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Dark teal", exact: true }).click();
+  const trigger = page.getByRole("button", {
+    name: "Section color: Dark teal",
+    exact: true,
+  });
+  await expect.element(trigger).toHaveFocus();
+  expect(resume.layout.headingColor).toBe("template-default");
+  await trigger.click();
+  await userEvent.keyboard("{Escape}");
+  await expect.element(trigger).toHaveFocus();
+  expect(
+    JSON.parse(
+      page.getByRole("status", { name: "Draft appearance" }).element()
+        .textContent!,
+    ).headingColor,
+  ).toBe("dark-teal");
+});
+
+it("places paper before the guide and restores the focused margin after hovering another edge", async () => {
+  const { resume } = fixture();
+  await render(<AppearanceForm initial={resume.layout} />);
+  const image = page.getByRole("img", { name: /^A4,/ });
+  const paper = page.getByRole("group", { name: "Paper", exact: true });
+  expect(
+    paper.element().compareDocumentPosition(image.element()) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  const top = page.getByRole("textbox", {
+    name: "Top margin (mm)",
+    exact: true,
+  });
+  const bottom = page.getByRole("textbox", {
+    name: "Bottom margin (mm)",
+    exact: true,
+  });
+  await top.click();
+  expect(
+    image
+      .element()
+      .querySelector('[data-margin-edge="top"]')
+      ?.classList.contains("opacity-0"),
+  ).toBe(false);
+  await bottom.hover();
+  expect(
+    image
+      .element()
+      .querySelector('[data-margin-edge="bottom"]')
+      ?.classList.contains("opacity-0"),
+  ).toBe(false);
+  expect(
+    image
+      .element()
+      .querySelector('[data-margin-edge="top"]')
+      ?.classList.contains("opacity-0"),
+  ).toBe(true);
+  await bottom.unhover();
+  expect(
+    image
+      .element()
+      .querySelector('[data-margin-edge="top"]')
+      ?.classList.contains("opacity-0"),
+  ).toBe(false);
+  await page
+    .getByRole("button", { name: "Paper: US Letter", exact: true })
+    .click();
+  await expect
+    .element(page.getByRole("img", { name: /^US Letter,/ }))
+    .toBeVisible();
+  await page
+    .getByRole("textbox", { name: "Text size (pt)", exact: true })
+    .fill("bad");
+  await expect
+    .element(page.getByRole("img", { name: /^US Letter,/ }))
+    .toBeVisible();
+});
+
+it.each(["preset", "starter"] as const)(
+  "uses app defaults when editing %s appearance",
+  async (kind) => {
+    const { resume } = fixture();
+    const initial = { ...layoutAppearance(resume.layout), fontSize: 11 };
+    const item =
+      kind === "preset"
+        ? {
+            id: "reset-preset",
+            name: "Reset preset",
+            template: resume.template,
+            layout: initial,
+          }
+        : {
+            id: "reset-starter",
+            name: "Reset starter",
+            template: resume.template,
+            layout: initial,
+            sections: [],
+            summaryIncluded: false,
+          };
+    const document = fixture().document;
+    if (kind === "preset")
+      document.presets = [item as CareerDocument["presets"][number]];
+    else document.starters = [item as CareerDocument["starters"][number]];
+    const controller = await libraryWorkspace(document, `${kind}/${item.id}`);
+    await page
+      .getByRole("button", {
+        name: "Reset Typography to app defaults",
+        exact: true,
+      })
+      .click();
+    await expect
+      .element(
+        page.getByRole("textbox", { name: "Text size (pt)", exact: true }),
+      )
+      .toHaveValue("10");
+    const record =
+      kind === "preset"
+        ? controller.getSnapshot().head!.document.presets[0]
+        : controller.getSnapshot().head!.document.starters[0];
+    expect(record.layout.fontSize).toBe(11);
+  },
+);
+
 it("keeps invalid layout values visible and reveals their group", async () => {
   const { document } = fixture();
   function Form() {
@@ -72,8 +527,9 @@ it("keeps invalid layout values visible and reveals their group", async () => {
     .getByRole("button", { name: "Header & contacts", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Contacts per row: Custom rows", exact: true })
+    .getByRole("combobox", { name: "Contacts per row", exact: true })
     .click();
+  await page.getByRole("option", { name: "Custom rows", exact: true }).click();
   await page
     .getByRole("textbox", { name: "Custom row sizes", exact: true })
     .fill("3, 2");
@@ -92,7 +548,7 @@ function libraryFixture() {
       id: "compact",
       name: "Compact",
       template: resume.template,
-      layout: { ...resume.layout, marginLeft: 18 },
+      layout: { ...layoutAppearance(resume.layout), marginLeft: 18 },
     },
   ];
   const starter = captureStarter(document, resume);
@@ -430,7 +886,7 @@ it.each(["preset", "resume"] as const)(
 
 it("does not create an unsaved change or history step when a library preset already matches", async () => {
   const { document, resume } = libraryFixture();
-  document.presets[0].layout = structuredClone(resume.layout);
+  document.presets[0].layout = layoutAppearance(resume.layout);
   const controller = await libraryWorkspace(document, "presets");
   await page
     .getByRole("button", { name: "Apply preset…", exact: true })
@@ -530,7 +986,7 @@ it("loads a preset into a draft without changing committed layout or selections"
       id: "compact",
       name: "Compact",
       template: resume.template,
-      layout: { ...resume.layout, paper: "letter" },
+      layout: { ...layoutAppearance(resume.layout), paper: "letter" },
     },
   ];
   document.presets.push({
@@ -566,13 +1022,13 @@ it("loads a preset into a draft without changing committed layout or selections"
   await page.getByRole("option", { name: "Compact", exact: true }).click();
   await expect
     .element(page.getByRole("status").filter({ hasText: '"paper"' }))
-    .toHaveTextContent('"paper":"a4"');
+    .toHaveTextContent(/"paper":"a4"/);
   await page
     .getByRole("button", { name: "Load into layout", exact: true })
     .click();
   await expect
     .element(page.getByRole("status").filter({ hasText: '"paper"' }))
-    .toHaveTextContent('"paper":"letter"');
+    .toHaveTextContent(/"paper":"letter"/);
   expect(resume.layout.paper).toBe("a4");
   expect(resume.selection).toEqual([]);
 });
@@ -626,7 +1082,7 @@ it("rechecks reviewed mappings inside real IndexedDB without partially creating 
     id: "starter",
     name: "Structure",
     template: resume.template,
-    layout: resume.layout,
+    layout: layoutAppearance(resume.layout),
     summaryIncluded: false,
     sections: [
       {
@@ -677,7 +1133,7 @@ it("retries an interrupted composite acknowledgment once and survives restart af
     id: "starter",
     name: "Structure",
     template: resume.template,
-    layout: resume.layout,
+    layout: layoutAppearance(resume.layout),
     summaryIncluded: false,
     sections: [
       {
@@ -728,7 +1184,7 @@ it("rejects a real transaction write failure with neither resume nor section com
     id: "starter",
     name: "Structure",
     template: resume.template,
-    layout: resume.layout,
+    layout: layoutAppearance(resume.layout),
     summaryIncluded: false,
     sections: [
       {
@@ -772,7 +1228,7 @@ it("round-trips saved setups and separate layout recovery through replacement an
       id: "preset",
       name: "Saved appearance",
       template: resume.template,
-      layout: { ...resume.layout, contactRows: "3" },
+      layout: { ...layoutAppearance(resume.layout), contactRows: "3" },
     },
   ];
   const controller = await owner(document);

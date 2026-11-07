@@ -1,3 +1,4 @@
+import { layoutSchema, resumeLayoutSchema } from "@/lib/career/model";
 import { settingsSchema } from "@/lib/output/schema";
 import type { CareerResume } from "@/types-and-constants/career";
 import type { TemplateSettings } from "@/types-and-constants/output";
@@ -52,4 +53,80 @@ export function contactRows<T>(
   }
   if (index < contacts.length) rows.push(contacts.slice(index));
   return rows;
+}
+
+/** Copy only renderable appearance, excluding resume reset metadata.
+ * @param layout Valid appearance with optional resume metadata.
+ * @returns Flat validated appearance suitable for presets and starters.
+ * @example layoutAppearance(resume.layout)
+ */
+export function layoutAppearance(layout: CareerResume["layout"]) {
+  const { defaults: _defaults, ...appearance } = layout;
+  void _defaults;
+  return layoutSchema.parse(appearance);
+}
+
+/** Copy appearance as both the current layout and its frozen reset baseline.
+ * @param layout Appearance supplied by a preset, starter, or workspace.
+ * @returns Independent values and defaults with no live library reference.
+ * @example layoutFromPreset(preset.layout)
+ */
+export function layoutFromPreset(
+  layout: CareerResume["layout"],
+): CareerResume["layout"] {
+  const appearance = layoutAppearance(layout);
+  return { ...appearance, defaults: structuredClone(appearance) };
+}
+
+/** Resolve defaults without writing or inferring them from modified draft values.
+ * @param layout Committed layout or the original editing baseline.
+ * @returns Frozen defaults, or saved appearance for records without baseline metadata.
+ * @example layoutDefaults(draft.baseline)
+ */
+export function layoutDefaults(layout: unknown) {
+  const parsed = resumeLayoutSchema.parse(layout);
+  return parsed.defaults ?? layoutAppearance(parsed);
+}
+
+/** Compare effective layout values and reset behavior, including baseline-only changes.
+ * @param left First validated resume layout.
+ * @param right Second validated resume layout.
+ * @returns True when appearance and frozen defaults are equal.
+ * @example sameLayout(resume.layout, layoutFromPreset(preset.layout))
+ */
+export function sameLayout(left: unknown, right: unknown): boolean {
+  const a = resumeLayoutSchema.safeParse(left);
+  const b = resumeLayoutSchema.safeParse(right);
+  if (!a.success || !b.success) return false;
+  return (
+    JSON.stringify({
+      ...layoutAppearance(a.data),
+      defaults: layoutDefaults(a.data),
+    }) ===
+    JSON.stringify({
+      ...layoutAppearance(b.data),
+      defaults: layoutDefaults(b.data),
+    })
+  );
+}
+
+/** Compare appearance only, allowing malformed drafts without throwing during rendering.
+ * @param left First layout or draft.
+ * @param right Second layout or draft.
+ * @returns True when both have valid, identical appearance regardless of defaults.
+ * @example sameAppearance(preset.layout, draft.values)
+ */
+export function sameAppearance(left: unknown, right: unknown): boolean {
+  const appearance = (value: unknown) => {
+    if (!value || typeof value !== "object")
+      return layoutSchema.safeParse(value);
+    const { defaults: _defaults, ...rest } = value as Record<string, unknown>;
+    void _defaults;
+    return layoutSchema.safeParse(rest);
+  };
+  const a = appearance(left);
+  const b = appearance(right);
+  return (
+    a.success && b.success && JSON.stringify(a.data) === JSON.stringify(b.data)
+  );
 }

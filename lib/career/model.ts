@@ -15,7 +15,7 @@ import {
   SECTION_KINDS,
   WORKSPACE_BYTES,
 } from "@/types-and-constants/career";
-import { defaultSettings } from "@/types-and-constants/output";
+import { appLayoutDefaults } from "@/types-and-constants/layout";
 import {
   defaultSectionIcons,
   sectionIconIds,
@@ -162,6 +162,10 @@ export const layoutSchema = settingsSchema
     contactRowGap: z.number().min(0).max(24),
     contactSeparator: z.enum(["space", "dot", "bar"]),
   });
+export const resumeLayoutSchema = layoutSchema.extend({
+  defaults: layoutSchema.optional(),
+});
+
 const selectionSchema = z.strictObject({
   sectionId: id,
   hidden: z.boolean().optional(),
@@ -182,7 +186,7 @@ const resumeSchema = z.strictObject({
   profileSelection: z.array(id).max(60).optional(),
   summaryIncluded: z.boolean().optional(),
   overrides: z.record(id, richTextSchema),
-  layout: layoutSchema,
+  layout: resumeLayoutSchema,
   createdSectionIds: z.array(id).max(100).optional(),
 });
 
@@ -626,18 +630,6 @@ export function parsePortable(source: string, kind: "workspace" | "recovery") {
  * @example createCareerDocument("pt-BR")
  */
 export function createCareerDocument(tag = "en-US"): CareerDocument {
-  const { pageSize, fontFamily, ...appearance } = defaultSettings;
-  void fontFamily;
-  const defaults = {
-    ...appearance,
-    contactRows: "auto" as const,
-    contactRowSizes: [],
-    contactRowGap: 0,
-    contactSeparator: "space" as const,
-    paper: pageSize,
-    font: "inter" as const,
-    fontSize: 10,
-  };
   return validateDocument({
     languages: [{ tag, active: true }],
     profile: {
@@ -672,7 +664,7 @@ export function createCareerDocument(tag = "en-US"): CareerDocument {
     resumes: [],
     starters: [],
     presets: [],
-    defaults,
+    defaults: structuredClone(appLayoutDefaults),
   });
 }
 
@@ -884,8 +876,15 @@ export function applyScope(
     return validateDocument({ ...document, [key]: records });
   }
   if (kind === "resume-layout") {
-    next.resumes.find((item) => item.id === target)!.layout =
-      layoutSchema.parse(values);
+    const resume = next.resumes.find((item) => item.id === target)!;
+    const previous = resume.layout;
+    const layout = resumeLayoutSchema.parse(values);
+    const { defaults: _previousDefaults, ...appearance } = previous;
+    void _previousDefaults;
+    resume.layout = {
+      ...layout,
+      defaults: layout.defaults ?? previous.defaults ?? appearance,
+    };
   } else if (kind === "resume") {
     if (values === null)
       next.resumes = next.resumes.filter((item) => item.id !== target);

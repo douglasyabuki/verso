@@ -144,7 +144,10 @@ it("creates empty sample starters in either language with reusable field default
       );
       const created = next.resumes.at(-1)!;
       expect(created.language).toBe(language);
-      expect(created.layout).toEqual(starter.layout);
+      expect(created.layout).toEqual({
+        ...starter.layout,
+        defaults: starter.layout,
+      });
       expect(created.profileSelection).toEqual([]);
       expect(created.overrides).toEqual({});
       expect(created.selection).toHaveLength(starter.sections.length);

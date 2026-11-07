@@ -19,6 +19,28 @@ effect. Empty values are omitted. Contact inclusion and order stay in
 **Content & order**, linked directly from Header. Full name remains required.
 Custom rows store positions, never contact identities.
 
+Each expanded layout group has one compact reset action. Resume **Reset group**
+restores the frozen defaults copied from its last loaded preset, starter, or
+initial workspace appearance. Preset changes or deletion never change those
+copies. Loading a preset replaces both appearance and defaults in the draft;
+Save keeps both together. Existing resumes without stored defaults use their
+saved appearance, recording it on their next layout Save without load-time writes.
+Preset and starter editors instead offer **Reset to app defaults**.
+
+Controls show effective values and muted default descriptions. Relative and
+automatic spacing remains relative until explicitly edited. Divider thickness,
+page-number options, and custom contact rows appear when enabled; hidden values
+are retained and invalid ones remain available for correction. Paper appears
+above the margin guide, whose edges respond to margin hover and keyboard focus.
+Divider thickness stays beneath its checkbox. Numbering options stay beneath
+their checkbox, alongside the page-warning
+threshold; its explanation is available from the label info hint. Custom contact
+rows stay beneath their select, alongside row spacing and separator controls.
+Row-break choices share one instruction rather than repeating it for each contact.
+Color swatches open named-choice popovers; selection changes the draft and closes
+the popover, while the enclosing Save still commits the form. Swatches and the
+Style sample approximate PDF colors; the compiled PDF remains authoritative.
+
 The fictional **Style sample** responds immediately without compiling; it is not
 a PDF and does not predict pagination or exact font metrics. The real PDF always
 uses saved content. Save does not compile: use Refresh preview. The labeled last

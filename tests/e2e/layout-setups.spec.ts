@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { layoutAppearance } from "@/lib/career/layout";
 import { createCareerDocument } from "@/lib/career/model";
 import { createResume } from "@/lib/career/resumes";
 
@@ -26,7 +27,7 @@ for (const narrow of [false, true])
         id: "compact",
         name: "Compact",
         template: resume.template,
-        layout: { ...resume.layout, marginLeft: 18 },
+        layout: { ...layoutAppearance(resume.layout), marginLeft: 18 },
       },
     ];
     document.starters = [
@@ -34,7 +35,7 @@ for (const narrow of [false, true])
         id: "structure",
         name: "Empty structure",
         template: resume.template,
-        layout: { ...resume.layout, paper: "letter" },
+        layout: { ...layoutAppearance(resume.layout), paper: "letter" },
         summaryIncluded: false,
         sections: [
           {
@@ -160,6 +161,35 @@ for (const narrow of [false, true])
     await expect(
       page.getByRole("textbox", { name: "Left margin (mm)", exact: true }),
     ).toHaveValue("18");
+    const margin = page.getByRole("textbox", {
+      name: "Left margin (mm)",
+      exact: true,
+    });
+    const reset = page.getByRole("button", {
+      name: "Reset Page & margins to layout defaults",
+      exact: true,
+    });
+    await expect(reset).toBeDisabled();
+    await margin.fill("20");
+    await reset.click();
+    await expect(margin).toHaveValue("18");
+    await expect(reset).toBeDisabled();
+    const storedDefaults = await page.evaluate(async () => {
+      return new Promise<number>((resolve, reject) => {
+        const request = indexedDB.open("verso-local");
+        request.onsuccess = () => {
+          const db = request.result;
+          const tx = db.transaction("heads", "readonly");
+          const get = tx.objectStore("heads").get("guest");
+          get.onsuccess = () =>
+            resolve(get.result.document.resumes[0].layout.defaults.marginLeft);
+          tx.oncomplete = () => db.close();
+          tx.onerror = () => reject(tx.error);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    });
+    expect(storedDefaults).toBe(18);
     await expect(
       page.getByRole("button", {
         name: "Layout presets (optional)",

@@ -59,6 +59,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  layoutFromPreset,
+  sameAppearance,
+  sameLayout,
+} from "@/lib/career/layout";
 import { presetSchema, starterSchema } from "@/lib/career/model";
 import type { CareerDocument } from "@/types-and-constants/career";
 import {
@@ -641,8 +646,8 @@ export function PresetPicker({
   const [selected, setSelected] = useState("");
   const [loaded, setLoaded] = useState(false);
   const item = document.presets.find((item) => item.id === selected);
-  const matching = document.presets.find(
-    (item) => JSON.stringify(item.layout) === JSON.stringify(values),
+  const matching = document.presets.find((item) =>
+    sameAppearance(item.layout, values),
   );
   return (
     <>
@@ -674,9 +679,9 @@ export function PresetPicker({
                   {matching
                     ? `Current appearance matches ${matching.name || "Untitled preset"}. `
                     : ""}
-                  Loading copies appearance only. Save layout to keep changes.
-                  Save as preset captures saved appearance after resolving
-                  unsaved changes.
+                  Loading copies appearance and sets the defaults for this
+                  layout. Save layout to keep changes. Save as preset captures
+                  saved appearance after resolving unsaved changes.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -740,9 +745,9 @@ export function PresetPicker({
                     onClick={() => {
                       if (
                         item &&
-                        JSON.stringify(item.layout) !== JSON.stringify(values)
+                        !sameLayout(layoutFromPreset(item.layout), values)
                       ) {
-                        onChange(structuredClone(item.layout));
+                        onChange(layoutFromPreset(item.layout));
                         setLoaded(true);
                         onLoaded?.();
                       }

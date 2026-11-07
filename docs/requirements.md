@@ -1,6 +1,6 @@
 # Verso — Requirements and implementation order
 
-Updated: 2026-11-03.
+Updated: 2026-11-07.
 
 This is the accepted product plan. [README](../README.md) describes delivered
 behavior; [evidence](phase-1-evidence.md) records executed checks;
@@ -436,9 +436,9 @@ workflow and rendering complexity.
   See the [Prisma Postgres billing FAQ](https://www.prisma.io/docs/postgres/faq).
 - Avoid redundant refetches after acknowledged saves, use local cross-tab notifications,
   and bound/coalesce remote refresh on focus/reconnect/visibility. Server checks remain
-  authoritative. Set the exact remote freshness bound in phase 9 and measure its
+  authoritative. Set the exact remote freshness bound in phase 10 and measure its
   operation cost; do not copy Dayplan's timing as a new product requirement.
-- Phases 8 and 9 implement and verify these future account/sync contracts. No auth
+- Phases 9 and 10 implement and verify these future account/sync contracts. No auth
   packages, database provisioning, or account adapters are authorized by this decision.
 
 ### Capacity and failure boundaries
@@ -824,97 +824,180 @@ See README for delivered behavior and
 [verification](verification.md) for the self-contained owner checklist and actual
 non-browser results. Existing deferred acceptance remains open.
 
-## Phase 5 — Settings and navigation
+## Phase 5 — Layout editor refactoring
 
-- [ ] P5.1 Provide appearance, content-language, editing/preview, data/backup, and default settings.
-- [ ] P5.2 Identify device-only versus workspace settings and their backup/sync scope.
-- [ ] P5.3 Provide durable validated routes, reload, Back/Forward, and missing-resource states;
+- [x] P5.1 Replace generic Template default placeholders with effective values in
+      controls and muted default descriptions near their labels or inputs. Include
+      units and actual default color swatches. Explain relative/elastic defaults in
+      plain language without inventing fixed equivalents; preserve underlying
+      template-default semantics until the user edits the field.
+- [x] P5.2 Replace individual reset actions with one compact outlined Reset group
+      button and reset icon, right-aligned at the top of each expanded group's
+      content, outside its disclosure trigger. Disable when the group matches its
+      frozen layout defaults for resumes and app defaults for preset/starter
+      authors. Reset all group-owned settings, including hidden values,
+      in one uncommitted draft update, leaving other groups untouched.
+- [x] P5.3 Add representative typography, page, contact-card, spacing, and palette
+      icons between each group caret and title. Use recognizable bullet-marker
+      previews and alignment icons where helpful; preserve accessible text labels
+      and hide decorative icons from assistive technology.
+- [x] P5.4 Use a Section divider checkbox in Typography; show divider thickness only
+      when enabled, directly beneath its checkbox, and retain its value while
+      hidden. Keep the neighboring field anchored while toggling the divider.
+- [x] P5.5 Place Paper above the margin guide. Restore master's margin-edge highlight
+      on hover and provide equivalent keyboard-focus behavior. Hover takes
+      precedence; leaving restores the focused edge. Use a Show page numbers
+      checkbox, revealing format and alignment only when enabled and retaining
+      hidden values. Keep both dependent controls beneath their checkbox and the
+      page-warning threshold alongside it; place its explanation in a label info hint.
+- [x] P5.6 Replace the prominent Edit profile content button with a small inline
+      action in Header & contacts explanatory text, retaining guarded navigation.
+      Use a Contacts per row select with Automatic wrapping as the canonical
+      default, retaining fixed-count and Custom rows choices. Show custom row sizes
+      and row-break controls only for Custom rows, beneath their select. Keep row
+      spacing and separator alongside this column so toggling custom rows does not
+      reposition neighboring fields. Row-break choices share one Start a new row
+      before instruction. Use a Contact icons checkbox.
+- [x] P5.7 Place a compact clickable color swatch beside each color label. Open an
+      accessible popover with named choices and selected-state feedback. Selection
+      updates the draft and closes the popover; Escape/outside dismissal changes
+      nothing. Restore focus to the trigger. Explain that changes require the
+      enclosing Save; do not add a popover Save button. Retain disabled color
+      dependencies and their explanations.
+- [x] P5.8 Update affected existing tests and add meaningful regression coverage
+      for defaults, reset isolation, conditional controls/value retention, margin
+      hover/focus, paper ordering, guarded navigation, and color-popover selection,
+      dismissal, and focus. Cover resume, preset, and starter appearance editors.
+      Verify Cancel restores committed values, Save retains one atomic history
+      step, and unsaved changes never compile or change committed PDF output.
+- [x] P5.9 Copy preset/starter appearance as frozen defaults when applying/creating
+      a resume; blank creation copies workspace defaults. Later library edits or
+      deletion never affect those copies. Preserve defaults through duplication,
+      exact layout Saves, recovery, history, backup, replacement, and rollback.
+      Existing supported resumes without defaults use saved appearance, persisted
+      only on their next layout Save; never infer it from modified draft values.
+      Preserve immutable requests and fingerprints. A baseline-only preset load
+      remains a meaningful edit even when rendered appearance matches.
+
+Apply this refactoring through the shared active LayoutFields controls. Preserve
+existing group order, initial expansion, values, validation, recovery, history,
+and Save/Cancel boundaries. Hidden invalid fields must remain discoverable and
+actionable through validation-driven disclosure and error presentation. Use
+frozen preset-defined resume defaults, app defaults for library authors, and
+verified template metadata for display and reset behavior. Do not change retired
+editor behavior solely because presentation helpers are shared. No public API,
+template identity, or dependency changes are required. Resume layouts add an
+optional nonrecursive defaults snapshot within workspace schema 2/recovery format
+1; presets and starters remain flat appearance. This narrowly scoped baseline
+initialization is authorized; earlier unsupported templates/layouts remain rejected.
+
+During implementation, run formatting, lint, generated-route/type checks, and
+relevant non-watch unit tests. Author and update affected Browser Mode and
+production E2E cases. Browser execution was initially left to the owner and later
+authorized for failing-test repair; manual/visual/PDF acceptance remains with the
+owner. Report actual executed counts, failures, and unexecuted coverage separately;
+authored tests are not passing evidence. Preserve all earlier deferred acceptance.
+
+Implementation is delivered with regression coverage. Executed automated browser
+results are separate from owner manual/visual/PDF acceptance, which remains open.
+Executed checks and remaining acceptance are recorded in
+[verification](verification.md).
+
+## Phase 6 — Settings and navigation
+
+- [ ] P6.1 Provide appearance, content-language, editing/preview, data/backup, and default settings.
+- [ ] P6.2 Identify device-only versus workspace settings and their backup/sync scope.
+- [ ] P6.3 Provide durable validated routes, reload, Back/Forward, and missing-resource states;
       extend the established Library overview/collection/editor destinations alongside
       all other navigation;
       never put private text or secrets in URLs. Library work covers only its slice.
-- [ ] P5.4 Preserve drafts, focus, scroll, issue navigation, and narrow-screen access;
+- [ ] P6.4 Preserve drafts, focus, scroll, issue navigation, and narrow-screen access;
       extend the established Library behavior across the workspace; keep transient
-      controls local and guard dirty navigation. Broader settings work remains open.
+      controls local and guard dirty navigation. Include inline profile-content
+      navigation and transient layout color popovers. Broader settings work remains open.
 
-## Phase 6 — Saving and bounded PDF resources
+## Phase 7 — Saving and bounded PDF resources
 
-- [ ] P6.1 Verify compiler, worker, PDF, canvas, URL, timer, listener, and history lifecycles.
-- [ ] P6.2 Distinguish recovery, Save, preview, backup, and future release status.
-- [ ] P6.3 Default to manual refresh; optional automatic refresh uses committed output changes only.
-- [ ] P6.4 Bound active/queued work, reject stale results, and release obsolete resources;
+- [ ] P7.1 Verify compiler, worker, PDF, canvas, URL, timer, listener, and history lifecycles.
+- [ ] P7.2 Distinguish recovery, Save, preview, backup, and future release status.
+- [ ] P7.3 Default to manual refresh; optional automatic refresh uses committed output changes only.
+- [ ] P7.4 Bound active/queued work, reject stale results, and release obsolete resources;
       define hidden-preview behavior.
-- [ ] P6.5 Retain a labeled last successful preview on failure with revision/staleness and retry.
-- [ ] P6.6 Verify draft/Save/recovery/conflict/history boundaries; Save never requires compilation.
+- [ ] P7.5 Retain a labeled last successful preview on failure with revision/staleness and retry.
+- [ ] P7.6 Verify draft/Save/recovery/conflict/history boundaries; Save never requires compilation.
       Include library entry points and Style samples: unsaved actions never compile
-      or change committed output. Existing resource/safety obligations remain open.
-- [ ] P6.7 Verify conditional guest writes, generation checks, other-tab conflicts, and
+      or change committed output. Include layout group resets and color selection
+      in these draft/resource checks. Existing resource/safety obligations remain open.
+- [ ] P7.7 Verify conditional guest writes, generation checks, other-tab conflicts, and
       clearly disclosed session-only recovery when durable storage is unavailable.
-- [ ] P6.8 Manually exercise rapid edits/switches, hidden previews, failures, and cleanup.
+- [ ] P7.8 Manually exercise rapid edits/switches, hidden previews, failures, and cleanup.
 
-## Phase 7 — Local acceptance
+## Phase 8 — Local acceptance
 
-- [ ] P7.1 Verify onboarding, independent language resumes, visibility/order, facts, and overrides.
-- [ ] P7.2 Verify language labels, dates/regions, fonts, direction/hyphenation as applicable,
+- [ ] P8.1 Verify onboarding, independent language resumes, visibility/order, facts, and overrides.
+- [ ] P8.2 Verify language labels, dates/regions, fonts, direction/hyphenation as applicable,
       metadata, links, selectable text, and layout; disable unsupported PDF output.
-- [ ] P7.3 Verify presets/starters, settings/routes, save/preview/history, keyboard, and narrow layouts.
+- [ ] P8.3 Verify presets/starters, settings/routes, save/preview/history, keyboard, and narrow layouts.
       Include Library discovery, reuse-option clarity, contextual/library entry points,
       guarded location trails, optional preset/direct layout editing, destructive-action
-      order and wrapping, and short-screen navigation.
-- [ ] P7.4 Restore workspace/recovery exports on disposable origins; rejected imports preserve work.
-- [ ] P7.5 Inspect actual PDFs for accents, long text/URLs, omissions, overflow, and stale failures.
+      order and wrapping, and short-screen navigation. Include refactored layout
+      defaults, group resets, conditional controls, margin highlighting, and color
+      popovers on desktop, narrow screens, and keyboard navigation.
+- [ ] P8.4 Restore workspace/recovery exports on disposable origins; rejected imports preserve work.
+- [ ] P8.5 Inspect actual PDFs for accents, long text/URLs, omissions, overflow, and stale failures.
       Page counts do not establish clipping, PDF/UA, or ATS compatibility.
-- [ ] P7.6 Record static/build/manual evidence and update affected documentation.
-- [ ] P7.7 Run relevant unit/browser/application suites; record actual counts and limitations.
+- [ ] P8.6 Record static/build/manual evidence and update affected documentation.
+- [ ] P8.7 Run relevant unit/browser/application suites; record actual counts and limitations.
 
-## Phase 8 — Future accounts and Prisma Postgres
+## Phase 9 — Future accounts and Prisma Postgres
 
 Requires owner activation, approved infrastructure, and a stable local model.
 
-- [ ] P8.1 Review Dayplan patterns and selected-version official docs; copy no credentials/versions.
-- [ ] P8.2 Decide providers/access, sessions, runtime, Prisma version/driver, and connection mode.
-- [ ] P8.3 Implement login/logout/expiry, settings, and ownership checks on every private operation.
-- [ ] P8.4 Persist user-owned content/configuration; choose schema structure from consistency needs.
-- [ ] P8.5 Prepare immutable local Save requests, send immediately, and confirm only on server
+- [ ] P9.1 Review Dayplan patterns and selected-version official docs; copy no credentials/versions.
+- [ ] P9.2 Decide providers/access, sessions, runtime, Prisma version/driver, and connection mode.
+- [ ] P9.3 Implement login/logout/expiry, settings, and ownership checks on every private operation.
+- [ ] P9.4 Persist user-owned content/configuration; choose schema structure from consistency needs.
+- [ ] P9.5 Prepare immutable local Save requests, send immediately, and confirm only on server
       acknowledgment; use atomic scope checks/receipts/retries and measure database operations.
-- [ ] P8.6 Provide explicit reviewed guest import; login never silently merges or replaces work.
-- [ ] P8.7 Isolate account/guest caches and recovery; preserve pending work on logout/switch.
-- [ ] P8.8 Test real isolated-database ownership, atomicity, retries, import, and isolation;
+- [ ] P9.6 Provide explicit reviewed guest import; login never silently merges or replaces work.
+- [ ] P9.7 Isolate account/guest caches and recovery; preserve pending work on logout/switch.
+- [ ] P9.8 Test real isolated-database ownership, atomicity, retries, import, and isolation;
       manually verify real provider callbacks and expiry.
 
-## Phase 9 — Future sync
+## Phase 10 — Future sync
 
 Requires authenticated shared storage; local tab coordination is not device sync.
 
-- [ ] P9.1 Detect revisions on focus/reconnect and a documented event/periodic mechanism;
+- [ ] P10.1 Detect revisions on focus/reconnect and a documented event/periodic mechanism;
       measure freshness and preserve dirty drafts.
-- [ ] P9.2 Coordinate tabs; server revision checks remain authoritative across devices.
-- [ ] P9.3 Retain both conflict versions with compare/export/explicit resolution.
-- [ ] P9.4 Recover offline work safely; bound eligible history without expiring unresolved recovery.
-- [ ] P9.5 Verify simultaneous/offline/sleeping clients, retries, account changes, and expiry
+- [ ] P10.2 Coordinate tabs; server revision checks remain authoritative across devices.
+- [ ] P10.3 Retain both conflict versions with compare/export/explicit resolution.
+- [ ] P10.4 Recover offline work safely; bound eligible history without expiring unresolved recovery.
+- [ ] P10.5 Verify simultaneous/offline/sleeping clients, retries, account changes, and expiry
       through automation plus actual browsers/devices. No coauthoring requirement.
 
-## Phase 10 — Future public PDF releases
+## Phase 11 — Future public PDF releases
 
 Requires accounts, hosted artifacts, and an approved latest-release policy.
 
-- [ ] P10.1 Explicitly release reviewed content; private resumes stay private.
-- [ ] P10.2 Store immutable PDFs with content, locale, template/runtime, and settings identity.
-- [ ] P10.3 Provide pinned/latest URLs; latest advances through explicit release by default.
+- [ ] P11.1 Explicitly release reviewed content; private resumes stay private.
+- [ ] P11.2 Store immutable PDFs with content, locale, template/runtime, and settings identity.
+- [ ] P11.3 Provide pinned/latest URLs; latest advances through explicit release by default.
       Automatic release requires opt-in; typing never publishes.
-- [ ] P10.4 Atomically advance latest after successful storage/validation; failures preserve old links.
-- [ ] P10.5 Expose only intended release artifacts/metadata; unlisted URLs are not authentication.
-- [ ] P10.6 Provide link/history/latest/rollback/revocation controls and retention/cache policy.
-- [ ] P10.7 Serve correct PDF headers, filenames, caching, and documented latest freshness.
-- [ ] P10.8 Verify anonymous/private access, pinned stability, advancement/failure, rollback,
+- [ ] P11.4 Atomically advance latest after successful storage/validation; failures preserve old links.
+- [ ] P11.5 Expose only intended release artifacts/metadata; unlisted URLs are not authentication.
+- [ ] P11.6 Provide link/history/latest/rollback/revocation controls and retention/cache policy.
+- [ ] P11.7 Serve correct PDF headers, filenames, caching, and documented latest freshness.
+- [ ] P11.8 Verify anonymous/private access, pinned stability, advancement/failure, rollback,
       revocation, caches, and artifact/cost bounds on hosted infrastructure.
 
-## Phase 11 — Future hosted readiness
+## Phase 12 — Future hosted readiness
 
-- [ ] P11.1 Document hosting, secrets/callbacks, migrations, artifact access, and compiler assets.
-- [ ] P11.2 Define deletion/retention/restore policy and perform a recovery exercise.
-- [ ] P11.3 Bound inputs, compilation, abuse, and storage; avoid logging private content.
-- [ ] P11.4 Verify HTTPS, ownership/origin checks, isolation, caches, browsers, and measured budgets.
-- [ ] P11.5 Record real hosted acceptance and limitations; local tests do not prove deployment.
+- [ ] P12.1 Document hosting, secrets/callbacks, migrations, artifact access, and compiler assets.
+- [ ] P12.2 Define deletion/retention/restore policy and perform a recovery exercise.
+- [ ] P12.3 Bound inputs, compilation, abuse, and storage; avoid logging private content.
+- [ ] P12.4 Verify HTTPS, ownership/origin checks, isolation, caches, browsers, and measured budgets.
+- [ ] P12.5 Record real hosted acceptance and limitations; local tests do not prove deployment.
 
 ## Out of scope unless separately requested
 
@@ -928,7 +1011,7 @@ groups, user-defined field types, and content-bearing starters.
 These open acceptance items are deferred by the owner. They do not block roadmap
 progression and must not be reported as passed. Preserve the contracts above;
 future changes still need relevant regression checks. Resolve before claiming full
-local acceptance in Phase 7, or explicitly revise that acceptance scope.
+local acceptance in Phase 8, or explicitly revise that acceptance scope.
 
 - [ ] F1 Final regression pass: formatting, lint, route generation/typecheck, unit,
       Browser Mode, and production E2E/build; record actual counts. The requested run

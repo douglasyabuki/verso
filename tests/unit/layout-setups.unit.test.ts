@@ -1,13 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { contactRows, templateSettings } from "@/lib/career/layout";
+import {
+  contactRows,
+  layoutAppearance,
+  layoutDefaults,
+  layoutFromPreset,
+  sameAppearance,
+  sameLayout,
+  templateSettings,
+} from "@/lib/career/layout";
+import {
+  resolvedLayoutColor,
+  templateDimensionDisplay,
+  templateDimensionExplanation,
+} from "@/lib/career/layout-display";
 import {
   applyScope,
   createCareerDocument,
   createEntry,
-  layoutSchema,
   parsePortable,
   readScope,
+  resumeLayoutSchema,
   validateDocument,
 } from "@/lib/career/model";
 import { renderCareerResume } from "@/lib/career/output";
@@ -61,21 +74,209 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("frozen layout defaults", () => {
+  it("copies preset defaults independently and captures appearance without baseline metadata", () => {
+    const { document, resume } = fixture();
+    const preset = { ...document.defaults, marginLeft: 18, fontSize: 9 };
+    const loaded = layoutFromPreset(preset);
+    resume.layout = loaded;
+    loaded.marginLeft = 20;
+    preset.marginLeft = 24;
+    expect(loaded.defaults?.marginLeft).toBe(18);
+    expect(loaded.defaults?.fontSize).toBe(9);
+    expect(layoutAppearance(loaded)).not.toHaveProperty("defaults");
+    expect(captureStarter(document, resume).layout).not.toHaveProperty(
+      "defaults",
+    );
+    const copy = copyResume(resume);
+    copy.layout.defaults!.marginLeft = 22;
+    expect(resume.layout.defaults!.marginLeft).toBe(18);
+    expect(copyResume(resume, "pt-BR").layout.defaults?.fontSize).toBe(9);
+  });
+
+  it("distinguishes baseline-only loads without changing generated output", () => {
+    const { document, resume } = fixture();
+    resume.layout.marginLeft = 18;
+    const loaded = layoutFromPreset(layoutAppearance(resume.layout));
+    expect(sameAppearance(resume.layout, loaded)).toBe(true);
+    expect(sameLayout(resume.layout, loaded)).toBe(false);
+    const before = renderCareerResume(document, resume.id, 1);
+    const next = applyScope(document, `resume-layout/${resume.id}`, loaded);
+    expect(renderCareerResume(next, resume.id, 1)).toBe(before);
+    expect(next.resumes[0].layout.defaults?.marginLeft).toBe(18);
+    expect(sameLayout(next.resumes[0].layout, loaded)).toBe(true);
+  });
+
+  it("initializes only missing baselines from saved appearance without mutating old requests", () => {
+    const { document, resume } = fixture();
+    resume.layout = { ...layoutAppearance(resume.layout), marginLeft: 19 };
+    expect(validateDocument(document).resumes[0].layout).not.toHaveProperty(
+      "defaults",
+    );
+    const values = { ...resume.layout, marginLeft: 21 };
+    const fingerprint = JSON.stringify(values);
+    const next = applyScope(document, `resume-layout/${resume.id}`, values);
+    expect(next.resumes[0].layout.defaults?.marginLeft).toBe(19);
+    expect(next.resumes[0].layout.marginLeft).toBe(21);
+    expect(JSON.stringify(values)).toBe(fingerprint);
+    expect(document.resumes[0].layout).not.toHaveProperty("defaults");
+    const later = applyScope(next, `resume-layout/${resume.id}`, {
+      ...values,
+      marginLeft: 22,
+    });
+    expect(later.resumes[0].layout.defaults?.marginLeft).toBe(19);
+  });
+
+  it("round-trips frozen defaults in workspace backups and rejects recursive defaults", () => {
+    const { document, resume } = fixture();
+    resume.layout = layoutFromPreset({ ...document.defaults, marginLeft: 18 });
+    resume.layout.marginLeft = 20;
+    const portable = {
+      format: "verso.workspace",
+      schemaVersion: 2,
+      exportedAt: new Date().toISOString(),
+      workspaceId: "workspace",
+      document,
+    };
+    const parsed = parsePortable(JSON.stringify(portable), "workspace");
+    expect(parsed).toMatchObject({
+      document: {
+        resumes: [{ layout: { marginLeft: 20, defaults: { marginLeft: 18 } } }],
+      },
+    });
+    expect(
+      resumeLayoutSchema.safeParse({
+        ...resume.layout,
+        defaults: resume.layout,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("preserves malformed recovered values, both baseline versions and immutable retry context", () => {
+    const { resume } = fixture();
+    const baseline = { ...layoutAppearance(resume.layout), marginLeft: 19 };
+    const values = {
+      ...layoutFromPreset({ ...baseline, marginLeft: 18 }),
+      marginLeft: "unfinished",
+    };
+    const draft = {
+      draftId: "draft",
+      draftVersion: 3,
+      workspaceId: "workspace",
+      scope: `resume-layout/${resume.id}`,
+      baseline,
+      baselineRevision: 4,
+      generation: 1,
+      values,
+      operationId: "operation",
+      fingerprint: "immutable-original-fingerprint",
+    };
+    const envelope = {
+      format: "verso.recovery",
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      sourceWorkspaceId: "workspace",
+      drafts: [draft],
+    };
+    const result = parsePortable(JSON.stringify(envelope), "recovery");
+    expect(result).toEqual(envelope);
+    expect(resumeLayoutSchema.safeParse(values).success).toBe(false);
+    expect(draft.baseline).not.toHaveProperty("defaults");
+    expect(draft.values.defaults?.marginLeft).toBe(18);
+  });
+
+  it("keeps preset defaults and appearance in one cancelable, undoable Save", async () => {
+    vi.spyOn(persistence, "openCareerStorage").mockRejectedValue(
+      new Error("Unavailable"),
+    );
+    const controller = new CareerController();
+    controllers.push(controller);
+    await controller.initialize();
+    const document = controller.getSnapshot().head!.document;
+    const resume = createResume(document, "en-US");
+    controller.open(`resume/${resume.id}`);
+    controller.change(resume);
+    expect(await controller.save(true)).toBe(true);
+    await controller.cancel();
+    const original = structuredClone(
+      controller.getSnapshot().head!.document.resumes[0].layout,
+    );
+    const loaded = layoutFromPreset({ ...document.defaults, marginLeft: 18 });
+    controller.open(`resume-layout/${resume.id}`);
+    controller.change(loaded);
+    await controller.cancel();
+    expect(controller.getSnapshot().head!.document.resumes[0].layout).toEqual(
+      original,
+    );
+    controller.open(`resume-layout/${resume.id}`);
+    controller.change(loaded);
+    const steps = controller.getSnapshot().undoCount;
+    expect(await controller.save(true)).toBe(true);
+    expect(controller.getSnapshot().undoCount).toBe(steps + 1);
+    await controller.cancel();
+    expect(await controller.history("undo")).toBe(true);
+    expect(controller.getSnapshot().head!.document.resumes[0].layout).toEqual(
+      original,
+    );
+    expect(await controller.history("redo")).toBe(true);
+    expect(controller.getSnapshot().head!.document.resumes[0].layout).toEqual(
+      loaded,
+    );
+  });
+
+  it("describes relative and elastic defaults without replacing them with fixed values", () => {
+    expect(templateDimensionDisplay("nameSize")).toBe(20);
+    expect(templateDimensionDisplay("entryTitleSize")).toBe("Body text size");
+    expect(templateDimensionDisplay("entryGap")).toBe("0.7 × body text size");
+    expect(templateDimensionExplanation("paragraphGap")).toContain(
+      "stretch by 1 pt",
+    );
+    const { resume } = fixture();
+    expect(resume.layout.entryGap).toBe("template-default");
+  });
+
+  it("resolves template color dependencies rather than displaying transparent defaults", () => {
+    const { resume } = fixture();
+    expect(resolvedLayoutColor(resume.layout, "headingColor")).toEqual({
+      label: "Sepia",
+      hex: "#4D0000",
+    });
+    expect(resolvedLayoutColor(resume.layout, "secondaryColor").hex).toBe(
+      "#404040",
+    );
+    expect(
+      resolvedLayoutColor(
+        { ...resume.layout, headingColor: "dark-teal" },
+        "linkColor",
+      ).hex,
+    ).toBe("#115E59");
+    expect(
+      resolvedLayoutColor(
+        { ...resume.layout, bodyColor: "dark-navy" },
+        "iconColor",
+      ).hex,
+    ).toBe("#1E3A5F");
+    expect(layoutDefaults(resume.layout).fontSize).toBe(10);
+  });
+});
+
 describe("independent appearance and reusable structure", () => {
   it("validates boundaries without truncating or coercing drafts", () => {
     const { resume } = fixture();
     expect(
-      layoutSchema.safeParse({ ...resume.layout, marginLeft: 9 }).success,
+      resumeLayoutSchema.safeParse({ ...resume.layout, marginLeft: 9 }).success,
     ).toBe(false);
     expect(
-      layoutSchema.safeParse({ ...resume.layout, contactRowSizes: [0] })
+      resumeLayoutSchema.safeParse({ ...resume.layout, contactRowSizes: [0] })
         .success,
     ).toBe(false);
     expect(
-      layoutSchema.safeParse({ ...resume.layout, fontSize: "10" }).success,
+      resumeLayoutSchema.safeParse({ ...resume.layout, fontSize: "10" })
+        .success,
     ).toBe(false);
     expect(
-      layoutSchema.safeParse({ ...resume.layout, fontSize: 10.375 }).success,
+      resumeLayoutSchema.safeParse({ ...resume.layout, fontSize: 10.375 })
+        .success,
     ).toBe(true);
     expect(
       templateSettings({
@@ -194,7 +395,7 @@ describe("independent appearance and reusable structure", () => {
       id: "preset",
       name: "Compact",
       template: resume.template,
-      layout: { ...resume.layout, fontSize: 9 },
+      layout: { ...layoutAppearance(resume.layout), fontSize: 9 },
     };
     const saved = applyScope(document, "preset/preset", preset);
     const applied = applyScope(
@@ -331,7 +532,7 @@ describe("independent appearance and reusable structure", () => {
         id: "preset",
         name: "Appearance",
         template: resume.template,
-        layout: resume.layout,
+        layout: layoutAppearance(resume.layout),
       },
     ];
     const envelope = {
@@ -372,7 +573,7 @@ describe("independent appearance and reusable structure", () => {
       id: "starter",
       name: "Empty",
       template: resume.template,
-      layout: resume.layout,
+      layout: layoutAppearance(resume.layout),
       summaryIncluded: false,
       sections: [
         {
@@ -410,7 +611,7 @@ it("rejects content-bearing composite requests without changing committed record
     id: "starter",
     name: "Structure",
     template: resume.template,
-    layout: resume.layout,
+    layout: layoutAppearance(resume.layout),
     summaryIncluded: false,
     sections: [
       {

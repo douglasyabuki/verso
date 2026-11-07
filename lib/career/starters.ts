@@ -1,3 +1,4 @@
+import { layoutAppearance, layoutFromPreset } from "@/lib/career/layout";
 import { createResume } from "@/lib/career/resumes";
 import type {
   CareerDocument,
@@ -22,7 +23,7 @@ export function captureStarter(
     id: crypto.randomUUID(),
     name: `${resume.name || "Untitled resume"} structure`.slice(0, 500),
     template: resume.template,
-    layout: structuredClone(resume.layout),
+    layout: layoutAppearance(resume.layout),
     summaryIncluded: resume.summaryIncluded ?? true,
     sections: resume.selection.map((selection) => {
       const section = document.sections.find(
@@ -89,7 +90,7 @@ export function prepareStarterResume(
   const resume = createResume(document, language);
   const sections: CareerDocument["sections"] = [];
   const used = new Set<string>();
-  resume.layout = structuredClone(starter.layout);
+  resume.layout = layoutFromPreset(starter.layout);
   resume.summaryIncluded = starter.summaryIncluded;
   resume.selection = starter.sections.map((definition, index) => {
     let section = document.sections.find((item) => item.id === mapping[index]);

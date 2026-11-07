@@ -93,11 +93,18 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
+  layoutAppearance,
+  layoutDefaults,
+  layoutFromPreset,
+  sameLayout,
+} from "@/lib/career/layout";
+import {
   careerDocumentSchema,
   createEntry,
   duplicateEntry,
   entrySchema,
   readScope,
+  resumeLayoutSchema,
   sectionPropertiesSchema,
   starterCreationSchema,
 } from "@/lib/career/model";
@@ -1120,7 +1127,7 @@ export function CareerWorkspace({
         id: crypto.randomUUID(),
         name: `${current.name || "Untitled resume"} appearance`.slice(0, 500),
         template: current.template,
-        layout: structuredClone(current.layout),
+        layout: layoutAppearance(current.layout),
       };
       navigate(`preset/${item.id}`, item);
     });
@@ -1148,9 +1155,11 @@ export function CareerWorkspace({
         return;
       }
       const next = `resume-layout/${resume.id}`;
-      const changed =
-        JSON.stringify(preset.layout) !== JSON.stringify(resume.layout);
-      navigate(next, changed ? structuredClone(preset.layout) : undefined);
+      const changed = !sameLayout(
+        layoutFromPreset(preset.layout),
+        resume.layout,
+      );
+      navigate(next, changed ? layoutFromPreset(preset.layout) : undefined);
       setPresetNotice(changed ? next : null);
       setLibraryEditorRequest({});
       complete();
@@ -1707,6 +1716,14 @@ export function CareerWorkspace({
                               continues to show saved content.
                             </p>
                             <LayoutFields
+                              defaults={layoutDefaults(
+                                resumeLayoutSchema.safeParse(
+                                  state.draft.baseline,
+                                ).success
+                                  ? state.draft.baseline
+                                  : activeResume.layout,
+                              )}
+                              resumeLayout
                               values={state.draft.values}
                               onChange={(values) => controller.change(values)}
                               contacts={profileContactLabels(
