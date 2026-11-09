@@ -5,6 +5,33 @@ import {
   validateDocument,
 } from "@/lib/career/model";
 import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
+import type { SaveFailureReason } from "@/types-and-constants/career-status";
+
+/** Typed storage failure so callers never classify errors by message text.
+ * @example throw new CareerStorageError("conflict", "This scope changed in another save.")
+ */
+export class CareerStorageError extends Error {
+  constructor(
+    readonly code: SaveFailureReason,
+    message: string,
+  ) {
+    super(message);
+    this.name = "Error";
+  }
+}
+
+/** Classify any Save/replacement failure without inspecting message text.
+ * IndexedDB/DOM exceptions (abort, quota, closed database) are storage failures.
+ * @param error Unknown thrown value.
+ * @returns Failure reason; other errors are request/validation failures.
+ * @example saveFailureReason(new DOMException("full", "QuotaExceededError")) // "storage"
+ */
+export function saveFailureReason(error: unknown): SaveFailureReason {
+  if (error instanceof CareerStorageError) return error.code;
+  if (typeof DOMException !== "undefined" && error instanceof DOMException)
+    return "storage";
+  return "invalid";
+}
 
 export type CareerHead = {
   key: "guest";
@@ -208,7 +235,8 @@ export class CareerStorage {
       new TextEncoder().encode(JSON.stringify(draft)).byteLength >
       64 * 1024 * 1024
     )
-      throw new Error(
+      throw new CareerStorageError(
+        "storage",
         "Recovery exceeds 64 MiB. Keep this tab open and export recovery chunks.",
       );
     await this.transaction(["drafts"], "readwrite", async (tx) => {
@@ -345,7 +373,8 @@ export class CareerStorage {
       request.draftVersion,
     ]);
     if (fingerprint !== request.fingerprint)
-      throw new Error(
+      throw new CareerStorageError(
+        "invalid",
         "Save request fingerprint differs from its immutable content.",
       );
     await this.transaction(["operations"], "readwrite", async (tx) => {
@@ -359,11 +388,13 @@ export class CareerStorage {
           (old.request.baselineRevision !== undefined &&
             old.request.baselineRevision !== request.baselineRevision))
       )
-        throw new Error(
+        throw new CareerStorageError(
+          "invalid",
           "Operation identity cannot be reused with changed content.",
         );
       if (!old && !fresh)
-        throw new Error(
+        throw new CareerStorageError(
+          "uncertain",
           "Save outcome unknown. Compare current content and reconcile before a new Save.",
         );
       if (!old)
@@ -389,7 +420,8 @@ export class CareerStorage {
           operations.get(operationId),
         );
         if (!operation)
-          throw new Error(
+          throw new CareerStorageError(
+            "uncertain",
             "Save outcome unknown. Compare current content and reconcile before a new Save.",
           );
         const request = operation.request;
@@ -399,7 +431,8 @@ export class CareerStorage {
           head.workspaceId !== request.workspaceId ||
           head.generation !== request.generation
         )
-          throw new Error(
+          throw new CareerStorageError(
+            "replaced",
             "Workspace was replaced. Compare or restore this draft as new.",
           );
         if (operation.result) {
@@ -416,7 +449,8 @@ export class CareerStorage {
         if (
           !sameScope(readScope(head.document, request.scope), request.baseline)
         )
-          throw new Error(
+          throw new CareerStorageError(
+            "conflict",
             "This scope changed in another save. Compare and reconcile; your draft is retained.",
           );
         const document = applyScope(
@@ -518,7 +552,8 @@ export class CareerStorage {
         current.generation !== reviewed.generation ||
         current.revision !== reviewed.revision
       )
-        throw new Error(
+        throw new CareerStorageError(
+          "conflict",
           "Workspace changed since review. Review the current workspace again.",
         );
       const prior = incoming

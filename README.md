@@ -31,7 +31,9 @@ device-only view controls. No account sync is implemented.
 
 Compiler timeouts default to 120 seconds initialization and 30 seconds compilation,
 with a supported range of 0.1–600 seconds. Changes affect the next compiler instance
-without interrupting active work. Preview refresh remains manual. Completed-operation
+without interrupting active work. Preview refresh is manual by default; an optional
+device-only **Refresh preview automatically after Save** setting is described under
+saving and preview status below. Completed-operation
 retention defaults to 30 days or 1,000 eligible receipts, whichever limit is reached
 first. Both limits accept nonnegative whole numbers; zero retains no eligible
 completed receipts. Pending/uncertain, unacknowledged, and recovery-referenced
@@ -201,8 +203,9 @@ and starter definitions. Earlier development data without icons is unsupported;
 there is no conversion or silent reseeding. Workspace schema 2 and recovery
 format 1 are the supported formats. Icons survive recovery, history,
 archive/restore, and workspace replacement/rollback. They do not add PDF graphics
-or readiness requirements. An icon Save still advances workspace revision and
-can mark the preview stale through its existing PDF revision metadata.
+or readiness requirements. An icon Save advances the workspace revision but does
+not mark the preview outdated, because staleness compares rendered output, not
+revision numbers.
 Portable starter definitions also carry icon choices.
 
 Create sections/entries explicitly, then edit their wording and facts. Ordinary
@@ -222,6 +225,39 @@ compare and reconcile it before Save. Failed/uncertain Saves retain drafts and
 reuse immutable operation IDs. Unknown operation history requires reconciliation.
 Unresolved drafts do not expire. Browser clearing/eviction can still remove data.
 Session-only Save is an explicit choice and does not replace durable content.
+While Saves exist only in this tab, the workspace shows **Saving in this tab only**
+and the browser warns on close. **Return to durable saving** first requires resolving
+open forms, then shows the durable revision for review. **Discard tab-only Saves**
+reloads the durable workspace; **Keep this tab's workspace** adopts it through the
+reviewed atomic replacement path, keeping the outgoing durable workspace as the one
+previous workspace. A durable revision newer than the one reviewed rejects adoption.
+Before adoption, the dialog identifies the previous snapshot being replaced and
+requires exporting it or explicitly continuing without export. Failed export keeps
+adoption blocked until retry or explicit continuation. Export remains available
+in that dialog. If browser storage never opened, Saves stay tab-only for this
+session, with a persistent disclosure and workspace-export guidance.
+
+**Saving and preview status.** Each kind of status has its own place and meaning;
+none implies another.
+
+- **Save status** (toolbar): _Saving…_, _Saved locally · revision N_, _Updated
+  from another tab · revision N_, _Saved in this tab only_, _cleanup retries on
+  next load_ (commit confirmed, receipt acknowledgment pending), or _not
+  confirmed_ with a reason: changed in another save, workspace replaced, browser
+  storage failed, or outcome unknown. Failed Saves always keep the draft. The
+  **Save in this tab only** action appears only when durable storage is unavailable
+  or a Save failed because browser storage failed.
+- **Recovery status** (beside the form): pending, stored with its draft version,
+  or failed with export guidance. Recovery is never a Save.
+- **Preview status** (PDF pane): preparing, generating, queued, failed with retry
+  (timeouts note the compiler restart; a compiler log disclosure appears when
+  available), and the retained PDF label with its revision, generation, and
+  **Current** or **Outdated**.
+- **Backup**: workspace exports say _saved workspace only_; recovery exports are
+  separate. There is no release status; public releases are not implemented.
+
+Notifications from other tabs that arrive during a local Save are applied after
+that Save settles.
 
 Data & backups exports committed schema-2 content and separate format-1 recovery.
 It can be visited without resolving open drafts. Stored draft recovery appears
@@ -300,8 +336,14 @@ Search opens through its button;
 Ctrl/Cmd+F is left to the browser. Native browser Find across unrendered pages is
 not guaranteed. Compilation
 failure retains the labeled last successful PDF. Viewer replacement cancels its
-owned rendering tasks and releases workers; compiler and URL ownership remain
-with the committed-output coordinator.
+owned rendering tasks, releases cached pages, detaches find/link services, and
+destroys the PDF.js document and worker. The workspace preview coordinator, which
+lives above the editor/preview layout, owns the compiler and the retained PDF URL.
+
+Hiding the preview (Hide PDF preview, a full-width destination, or the narrow
+Editor tab) unmounts the PDF viewer and releases its document, canvases, and
+worker, but keeps the last successful PDF and any compilation in progress.
+Showing the preview again redisplays that PDF without recompiling.
 
 Before the first PDF, an illustrated document placeholder offers **Generate preview**
 or directs blocked resumes to Issues. Preparation, generation, viewer loading, and
@@ -358,8 +400,20 @@ Readiness and TeX rendering use the same assessment. Incomplete valid content ca
 still be saved; malformed values retain the failed draft. Typing, recovery
 restoration, and unsaved wording never update readiness or compile a PDF. Refresh
 preview is disabled while blocked, and compilation errors remain separate. A last
-successful PDF remains labeled and downloadable, becoming outdated after saved
-output changes. Ready for PDF establishes content eligibility, not visual layout,
+successful PDF remains labeled and downloadable, becoming outdated only when the
+saved output of that resume changes. Staleness compares a fingerprint of the
+rendered source that ignores the revision number embedded in PDF metadata, so
+Saves elsewhere (other resumes, presets, unselected content, icons) keep it
+**Current**.
+
+With **Refresh preview automatically after Save** enabled (Settings → Editing &
+preview, device-only, off by default), a saved change to the selected resume's
+output refreshes the visible preview about 800 ms later. Unsaved edits, recovery,
+preset loads, style samples, layout resets, and color picks never trigger it. While
+the preview is hidden or the browser tab is in the background, the refresh waits,
+including automatic work already queued behind a compile. The header shows
+_Refresh pending_. A Save that makes the selected resume ready again also schedules
+refresh; switching resumes alone does not. Ready for PDF establishes content eligibility, not visual layout,
 clipping, PDF/UA, or ATS acceptance.
 
 Shared rich-text URL validation and the entry-search checkbox are independent of
@@ -394,7 +448,12 @@ steps or 32 MiB; undo is not a backup. Browser clearing/eviction can still remov
 Compiler defaults are a 120-second initialization timeout, 30-second compilation
 timeout, and 1,000,000-byte source limit. Compilation uses one active request and
 one replaceable queued request, one compiler/worker pair per tab, and one retained
-successful PDF plus an in-flight result.
+successful PDF plus an in-flight result. A running compilation is never interrupted
+by a newer request; when it finishes, the queued request compiles the latest saved
+output for the same resume. Results whose generation, resume, or output fingerprint
+no longer match are discarded before any PDF URL is created. Workspace replacement
+closes the compiler and drops queued work. A timeout terminates the compiler worker
+pair before the next attempt.
 
 ## Setup and checks
 

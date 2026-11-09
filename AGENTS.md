@@ -173,7 +173,10 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
   settings before startup pruning; if their read fails, skip receipt pruning until
   preferences can be saved. Protect pending, uncertain, unacknowledged, and
   recovery-referenced operations regardless of limits. Compiler preference changes
-  apply to the next instance without interrupting active work. Preview remains manual.
+  apply to the next instance without interrupting active work. Preview is manual by
+  default; the optional device-only `automaticRefresh` preference (optional field in
+  preference record version 1, default off) refreshes the visible preview after
+  committed output changes only.
 
 ## Active output readiness
 
@@ -204,7 +207,7 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
   and its existing Save/Cancel; no separate picker commit. All existing section
   representations resolve the saved icon, including resume wording/fact/comparison
   descriptors. Icons are shared, language-independent app metadata, outside wording
-  overrides and PDF graphics/readiness. Revision metadata can still stale preview.
+  overrides and PDF graphics/readiness. Preview staleness ignores revision metadata.
   Include icons in scope baselines, recovery, history, backups, and rollback. No
   compatibility or migration for earlier development icon data; never silently
   reseed it. Starters copy structural icons into newly created sections; presets do not change shared icons.
@@ -214,7 +217,10 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 - Use Cancel / Save for forms and Cancel / Discard / Save for dirty navigation, with the primary action rightmost. Disable form actions while unchanged or saving; navigation Cancel retains the draft. Recovery discovery/restoration belongs in Data & backups, not entry-order comparison panels. Preserve shared accessible controls and narrow-screen Editor/PDF switching without closing drafts.
 - Workspace envelopes use `format: "verso.workspace"`, `schemaVersion: 2`, `exportedAt`, `workspaceId`, and `document`. Recovery envelopes use `format: "verso.recovery"`, `schemaVersion: 1`, `exportedAt`, `sourceWorkspaceId`, and `drafts`. Recovery carries scope identities, draft version/values, baseline values/revision/generation, and pending immutable request context. Imported receipts never prove local commits.
 - Use UTF-8 JSON with stable opaque IDs, canonical language tags, validated references, and explicit template identities. Unknown versions and rejected imports cause no writes. Validate recovery structure while preserving malformed field values for editing. Portable files exclude credentials, device preferences, local operation ledgers, and compiler/PDF assets.
-- Recovery scheduling uses 500 ms inactivity and a 2-second maximum wait. Close-time flushing is best effort. If IndexedDB fails, retain drafts and offer export; session-only commits require explicit choice and never overwrite durable content. Do not silently fall back to localStorage or promise durable replacement without snapshot preservation.
+- Recovery scheduling uses 500 ms inactivity and a 2-second maximum wait. Close-time flushing is best effort. If IndexedDB fails, retain drafts and offer export; session-only commits require explicit choice and never overwrite durable content. Leaving session mode requires resolved drafts and an explicit reviewed choice: reload the durable workspace, or adopt this tab's workspace through the atomic reviewed replacement path (rejecting a newer durable revision).
+- Save, recovery, preview, and backup status stay separate. The controller publishes typed `saveStatus`/`storageMode`/`sessionCommits` (`types-and-constants/career-status.ts`); the toolbar text derives from `saveStatus`. Persistence throws `CareerStorageError` codes (`conflict`, `replaced`, `uncertain`, `storage`, `invalid`), and DOM/IndexedDB exceptions classify as `storage`. UI decisions (session-only action, close warning) use typed state, never message text. Other-tab commits publish `remote-update`; notifications during a local Save are applied after it settles. A confirmed commit whose receipt acknowledgment fails reports `cleanup-retry`, not an error. There is no release status until public releases exist. Do not silently fall back to localStorage or promise durable replacement without snapshot preservation.
+- Disclose tab-only commits even when storage never opened (`storageMode: unavailable`). Session adoption identifies the retained previous-workspace snapshot and requires its export or explicit continuation without export; export failures retain the review and keep adoption blocked. Discarding tab-only Saves does not replace the snapshot and needs no export decision.
+- Preview target identity persists while readiness blocks output, so a committed Save that makes the same resume ready schedules optional automatic refresh. Hidden previews defer already queued automatic requests as well as timers; explicit queued requests remain explicit. Disabling automatic refresh cancels its queued work without canceling manual requests or active compilation.
 
 ## Capacity, performance, and resource targets
 
@@ -225,6 +231,7 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 - Normal-speed p95 targets: input/selection/reorder <=100 ms; Save click-to-committed acknowledgment <=500 ms representative / <=2 s capacity; workspace open <=2 s representative / <=5 s capacity excluding compiler initialization. Collect at least 100 interactions and 30 Saves/opens per data fixture. Typing must not scan the whole workspace.
 - Recovery acknowledgment targets <=3 s during continuous input; expose storage failure within 1 s of detection. Capacity import preview targets <=5 s with progress after 500 ms and no recurring main-thread parsing/transfer tasks above 50 ms. Targets require measurement, not assumptions from worker use.
 - Compiler defaults: configurable 120-second initialization / 30-second compilation timeout; 1,000,000-byte source limit. Measure 10 warm runs (target <=5 s) and 5 cached-cold initialization-plus-compilation runs (target <=20 s) on representative 1–3-page resumes. Report proven uncached download separately.
+- `stores/output/preview-coordinator.ts` owns preview resources for one workspace per tab and is mounted through `hooks/output/use-committed-preview.ts` in the career workspace, above the editor/preview layout, so hiding the preview never discards the retained PDF or in-flight compile. `components/career/committed-output.tsx` renders it and unmounts the PDF.js viewer whenever the preview is not visible (desktop pane hidden, full-width destination, inactive narrow tab). Staleness and stale-result rejection use `{generation, resumeId, fingerprint}`, where `renderCareerOutput` fingerprints the rendered source excluding only its revision metadata; Saves that do not change a resume's output keep its preview Current. Automatic refresh (off by default) debounces 800 ms after a committed fingerprint change for the same resume and generation, never on resume switches, generation changes, or drafts, and waits while the preview or document is hidden. A running job is never interrupted; one queued request compiles the latest committed target for the same resume afterwards.
 - Allow one active compile and one replaceable latest queued request per workspace, one compiler instance/worker pair per tab, one last successful PDF, and one in-flight result. Tag work with generation/resume/output identity; reject stale results. Terminate timed-out workers before retry and release obsolete URLs/documents/canvases/listeners/timers. Verify deterministic settled bounds; no mandatory 30-minute/100-refresh soak or sustained heap-growth claim.
 - Verify real IndexedDB abort/quota behavior, interrupted acknowledgments, exact cleanup races, two-tab scope conflicts, generation rejection, repeated rollback, protected-record cleanup, and restart/recovery imports on isolated origins. Mocked exceptions alone do not prove transactional safety.
 

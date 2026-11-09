@@ -7,6 +7,7 @@ export const devicePreferencesSchema = z.strictObject({
   compilationTimeoutMs: z.number().finite().min(100).max(600_000),
   completedOperationDays: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   completedOperationCount: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+  automaticRefresh: z.boolean().optional(),
 });
 
 /** Read a versioned browser preference record without writing defaults on load.

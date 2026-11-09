@@ -100,6 +100,7 @@ it("refreshes manually, retains captured download identity after switching, and 
     const option = screen.getByRole("option", {
       name: "Application 1 (pt-BR)",
     });
+    await expect.element(option).toBeVisible();
     expect(
       option
         .element()
@@ -411,6 +412,147 @@ it("uses saved device timeouts on the next compiler instance without compiling o
       }),
     );
     expect(runtime.close).toHaveBeenCalledTimes(beforeChange + 1);
+  } finally {
+    await screen.unmount();
+  }
+});
+
+it("keeps an unrelated committed Save current and retains the PDF while the preview is hidden", async () => {
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:hidden");
+  const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  runtime.compile.mockResolvedValue({
+    bytes: new Uint8Array([37, 80, 68, 70]),
+  });
+  const committed = head();
+  const onIssue = () => {};
+  const screen = await render(
+    <CommittedOutput head={committed} onIssue={onIssue} />,
+  );
+  try {
+    await screen.getByRole("button", { name: "Refresh preview" }).click();
+    await expect
+      .element(screen.getByText(/Last successful preview/))
+      .toHaveTextContent(/revision 7.*Current/);
+    const unrelated = structuredClone(committed);
+    unrelated.revision = 8;
+    unrelated.document.resumes[1].name = "Renamed other application";
+    await screen.rerender(
+      <CommittedOutput head={unrelated} onIssue={onIssue} />,
+    );
+    await expect
+      .element(screen.getByText(/Last successful preview/))
+      .toHaveTextContent(/revision 7.*Current/);
+    await screen.rerender(
+      <CommittedOutput head={unrelated} onIssue={onIssue} visible={false} />,
+    );
+    await expect
+      .element(screen.getByRole("link", { name: /Download PDF/ }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(screen.getByText(/Last successful preview/))
+      .toBeVisible();
+    await screen.rerender(
+      <CommittedOutput head={unrelated} onIssue={onIssue} visible />,
+    );
+    await expect
+      .element(screen.getByRole("link", { name: /Download PDF/ }))
+      .toHaveAttribute("href", "blob:hidden");
+    expect(revoke).not.toHaveBeenCalled();
+    expect(runtime.compile).toHaveBeenCalledTimes(1);
+  } finally {
+    await screen.unmount();
+  }
+  expect(revoke).toHaveBeenCalledWith("blob:hidden");
+});
+
+it("refreshes automatically only after committed output changes while visible when enabled", async () => {
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:automatic");
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  runtime.compile.mockResolvedValue({
+    bytes: new Uint8Array([37, 80, 68, 70]),
+  });
+  const preferences = { ...devicePreferenceDefaults, automaticRefresh: true };
+  const committed = head();
+  const onIssue = () => {};
+  const view = (value: CareerHead, visible = true) => (
+    <CommittedOutput
+      head={value}
+      onIssue={onIssue}
+      preferences={preferences}
+      visible={visible}
+    />
+  );
+  const screen = await render(view(committed));
+  try {
+    await expect
+      .element(screen.getByText(/Automatic refresh · Saved content only/))
+      .toBeVisible();
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    expect(runtime.compile).not.toHaveBeenCalled();
+    const unrelated = structuredClone(committed);
+    unrelated.revision = 8;
+    unrelated.document.resumes[1].name = "Other";
+    await screen.rerender(view(unrelated));
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    expect(runtime.compile).not.toHaveBeenCalled();
+    const changed = structuredClone(unrelated);
+    changed.revision = 9;
+    changed.document.resumes[0].name = "Renamed application";
+    await screen.rerender(view(changed, false));
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    expect(runtime.compile).not.toHaveBeenCalled();
+    await expect
+      .element(screen.getByText(/Refresh pending/))
+      .toBeInTheDocument();
+    await screen.rerender(view(changed));
+    await expect.poll(() => runtime.compile.mock.calls.length).toBe(1);
+    await expect
+      .element(screen.getByText(/Last successful preview/))
+      .toHaveTextContent(/Renamed application.*revision 9.*Current/);
+  } finally {
+    await screen.unmount();
+  }
+});
+
+it("automatically refreshes after saved wording makes blocked output ready again", async () => {
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:ready-again");
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  runtime.compile.mockResolvedValue({
+    bytes: new Uint8Array([37, 80, 68, 70]),
+  });
+  const preferences = { ...devicePreferenceDefaults, automaticRefresh: true };
+  const view = (value: CareerHead) => (
+    <CommittedOutput
+      head={value}
+      preferences={preferences}
+      onIssue={() => {}}
+    />
+  );
+  const committed = head();
+  const screen = await render(view(committed));
+  try {
+    await screen.getByRole("button", { name: "Refresh preview" }).click();
+    await expect
+      .element(screen.getByText(/Last successful preview/))
+      .toHaveTextContent(/Current/);
+    const blocked = structuredClone(committed);
+    blocked.revision += 1;
+    blocked.document.profile.fields[0].wording["en-US"] = "";
+    await screen.rerender(view(blocked));
+    await expect
+      .element(screen.getByRole("button", { name: "Refresh preview" }))
+      .toBeDisabled();
+    await expect
+      .element(screen.getByText(/Last successful preview/))
+      .toHaveTextContent(/Outdated/);
+    const ready = structuredClone(blocked);
+    ready.revision += 1;
+    ready.document.profile.fields[0].wording["en-US"] = "Ana Ready";
+    await screen.rerender(view(ready));
+    await expect.poll(() => runtime.compile.mock.calls.length).toBe(2);
+    await expect
+      .element(screen.getByText(/Last successful preview/))
+      .toHaveTextContent(/revision 9.*Current/);
   } finally {
     await screen.unmount();
   }

@@ -9,7 +9,8 @@ contracts are maintained in [AGENTS.md](../AGENTS.md).
 
 Settings now uses a dialog with its own responsive sidebar and durable panel URLs.
 The implementation adds browser preferences and a recoverable workspace appearance-
-defaults editing scope. Automatic preview refresh remains deferred. Browser Mode,
+defaults editing scope. Optional automatic preview refresh was added later (see
+Saving and preview resources below). Browser Mode,
 production browser suites, screenshots, and manual interaction/PDF validation for
 these changes were explicitly left to the owner and have not been executed.
 Earlier automated results predate these changes and do not prove this slice.
@@ -410,7 +411,7 @@ Earlier browser results do not establish acceptance of these changes.
       on disposable origins; preserve both appearance and defaults atomically.
 - [ ] Check English/Portuguese PDFs and confirm that default sentinels retain
       template behavior, saved appearance renders correctly, and baseline-only
-      metadata changes no layout commands. Revision metadata can stale previews.
+      metadata changes no layout commands. Revision-only Saves keep previews Current.
 
 All earlier deferred acceptance remains open.
 
@@ -461,3 +462,155 @@ These automated results supersede the earlier unexecuted-browser status for the
 refactoring and positioning correction. Owner manual/visual/PDF acceptance and
 other deferred verification remain open; the tests do not establish complete
 product acceptance or performance measurements.
+
+## Saving and preview resources
+
+Implemented behavior (see README "Current capabilities" and AGENTS.md):
+
+- A workspace preview coordinator above the editor/preview layout owns one
+  compiler instance, one active job, one replaceable queued job, one retained
+  PDF URL, and an optional automatic-refresh timer. Results are tagged with
+  generation, resume, and an output fingerprint that ignores revision
+  metadata; stale results are discarded before any URL is created.
+- Hiding the preview unmounts the PDF.js viewer (document, canvases, worker,
+  listeners) while keeping the last PDF and any in-flight compile.
+- Optional device-only automatic refresh (off by default) runs about 800 ms
+  after a committed output change while the preview and tab are visible.
+  It retains target identity while output is blocked and refreshes when a Save
+  makes the same resume ready. Already queued automatic work waits while hidden;
+  disabling the preference or switching resumes drops its obsolete queue.
+- Save status is typed and separate from recovery, preview, and backup status;
+  storage failures carry typed reasons. Session-only mode can be left through a
+  reviewed choice: discard tab-only Saves or adopt this tab's workspace through
+  atomic replacement. Adoption identifies the previous snapshot and requires
+  export or explicit continuation without export; export failures keep adoption
+  blocked. Tab-only Saves after storage startup failure retain a persistent
+  disclosure and workspace-export guidance.
+
+Initial checks on 2026-11-09 (before the follow-up corrections below):
+
+- `npm run format:check`, `npm run lint`, and `npm run typecheck` (generated
+  routes plus TypeScript) passed.
+- `npm run test:unit` passed 165 tests across 15 files, with no failures or skips.
+  Two later reruns under the same high host load timed out (5 s) only in the
+  unchanged `recovery-cli` subprocess test (164/165).
+- Targeted Browser Mode runs passed:
+  - `output.browser.test.tsx`: 8 tests.
+  - `preview-resources.browser.test.tsx`: 1 test, 3 consecutive runs.
+  - `save-status.browser.test.tsx`: 4 tests, 3 consecutive runs.
+  - `pdf-preview.browser.test.tsx`: 5 tests.
+  - `settings.browser.test.tsx`: 12 tests.
+- An earlier full Browser Mode run of the same application code passed 135 tests
+  across 11 files, before the new resource, status, and settings cases existed.
+- Targeted Chromium production E2E runs, each with a fresh build, passed:
+  - all 11 `career.spec.ts` cases, including the new hidden-preview and
+    automatic-refresh case and the two-tab remote-update assertion;
+  - the new case again on its own after a test-flow fix.
+
+Initial failed or incomplete runs:
+
+- The complete `npm test` run failed in Browser Mode: 13 of 141 tests across 6
+  files, mostly 15-second timeouts. Because the browser stage failed, its
+  Firefox and WebKit E2E stage did not run.
+- A standalone Browser Mode rerun failed 23 tests.
+- During these runs the host was at about 96% CPU from unrelated applications.
+- The two custom-section icon cases that failed did not pass in isolation, and
+  fail identically on the unchanged pre-change code (`git stash`) under the
+  same load. This indicates host contention rather than a regression, but it
+  does not prove it.
+- A complete `npm test` on an idle host is still required before counting this
+  slice as verified.
+
+Initial coverage limitations (follow-up results below supersede where stated):
+
+- No Firefox or WebKit E2E run of the new cases.
+- No Chromium E2E for session-only disclosure with IndexedDB blocked. Session
+  behavior is covered by real-IndexedDB Browser Mode cases only.
+- The backup button keeps its existing "saved workspace only" label at all
+  times; it is not limited to when drafts exist.
+
+Owner acceptance (open):
+
+- [ ] Rapid edits and resume switches with manual and automatic refresh: at most
+      one compile runs and one waits. The label tracks Current/Outdated correctly.
+- [ ] Hide/show the preview, cross the narrow/desktop breakpoint, and switch
+      narrow tabs. The last PDF persists; the viewer reloads without recompiling.
+- [ ] Compiler failure and timeout (lower the timeout in Settings): the last PDF is
+      kept, the retry works, and the timeout guidance and compiler log appear.
+- [ ] Two tabs: other-tab Saves show "Updated from another tab". Same-scope
+      conflicts keep the draft and report the conflict reason.
+- [ ] Session-only: block storage or choose Save in this tab only, confirm the
+      banner and close warning, then exercise both Return to durable saving choices.
+- [ ] Inspect memory/task manager after settling. Bounds are deterministic test
+      checks, not long-session memory claims.
+
+All earlier deferred acceptance remains open.
+
+### Saving and preview follow-up verification
+
+**Status: Resolved.** The implementation gaps and automated regression failures
+are closed. The owner acceptance checklist remains separate and unexecuted.
+
+Corrections on 2026-11-09:
+
+- Session adoption now identifies the retained previous-workspace snapshot and
+  requires its export or explicit continuation without export. Export failure
+  retains the review, shows the error inside the dialog, and blocks adoption.
+  Successful export alone does not change durable content. The export control
+  wraps on narrow screens.
+- Tab-only Saves retain their disclosure and export guidance when IndexedDB
+  could not open. Production checks cover this startup failure and prevention of
+  `beforeunload` for tab-only commits in Chromium, Firefox, and WebKit.
+- The preview target keeps its resume/generation identity while readiness blocks
+  output. A committed Save that makes that resume ready schedules optional
+  automatic refresh. Already queued automatic requests wait while hidden, are
+  canceled when disabled, and are dropped when the resume changes. Explicit
+  queued refreshes remain explicit.
+
+Earlier follow-up runs exposed additional test issues. A career ordering case
+unmounted its controller after observing the committed head but before Save
+maintenance settled. Disposal stops subsequent publications, leaving its
+`saving` snapshot true; failed teardown then contaminated the icon fixtures.
+The case now waits for Save completion before unmount. A preview test queried
+an option's DOM before its select popup opened; it now waits for visibility.
+The Settings E2E case still expected the removed "remains manual" wording. It
+now checks that automatic refresh remains off after reload, alongside its
+existing compiler-preference persistence assertions. The session review test
+waits for dialog closure before reopening. Assertions, timeouts, configured
+retries, and skip behavior were not weakened.
+
+Failed and intermediate checks remain separate from final evidence:
+
+- The first normal `npm test` stopped at the unchanged five-second recovery-CLI
+  timeout: 167/168 unit tests passed. A single-worker unit run then passed all
+  168 cases before the final queue-switch regression was added.
+- A single-worker Browser Mode attempt failed before executing tests because its
+  local server refused the connection. The next parallel run passed 129/144;
+  sequential browser files passed 141/144, exposing the ordering teardown race
+  and two contaminated icon cases described above.
+- The first full production E2E run passed 76/82; all six failures were the stale
+  Settings wording assertion on desktop/phone across the three browsers.
+- A subsequent normal run passed 169 unit tests and 144/145 Browser Mode cases,
+  exposing the select-popup timing issue. Focused output/session regressions then
+  passed all 16 cases, including export success/failure, adoption gating, and
+  narrow-dialog overflow checks.
+
+Final verification on 2026-11-09:
+
+- The normal, unmodified `npm test` command passed 169 unit tests across 15 files,
+  145 Chromium Browser Mode tests across 13 files, and all 82 production E2E
+  cases across Chromium, Firefox, and WebKit, with no failures or skips and no
+  configured retries. The E2E stage built and started a fresh production server.
+- `npm run format:check`, `npm run lint`, and `npm run typecheck` passed. The
+  production build also checked the final TypeScript. Formatting separately
+  checked the preview hook/coordinator because the existing `output/` ignore
+  pattern excludes those subfolders from ordinary Prettier traversal.
+- Maintained-document local links and diff whitespace checks passed. Initial
+  sandbox subprocess/traversal EPERM errors were resolved by running the same
+  checks outside the sandbox.
+
+These final results supersede the earlier incomplete automated status, including
+the missing Firefox/WebKit and blocked-storage coverage. Failure screenshots
+were inspected for diagnosis only. The owner checklist above, visual/PDF
+acceptance, manual resource inspection, and earlier deferred acceptance remain
+open; no performance measurements or sustained-memory acceptance were executed.

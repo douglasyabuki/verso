@@ -2,7 +2,7 @@
 
 import { cn } from "cn";
 import { FileText, RefreshCw } from "lucide-react";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 import { ResumeReadiness } from "@/components/career/resume-readiness";
 import PdfPreview from "@/components/output/lazy-pdf-preview";
@@ -18,139 +18,87 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { renderCareerResume } from "@/lib/career/output";
-import { assessResumeOutput } from "@/lib/career/readiness";
+import {
+  type CommittedPreview,
+  useCommittedPreview,
+} from "@/hooks/output/use-committed-preview";
 import type { CareerHead } from "@/stores/career/persistence";
-import { BrowserCompiler } from "@/tools/compiler-proof/compiler.mjs";
 import type { ResumeOutputTarget } from "@/types-and-constants/career";
 import {
   devicePreferenceDefaults,
   type DevicePreferences,
 } from "@/types-and-constants/settings";
 
+/** Standalone committed preview that owns its own coordinator.
+ * The workspace mounts {@link CommittedOutputView} with a coordinator owned above
+ * the shell instead, so hiding the preview keeps the last PDF.
+ * @param props Committed head, device preferences, destination resume, and issue navigation.
+ * @returns Preview pane bound to a coordinator disposed on unmount.
+ * @example <CommittedOutput head={head} onIssue={openIssue} />
+ */
 export const CommittedOutput = memo(function CommittedOutput({
   head,
   activeResumeId,
   onIssue,
   preferences = devicePreferenceDefaults,
+  visible = true,
 }: {
   head: CareerHead;
   preferences?: DevicePreferences;
   activeResumeId?: string;
   onIssue: (target: ResumeOutputTarget) => void;
+  visible?: boolean;
 }) {
-  const [resumeId, setResumeId] = useState("");
-  const [output, setOutput] = useState<{
-    url: string;
-    key: string;
-    revision: number;
-    resumeId: string;
-    resumeName: string;
-    language: string;
-    generation: number;
-    targetPages: number;
-  } | null>(null);
-  const [pending, setPending] = useState(false);
-  const [phase, setPhase] = useState<"initializing" | "compiling">(
-    "initializing",
+  const preview = useCommittedPreview({ head, preferences, activeResumeId });
+  return (
+    <CommittedOutputView
+      preview={preview}
+      visible={visible}
+      showSelector={!activeResumeId}
+      onIssue={onIssue}
+    />
   );
-  const [error, setError] = useState("");
-  const compiler = useRef<BrowserCompiler | null>(null);
-  const compilerSettings = useRef("");
-  const latest = useRef("");
-  const mounted = useRef(true);
-  const active =
-    head.document.resumes.find(
-      (resume) => resume.id === (activeResumeId ?? resumeId),
-    ) ?? head.document.resumes[0];
-  const { source, sourceError } = useMemo(() => {
-    if (!active || !assessResumeOutput(head.document, active.id).ready)
-      return { source: "", sourceError: "" };
-    try {
-      return {
-        source: renderCareerResume(head.document, active.id, head.revision),
-        sourceError: "",
-      };
-    } catch (error) {
-      return { source: "", sourceError: String(error) };
-    }
-  }, [head.document, head.revision, active]);
-  const key = JSON.stringify([head.generation, active?.id, source]);
+});
+
+/** Render committed preview state without owning compiler or URL lifecycles.
+ * When not visible, the PDF viewer is unmounted so its document, canvases, and
+ * worker are released while the coordinator retains the PDF and in-flight job.
+ * @param props Coordinator-backed preview, visibility, selector flag, and issue navigation.
+ * @returns Preview header, retained-PDF label, viewer, and Issues footer.
+ * @example <CommittedOutputView preview={preview} visible onIssue={openIssue} />
+ */
+export const CommittedOutputView = memo(function CommittedOutputView({
+  preview,
+  visible,
+  showSelector,
+  onIssue,
+}: {
+  preview: CommittedPreview;
+  visible: boolean;
+  showSelector: boolean;
+  onIssue: (target: ResumeOutputTarget) => void;
+}) {
+  const { coordinator, state, head, active, source, sourceError, key } =
+    preview;
+  const [documentVisible, setDocumentVisible] = useState(
+    () => typeof document === "undefined" || !document.hidden,
+  );
   useEffect(() => {
-    latest.current = key;
-  }, [key]);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      compiler.current?.close();
-      compiler.current = null;
-    };
+    const update = () => setDocumentVisible(!document.hidden);
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
   }, []);
-  useEffect(
-    () => () => {
-      if (output) URL.revokeObjectURL(output.url);
-    },
-    [output],
-  );
   useEffect(() => {
-    compiler.current?.close();
-    compiler.current = null;
-  }, [head.generation]);
-  const compile = async () => {
-    if (!active || !source || pending) return;
-    setPending(true);
-    setPhase(compiler.current ? "compiling" : "initializing");
-    setError("");
-    const jobKey = key;
-    try {
-      const settingsKey = JSON.stringify([
-        preferences.initializationTimeoutMs,
-        preferences.compilationTimeoutMs,
-      ]);
-      if (compiler.current && compilerSettings.current !== settingsKey) {
-        compiler.current.close();
-        compiler.current = null;
-      }
-      compilerSettings.current = settingsKey;
-      compiler.current ??= new BrowserCompiler({
-        assetBase: "/compiler/",
-        initializationTimeoutMs: preferences.initializationTimeoutMs,
-        compilationTimeoutMs: preferences.compilationTimeoutMs,
-        onState: (state) => {
-          if (
-            mounted.current &&
-            (state === "initializing" || state === "compiling")
-          )
-            setPhase(state);
-        },
-      });
-      const result = await compiler.current.compile({
-        source,
-        snapshotId: jobKey,
-        locale: active.language,
-      });
-      if (!mounted.current || latest.current !== jobKey) return;
-      const url = URL.createObjectURL(
-        new Blob([result.bytes.slice().buffer], { type: "application/pdf" }),
-      );
-      setOutput({
-        url,
-        key: jobKey,
-        revision: head.revision,
-        resumeId: active.id,
-        resumeName: active.name,
-        language: active.language,
-        generation: head.generation,
-        targetPages: active.layout.targetPages,
-      });
-    } catch (error) {
-      if (mounted.current && latest.current === jobKey) setError(String(error));
-    } finally {
-      if (mounted.current) setPending(false);
-    }
-  };
-  if (!active) return null;
+    coordinator.setVisible(visible && documentVisible);
+    return () => coordinator.setVisible(false);
+  }, [coordinator, visible, documentVisible]);
+  const output = state.output;
+  const pending = state.active !== null;
+  const phase =
+    state.status.kind === "preparing" ? "initializing" : "compiling";
+  const error = state.status.kind === "failed" ? state.status : null;
+  const compile = preview.refresh;
+  if (!head || !active) return null;
   return (
     <section
       className="flex h-full min-h-0 flex-1 flex-col"
@@ -162,9 +110,9 @@ export const CommittedOutput = memo(function CommittedOutput({
           <Button
             variant="ghost"
             size="sm"
-            disabled={pending || !source}
+            disabled={!source || state.active === key || state.queued === key}
             aria-busy={pending}
-            onClick={() => void compile()}
+            onClick={compile}
           >
             <RefreshCw
               aria-hidden="true"
@@ -176,20 +124,21 @@ export const CommittedOutput = memo(function CommittedOutput({
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Manual refresh · Saved content only
+          {preview.automaticRefresh ? "Automatic refresh" : "Manual refresh"} ·
+          Saved content only
+          {state.automaticPending && " · Refresh pending"}
         </p>
-        {!activeResumeId && (
+        {showSelector && (
           <Field>
             <FieldLabel htmlFor="existing-resume">Existing resume</FieldLabel>
             <Select
-              disabled={Boolean(activeResumeId)}
               value={active.id}
               items={head.document.resumes.map((resume) => ({
                 value: resume.id,
                 label: `${resume.name} (${resume.language})`,
               }))}
               onValueChange={(value) => {
-                if (value) setResumeId(value);
+                if (value) preview.selectResume(value);
               }}
             >
               <SelectTrigger id="existing-resume">
@@ -223,7 +172,17 @@ export const CommittedOutput = memo(function CommittedOutput({
           <Alert variant="destructive">
             <AlertTitle>Preview could not be generated</AlertTitle>
             <AlertDescription className="wrap-anywhere">
-              {sourceError || error}
+              {sourceError || error?.message}
+              {error?.timedOut &&
+                " The compiler was stopped and restarts on the next refresh."}
+              {error?.log && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer">Compiler log</summary>
+                  <pre className="mt-1 max-h-40 overflow-auto text-xs whitespace-pre-wrap">
+                    {error.log}
+                  </pre>
+                </details>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -238,6 +197,7 @@ export const CommittedOutput = memo(function CommittedOutput({
               ? "Preparing your preview..."
               : "Generating your PDF..."}{" "}
             Your last successful preview stays available.
+            {state.queued && " Another refresh is queued."}
           </p>
         )}
         {!output &&
@@ -259,7 +219,7 @@ export const CommittedOutput = memo(function CommittedOutput({
             <PdfPreviewPlaceholder
               title="Let's try that again"
               description="Your saved content is safe. Try refreshing the preview again."
-              onGenerate={source ? () => void compile() : undefined}
+              onGenerate={source ? compile : undefined}
               actionLabel="Try again"
             />
           ) : !source ? (
@@ -268,23 +228,25 @@ export const CommittedOutput = memo(function CommittedOutput({
               description="Open Issues below to see what needs wording before this resume can become a PDF."
             />
           ) : (
-            <PdfPreviewPlaceholder onGenerate={() => void compile()} />
+            <PdfPreviewPlaceholder onGenerate={compile} />
           ))}
         {output && (
           <>
             <p className="shrink-0 px-3 text-xs text-muted-foreground">
               Last successful preview · {output.resumeName} ({output.language})
-              · revision {output.revision} · generation {output.generation}
+              · revision {output.revision} · generation {output.tag.generation}
               {output.key !== key ? " · Outdated" : " · Current"}
             </p>
-            <PdfPreview
-              pageWarningThreshold={output.targetPages}
-              document={{
-                key: output.key,
-                url: output.url,
-                fileName: `verso-${output.resumeId}-${output.language}-${output.revision}.pdf`,
-              }}
-            />
+            {visible && (
+              <PdfPreview
+                pageWarningThreshold={output.targetPages}
+                document={{
+                  key: output.key,
+                  url: output.url,
+                  fileName: `verso-${output.tag.resumeId}-${output.language}-${output.revision}.pdf`,
+                }}
+              />
+            )}
           </>
         )}
       </div>

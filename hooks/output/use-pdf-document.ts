@@ -49,6 +49,7 @@ export function usePdfDocument({
     let cancelled = false;
     let loading: PDFDocumentLoadingTask | undefined;
     let viewer: PDFViewer | undefined;
+    let releaseLinks: (() => void) | undefined;
     let observer: ResizeObserver | undefined;
     let frame = 0;
     const abort = new AbortController();
@@ -77,6 +78,7 @@ export function usePdfDocument({
         maxCanvasPixels: 8_000_000,
       });
       links.setViewer(viewer);
+      releaseLinks = () => links.setDocument(null);
       instance.current = { viewer, bus, links };
       bus.on(
         "pagerendered",
@@ -177,7 +179,11 @@ export function usePdfDocument({
       observer?.disconnect();
       cancelAnimationFrame(frame);
       instance.current = null;
+      // Release cached page canvases/text layers, then detach the document from
+      // the viewer, its find controller, and link service before destroying it.
+      viewer?.cleanup();
       viewer?.setDocument(null!);
+      releaseLinks?.();
       void loading?.destroy();
     };
   }, [source.key, source.url, container, pages]);

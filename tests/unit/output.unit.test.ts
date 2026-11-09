@@ -5,7 +5,7 @@ import {
   createCareerDocument,
   createEntry,
 } from "@/lib/career/model";
-import { renderCareerResume } from "@/lib/career/output";
+import { renderCareerOutput, renderCareerResume } from "@/lib/career/output";
 
 export function outputFixture(language = "en-US") {
   const document = createCareerDocument(language);
@@ -144,4 +144,40 @@ it("renders selected entry order and omits unselected content without changing c
     second.id,
     hidden.id,
   ]);
+});
+
+it("keeps the output fingerprint across revisions and unrelated Saves but changes it for selected output", () => {
+  const document = outputFixture();
+  const first = renderCareerOutput(document, "resume", 1);
+  const later = renderCareerOutput(document, "resume", 9);
+  expect(later.source).not.toBe(first.source);
+  expect(later.source).toContain("Verso revision 9;");
+  expect(later.fingerprint).toBe(first.fingerprint);
+  const unrelated = structuredClone(document);
+  unrelated.sections[0].icon = "rocket";
+  const hidden = createEntry("experience");
+  hidden.fields[0].wording["en-US"] = "Unselected role";
+  unrelated.sections[0].entries.push(hidden);
+  unrelated.resumes.push({
+    ...structuredClone(unrelated.resumes[0]),
+    id: "other",
+    name: "Other application",
+  });
+  unrelated.resumes[1].overrides[
+    unrelated.sections[0].entries[0].fields[0].id
+  ] = "Other resume wording";
+  expect(renderCareerOutput(unrelated, "resume", 4).fingerprint).toBe(
+    first.fingerprint,
+  );
+  const wording = structuredClone(document);
+  wording.resumes[0].overrides[wording.sections[0].entries[0].fields[0].id] =
+    "Tailored title";
+  expect(renderCareerOutput(wording, "resume", 1).fingerprint).not.toBe(
+    first.fingerprint,
+  );
+  const layout = structuredClone(document);
+  layout.resumes[0].layout = { ...layout.resumes[0].layout, entryGap: 9 };
+  expect(renderCareerOutput(layout, "resume", 1).fingerprint).not.toBe(
+    first.fingerprint,
+  );
 });

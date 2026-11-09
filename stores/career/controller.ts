@@ -16,11 +16,18 @@ import { createResume } from "@/lib/career/resumes";
 import {
   type CareerHead,
   type CareerStorage,
+  CareerStorageError,
   openCareerStorage,
   sameScope,
+  saveFailureReason,
   type SaveRequest,
 } from "@/stores/career/persistence";
 import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
+import {
+  describeSaveStatus,
+  type SaveStatus,
+  type StorageMode,
+} from "@/types-and-constants/career-status";
 import {
   devicePreferenceDefaults,
   type DevicePreferences,
@@ -45,7 +52,14 @@ export type CareerState = {
   orderRecoveryStatus: string;
   recovery: CareerDraft[];
   error: string;
+  /** Toolbar text derived from saveStatus; kept for display only. */
   status: string;
+  /** Typed committed-workspace Save status, separate from recovery/preview/backup. */
+  saveStatus: SaveStatus;
+  /** Where Saves commit for this tab. */
+  storageMode: StorageMode;
+  /** Commits made in this tab's memory only since entering session mode. */
+  sessionCommits: number;
   recoveryStatus: string;
   saving: boolean;
   durable: boolean;
@@ -69,7 +83,10 @@ export class CareerController {
     orderRecoveryStatus: "",
     recovery: [],
     error: "",
-    status: "Opening saved workspace…",
+    status: describeSaveStatus({ kind: "opening" }),
+    saveStatus: { kind: "opening" },
+    storageMode: "unavailable",
+    sessionCommits: 0,
     recoveryStatus: "",
     saving: false,
     durable: false,
@@ -89,6 +106,7 @@ export class CareerController {
   private disposed = false;
   private lifecycle = 0;
   private session = false;
+  private refreshPending = false;
   private writeChain: Promise<void> = Promise.resolve();
   private pendingHistory: {
     direction: "undo" | "redo";
@@ -214,6 +232,9 @@ export class CareerController {
     this.state = {
       ...this.state,
       ...patch,
+      ...(patch.saveStatus && !("status" in patch)
+        ? { status: describeSaveStatus(patch.saveStatus) }
+        : {}),
       undoCount: this.undo.length,
       redoCount: this.redo.length,
     };
@@ -355,11 +376,17 @@ export class CareerController {
         head,
         recovery,
         durable: true,
-        status: `Saved locally · revision ${head.revision}`,
+        storageMode: "durable",
+        saveStatus: { kind: "saved", revision: head.revision },
       });
     } catch (error) {
       if (this.disposed || lifecycle !== this.lifecycle) return;
-      if (!this.state.head)
+      if (!this.state.head) {
+        // Never pair the memory fallback head with an open durable store.
+        this.storage?.close();
+        this.storage = null;
+        this.channel?.close();
+        this.channel = null;
         this.publish({
           ready: true,
           head: {
@@ -369,13 +396,17 @@ export class CareerController {
             generation: 0,
             document: createCareerDocument(),
           },
-          status: String(error).includes("unsupported layout format")
-            ? "Not saved: unsupported development workspace"
-            : "Not saved · browser storage unavailable",
+          saveStatus: {
+            kind: "unavailable",
+            reason: String(error).includes("unsupported layout format")
+              ? "unsupported"
+              : "storage",
+          },
+          storageMode: "unavailable",
           error: String(error),
           durable: false,
         });
-      else this.publish({ error: String(error) });
+      } else this.publish({ error: String(error) });
     }
   }
 
@@ -384,7 +415,13 @@ export class CareerController {
    * @example await controller.refresh()
    */
   async refresh(): Promise<void> {
-    if (!this.storage || this.session || this.state.saving) return;
+    if (!this.storage || this.session) return;
+    if (this.state.saving) {
+      // Apply other-tab notifications after the local Save settles.
+      this.refreshPending = true;
+      return;
+    }
+    this.refreshPending = false;
     try {
       const head = await this.storage.load();
       if (
@@ -395,12 +432,28 @@ export class CareerController {
               head.revision < this.state.head.revision)))
       )
         return;
+      const advanced =
+        !this.state.head ||
+        head.generation !== this.state.head.generation ||
+        head.revision !== this.state.head.revision;
       if (head.generation !== this.state.head?.generation) {
         this.undo = [];
         this.redo = [];
         this.pendingHistory = null;
+        this.committedIds.clear();
       }
-      this.publish({ head, recovery: await this.readRecovery() });
+      this.publish({
+        head,
+        recovery: await this.readRecovery(),
+        ...(advanced
+          ? {
+              saveStatus: { kind: "remote-update", revision: head.revision },
+              historyBoundary:
+                head.generation === this.state.head?.generation &&
+                this.state.historyBoundary,
+            }
+          : {}),
+      });
       for (const target of ["form", "order"] as const) {
         const draft = this.draftFor(target);
         if (
@@ -606,7 +659,9 @@ export class CareerController {
         throw error;
       } finally {
         this.publish({ saving: false });
-        if (this.hasUnsavedChanges())
+        clearTimeout(this.timer);
+        this.timer = undefined;
+        if (this.hasUnsavedChanges() && !this.disposed)
           this.timer = setTimeout(() => {
             void this.flushRecovery();
           }, 500);
@@ -634,7 +689,12 @@ export class CareerController {
       await this.cancel(target);
       return true;
     }
-    this.publishFor(target, { saving: true, error: "" });
+    this.publishFor(target, {
+      saving: true,
+      error: "",
+      saveStatus: { kind: "saving" },
+    });
+    let cleanupPending = false;
     try {
       // A prepared request may already have committed (notably resume creation).
       // Its receipt must be checked before trying to apply that creation again.
@@ -683,7 +743,8 @@ export class CareerController {
         this.session = true;
       } else {
         if (!this.storage || this.session)
-          throw new Error(
+          throw new CareerStorageError(
+            "storage",
             "Durable Save unavailable. Export recovery or explicitly choose Save in this tab only.",
           );
         await this.flushRecovery();
@@ -692,10 +753,10 @@ export class CareerController {
         next = await this.storage.commit(operationId);
         try {
           await this.storage.acknowledge(operationId);
-        } catch (error) {
-          this.publish({
-            error: `Save confirmed; receipt cleanup needs retry. ${String(error)}`,
-          });
+        } catch {
+          // The commit is confirmed; the receipt stays protected and is
+          // acknowledged on the next load. Report it as informational status.
+          cleanupPending = true;
         }
       }
       if (!this.committedIds.has(operationId)) {
@@ -758,6 +819,9 @@ export class CareerController {
             .byteLength,
         });
         this.committedIds.add(operationId);
+        // Retries only need recent identities; keep the set bounded.
+        while (this.committedIds.size > 1000)
+          this.committedIds.delete(this.committedIds.values().next().value!);
       }
       const current = this.draftFor(target);
       const newer =
@@ -776,9 +840,19 @@ export class CareerController {
               fingerprint: undefined,
             }
           : null,
-        status: memory
-          ? "Saved in this tab only · durable workspace unchanged"
-          : `Saved locally · revision ${next.revision}`,
+        saveStatus: memory
+          ? { kind: "session", revision: next.revision }
+          : cleanupPending
+            ? { kind: "cleanup-retry", revision: next.revision }
+            : { kind: "saved", revision: next.revision },
+        ...(memory
+          ? {
+              storageMode: this.storage
+                ? ("session" as const)
+                : ("unavailable" as const),
+              sessionCommits: this.state.sessionCommits + 1,
+            }
+          : {}),
         recoveryStatus: "",
         recovery: this.state.recovery.filter(
           (item) => item.draftId !== draft.draftId,
@@ -794,11 +868,12 @@ export class CareerController {
           target === "order"
             ? `Order Save not confirmed. Your pending order is retained. Export recovery from Data & backups, or cancel this order and start again. ${String(error)}`
             : String(error),
-        status: "Save not confirmed · draft retained",
+        saveStatus: { kind: "failed", reason: saveFailureReason(error) },
       });
       return false;
     } finally {
       this.publishFor(target, { saving: false });
+      if (this.refreshPending) void this.refresh();
     }
   }
 
@@ -815,11 +890,9 @@ export class CareerController {
       return;
     }
     this.undo.push(step);
-    while (
-      this.undo.length > 100 ||
-      this.undo.reduce((sum, item) => sum + item.bytes, 0) > 32 * 1024 * 1024
-    ) {
-      this.undo.shift();
+    let bytes = this.undo.reduce((sum, item) => sum + item.bytes, 0);
+    while (this.undo.length > 100 || bytes > 32 * 1024 * 1024) {
+      bytes -= this.undo.shift()!.bytes;
       this.publish({ historyBoundary: true });
     }
   }
@@ -871,7 +944,8 @@ export class CareerController {
     if (!step || !head || this.state.saving) return false;
     const baseline = direction === "undo" ? step.after : step.before;
     const values = direction === "undo" ? step.before : step.after;
-    this.publish({ saving: true });
+    this.publish({ saving: true, saveStatus: { kind: "saving" } });
+    let cleanupPending = false;
     try {
       const retry = this.pendingHistory;
       if (retry && (retry.direction !== direction || retry.step !== step))
@@ -929,10 +1003,8 @@ export class CareerController {
         next = await this.storage.commit(request.id);
         try {
           await this.storage.acknowledge(request.id);
-        } catch (error) {
-          this.publish({
-            error: `History confirmed; receipt cleanup needs retry. ${String(error)}`,
-          });
+        } catch {
+          cleanupPending = true;
         }
       }
       this.pendingHistory = null;
@@ -941,18 +1013,27 @@ export class CareerController {
       this.publish({
         head: next,
         error: "",
-        status: this.session
-          ? "Saved in this tab only"
-          : `Saved locally · revision ${next.revision}`,
+        saveStatus: this.session
+          ? { kind: "session", revision: next.revision }
+          : cleanupPending
+            ? { kind: "cleanup-retry", revision: next.revision }
+            : { kind: "saved", revision: next.revision },
+        ...(this.session
+          ? { sessionCommits: this.state.sessionCommits + 1 }
+          : {}),
       });
       this.channel?.postMessage("saved");
       await this.maintain();
       return true;
     } catch (error) {
-      this.publish({ error: String(error) });
+      this.publish({
+        error: String(error),
+        saveStatus: { kind: "failed", reason: saveFailureReason(error) },
+      });
       return false;
     } finally {
       this.publish({ saving: false });
+      if (this.refreshPending) void this.refresh();
     }
   }
 
@@ -1161,10 +1242,12 @@ export class CareerController {
       this.undo = [];
       this.redo = [];
       this.pendingHistory = null;
+      this.committedIds.clear();
       this.publish({
         head,
         error: "",
-        status: `Saved locally · revision ${head.revision}`,
+        historyBoundary: false,
+        saveStatus: { kind: "saved", revision: head.revision },
         recovery: await this.readRecovery(),
       });
       this.channel?.postMessage("replaced");
@@ -1208,7 +1291,7 @@ export class CareerController {
         completed++;
       }
       this.publish({
-        status: "Recovery imported · no workspace changes committed",
+        recoveryStatus: "Recovery imported · no workspace changes committed",
       });
     } catch (error) {
       throw new Error(
@@ -1230,7 +1313,85 @@ export class CareerController {
     this.lifecycle++;
     clearTimeout(this.timer);
     clearTimeout(this.maxTimer);
+    this.timer = undefined;
+    this.maxTimer = undefined;
     this.channel?.close();
+    this.channel = null;
     this.listeners.clear();
+  }
+
+  /** Read the durable workspace for review before leaving session mode.
+   * @returns Current durable head, or undefined when durable storage is unavailable.
+   * @example const durable = await controller.durableHead()
+   */
+  async durableHead(): Promise<CareerHead | undefined> {
+    if (!this.storage) return undefined;
+    return this.storage.load();
+  }
+
+  /** Leave explicit session-only mode after review, restoring durable Saves.
+   * `keep-durable` discards this tab's session commits and shows the durable
+   * workspace. `replace-durable` adopts this tab's workspace through the atomic
+   * reviewed replacement path, preserving the outgoing durable workspace as the
+   * one previous workspace. Drafts must be resolved first; recovery is retained.
+   * @param choice Which committed workspace to keep.
+   * @param reviewed Durable head the user reviewed; a newer durable revision rejects replacement.
+   * @returns True after durable Saves are available again; false when blocked or failed.
+   * @example await controller.leaveSessionMode("keep-durable", reviewed)
+   */
+  async leaveSessionMode(
+    choice: "keep-durable" | "replace-durable",
+    reviewed: CareerHead,
+  ): Promise<boolean> {
+    const head = this.state.head;
+    if (
+      !this.storage ||
+      !this.session ||
+      !head ||
+      this.state.saving ||
+      this.state.draft ||
+      this.state.orderDraft
+    )
+      return false;
+    this.publish({ saving: true });
+    try {
+      const next =
+        choice === "replace-durable"
+          ? await this.storage.replace(
+              reviewed,
+              validateDocument(structuredClone(head.document)),
+            )
+          : await this.storage.load();
+      if (
+        choice === "keep-durable" &&
+        (next.generation !== reviewed.generation ||
+          next.revision !== reviewed.revision)
+      )
+        throw new CareerStorageError(
+          "conflict",
+          "Workspace changed since review. Review the current workspace again.",
+        );
+      this.session = false;
+      this.undo = [];
+      this.redo = [];
+      this.pendingHistory = null;
+      this.committedIds.clear();
+      this.publish({
+        head: next,
+        error: "",
+        historyBoundary: false,
+        storageMode: "durable",
+        sessionCommits: 0,
+        saveStatus: { kind: "saved", revision: next.revision },
+        recovery: await this.readRecovery(),
+      });
+      if (choice === "replace-durable") this.channel?.postMessage("replaced");
+      return true;
+    } catch (error) {
+      this.publish({ error: String(error) });
+      return false;
+    } finally {
+      this.publish({ saving: false });
+    }
   }
 }

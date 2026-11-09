@@ -103,6 +103,7 @@ describe("browser preference boundaries", () => {
         compilationTimeoutMs: 30000,
         completedOperationDays: 30,
         completedOperationCount: 1000,
+        automaticRefresh: false,
       });
       expect(result).not.toBe(devicePreferenceDefaults);
     }
@@ -116,6 +117,24 @@ describe("browser preference boundaries", () => {
       completedOperationCount: 0,
     };
     expect(readDevicePreferences({ version: 1, values })).toEqual(values);
+  });
+
+  it("keeps automatic preview refresh optional in version-1 records and rejects non-boolean values", () => {
+    const values = { ...devicePreferenceDefaults };
+    delete values.automaticRefresh;
+    expect(readDevicePreferences({ version: 1, values })).toEqual(values);
+    expect(
+      readDevicePreferences({
+        version: 1,
+        values: { ...values, automaticRefresh: true },
+      }).automaticRefresh,
+    ).toBe(true);
+    expect(
+      readDevicePreferences({
+        version: 1,
+        values: { ...values, automaticRefresh: "yes" },
+      }),
+    ).toEqual(devicePreferenceDefaults);
   });
 
   it.each([

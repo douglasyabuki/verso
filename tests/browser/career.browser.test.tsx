@@ -1973,6 +1973,9 @@ describe("restored schema-2 editing controls", () => {
             .head!.document.sections[0].entries.map((entry) => entry.id),
         )
         .toEqual([before[2], before[1], before[0]]);
+      // The head updates before receipt maintenance finishes. Wait for the Save
+      // to settle before unmount disposes the controller and stops publications.
+      await expect.poll(() => controller.getSnapshot().saving).toBe(false);
       expect(controller.getSnapshot().undoCount).toBe(undoCount + 1);
       await expect
         .element(

@@ -99,6 +99,40 @@ test("workspace loads, saves one-language career wording, and survives reload", 
   expect(errors).toEqual([]);
 });
 
+test("blocked IndexedDB keeps tab-only Saves visibly disclosed and warns before closing", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    IDBFactory.prototype.open = () => {
+      throw new DOMException("Storage blocked for this test", "SecurityError");
+    };
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await page.getByRole("textbox", { name: "Full name" }).fill("Ana Session");
+  await page
+    .getByRole("button", { name: "Save in this tab only", exact: true })
+    .click();
+  await expect(
+    page.getByText("Saving in this tab only", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/1 Save exists only in this tab/)).toBeVisible();
+  await expect(
+    page.getByText(
+      /Export this tab's saved workspace from Data & backups before closing/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Saved in this tab only" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        !window.dispatchEvent(new Event("beforeunload", { cancelable: true })),
+    ),
+  ).toBe(true);
+});
+
 test("Back and Forward guard dirty forms with Cancel/Discard and preserve native draft undo", async ({
   page,
 }) => {
@@ -267,6 +301,9 @@ test("two tabs preserve unrelated saves and retain same-scope drafts on conflict
     .getByRole("region", { name: "Editing form" })
     .getByRole("button", { name: "Save", exact: true })
     .click();
+  await expect(
+    other.getByText("Updated from another tab · revision 1", { exact: true }),
+  ).toBeVisible();
   await other
     .getByRole("region", { name: "Editing form" })
     .getByRole("button", { name: "Save", exact: true })
@@ -559,4 +596,78 @@ test("imported schema-2 resume uses restored desktop split and narrow panel acce
   await expect(
     page.getByRole("heading", { name: "Resume overview", exact: true }),
   ).toBeVisible();
+});
+
+test("hidden preview keeps the last PDF and optional automatic refresh compiles saved output once", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const { document } = fixture();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Data & backups" }).click();
+  await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
+    name: "workspace.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(envelope(document))),
+  });
+  await page
+    .getByRole("button", { name: "Continue without exporting snapshot" })
+    .click();
+  await page.getByRole("button", { name: "Confirm adoption" }).click();
+  await closeSettings(page);
+  await page
+    .getByRole("button", { name: "Application (en-US)", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Refresh preview" }).click();
+  const label = page.getByText(/^Last successful preview/);
+  await expect(label).toContainText(/revision 1 .*Current/, {
+    timeout: 150_000,
+  });
+  await page.getByRole("button", { name: "Hide PDF preview" }).click();
+  await expect(
+    page.getByRole("region", { name: "Committed resume output" }),
+  ).toBeHidden();
+  await page.getByRole("button", { name: "Show PDF preview" }).click();
+  await expect(label).toContainText(/revision 1 .*Current/);
+  await expect(
+    page.getByRole("button", { name: "Search PDF", exact: true }),
+  ).toBeEnabled({ timeout: 60_000 });
+
+  await page
+    .getByRole("navigation", { name: "Workspace navigation" })
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Settings", exact: true })
+    .getByRole("button", { name: "Editing & preview", exact: true })
+    .click();
+  await page
+    .getByRole("checkbox", {
+      name: "Refresh preview automatically after Save",
+    })
+    .click();
+  await closeSettings(page);
+  await expect(
+    page.getByText("Automatic refresh · Saved content only"),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await page.getByRole("textbox", { name: "Full name" }).fill("Ana Automatic");
+  await expect(label).toContainText(/revision 1 .*Current/);
+  await page
+    .getByRole("region", { name: "Editing form" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  // Profile Save returns to the full-width overview, where the preview is not
+  // shown; automatic refresh waits until a preview is visible again.
+  await expect(
+    page.getByRole("region", { name: "Committed resume output" }),
+  ).toBeHidden();
+  await page
+    .getByRole("button", { name: "Application (en-US)", exact: true })
+    .click();
+  await expect(label).toContainText(/revision 2 .*Current/, {
+    timeout: 150_000,
+  });
 });

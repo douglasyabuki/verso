@@ -925,19 +925,32 @@ passing evidence. See the self-contained Settings checklist in
 
 ## Phase 7 — Saving and bounded PDF resources
 
+**Status: Resolved — implementation and automated regression verification complete.**
+Owner manual/resource acceptance remains separate and is not counted as executed.
+
 - [ ] P7.1 Verify compiler, worker, PDF, canvas, URL, timer, listener, and history lifecycles.
-- [ ] P7.2 Distinguish recovery, Save, preview, backup, and future release status.
-- [ ] P7.3 Default to manual refresh; optional automatic refresh uses committed output changes only.
-- [ ] P7.4 Bound active/queued work, reject stale results, and release obsolete resources;
+- [x] P7.2 Distinguish recovery, Save, preview, backup, and future release status.
+- [x] P7.3 Default to manual refresh; optional automatic refresh uses committed output changes only.
+- [x] P7.4 Bound active/queued work, reject stale results, and release obsolete resources;
       define hidden-preview behavior.
-- [ ] P7.5 Retain a labeled last successful preview on failure with revision/staleness and retry.
-- [ ] P7.6 Verify draft/Save/recovery/conflict/history boundaries; Save never requires compilation.
+- [x] P7.5 Retain a labeled last successful preview on failure with revision/staleness and retry.
+- [x] P7.6 Verify draft/Save/recovery/conflict/history boundaries; Save never requires compilation.
       Include library entry points and Style samples: unsaved actions never compile
       or change committed output. Include layout group resets and color selection
       in these draft/resource checks. Existing resource/safety obligations remain open.
-- [ ] P7.7 Verify conditional guest writes, generation checks, other-tab conflicts, and
+- [x] P7.7 Verify conditional guest writes, generation checks, other-tab conflicts, and
       clearly disclosed session-only recovery when durable storage is unavailable.
-- [ ] P7.8 Manually exercise rapid edits/switches, hidden previews, failures, and cleanup.
+
+Implementation delivered on 2026-11-09 with regression coverage: preview
+coordinator bounds, revision-independent output fingerprint, hidden-preview
+viewer release, optional automatic refresh, typed Save/storage status, and
+reviewed exit from session-only mode. Follow-up corrections protect snapshot
+export before session adoption, disclose tab-only Saves after storage startup
+failure, refresh output that becomes ready, and defer queued automatic work while
+hidden. The final normal `npm test` passed 169 unit, 145 Browser Mode, and 82
+production E2E cases across Chromium, Firefox, and WebKit. P7.2–P7.7 have automated
+regression evidence. P7.1 retains owner resource/lifecycle inspection, and P7.8
+retains manual acceptance; neither is counted as passed by those tests.
 
 ## Phase 8 — Local acceptance
 

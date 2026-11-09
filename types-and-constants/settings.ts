@@ -13,6 +13,8 @@ export type DevicePreferences = {
   compilationTimeoutMs: number;
   completedOperationDays: number;
   completedOperationCount: number;
+  /** Optional automatic preview refresh after committed output changes; off by default. */
+  automaticRefresh?: boolean;
 };
 
 export const devicePreferenceDefaults: DevicePreferences = {
@@ -20,4 +22,5 @@ export const devicePreferenceDefaults: DevicePreferences = {
   compilationTimeoutMs: 30_000,
   completedOperationDays: 30,
   completedOperationCount: 1000,
+  automaticRefresh: false,
 };

@@ -94,7 +94,7 @@ describe("resume editing and transactional lifecycle", () => {
           canRedo: false,
         }}
         editorRequest={editorRequest}
-        output={<p>Saved PDF surface</p>}
+        output={(visible) => <p data-visible={visible}>Saved PDF surface</p>}
       >
         <p>Wording editor surface</p>
       </CareerWorkspaceShell>

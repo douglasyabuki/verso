@@ -286,6 +286,35 @@ describe("Settings drafts and device preference persistence", () => {
     );
   });
 
+  it("persists automatic preview refresh as a device-only choice that survives replacement without history", async () => {
+    const controller = await owner();
+    window.history.replaceState(
+      { versoIndex: 0, versoBackground: "summary" },
+      "",
+      "?scope=settings/editing-preview",
+    );
+    await render(<CareerWorkspace controller={controller} />);
+    const toggle = page.getByRole("checkbox", {
+      name: "Refresh preview automatically after Save",
+    });
+    await expect.element(toggle).not.toBeChecked();
+    await toggle.click();
+    await expect.element(toggle).toBeChecked();
+    await expect
+      .poll(() => controller.getSnapshot().preferenceStatus)
+      .toBe("Browser preferences saved.");
+    expect(controller.getSnapshot().undoCount).toBe(0);
+    expect(controller.getSnapshot().head!.revision).toBe(0);
+    expect(
+      await controller.replace(
+        controller.getSnapshot().head!,
+        createCareerDocument("pt-BR"),
+      ),
+    ).toBe(true);
+    const reloaded = await owner();
+    expect(reloaded.getSnapshot().preferences.automaticRefresh).toBe(true);
+  });
+
   it("rechecks defaults conflicts atomically and retains the losing draft", async () => {
     const first = await owner();
     const second = await owner();

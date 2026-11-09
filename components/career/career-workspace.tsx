@@ -31,7 +31,7 @@ import {
 } from "@/components/career/career-fields";
 import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
-import { CommittedOutput } from "@/components/career/committed-output";
+import { CommittedOutputView } from "@/components/career/committed-output";
 import { LayoutFields } from "@/components/career/layout-editor";
 import { libraryDestinationKind } from "@/components/career/library-navigation";
 import {
@@ -96,6 +96,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useCommittedPreview } from "@/hooks/output/use-committed-preview";
 import {
   layoutAppearance,
   layoutDefaults,
@@ -694,6 +695,12 @@ export function CareerWorkspace({
     previous?: CareerHead;
   } | null>(null);
   const [localError, setLocalError] = useState("");
+  const [sessionReview, setSessionReview] = useState<{
+    head: CareerHead;
+    previous?: CareerHead;
+  } | null>(null);
+  const [sessionExportChoice, setSessionExportChoice] = useState(false);
+  const [sessionReviewError, setSessionReviewError] = useState("");
   const [compare, setCompare] = useState(false);
   const [addingSection, setAddingSection] = useState(false);
   const [addingResume, setAddingResume] = useState(false);
@@ -820,7 +827,7 @@ export function CareerWorkspace({
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (
         controller.hasUnsavedChanges() ||
-        controller.getSnapshot().status.includes("tab only")
+        controller.getSnapshot().sessionCommits > 0
       )
         event.preventDefault();
     };
@@ -936,6 +943,11 @@ export function CareerWorkspace({
         destination,
       ),
   );
+  const preview = useCommittedPreview({
+    head: state.head,
+    preferences: state.preferences,
+    activeResumeId: activeResume?.id,
+  });
   const contentLanguage =
     activeResume?.language ||
     language ||
@@ -1778,14 +1790,14 @@ export function CareerWorkspace({
                   ? resolveTargets(controller.navigationTargets(), () => {})
                   : void controller.history("redo"),
             }}
-            output={
-              <CommittedOutput
-                head={state.head!}
-                preferences={state.preferences}
-                activeResumeId={activeResume?.id}
+            output={(visible) => (
+              <CommittedOutputView
+                preview={preview}
+                visible={visible}
+                showSelector={!activeResume}
                 onIssue={openOutputIssue}
               />
-            }
+            )}
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1 basis-48">
@@ -1941,6 +1953,168 @@ export function CareerWorkspace({
                 Validating import… Your saved workspace is unchanged.
               </p>
             )}
+            {(state.storageMode === "session" || state.sessionCommits > 0) && (
+              <Alert>
+                <AlertTitle>Saving in this tab only</AlertTitle>
+                <AlertDescription className="flex flex-col items-start gap-2">
+                  <span>
+                    {state.sessionCommits === 1
+                      ? "1 Save exists"
+                      : `${state.sessionCommits} Saves exist`}{" "}
+                    only in this tab. Browser storage is unchanged; closing this
+                    tab loses them unless you export or keep them.
+                  </span>
+                  {state.storageMode === "unavailable" ? (
+                    <span>
+                      Browser storage could not be opened. Export this
+                      tab&apos;s saved workspace from Data &amp; backups before
+                      closing.
+                    </span>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={state.saving}
+                      onClick={() => {
+                        if (state.draft || state.orderDraft) {
+                          setLocalError(
+                            "Resolve pending forms with Cancel, Discard, or Save before returning to durable saving.",
+                          );
+                          return;
+                        }
+                        setLocalError("");
+                        void Promise.all([
+                          controller.durableHead(),
+                          controller.previous(),
+                        ])
+                          .then(([head, previous]) => {
+                            setSessionExportChoice(false);
+                            setSessionReviewError("");
+                            setSessionReview(head ? { head, previous } : null);
+                          })
+                          .catch((error) => setLocalError(String(error)));
+                      }}
+                    >
+                      Return to durable saving
+                    </Button>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+            <Dialog
+              open={Boolean(sessionReview)}
+              onOpenChange={(open) => {
+                if (!open) setSessionReview(null);
+              }}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Return to durable saving</DialogTitle>
+                  <DialogDescription>
+                    Choose which saved workspace continues. The browser&apos;s
+                    durable workspace is at revision{" "}
+                    {sessionReview?.head.revision} (generation{" "}
+                    {sessionReview?.head.generation}). This tab has{" "}
+                    {state.sessionCommits} tab-only{" "}
+                    {state.sessionCommits === 1 ? "Save" : "Saves"}. Replacing
+                    keeps the durable workspace as the one previous workspace.
+                    Unresolved recovery is kept either way.
+                    {sessionReview?.previous
+                      ? ` Keeping this tab replaces the retained snapshot at revision ${sessionReview.previous.revision} (generation ${sessionReview.previous.generation}).`
+                      : " No previous snapshot is currently retained."}
+                  </DialogDescription>
+                </DialogHeader>
+                {sessionReviewError && (
+                  <Alert variant="destructive">
+                    <AlertTitle>Action needs attention</AlertTitle>
+                    <AlertDescription>{sessionReviewError}</AlertDescription>
+                  </Alert>
+                )}
+                {sessionReview?.previous && !sessionExportChoice && (
+                  <Button
+                    variant="outline"
+                    className="h-auto whitespace-normal"
+                    onClick={() => {
+                      try {
+                        exportWorkspace(sessionReview.previous);
+                        setSessionExportChoice(true);
+                        setSessionReviewError("");
+                      } catch (error) {
+                        setSessionReviewError(
+                          `Export failed. Retry or explicitly continue without export. ${String(error)}`,
+                        );
+                      }
+                    }}
+                  >
+                    Export snapshot being replaced (download initiated)
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSessionExportChoice(true);
+                    setSessionReviewError("");
+                  }}
+                >
+                  Continue without exporting snapshot
+                </Button>
+                <DialogFooter className="flex-wrap">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSessionReview(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      try {
+                        exportWorkspace();
+                      } catch (error) {
+                        setSessionReviewError(String(error));
+                      }
+                    }}
+                  >
+                    Export this tab&apos;s workspace
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={state.saving}
+                    onClick={() => {
+                      if (!sessionReview) return;
+                      void controller
+                        .leaveSessionMode("keep-durable", sessionReview.head)
+                        .then((done) => {
+                          if (done) setSessionReview(null);
+                          else
+                            setSessionReviewError(
+                              controller.getSnapshot().error,
+                            );
+                        });
+                    }}
+                  >
+                    Discard tab-only Saves
+                  </Button>
+                  <Button
+                    disabled={state.saving || !sessionExportChoice}
+                    onClick={() => {
+                      if (!sessionReview) return;
+                      void controller
+                        .leaveSessionMode("replace-durable", sessionReview.head)
+                        .then((done) => {
+                          if (done) setSessionReview(null);
+                          else
+                            setSessionReviewError(
+                              controller.getSnapshot().error,
+                            );
+                        });
+                    }}
+                  >
+                    Keep this tab&apos;s workspace
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             {state.historyBoundary && (
               <p>
                 Oldest history steps are unavailable (100 steps / 32 MiB). Undo
@@ -2277,7 +2451,9 @@ export function CareerWorkspace({
                               ? state.recoveryStatus
                               : "No unsaved changes"}
                           </span>
-                          {(!state.durable || state.error.includes("Save")) && (
+                          {(state.storageMode !== "durable" ||
+                            (state.saveStatus.kind === "failed" &&
+                              state.saveStatus.reason === "storage")) && (
                             <Button
                               variant="outline"
                               onClick={() => void controller.save(true)}

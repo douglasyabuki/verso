@@ -158,7 +158,7 @@ function ResumeSidebarCollection({
                 <SidebarMenuAction
                   className={cn(
                     disclosureChevronTriggerClassName,
-                    "start-1 end-auto",
+                    "inset-s-1 inset-e-auto",
                   )}
                   aria-label={`${expanded ? "Collapse" : "Expand"} ${name} pages`}
                   aria-expanded={expanded}
@@ -426,7 +426,8 @@ export function CareerWorkspaceShell({
     canRedo: boolean;
   };
   children: ReactNode;
-  output: ReactNode;
+  /** Render the preview; `visible` is false when it is mounted but hidden. */
+  output: (visible: boolean) => ReactNode;
   editorRequest?: object | null;
   libraryItemState?: "new" | "missing";
 }) {
@@ -486,9 +487,9 @@ export function CareerWorkspaceShell({
       </div>
     </div>
   );
-  const preview = (
+  const preview = (visible: boolean) => (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/30">
-      {output}
+      {output(visible)}
     </div>
   );
   const open = (next: string) => {
@@ -718,7 +719,7 @@ export function CareerWorkspaceShell({
                 </ResizablePanel>
                 <ResizableHandle withHandle />
                 <ResizablePanel id="preview" minSize="30%">
-                  {preview}
+                  {preview(true)}
                 </ResizablePanel>
               </ResizablePanelGroup>
             ) : desktop || !previewAvailable ? (
@@ -728,16 +729,16 @@ export function CareerWorkspaceShell({
                 <TabsContent
                   value="editor"
                   keepMounted
-                  className="h-full min-h-0 data-[hidden]:hidden"
+                  className="h-full min-h-0 data-hidden:hidden"
                 >
                   {editor}
                 </TabsContent>
                 <TabsContent
                   value="preview"
                   keepMounted
-                  className="h-full min-h-0 data-[hidden]:hidden"
+                  className="h-full min-h-0 data-hidden:hidden"
                 >
-                  {preview}
+                  {preview(mobilePanel === "preview")}
                 </TabsContent>
               </>
             )}

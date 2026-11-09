@@ -168,3 +168,46 @@ export function renderCareerResume(
     body,
   });
 }
+
+/** Render one committed resume and derive its revision-independent output fingerprint.
+ * The fingerprint ignores only the committed revision embedded in PDF metadata, so
+ * Saves that do not change this resume's rendered source keep the same fingerprint.
+ * @param document Committed validated workspace, never form-draft values.
+ * @param resumeId Independent resume identity.
+ * @param revision Committed revision displayed in PDF metadata.
+ * @returns {{ source: string; fingerprint: string }} Trusted TeX plus a stable hash; throws like renderCareerResume.
+ * @example renderCareerOutput(document, resume.id, 4).fingerprint
+ */
+export function renderCareerOutput(
+  document: CareerDocument,
+  resumeId: string,
+  revision: number,
+): { source: string; fingerprint: string } {
+  const source = renderCareerResume(document, resumeId, revision);
+  return {
+    source,
+    fingerprint: outputFingerprint(
+      source.replace(
+        `pdfsubject={Verso revision ${revision};`,
+        "pdfsubject={Verso revision;",
+      ),
+    ),
+  };
+}
+
+function outputFingerprint(value: string) {
+  let first = 0xdeadbeef;
+  let second = 0x41c6ce57;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    first = Math.imul(first ^ code, 2654435761);
+    second = Math.imul(second ^ code, 1597334677);
+  }
+  first =
+    Math.imul(first ^ (first >>> 16), 2246822507) ^
+    Math.imul(second ^ (second >>> 13), 3266489909);
+  second =
+    Math.imul(second ^ (second >>> 16), 2246822507) ^
+    Math.imul(first ^ (first >>> 13), 3266489909);
+  return `${value.length.toString(36)}-${(second >>> 0).toString(36)}${(first >>> 0).toString(36)}`;
+}

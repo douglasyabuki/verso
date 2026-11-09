@@ -18,6 +18,7 @@ import {
 
 import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
@@ -79,8 +80,27 @@ export function DeviceSettings({
     <div className="flex flex-col gap-5">
       <p>
         Save explicitly commits workspace changes. Draft recovery is separate.
-        Refresh preview uses saved content only and remains manual.
+        The PDF preview uses saved content only and refreshes manually by
+        default.
       </p>
+      <Field>
+        <FieldLabel htmlFor="automatic-refresh">
+          <Checkbox
+            id="automatic-refresh"
+            checked={Boolean(values.automaticRefresh)}
+            aria-describedby="automatic-refresh-description"
+            onCheckedChange={(checked) =>
+              change({ automaticRefresh: Boolean(checked) })
+            }
+          />
+          Refresh preview automatically after Save
+        </FieldLabel>
+        <FieldDescription id="automatic-refresh-description">
+          Applies to this device only. The visible preview refreshes shortly
+          after a Save changes the selected resume&apos;s PDF. Unsaved edits,
+          preset loads, and resets never refresh it.
+        </FieldDescription>
+      </Field>
       <Collapsible>
         <CollapsibleTrigger
           render={<Button variant="outline" />}
@@ -153,7 +173,7 @@ function PreferenceNumber({
   values,
   change,
 }: {
-  name: keyof DevicePreferences;
+  name: Exclude<keyof DevicePreferences, "automaticRefresh">;
   label: string;
   divisor: number;
   values: DevicePreferences;

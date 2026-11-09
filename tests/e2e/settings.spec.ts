@@ -95,7 +95,12 @@ for (const narrow of [false, true]) {
       await expect(
         settings.getByLabel("Compilation timeout (seconds)"),
       ).toHaveValue("45");
-      await expect(settings.getByText(/remains manual/)).toBeVisible();
+      await expect(
+        settings.getByRole("checkbox", {
+          name: "Refresh preview automatically after Save",
+          exact: true,
+        }),
+      ).not.toBeChecked();
     });
 
     test("guards defaults on Back, retains canceled edits through a data detour, and saves explicitly", async ({
