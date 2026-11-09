@@ -152,6 +152,29 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
   not compile or commit; explicit creation retains its atomic lifecycle. Existing
   Save/recovery contracts remain authoritative.
 
+## Settings and navigation
+
+- Settings is a durable dialog over a mounted workspace, with Appearance, Content
+  languages, Editing & preview, Data & backups, and Resume defaults panels at
+  `settings/<panel>` scope URLs. Keep old `languages`/`backups` links usable and
+  distinguish panel destinations from exact editing scopes. Validate routes before
+  opening resources; missing resources never create content. Preserve history
+  metadata, underlying destination, focus/scroll, drafts, and narrow-screen access.
+- Opening Settings and visiting device/data panels preserves career drafts. Resolve
+  occupied drafts before opening language/defaults forms; guard dirty Settings-form
+  departure, including Back/Forward, closure, and workspace data actions. Data viewing/export remains accessible without
+  resolution. Keep language/defaults Save/Cancel, recovery, conflicts, and history
+  under the career controller; exact `defaults` edits the complete flat workspace
+  appearance and affects future blank creation only.
+- Device theme and compiler/receipt-retention preferences apply immediately, outside
+  workspace history and portable exports. New device settings use a validated,
+  versioned record in the IndexedDB preferences store, separate from cleanup intents.
+  Serialize writes and report current-tab-only failures with retry. Load retention
+  settings before startup pruning; if their read fails, skip receipt pruning until
+  preferences can be saved. Protect pending, uncertain, unacknowledged, and
+  recovery-referenced operations regardless of limits. Compiler preference changes
+  apply to the next instance without interrupting active work. Preview remains manual.
+
 ## Active output readiness
 
 - `lib/career/readiness.ts` assesses committed effective selections for one resume;

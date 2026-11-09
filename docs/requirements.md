@@ -905,16 +905,23 @@ Executed checks and remaining acceptance are recorded in
 
 ## Phase 6 — Settings and navigation
 
-- [ ] P6.1 Provide appearance, content-language, editing/preview, data/backup, and default settings.
-- [ ] P6.2 Identify device-only versus workspace settings and their backup/sync scope.
-- [ ] P6.3 Provide durable validated routes, reload, Back/Forward, and missing-resource states;
+- [x] P6.1 Provide appearance, content-language, editing/preview, data/backup, and default settings.
+- [x] P6.2 Identify device-only versus workspace settings and their backup/sync scope.
+- [x] P6.3 Provide durable validated routes, reload, Back/Forward, and missing-resource states;
       extend the established Library overview/collection/editor destinations alongside
       all other navigation;
       never put private text or secrets in URLs. Library work covers only its slice.
-- [ ] P6.4 Preserve drafts, focus, scroll, issue navigation, and narrow-screen access;
+- [x] P6.4 Preserve drafts, focus, scroll, issue navigation, and narrow-screen access;
       extend the established Library behavior across the workspace; keep transient
       controls local and guard dirty navigation. Include inline profile-content
-      navigation and transient layout color popovers. Broader settings work remains open.
+      navigation and transient layout color popovers.
+
+Settings implementation is delivered as a dialog with its own sidebar. Device
+preferences apply immediately; workspace language/defaults forms retain explicit
+Save/Cancel. Automatic preview refresh remains in Phase 7. Browser suites and
+manual/visual validation remain with the owner; authored browser cases are not
+passing evidence. See the self-contained Settings checklist in
+[verification](verification.md). Earlier deferred acceptance remains open.
 
 ## Phase 7 — Saving and bounded PDF resources
 

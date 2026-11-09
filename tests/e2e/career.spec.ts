@@ -1,8 +1,17 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 import { createCareerDocument, createEntry } from "@/lib/career/model";
 
 import { installPdfInspector } from "./career-harness";
+
+/** Close the durable Settings dialog before interacting with its underlying workspace. */
+async function closeSettings(page: Page) {
+  const settings = page.getByRole("dialog", { name: "Settings", exact: true });
+  await settings
+    .getByRole("button", { name: "Close settings", exact: true })
+    .click();
+  await expect(settings).toBeHidden();
+}
 
 function fixture(language = "en-US") {
   const document = createCareerDocument(language);
@@ -158,7 +167,12 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
     .getByRole("button", { name: "Continue without exporting snapshot" })
     .click();
   await page.getByRole("button", { name: "Confirm adoption" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog", {
+      name: "Review workspace replacement",
+      exact: true,
+    }),
+  ).toBeHidden();
   const downloadEvent = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export workspace · saved workspace only" })
@@ -171,6 +185,7 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   expect(backup.document).toEqual(document);
   expect(backup.schemaVersion).toBe(2);
   await page.reload();
+  await closeSettings(page);
   await page
     .getByRole("button", { name: "Application (en-US)", exact: true })
     .click();
@@ -198,9 +213,12 @@ test("sample button handles failure, cancellation, adoption and reload without a
   await expect(load).toBeEnabled();
   await page.unroute("**/examples/alex-morgan.schema-2.json");
   await load.click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "Incoming sections: 6. Incoming resumes: 2.",
-  );
+  await expect(
+    page.getByRole("dialog", {
+      name: "Review workspace replacement",
+      exact: true,
+    }),
+  ).toContainText("Incoming sections: 6. Incoming resumes: 2.");
   await page.getByRole("button", { name: "Cancel replacement" }).click();
   await expect(
     page.getByRole("button", { name: "Refresh preview" }),
@@ -210,8 +228,14 @@ test("sample button handles failure, cancellation, adoption and reload without a
     .getByRole("button", { name: "Continue without exporting snapshot" })
     .click();
   await page.getByRole("button", { name: "Confirm adoption" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog", {
+      name: "Review workspace replacement",
+      exact: true,
+    }),
+  ).toBeHidden();
   await page.reload();
+  await closeSettings(page);
   await page
     .getByRole("button", { name: "Alex Morgan · English (en-US)", exact: true })
     .click();
@@ -299,6 +323,7 @@ for (const language of ["en-US", "pt-BR"])
       .getByRole("button", { name: "Continue without exporting snapshot" })
       .click();
     await page.getByRole("button", { name: "Confirm adoption" }).click();
+    await closeSettings(page);
     await page
       .getByRole("button", { name: `Application (${language})`, exact: true })
       .click();
@@ -368,6 +393,12 @@ for (const width of [1440, 390]) {
       name: "Workspace navigation",
     });
     const openNavigation = async () => {
+      if (
+        await page
+          .getByRole("dialog", { name: "Settings", exact: true })
+          .isVisible()
+      )
+        await closeSettings(page);
       if (mobile)
         await page
           .getByRole("button", { name: "Expand sidebar", exact: true })
@@ -456,6 +487,9 @@ for (const width of [1440, 390]) {
     await page
       .getByRole("button", { name: "Back to editing", exact: true })
       .click();
+    await expect(
+      page.getByRole("dialog", { name: "Settings", exact: true }),
+    ).toBeHidden();
     await expect(field).toHaveText("Discard through navigation");
     await openNavigation();
     await page.getByRole("button", { name: "Profile", exact: true }).click();
@@ -497,7 +531,7 @@ test("imported schema-2 resume uses restored desktop split and narrow panel acce
     .getByRole("button", { name: "Continue without exporting snapshot" })
     .click();
   await page.getByRole("button", { name: "Confirm adoption" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
+  await closeSettings(page);
   await page
     .getByRole("button", { name: "Application (en-US)", exact: true })
     .click();

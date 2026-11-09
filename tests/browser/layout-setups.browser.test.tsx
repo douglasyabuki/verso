@@ -779,7 +779,9 @@ it.each(["Library", "Layout presets"])(
       .getByRole("dialog")
       .getByRole("button", { name: "Save", exact: true })
       .click();
-    expect(window.location.search).toContain(`resume-layout/${resume.id}`);
+    expect(new URLSearchParams(window.location.search).get("scope")).toBe(
+      `resume-layout/${resume.id}`,
+    );
     expect(controller.isDirty()).toBe(true);
     expect(controller.getSnapshot().head?.document).toEqual(document);
     await page
@@ -817,7 +819,9 @@ it("keeps library editors selected and guards their parent location link", async
     .getByRole("button", { name: "Cancel", exact: true })
     .click();
   expect(controller.isDirty()).toBe(true);
-  expect(window.location.search).toContain("preset/compact");
+  expect(new URLSearchParams(window.location.search).get("scope")).toBe(
+    "preset/compact",
+  );
 });
 
 it.each(["preset", "resume"] as const)(
@@ -1363,7 +1367,9 @@ it.each(["Cancel", "Discard", "Save"] as const)(
         )
         .toHaveValue("Revised preset");
       expect(controller.isDirty()).toBe(true);
-      expect(window.location.search).toContain("preset/compact");
+      expect(new URLSearchParams(window.location.search).get("scope")).toBe(
+        "preset/compact",
+      );
     } else {
       await expect
         .element(page.getByRole("heading", { name: "Library", exact: true }))

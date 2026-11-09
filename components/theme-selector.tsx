@@ -1,8 +1,9 @@
 "use client";
 
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 
+import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 type ThemePreference = "system" | "light" | "dark";
@@ -77,6 +78,15 @@ function getServerPreference(): ThemePreference {
 }
 
 export function ThemeSelector() {
+  const [storageFailed, setStorageFailed] = useState(false);
+  const persist = (value: ThemePreference) => {
+    try {
+      localStorage.setItem(storageKey, value);
+      setStorageFailed(false);
+    } catch {
+      setStorageFailed(true);
+    }
+  };
   const preference = useSyncExternalStore(
     subscribe,
     getPreference,
@@ -84,41 +94,59 @@ export function ThemeSelector() {
   );
 
   return (
-    <ToggleGroup
-      aria-label="Color theme"
-      value={[preference]}
-      variant="outline"
-      size="sm"
-      spacing={0}
-      onValueChange={(values) => {
-        const value = values[0];
-        if (value !== "system" && value !== "light" && value !== "dark") return;
-        applyTheme(value);
-        try {
-          localStorage.setItem(storageKey, value);
-        } catch {
-          // Keep the selection active for this page if storage is unavailable.
-        }
-        window.dispatchEvent(new Event(changeEvent));
-      }}
-    >
-      <ToggleGroupItem
-        value="system"
-        aria-label="System theme"
-        title="System theme"
+    <div className="flex flex-col gap-2">
+      <ToggleGroup
+        aria-label="Color theme"
+        value={[preference]}
+        variant="outline"
+        size="sm"
+        spacing={0}
+        onValueChange={(values) => {
+          const value = values[0];
+          if (value !== "system" && value !== "light" && value !== "dark")
+            return;
+          applyTheme(value);
+          persist(value);
+          window.dispatchEvent(new Event(changeEvent));
+        }}
       >
-        <Monitor />
-      </ToggleGroupItem>
-      <ToggleGroupItem
-        value="light"
-        aria-label="Light theme"
-        title="Light theme"
-      >
-        <Sun />
-      </ToggleGroupItem>
-      <ToggleGroupItem value="dark" aria-label="Dark theme" title="Dark theme">
-        <Moon />
-      </ToggleGroupItem>
-    </ToggleGroup>
+        <ToggleGroupItem
+          value="system"
+          aria-label="System theme"
+          title="System theme"
+        >
+          <Monitor />
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="light"
+          aria-label="Light theme"
+          title="Light theme"
+        >
+          <Sun />
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="dark"
+          aria-label="Dark theme"
+          title="Dark theme"
+        >
+          <Moon />
+        </ToggleGroupItem>
+      </ToggleGroup>
+      {storageFailed && (
+        <div role="status" className="text-xs text-muted-foreground">
+          <p>
+            Theme applies in this tab only. Browser preferences could not be
+            saved.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => persist(preference)}
+          >
+            Retry saving theme
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

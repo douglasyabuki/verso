@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { ThemeSelector } from "@/components/theme-selector";
@@ -48,6 +48,41 @@ it("switches appearance without fading controls, then restores interaction trans
   } finally {
     document.removeEventListener("click", observe);
     await screen.unmount();
+    root.className = originalClass;
+    if (originalPreference === undefined) delete root.dataset.themePreference;
+    else root.dataset.themePreference = originalPreference;
+    if (originalStorage === null) localStorage.removeItem("verso-theme");
+    else localStorage.setItem("verso-theme", originalStorage);
+  }
+});
+
+it("keeps a theme active after storage failure and offers an explicit retry", async () => {
+  const root = document.documentElement;
+  const originalClass = root.className;
+  const originalPreference = root.dataset.themePreference;
+  const originalStorage = localStorage.getItem("verso-theme");
+  root.classList.remove("dark");
+  root.dataset.themePreference = "light";
+  const persist = vi
+    .spyOn(Storage.prototype, "setItem")
+    .mockImplementationOnce(() => {
+      throw new Error("Storage unavailable");
+    });
+  const screen = await render(<ThemeSelector />);
+  try {
+    await screen
+      .getByRole("button", { name: "Dark theme", exact: true })
+      .click();
+    expect(root.classList.contains("dark")).toBe(true);
+    await expect
+      .element(screen.getByRole("status"))
+      .toHaveTextContent(/tab only/);
+    await screen.getByRole("button", { name: "Retry saving theme" }).click();
+    await expect.element(screen.getByRole("status")).not.toBeInTheDocument();
+    expect(localStorage.getItem("verso-theme")).toBe("dark");
+  } finally {
+    await screen.unmount();
+    persist.mockRestore();
     root.className = originalClass;
     if (originalPreference === undefined) delete root.dataset.themePreference;
     else root.dataset.themePreference = originalPreference;

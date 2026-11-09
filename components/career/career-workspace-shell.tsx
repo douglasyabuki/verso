@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ListOrdered,
   Palette,
+  Settings,
   X,
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
@@ -372,9 +373,9 @@ function CareerSidebar({
       <SidebarFooter ref={footerRef} className="shrink-0 px-3 py-2">
         <SidebarMenu>
           {item(
-            "languages",
-            "Content languages",
-            <Languages aria-hidden="true" />,
+            "settings/appearance",
+            "Settings",
+            <Settings aria-hidden="true" />,
           )}
         </SidebarMenu>
         {isMobile && (
@@ -491,7 +492,11 @@ export function CareerWorkspaceShell({
     </div>
   );
   const open = (next: string) => {
-    setMobilePanel("editor");
+    if (
+      !next.startsWith("settings/") &&
+      !["settings", "backups", "languages", "defaults"].includes(next)
+    )
+      setMobilePanel("editor");
     navigate(next);
   };
   return (
@@ -511,15 +516,26 @@ export function CareerWorkspaceShell({
           sidebarOpen={layout.sidebar}
           onSidebarChange={(sidebar) => changeLayout({ sidebar })}
           dataMenu={
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Data & backups"
-              title="Data & backups"
-              onClick={() => open("backups")}
-            >
-              <Database />
-            </Button>
+            <div className="flex flex-col gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Settings"
+                title="Settings"
+                onClick={() => open("settings/appearance")}
+              >
+                <Settings aria-hidden="true" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Data & backups"
+                title="Data & backups"
+                onClick={() => open("backups")}
+              >
+                <Database />
+              </Button>
+            </div>
           }
           sidebar={
             <CareerSidebar

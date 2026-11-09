@@ -47,6 +47,10 @@ import {
 } from "@/components/career/resume-workspace";
 import { ScopeComparison } from "@/components/career/scope-comparison";
 import {
+  DeviceSettings,
+  SettingsDialog,
+} from "@/components/career/settings-dialog";
+import {
   LibraryOverview,
   PresetPicker,
   SetupEditor,
@@ -108,6 +112,12 @@ import {
   sectionPropertiesSchema,
   starterCreationSchema,
 } from "@/lib/career/model";
+import {
+  destinationExists,
+  destinationScope,
+  parseDestination,
+  settingsPanel,
+} from "@/lib/career/navigation";
 import { importPortable } from "@/lib/career/portable-import";
 import { oversizedRecovery, recoveryFiles } from "@/lib/career/recovery-export";
 import { profileContactLabels, type ResumeContent } from "@/lib/career/resumes";
@@ -128,6 +138,7 @@ import {
   SECTION_KINDS,
   VERIFIED_OUTPUT_LANGUAGES,
 } from "@/types-and-constants/career";
+import { appLayoutDefaults } from "@/types-and-constants/layout";
 import { defaultSectionIcons } from "@/types-and-constants/section-icons";
 
 function download(value: unknown, filename: string) {
@@ -646,7 +657,16 @@ export function CareerWorkspace({
     () => ({ head: state.head, orderDraft: state.orderDraft }),
     [state.head, state.orderDraft],
   );
-  const [destination, setDestination] = useState("overview");
+  const [view, setView] = useState({
+    index: 0,
+    destination: "overview",
+    background: "overview",
+  });
+  const panel = settingsPanel(view.destination);
+  const destination = panel ? view.background : view.destination;
+  const settingsDraft =
+    state.draft?.scope === "languages" || state.draft?.scope === "defaults";
+  const settingsReturnFocus = useRef<HTMLElement | null>(null);
   const [issueFocus, setIssueFocus] = useState<{
     fieldId: string;
     resumeId: string;
@@ -687,7 +707,67 @@ export function CareerWorkspace({
   const [importPending, setImportPending] = useState(false);
   const importJob = useRef<AbortController | null>(null);
   useEffect(() => () => importJob.current?.abort(), []);
-  const route = useRef({ index: 0, restoring: false, allowed: false });
+  const route = useRef({
+    index: 0,
+    restoring: false,
+    allowed: false,
+    destination: "overview",
+    background: "overview",
+  });
+  const workspaceViews = useRef(
+    new Map<number, { scroll: number; focusId: string | undefined }>(),
+  );
+  const restoreWorkspace = useRef<{ index: number; history: boolean } | null>(
+    null,
+  );
+  const rememberWorkspace = useCallback(() => {
+    if (settingsPanel(route.current.destination)) return;
+    const node = document.querySelector<HTMLElement>("[data-workspace-scroll]");
+    const active = document.activeElement;
+    workspaceViews.current.set(route.current.index, {
+      scroll: node?.scrollTop ?? 0,
+      focusId:
+        active instanceof HTMLElement && node?.contains(active)
+          ? active.id
+          : undefined,
+    });
+  }, []);
+  useEffect(() => {
+    const pending = restoreWorkspace.current;
+    if (!pending || panel || issueFocus) return;
+    restoreWorkspace.current = null;
+    const frame = requestAnimationFrame(() => {
+      const remembered = pending.history
+        ? workspaceViews.current.get(pending.index)
+        : undefined;
+      const node = document.querySelector<HTMLElement>(
+        "[data-workspace-scroll]",
+      );
+      if (node) node.scrollTop = remembered?.scroll ?? 0;
+      const target =
+        (remembered?.focusId
+          ? document.getElementById(remembered.focusId)
+          : null) ??
+        document.querySelector<HTMLElement>("[data-workspace-heading]");
+      target?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [view, panel, issueFocus]);
+  const routeTargets = useCallback(
+    (next: string) => {
+      const current = route.current;
+      const draft = controller.getSnapshot().draft;
+      if (
+        settingsPanel(current.destination) &&
+        !settingsPanel(next) &&
+        next === current.background &&
+        !["languages", "defaults"].includes(draft?.scope ?? "")
+      )
+        return [];
+      return controller.navigationTargets(next);
+    },
+    [controller],
+  );
 
   const resolveTargets = useCallback(
     (targets: CareerDraftTarget[], action: () => void) => {
@@ -757,25 +837,53 @@ export function CareerWorkspace({
 
   useEffect(() => {
     if (!state.ready) return;
-    const openDestination = (incoming: string) => {
-      const next = incoming.replace(/^selection\//, "resume-content/");
-      setDestination(next);
+    const openDestination = (incoming: string, history = false) => {
+      const next = parseDestination(incoming);
+      const nextPanel = settingsPanel(next);
+      const background = nextPanel
+        ? parseDestination(window.history.state?.versoBackground ?? "overview")
+        : next;
+      route.current.destination = next;
+      route.current.background =
+        settingsPanel(background) || background === "unavailable"
+          ? "overview"
+          : background;
+      if (!nextPanel)
+        restoreWorkspace.current = { index: route.current.index, history };
+      setView({
+        index: route.current.index,
+        destination: next,
+        background: route.current.background,
+      });
       setCompare(false);
-      if (next.startsWith("new-") && !controller.getSnapshot().draft) return;
+      const editing = destinationScope(next);
+      const head = controller.getSnapshot().head;
       if (
-        ["profile", "summary", "languages", "sections"].includes(next) ||
-        /^(entry|section|entries|selection|new-entry|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\//.test(
+        editing &&
+        head &&
+        destinationExists(
+          head.document,
           next,
+          controller.getSnapshot().draft?.scope,
         )
       )
-        controller.open(next, next.startsWith("entries/") ? "order" : "form");
+        controller.open(
+          editing,
+          editing.startsWith("entries/") ? "order" : "form",
+        );
     };
     const initial =
       new URLSearchParams(window.location.search).get("scope") ?? "overview";
-    route.current.index = Number(window.history.state?.versoIndex ?? 0);
+    route.current.index = Number.isSafeInteger(window.history.state?.versoIndex)
+      ? window.history.state.versoIndex
+      : 0;
+    const initialUrl = new URL(window.location.href);
+    if (initial !== "overview" || initialUrl.searchParams.has("scope"))
+      initialUrl.searchParams.set("scope", parseDestination(initial));
     window.history.replaceState(
       { ...window.history.state, versoIndex: route.current.index },
       "",
+      initialUrl,
     );
     openDestination(initial);
     const pop = (event: PopStateEvent) => {
@@ -783,11 +891,14 @@ export function CareerWorkspace({
         route.current.restoring = false;
         return;
       }
+      rememberWorkspace();
       const next =
         new URLSearchParams(window.location.search).get("scope") ?? "overview";
-      const index = Number(event.state?.versoIndex ?? 0);
+      const index = Number.isSafeInteger(event.state?.versoIndex)
+        ? event.state.versoIndex
+        : 0;
       const delta = index - route.current.index;
-      const targets = controller.navigationTargets(next);
+      const targets = routeTargets(parseDestination(next));
       if (
         targets.some((target) => controller.isDirty(target)) &&
         !route.current.allowed &&
@@ -803,13 +914,19 @@ export function CareerWorkspace({
         route.current.allowed = false;
         resolveTargets(targets, () => {
           route.current.index = index;
-          openDestination(next);
+          openDestination(next, true);
         });
       }
     };
     window.addEventListener("popstate", pop);
     return () => window.removeEventListener("popstate", pop);
-  }, [controller, state.ready, resolveTargets]);
+  }, [
+    controller,
+    state.ready,
+    resolveTargets,
+    routeTargets,
+    rememberWorkspace,
+  ]);
 
   const documentValue = state.head?.document;
   const activeResume = documentValue?.resumes.find(
@@ -828,8 +945,9 @@ export function CareerWorkspace({
     incoming: string,
     initialValues?: unknown,
     focusFieldId?: string,
+    replace = false,
   ) => {
-    const next = incoming.replace(/^selection\//, "resume-content/");
+    const next = parseDestination(incoming);
     const focusIssue = () =>
       setIssueFocus(
         focusFieldId
@@ -837,42 +955,97 @@ export function CareerWorkspace({
           : null,
       );
     const perform = () => {
+      rememberWorkspace();
       focusIssue();
       setPresetNotice(null);
-      if (destination !== next) {
-        route.current.index++;
+      const nextPanel = settingsPanel(next);
+      const current = route.current;
+      const background = nextPanel
+        ? settingsPanel(current.destination)
+          ? current.background
+          : destination
+        : next;
+      if (nextPanel && !settingsPanel(current.destination))
+        settingsReturnFocus.current =
+          document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+      if (current.destination !== next) {
+        if (!replace) current.index++;
         const url = new URL(window.location.href);
         url.searchParams.set("scope", next);
-        window.history.pushState(
-          { ...window.history.state, versoIndex: route.current.index },
+        window.history[replace ? "replaceState" : "pushState"](
+          {
+            ...window.history.state,
+            versoIndex: current.index,
+            versoBackground: nextPanel ? background : undefined,
+            versoSettingsStart: nextPanel
+              ? settingsPanel(current.destination)
+                ? window.history.state?.versoSettingsStart
+                : current.index - (replace ? 0 : 1)
+              : undefined,
+          },
           "",
           url,
         );
       }
-      setDestination(next);
+      current.destination = next;
+      current.background = background;
+      if (!nextPanel && !focusFieldId)
+        restoreWorkspace.current = {
+          index: current.index,
+          history:
+            settingsPanel(view.destination) !== null &&
+            background === view.background,
+        };
+      setView({ index: current.index, destination: next, background });
       setCompare(false);
+      const editing = destinationScope(next);
+      const head = controller.getSnapshot().head;
       if (
-        ["profile", "summary", "languages", "sections"].includes(next) ||
-        /^(entry|section|entries|selection|new-entry|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\//.test(
+        editing &&
+        head &&
+        destinationExists(
+          head.document,
           next,
+          initialValues !== undefined
+            ? editing
+            : controller.getSnapshot().draft?.scope,
         )
       )
-        controller.open(next, next.startsWith("entries/") ? "order" : "form");
+        controller.open(
+          editing,
+          editing.startsWith("entries/") ? "order" : "form",
+        );
       if (initialValues !== undefined)
         controller.change(
           initialValues,
-          next.startsWith("entries/") ? "order" : "form",
+          editing?.startsWith("entries/") ? "order" : "form",
         );
     };
     if (
-      destination === next &&
+      view.destination === next &&
       controller.getSnapshot().draft?.scope === next &&
       initialValues === undefined
     ) {
       focusIssue();
       return;
     }
-    resolveTargets(controller.navigationTargets(next), perform);
+    resolveTargets(routeTargets(next), perform);
+  };
+  const closeSettings = () => {
+    const background = route.current.background;
+    resolveTargets(routeTargets(background), () => {
+      const start = window.history.state?.versoSettingsStart;
+      if (
+        Number.isSafeInteger(start) &&
+        start >= 0 &&
+        start < route.current.index
+      ) {
+        route.current.allowed = true;
+        window.history.go(start - route.current.index);
+      } else navigate(background, undefined, undefined, true);
+    });
   };
   const openOutputIssue = (target: ResumeOutputTarget) =>
     navigate(target.destination, undefined, target.fieldId);
@@ -1017,33 +1190,11 @@ export function CareerWorkspace({
       ? orderDraft
       : null;
   const beforeEntryReorder = () => !controller.getSnapshot().saving;
-  const missingDestination =
-    ((destination.startsWith("preset/") ||
-      destination.startsWith("starter/")) &&
-      state.draft?.values === null &&
-      state.draft.baseline === null) ||
-    (![
-      "overview",
-      "profile",
-      "summary",
-      "languages",
-      "sections",
-      "backups",
-      "resumes",
-      "resume-compare",
-      "library",
-      "presets",
-      "starters",
-    ].includes(destination) &&
-      !documentValue.sections.some(
-        (section) => destination === `list/${section.id}`,
-      ) &&
-      (destination.startsWith("new-")
-        ? state.draft?.scope !== destination
-        : destination.startsWith("resume-overview/")
-          ? !activeResume
-          : readScope(documentValue, destination) === undefined) &&
-      state.draft?.scope !== destination);
+  const missingDestination = !destinationExists(
+    documentValue,
+    destination,
+    state.draft?.values !== null ? state.draft?.scope : undefined,
+  );
   const title =
     destination === "library"
       ? "Library"
@@ -1179,6 +1330,270 @@ export function CareerWorkspace({
     else navigate(scope);
     return saved;
   };
+  const backupPanel = (
+    <section className="flex flex-col gap-4">
+      <p>
+        Workspace exports contain saved workspace only. Recovery is separate and
+        never committed by import. Device preferences are excluded. Browser
+        clearing or eviction can remove local data.
+      </p>
+      {state.recovery.some(
+        (draft) =>
+          draft.draftId !== state.draft?.draftId &&
+          draft.draftId !== state.orderDraft?.draftId,
+      ) && (
+        <section
+          className="flex flex-col gap-3"
+          aria-label="Unresolved recovery"
+        >
+          <h2>Unsaved draft recovery</h2>
+          {state.recovery
+            .filter(
+              (draft) =>
+                draft.draftId !== state.draft?.draftId &&
+                draft.draftId !== state.orderDraft?.draftId,
+            )
+            .map((draft) => (
+              <div
+                key={draft.draftId}
+                className="flex flex-wrap items-center gap-2"
+              >
+                <span>
+                  {draft.scope.startsWith("entries/")
+                    ? `${documentValue.sections.find((section) => section.id === draft.scope.split("/")[1])?.name || "Section"} entry order`
+                    : draft.scope.startsWith("entry/")
+                      ? (() => {
+                          const entry = documentValue.sections
+                            .flatMap((section) => section.entries)
+                            .find(
+                              (entry) => entry.id === draft.scope.split("/")[1],
+                            );
+                          return entry
+                            ? careerEntryLabel(entry, contentLanguage)
+                            : "Unavailable entry";
+                        })()
+                      : draft.scope.startsWith("resume") ||
+                          draft.scope.startsWith("selection/")
+                        ? `${documentValue.resumes.find((resume) => resume.id === draft.scope.split("/")[1])?.name || "Unavailable resume"} · ${draft.scope.startsWith("resume-wording/") ? "Wording" : draft.scope.startsWith("resume-details/") ? "Name & color" : draft.scope.startsWith("resume-layout/") ? "Layout" : "Content"}`
+                        : draft.scope.startsWith("preset/") ||
+                            draft.scope.startsWith("starter/")
+                          ? `${draft.scope.startsWith("preset/") ? "Layout preset" : "Resume starter"} / ${draft.values && typeof draft.values === "object" && "name" in draft.values && typeof draft.values.name === "string" ? draft.values.name : "Unsaved setup"}`
+                          : draft.scope.startsWith("starter-create/")
+                            ? "Resume creation from starter"
+                            : ({
+                                profile: "Profile",
+                                summary: "Summary",
+                                languages: "Content languages",
+                                defaults: "Resume defaults",
+                                sections: "Section order",
+                              }[draft.scope] ?? "Unsaved form")}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const restore = () => {
+                      controller.restore(draft);
+                      const activeForm = controller.getSnapshot().draft;
+                      navigate(
+                        draft.scope.startsWith("entries/") && activeForm
+                          ? activeForm.scope
+                          : draft.scope,
+                      );
+                    };
+                    const target: CareerDraftTarget = draft.scope.startsWith(
+                      "entries/",
+                    )
+                      ? "order"
+                      : "form";
+                    const activeForm = controller.getSnapshot().draft;
+                    const relatedSection = documentValue.sections.find(
+                      (section) =>
+                        section.entries.some(
+                          (entry) => activeForm?.scope === `entry/${entry.id}`,
+                        ),
+                    );
+                    const targets =
+                      draft.scope === `entries/${relatedSection?.id}`
+                        ? [target]
+                        : [
+                            ...new Set([
+                              ...controller.navigationTargets(draft.scope),
+                              target,
+                            ]),
+                          ];
+                    resolveTargets(targets, restore);
+                  }}
+                >
+                  Restore draft
+                </Button>
+              </div>
+            ))}
+        </section>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          onClick={() => {
+            try {
+              exportWorkspace();
+            } catch (error) {
+              setLocalError(String(error));
+            }
+          }}
+        >
+          Export workspace · saved workspace only
+        </Button>
+        <Button variant="outline" onClick={exportRecovery}>
+          Export recovery
+        </Button>
+        <Button
+          variant="outline"
+          disabled={!state.durable}
+          onClick={() =>
+            resolveTargets(controller.navigationTargets(), () => {
+              void controller
+                .previous()
+                .then((previous) => {
+                  if (!previous)
+                    setLocalError("No previous workspace is retained.");
+                  else {
+                    setReview({
+                      head: controller.getSnapshot().head!,
+                      previous,
+                    });
+                    setExportChoice(false);
+                  }
+                })
+                .catch((error) => setLocalError(String(error)));
+            })
+          }
+        >
+          Review one previous workspace
+        </Button>
+      </div>
+      <p>
+        Explore fictional career details and English/Portuguese resumes. Loading
+        the sample opens a replacement review before changing saved content.
+      </p>
+      <Button
+        variant="outline"
+        className="self-start"
+        disabled={loadingSample || state.saving || !state.durable}
+        onClick={() => void loadSample()}
+      >
+        {loadingSample ? "Loading sample…" : "Load sample workspace"}
+      </Button>
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="workspace-import">
+            Import schema-2 workspace for review
+          </FieldLabel>
+          <Input
+            id="workspace-import"
+            type="file"
+            accept="application/json,.json"
+            onChange={(event) => {
+              void importFile(event.target.files?.[0], false);
+              event.target.value = "";
+            }}
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="recovery-import">
+            Import recovery as uncommitted drafts
+          </FieldLabel>
+          <Input
+            id="recovery-import"
+            type="file"
+            accept="application/json,.json"
+            onChange={(event) => {
+              void importFile(event.target.files?.[0], true);
+              event.target.value = "";
+            }}
+          />
+        </Field>
+      </FieldGroup>
+    </section>
+  );
+  const settingsForm =
+    state.draft && settingsDraft ? (
+      <div className="flex flex-col gap-4">
+        <fieldset disabled={state.saving} className="flex flex-col gap-4">
+          {state.draft.scope === "defaults" ? (
+            <>
+              <p>
+                New blank resumes copy these appearance settings. Existing
+                resumes, presets, and starters keep independent copies.
+              </p>
+              <LayoutFields
+                values={state.draft.values}
+                defaults={appLayoutDefaults}
+                onChange={(values) => controller.change(values)}
+              />
+            </>
+          ) : (
+            <DraftEditor
+              document={documentValue}
+              scope="languages"
+              values={state.draft.values}
+              language={contentLanguage}
+              onChange={(values) => controller.change(values)}
+            />
+          )}
+        </fieldset>
+        <p role="status">
+          {controller.isDirty() ? state.recoveryStatus : "No unsaved changes"}
+        </p>
+        {state.error && <p role="alert">{state.error}</p>}
+        {compare && (
+          <ScopeComparison
+            current={readScope(documentValue, state.draft.scope)}
+            draft={state.draft.values}
+          />
+        )}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setCompare((value) => !value)}
+          >
+            Compare
+          </Button>
+          <Button
+            variant="outline"
+            disabled={state.saving}
+            onClick={() => controller.reconcile()}
+          >
+            Reconcile
+          </Button>
+          <Button variant="outline" onClick={exportRecovery}>
+            Export recovery
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!controller.isDirty() || state.saving}
+            onClick={() => {
+              const savedScope = state.draft!.scope;
+              void controller
+                .cancel()
+                .then(() => controller.open(savedScope))
+                .catch(() => {});
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={!controller.isDirty() || state.saving}
+            onClick={() => {
+              const savedScope = state.draft!.scope;
+              void controller.save().then((saved) => {
+                if (saved) controller.open(savedScope);
+              });
+            }}
+          >
+            Save
+          </Button>
+        </div>
+      </div>
+    ) : null;
   return (
     <div
       onKeyDown={(event) => {
@@ -1186,6 +1601,12 @@ export function CareerWorkspace({
           (event.ctrlKey || event.metaKey) &&
           ["z", "y"].includes(event.key.toLowerCase())
         ) {
+          if (
+            event.target instanceof HTMLElement &&
+            (event.target.isContentEditable ||
+              /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName))
+          )
+            return;
           if (state.draft || state.orderDraft) {
             event.stopPropagation();
             return;
@@ -1197,6 +1618,67 @@ export function CareerWorkspace({
         }
       }}
     >
+      <SettingsDialog
+        panel={panel}
+        historyKey={view.index}
+        navigate={navigate}
+        close={closeSettings}
+        returnFocus={settingsReturnFocus}
+        workspaceSettings={["languages", "defaults", "data"].includes(
+          panel ?? "",
+        )}
+        preferenceStatus={state.preferenceStatus}
+        retryPreferences={() => void controller.changePreferences()}
+      >
+        {panel === "editing-preview" ? (
+          <DeviceSettings
+            values={state.preferences}
+            change={(patch) => void controller.changePreferences(patch)}
+          />
+        ) : panel === "data" ? (
+          <>
+            {(state.draft || state.orderDraft) && (
+              <Button
+                variant="outline"
+                className="self-start"
+                onClick={() =>
+                  navigate(
+                    settingsDraft
+                      ? `settings/${state.draft?.scope}`
+                      : view.background,
+                  )
+                }
+              >
+                Back to editing
+              </Button>
+            )}
+            {(state.error || state.orderError || localError) && (
+              <Alert variant="destructive">
+                <AlertTitle>Action needs attention</AlertTitle>
+                <AlertDescription className="whitespace-pre-wrap">
+                  {[state.error, state.orderError, localError]
+                    .filter(Boolean)
+                    .join("\n")}
+                </AlertDescription>
+              </Alert>
+            )}
+            {importPending && (
+              <p role="status">
+                Validating import... Your saved workspace is unchanged.
+              </p>
+            )}
+            {rawExport && (
+              <Button variant="outline" onClick={exportRecovery}>
+                Export raw recovery chunks
+              </Button>
+            )}
+            {backupPanel}
+          </>
+        ) : ["languages", "defaults"].includes(panel ?? "") ? (
+          settingsForm
+        ) : null}
+      </SettingsDialog>
+
       <ResumeManager
         document={documentValue}
         saveStarter={(resume) =>
@@ -1299,6 +1781,7 @@ export function CareerWorkspace({
             output={
               <CommittedOutput
                 head={state.head!}
+                preferences={state.preferences}
                 activeResumeId={activeResume?.id}
                 onIssue={openOutputIssue}
               />
@@ -1637,7 +2120,7 @@ export function CareerWorkspace({
                     </Button>
                   </CardFooter>
                 </Card>
-              ) : state.draft && destination !== "backups" ? (
+              ) : state.draft && !settingsDraft && destination !== "backups" ? (
                 <section
                   className="flex flex-col gap-4"
                   aria-label="Editing form"
@@ -1941,208 +2424,7 @@ export function CareerWorkspace({
                   </Card>
                 </section>
               ) : destination === "backups" ? (
-                <section className="flex flex-col gap-4">
-                  <h2 className="text-xl font-semibold">Data & backups</h2>
-                  <p>
-                    Workspace exports contain saved workspace only. Recovery is
-                    separate and never committed by import. Device preferences
-                    are excluded. Browser clearing or eviction can remove local
-                    data.
-                  </p>
-                  {state.recovery.some(
-                    (draft) =>
-                      draft.draftId !== state.draft?.draftId &&
-                      draft.draftId !== state.orderDraft?.draftId,
-                  ) && (
-                    <section
-                      className="flex flex-col gap-3"
-                      aria-label="Unresolved recovery"
-                    >
-                      <h2>Unsaved draft recovery</h2>
-                      {state.recovery
-                        .filter(
-                          (draft) =>
-                            draft.draftId !== state.draft?.draftId &&
-                            draft.draftId !== state.orderDraft?.draftId,
-                        )
-                        .map((draft) => (
-                          <div
-                            key={draft.draftId}
-                            className="flex flex-wrap items-center gap-2"
-                          >
-                            <span>
-                              {draft.scope.startsWith("entries/")
-                                ? `${documentValue.sections.find((section) => section.id === draft.scope.split("/")[1])?.name || "Section"} entry order`
-                                : draft.scope.startsWith("entry/")
-                                  ? (() => {
-                                      const entry = documentValue.sections
-                                        .flatMap((section) => section.entries)
-                                        .find(
-                                          (entry) =>
-                                            entry.id ===
-                                            draft.scope.split("/")[1],
-                                        );
-                                      return entry
-                                        ? careerEntryLabel(
-                                            entry,
-                                            contentLanguage,
-                                          )
-                                        : "Unavailable entry";
-                                    })()
-                                  : draft.scope.startsWith("resume") ||
-                                      draft.scope.startsWith("selection/")
-                                    ? `${documentValue.resumes.find((resume) => resume.id === draft.scope.split("/")[1])?.name || "Unavailable resume"} · ${draft.scope.startsWith("resume-wording/") ? "Wording" : draft.scope.startsWith("resume-details/") ? "Name & color" : draft.scope.startsWith("resume-layout/") ? "Layout" : "Content"}`
-                                    : draft.scope.startsWith("preset/") ||
-                                        draft.scope.startsWith("starter/")
-                                      ? `${draft.scope.startsWith("preset/") ? "Layout preset" : "Resume starter"} / ${draft.values && typeof draft.values === "object" && "name" in draft.values && typeof draft.values.name === "string" ? draft.values.name : "Unsaved setup"}`
-                                      : draft.scope.startsWith(
-                                            "starter-create/",
-                                          )
-                                        ? "Resume creation from starter"
-                                        : ({
-                                            profile: "Profile",
-                                            summary: "Summary",
-                                            languages: "Content languages",
-                                            sections: "Section order",
-                                          }[draft.scope] ?? "Unsaved form")}
-                            </span>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                const restore = () => {
-                                  controller.restore(draft);
-                                  const activeForm =
-                                    controller.getSnapshot().draft;
-                                  navigate(
-                                    draft.scope.startsWith("entries/") &&
-                                      activeForm
-                                      ? activeForm.scope
-                                      : draft.scope,
-                                  );
-                                };
-                                const target: CareerDraftTarget =
-                                  draft.scope.startsWith("entries/")
-                                    ? "order"
-                                    : "form";
-                                const activeForm =
-                                  controller.getSnapshot().draft;
-                                const relatedSection =
-                                  documentValue.sections.find((section) =>
-                                    section.entries.some(
-                                      (entry) =>
-                                        activeForm?.scope ===
-                                        `entry/${entry.id}`,
-                                    ),
-                                  );
-                                const targets =
-                                  draft.scope ===
-                                  `entries/${relatedSection?.id}`
-                                    ? [target]
-                                    : [
-                                        ...new Set([
-                                          ...controller.navigationTargets(
-                                            draft.scope,
-                                          ),
-                                          target,
-                                        ]),
-                                      ];
-                                resolveTargets(targets, restore);
-                              }}
-                            >
-                              Restore draft
-                            </Button>
-                          </div>
-                        ))}
-                    </section>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={() => {
-                        try {
-                          exportWorkspace();
-                        } catch (error) {
-                          setLocalError(String(error));
-                        }
-                      }}
-                    >
-                      Export workspace · saved workspace only
-                    </Button>
-                    <Button variant="outline" onClick={exportRecovery}>
-                      Export recovery
-                    </Button>
-                    <Button
-                      variant="outline"
-                      disabled={!state.durable}
-                      onClick={() =>
-                        resolveTargets(controller.navigationTargets(), () => {
-                          void controller
-                            .previous()
-                            .then((previous) => {
-                              if (!previous)
-                                setLocalError(
-                                  "No previous workspace is retained.",
-                                );
-                              else {
-                                setReview({
-                                  head: controller.getSnapshot().head!,
-                                  previous,
-                                });
-                                setExportChoice(false);
-                              }
-                            })
-                            .catch((error) => setLocalError(String(error)));
-                        })
-                      }
-                    >
-                      Review one previous workspace
-                    </Button>
-                  </div>
-                  <p>
-                    Explore fictional career details and English/Portuguese
-                    resumes. Loading the sample opens a replacement review
-                    before changing saved content.
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="self-start"
-                    disabled={loadingSample || state.saving || !state.durable}
-                    onClick={() => void loadSample()}
-                  >
-                    {loadingSample
-                      ? "Loading sample…"
-                      : "Load sample workspace"}
-                  </Button>
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="workspace-import">
-                        Import schema-2 workspace for review
-                      </FieldLabel>
-                      <Input
-                        id="workspace-import"
-                        type="file"
-                        accept="application/json,.json"
-                        onChange={(event) => {
-                          void importFile(event.target.files?.[0], false);
-                          event.target.value = "";
-                        }}
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="recovery-import">
-                        Import recovery as uncommitted drafts
-                      </FieldLabel>
-                      <Input
-                        id="recovery-import"
-                        type="file"
-                        accept="application/json,.json"
-                        onChange={(event) => {
-                          void importFile(event.target.files?.[0], true);
-                          event.target.value = "";
-                        }}
-                      />
-                    </Field>
-                  </FieldGroup>
-                </section>
+                backupPanel
               ) : listSection ? null : (
                 <CareerOverview document={documentValue} navigate={navigate} />
               )}

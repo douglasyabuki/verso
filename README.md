@@ -4,6 +4,47 @@ Local career information and resume editor. The active application uses workspac
 explicit form Save/Cancel, and transactional IndexedDB. Schema-1 development data
 and backups are unsupported and are never loaded or converted.
 
+## Settings and navigation
+
+**Settings** opens a dialog with its own sidebar: Appearance, Content languages,
+Editing & preview, Data & backups, and Resume defaults. On narrow screens the
+panel navigation wraps above its content. Settings panels have durable
+`?scope=settings/<panel>` URLs; reload and browser Back/Forward restore the panel.
+Existing `languages` and `backups` links open the corresponding panels. Closing
+returns to the underlying workspace, or Overview when opened directly.
+Unknown destinations and missing records offer recovery navigation without creating content.
+
+Opening Settings preserves editor drafts. Device panels and Data & backups remain
+accessible without resolving them. Editing workspace languages/defaults resolves
+occupied editor drafts first. These workspace forms use explicit Cancel / Save,
+atomic history, and separate recovery. Dirty closure offers Cancel / Discard / Save;
+failed Saves retain the form. Leaving a Settings workspace form for another panel,
+including through Back/Forward, uses the same guard. Data & backups is the exception:
+a Data detour retains the unsaved Settings form without resolution.
+
+Theme choices and advanced compiler/receipt-retention preferences apply immediately
+to this browser, outside workspace Undo. Numeric preferences apply on valid
+Enter/blur; failed persistence reports that choices apply in the current tab and
+offers retry. Device preferences are excluded from both portable formats and survive
+workspace replacement/rollback. Existing pane visibility/split preferences remain
+device-only view controls. No account sync is implemented.
+
+Compiler timeouts default to 120 seconds initialization and 30 seconds compilation,
+with a supported range of 0.1–600 seconds. Changes affect the next compiler instance
+without interrupting active work. Preview refresh remains manual. Completed-operation
+retention defaults to 30 days or 1,000 eligible receipts, whichever limit is reached
+first. Both limits accept nonnegative whole numbers; zero retains no eligible
+completed receipts. Pending/uncertain, unacknowledged, and recovery-referenced
+operations remain protected. Missing receipts require comparison before retry.
+Preference changes affect subsequent maintenance; unresolved recovery never expires.
+If reading device preferences fails, receipt pruning waits until preferences can be
+saved, avoiding cleanup under an unknown retention policy.
+
+**Resume defaults** edits the appearance copied into new blank resumes. Save affects
+future creation only; existing resumes, presets, and starters keep independent copies.
+Group resets use app defaults, and the Style sample does not compile a PDF. Languages
+and resume defaults are workspace data included in backups; device preferences are not.
+
 ## Resume layout and reusable setups
 
 Each resume has an independent **Layout** view with explicit Cancel / Save.

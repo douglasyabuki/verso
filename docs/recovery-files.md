@@ -33,6 +33,15 @@ A document at its independent 64-MiB ceiling may exceed the backup-file ceiling;
 export reports this explicitly instead of downloading a file the app cannot import.
 No export contains device preferences, local operation ledgers, or credentials.
 
+Workspace appearance-default drafts use the exact `defaults` scope. They retain
+the complete flat appearance as baseline and editable values, without nested
+resume baseline metadata. Their explicit Save participates in atomic scope checks,
+receipts, recovery cleanup, and workspace Undo/Redo. Malformed recovered values stay
+editable and block Save until corrected. Changing workspace defaults never modifies
+existing resumes or their frozen layout defaults. Workspace schema 2 and recovery
+format 1 remain unchanged. Device theme, compiler timeouts, and receipt-retention
+preferences are not workspace drafts and are excluded from both exports.
+
 Resume drafts use `resume-details/<id>` for name/icon color,
 `resume-content/<id>` for visibility/order/contact/summary configuration, and
 `resume-wording/<id>` for display overrides. Nullable `resume/<id>` requests

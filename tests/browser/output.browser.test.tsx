@@ -5,15 +5,22 @@ import { CommittedOutput } from "@/components/career/committed-output";
 import { ResumeOverview } from "@/components/career/resume-workspace";
 import { createCareerDocument } from "@/lib/career/model";
 import type { CareerHead } from "@/stores/career/persistence";
+import { devicePreferenceDefaults } from "@/types-and-constants/settings";
 
 const runtime = vi.hoisted(() => ({
+  options: vi.fn(),
   compile: vi.fn(),
   close: vi.fn(),
   onState: vi.fn<(state: string) => void>(),
 }));
 vi.mock("@/tools/compiler-proof/compiler.mjs", () => ({
   BrowserCompiler: class {
-    constructor(options: { onState?: (state: string) => void }) {
+    constructor(options: {
+      onState?: (state: string) => void;
+      initializationTimeoutMs: number;
+      compilationTimeoutMs: number;
+    }) {
+      runtime.options(options);
       runtime.onState.mockImplementation(options.onState ?? (() => {}));
     }
     compile = runtime.compile;
@@ -33,6 +40,7 @@ vi.mock("@/components/output/lazy-pdf-preview", () => ({
 
 afterEach(() => {
   vi.restoreAllMocks();
+  runtime.options.mockReset();
   runtime.compile.mockReset();
   runtime.close.mockReset();
   runtime.onState.mockReset();
@@ -356,4 +364,54 @@ it("shows saved-content issues only in the PDF footer while retaining the last s
     .toHaveAttribute("aria-expanded", "false");
   expect(runtime.compile).toHaveBeenCalledTimes(1);
   await screen.unmount();
+});
+
+it("uses saved device timeouts on the next compiler instance without compiling on preference changes", async () => {
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:preferences");
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  runtime.compile.mockResolvedValue({
+    bytes: new Uint8Array([37, 80, 68, 70]),
+  });
+  const committed = head();
+  const onIssue = () => {};
+  const screen = await render(
+    <CommittedOutput head={committed} onIssue={onIssue} />,
+  );
+  try {
+    await screen.getByRole("button", { name: "Refresh preview" }).click();
+    await expect
+      .element(screen.getByRole("link", { name: /Download PDF/ }))
+      .toBeVisible();
+    expect(runtime.options).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        initializationTimeoutMs: 120000,
+        compilationTimeoutMs: 30000,
+      }),
+    );
+    const beforeChange = runtime.close.mock.calls.length;
+    await screen.rerender(
+      <CommittedOutput
+        head={committed}
+        onIssue={onIssue}
+        preferences={{
+          ...devicePreferenceDefaults,
+          initializationTimeoutMs: 60000,
+          compilationTimeoutMs: 45000,
+        }}
+      />,
+    );
+    expect(runtime.compile).toHaveBeenCalledTimes(1);
+    expect(runtime.close).toHaveBeenCalledTimes(beforeChange);
+    await screen.getByRole("button", { name: "Refresh preview" }).click();
+    await expect.poll(() => runtime.compile.mock.calls.length).toBe(2);
+    expect(runtime.options).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        initializationTimeoutMs: 60000,
+        compilationTimeoutMs: 45000,
+      }),
+    );
+    expect(runtime.close).toHaveBeenCalledTimes(beforeChange + 1);
+  } finally {
+    await screen.unmount();
+  }
 });

@@ -1,10 +1,19 @@
 import { FieldDescription } from "@/components/ui/field";
+import { templateSettingLabels } from "@/types-and-constants/output";
 import {
   sectionIconIds,
   sectionIconLabels,
 } from "@/types-and-constants/section-icons";
 
 const names: Record<string, string> = {
+  ...templateSettingLabels,
+  paper: "Paper",
+  font: "Font",
+  contactRows: "Contacts per row",
+  contactRowSizes: "Custom row sizes",
+  contactRowGap: "Contact row spacing",
+  contactSeparator: "Contact separator",
+  defaults: "Frozen layout defaults",
   fullName: "Full name",
   fact: "Shared value",
   wording: "Wording",

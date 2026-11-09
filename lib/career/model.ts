@@ -537,7 +537,7 @@ export const draftSchema = z.strictObject({
     .string()
     .max(370)
     .regex(
-      /^(profile|summary|languages|sections|(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\/[A-Za-z0-9_-]{1,120}|new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120})$/,
+      /^(profile|summary|languages|defaults|sections|(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\/[A-Za-z0-9_-]{1,120}|new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120})$/,
       "Unsupported editing scope.",
     ),
   baseline: z.unknown(),
@@ -731,6 +731,7 @@ export function readScope(document: CareerDocument, scope: string): unknown {
   if (scope === "profile") return document.profile;
   if (scope === "summary") return document.summary;
   if (scope === "languages") return document.languages;
+  if (scope === "defaults") return document.defaults;
   if (scope === "sections")
     return document.sections.map((section) => section.id);
   if (
@@ -950,6 +951,8 @@ export function applyScope(
     if (summary.id !== document.summary.id)
       throw new Error("Summary identity cannot change.");
     next.summary = summary;
+  } else if (scope === "defaults") {
+    next.defaults = layoutSchema.parse(values);
   } else if (scope === "languages") {
     const languages = careerDocumentSchema.shape.languages.parse(values);
     if (

@@ -23,13 +23,19 @@ import { assessResumeOutput } from "@/lib/career/readiness";
 import type { CareerHead } from "@/stores/career/persistence";
 import { BrowserCompiler } from "@/tools/compiler-proof/compiler.mjs";
 import type { ResumeOutputTarget } from "@/types-and-constants/career";
+import {
+  devicePreferenceDefaults,
+  type DevicePreferences,
+} from "@/types-and-constants/settings";
 
 export const CommittedOutput = memo(function CommittedOutput({
   head,
   activeResumeId,
   onIssue,
+  preferences = devicePreferenceDefaults,
 }: {
   head: CareerHead;
+  preferences?: DevicePreferences;
   activeResumeId?: string;
   onIssue: (target: ResumeOutputTarget) => void;
 }) {
@@ -50,6 +56,7 @@ export const CommittedOutput = memo(function CommittedOutput({
   );
   const [error, setError] = useState("");
   const compiler = useRef<BrowserCompiler | null>(null);
+  const compilerSettings = useRef("");
   const latest = useRef("");
   const mounted = useRef(true);
   const active =
@@ -97,10 +104,19 @@ export const CommittedOutput = memo(function CommittedOutput({
     setError("");
     const jobKey = key;
     try {
+      const settingsKey = JSON.stringify([
+        preferences.initializationTimeoutMs,
+        preferences.compilationTimeoutMs,
+      ]);
+      if (compiler.current && compilerSettings.current !== settingsKey) {
+        compiler.current.close();
+        compiler.current = null;
+      }
+      compilerSettings.current = settingsKey;
       compiler.current ??= new BrowserCompiler({
         assetBase: "/compiler/",
-        initializationTimeoutMs: 120_000,
-        compilationTimeoutMs: 30_000,
+        initializationTimeoutMs: preferences.initializationTimeoutMs,
+        compilationTimeoutMs: preferences.compilationTimeoutMs,
         onState: (state) => {
           if (
             mounted.current &&

@@ -5,6 +5,68 @@ Automated test sources and historical runs do not establish manual PDF acceptanc
 actual Safari behavior, or measured performance. Engineering targets and safety
 contracts are maintained in [AGENTS.md](../AGENTS.md).
 
+## Settings and navigation acceptance
+
+Settings now uses a dialog with its own responsive sidebar and durable panel URLs.
+The implementation adds browser preferences and a recoverable workspace appearance-
+defaults editing scope. Automatic preview refresh remains deferred. Browser Mode,
+production browser suites, screenshots, and manual interaction/PDF validation for
+these changes were explicitly left to the owner and have not been executed.
+Earlier automated results predate these changes and do not prove this slice.
+
+Non-browser verification executed on 2026-11-07: `npm run format:check`,
+`npm run lint`, `npm run typecheck` (including generated routes), and
+`npm run build` passed. `npm run test:unit` passed all 156 tests across 14 files,
+with no failures or skips. The initial unit run could not spawn its worker in the
+sandbox; the successful run used approved process access. The initial formatting
+check could not enumerate a temporary directory; its read-only retry passed.
+Maintained-document links and diff whitespace checks passed. These checks do not
+prove browser IndexedDB behavior, rendered interaction, visual layout, or PDF output.
+
+Authored coverage is in `tests/browser/settings.browser.test.tsx`, the added
+compiler-preference case in `tests/browser/output.browser.test.tsx`,
+theme persistence-failure coverage in `tests/browser/theme.browser.test.tsx`, and
+`tests/e2e/settings.spec.ts`. Run the existing browser suites as well as these new
+cases because navigation and data tools changed their presentation. On disposable
+origins, verify:
+
+- [ ] Open Settings from desktop utilities and the mobile sidebar. Check five
+      labeled panels, selected state, keyboard navigation, heading focus, close
+      access, independently scrolling content, short screens, text zoom, and theme.
+      Check Escape and IME composition without discarding an unresolved form.
+- [ ] Direct-load/reload every Settings panel, follow old language/backup links,
+      and use Back/Forward through panels and dialog closure. Cancel dirty history
+      navigation; URL and draft must remain current. Close to the original workspace
+      with appropriate focus and preserved scroll; direct-load closure goes to Overview.
+- [ ] Keep dirty entry and order drafts while visiting Appearance, Editing & preview,
+      and Data & backups. Exports stay accessible, selections/filter/scroll persist,
+      and no Save/history step occurs. Resolve occupied drafts independently before
+      editing languages/defaults; failed Save or canceled resolution prevents entry.
+- [ ] Suspend dirty Settings languages/defaults in Data & backups and return to
+      editing. Close, switch workspace forms, restore recovery, and attempt replacement/
+      rollback with Cancel/Discard/Save. Preserve both versions on failures/conflicts.
+- [ ] Change compiler preferences, reload, and verify browser-only persistence and
+      bounds. Verify failed preference writes, current-tab feedback, retry, and rapid
+      changes retaining the latest value. Import/rollback must preserve preferences.
+      Changing preferences alone never compiles or enters workspace Undo. Timeout
+      changes preserve active work and affect the next compiler instance.
+- [ ] Verify retention age/count choices, including zero, against real IndexedDB:
+      protect pending/uncertain, unacknowledged, and recovery-referenced operations;
+      load preferences before pruning after restart. Unresolved drafts never expire.
+- [ ] Edit/reset/save/cancel new-resume defaults, including hidden invalid fields and
+      relative values. Existing resumes/library items stay unchanged; new blank
+      resumes copy appearance and frozen defaults. Check one atomic history step,
+      Undo/Redo, interrupted identical retries, exact cleanup, two-tab conflicts,
+      recovery imports, workspace backups, replacement, and rotating rollback.
+- [ ] Verify missing/malformed career, entry, resume, Library, and Settings URLs:
+      useful recovery navigation, no content creation, no private text in generated
+      URLs. Recheck Library/resume expansion, inline profile navigation, exact issue
+      focus, color-popover selection/dismissal/focus, and narrow Editor/PDF switching.
+- [ ] Inspect actual English/Portuguese PDF output after explicit Saves and manual
+      refresh. The fictional defaults sample does not compile or prove pagination.
+
+All earlier deferred acceptance and performance/resource measurements remain open.
+
 ## Resume readiness and PDF acceptance
 
 Manual visual/PDF acceptance and browser execution for the PDF footer/control

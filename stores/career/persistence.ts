@@ -99,6 +99,27 @@ export class CareerStorage {
     database.onversionchange = () => database.close();
   }
 
+  /** Read browser preferences independently of workspace/recovery data.
+   * @returns Stored versioned record or undefined. @example await storage.readDevicePreferences()
+   */
+  async readDevicePreferences(): Promise<unknown> {
+    return this.transaction(["preferences"], "readonly", (tx) =>
+      requestResult(tx.objectStore("preferences").get("device-settings-v1")),
+    );
+  }
+
+  /** Persist browser preferences with transaction-completion acknowledgment.
+   * @param values Validated preference record. @returns Completion or storage failure.
+   * @example await storage.writeDevicePreferences({ version: 1, values })
+   */
+  async writeDevicePreferences(values: unknown): Promise<void> {
+    await this.transaction(["preferences"], "readwrite", async (tx) => {
+      await requestResult(
+        tx.objectStore("preferences").put(values, "device-settings-v1"),
+      );
+    });
+  }
+
   /** Release the database connection after the owning view unmounts.
    * @returns {void} No value.
    * @example storage.close()

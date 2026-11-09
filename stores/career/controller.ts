@@ -1,3 +1,7 @@
+import {
+  devicePreferencesSchema,
+  readDevicePreferences,
+} from "@/lib/career/device-preferences";
 import { layoutDefaults, sameLayout } from "@/lib/career/layout";
 import {
   applyScope,
@@ -7,6 +11,7 @@ import {
   resumeLayoutSchema,
   validateDocument,
 } from "@/lib/career/model";
+import { destinationScope, settingsPanel } from "@/lib/career/navigation";
 import { createResume } from "@/lib/career/resumes";
 import {
   type CareerHead,
@@ -16,6 +21,10 @@ import {
   type SaveRequest,
 } from "@/stores/career/persistence";
 import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
+import {
+  devicePreferenceDefaults,
+  type DevicePreferences,
+} from "@/types-and-constants/settings";
 
 export type CareerDraftTarget = "form" | "order";
 
@@ -26,6 +35,8 @@ export type CareerControllerOptions = {
 
 type Step = { scope: string; before: unknown; after: unknown; bytes: number };
 export type CareerState = {
+  preferences: DevicePreferences;
+  preferenceStatus: string;
   ready: boolean;
   head: CareerHead | null;
   draft: CareerDraft | null;
@@ -48,6 +59,8 @@ export type CareerState = {
  */
 export class CareerController {
   private state: CareerState = {
+    preferences: { ...devicePreferenceDefaults },
+    preferenceStatus: "",
     ready: false,
     head: null,
     draft: null,
@@ -97,6 +110,49 @@ export class CareerController {
     }
   }
 
+  private preferenceVersion = 0;
+  private preferencesLoaded = false;
+  private preferenceWrites: Promise<void> = Promise.resolve();
+
+  /** Apply immediate browser preferences, serializing durable writes without workspace history.
+   * @param patch Valid preference changes, or no changes to retry persistence.
+   * @returns Completion; failures retain current-tab values with retry feedback.
+   * @example await controller.changePreferences({ compilationTimeoutMs: 45000 })
+   */
+  async changePreferences(
+    patch: Partial<DevicePreferences> = {},
+  ): Promise<void> {
+    const preferences = devicePreferencesSchema.parse({
+      ...this.state.preferences,
+      ...patch,
+    });
+    const version = ++this.preferenceVersion;
+    this.publish({
+      preferences,
+      preferenceStatus: "Saving browser preferences...",
+    });
+    this.preferenceWrites = this.preferenceWrites
+      .catch(() => {})
+      .then(async () => {
+        try {
+          if (!this.storage) throw new Error("Browser storage is unavailable.");
+          await this.storage.writeDevicePreferences({
+            version: 1,
+            values: preferences,
+          });
+          this.preferencesLoaded = true;
+          if (!this.disposed && version === this.preferenceVersion)
+            this.publish({ preferenceStatus: "Browser preferences saved." });
+        } catch (error) {
+          if (!this.disposed && version === this.preferenceVersion)
+            this.publish({
+              preferenceStatus: `Preferences apply in this tab only. Retry saving. ${String(error)}`,
+            });
+        }
+      });
+    await this.preferenceWrites;
+  }
+
   /** Run noncritical cleanup without disabling editing or tab notifications.
    * @returns Maintenance completion; errors are exposed and retried on next load/save.
    * @example await this.maintain()
@@ -104,10 +160,13 @@ export class CareerController {
   private async maintain(): Promise<void> {
     try {
       await this.storage?.retryDraftCleanup();
-      await this.storage?.pruneCompleted(
-        this.options.completedOperationDays,
-        this.options.completedOperationCount,
-      );
+      if (this.preferencesLoaded)
+        await this.storage?.pruneCompleted(
+          this.options.completedOperationDays ??
+            this.state.preferences.completedOperationDays,
+          this.options.completedOperationCount ??
+            this.state.preferences.completedOperationCount,
+        );
     } catch (error) {
       this.publish({
         error: `Storage maintenance needs retry. ${String(error)}`,
@@ -205,14 +264,28 @@ export class CareerController {
 
   /** Identify drafts that must resolve before a destination or workspace action.
    * @param next Destination scope; omitted for history/replacement/workspace-wide actions.
-   * @returns Form then order targets; same-section entry navigation retains order, and backups retains both drafts.
+   * @returns Form then order targets; same-section entry navigation retains order. Data retains all drafts; device panels retain ordinary editor drafts but guard departure from Settings workspace forms.
    * @example controller.navigationTargets(`entry/${entry.id}`)
    */
   navigationTargets(next?: string): CareerDraftTarget[] {
     const targets: CareerDraftTarget[] = [];
     // Recovery/export is a safe utility destination, not a draft resolution.
-    if (next === "backups") return targets;
-    if (this.state.draft && this.state.draft.scope !== next)
+    const panel = next ? settingsPanel(next) : null;
+    const settingsForm = ["languages", "defaults"].includes(
+      this.state.draft?.scope ?? "",
+    );
+    if (
+      next === "backups" ||
+      panel === "data" ||
+      (panel && !["languages", "defaults"].includes(panel) && !settingsForm)
+    )
+      return targets;
+    if (next) next = destinationScope(next) ?? next;
+    const sameSelection =
+      next?.startsWith("resume-content/") &&
+      this.state.draft?.scope ===
+        next.replace(/^resume-content\//, "selection/");
+    if (this.state.draft && this.state.draft.scope !== next && !sameSelection)
       targets.push("form");
     const order = this.state.orderDraft;
     if (order) {
@@ -247,6 +320,7 @@ export class CareerController {
         return;
       }
       this.storage = storage;
+      this.preferencesLoaded = false;
       const head = await storage.load(createCareerDocument());
       if (this.disposed || lifecycle !== this.lifecycle) {
         storage.close();
@@ -258,6 +332,18 @@ export class CareerController {
       this.channel.onmessage = () => {
         void this.refresh();
       };
+      try {
+        this.publish({
+          preferences: readDevicePreferences(
+            await storage.readDevicePreferences(),
+          ),
+        });
+        this.preferencesLoaded = true;
+      } catch (error) {
+        this.publish({
+          preferenceStatus: `Device preferences could not be loaded. Defaults are active. ${String(error)}`,
+        });
+      }
       await this.maintain();
       const recovery = await this.readRecovery();
       if (this.disposed || lifecycle !== this.lifecycle) {
