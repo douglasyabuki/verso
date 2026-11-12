@@ -457,24 +457,28 @@ pair before the next attempt.
 
 ## Setup and checks
 
-Use Node >=20.19 and npm 11.3 with the existing package-lock.json.
+Use Node 24.22.1 (`.nvmrc`; `engines` accepts >=24.22.1 <25) and npm 11.3 with the
+existing package-lock.json. Python 3.10+ with lzma support must be on PATH
+(`python3`, `python`, or `py -3`) to prepare compiler assets.
 Run `npm ci`, `npm run compiler:prepare`, then `npm run dev`.
-The browser compiler uses locally prepared assets and needs no account credentials.
+The browser compiler uses locally prepared assets in the gitignored
+`public/compiler/` and needs no account credentials.
 Builds use the existing Next.js Google-font integration.
 
-| Command                | Purpose                                                               |
-| ---------------------- | --------------------------------------------------------------------- |
-| `npm run format:check` | Formatting                                                            |
-| `npm run lint`         | ESLint/import order                                                   |
-| `npm run typecheck`    | Next route generation and TypeScript                                  |
-| `npm run build`        | Production build                                                      |
-| `npm run test:unit`    | Vitest Node domain/capacity cases                                     |
-| `npm run test:browser` | Real Chromium component/IndexedDB cases                               |
-| `npm run test:e2e`     | Playwright with a fresh production build/server on localhost:3100     |
-| `npm run test:measure` | Explicit production capacity/interaction/import/compiler measurements |
-| `npm test`             | Unit, browser, then E2E suites                                        |
+| Command                    | Purpose                                                               |
+| -------------------------- | --------------------------------------------------------------------- |
+| `npm run format:check`     | Formatting                                                            |
+| `npm run lint`             | ESLint/import order                                                   |
+| `npm run typecheck`        | Next route generation and TypeScript                                  |
+| `npm run compiler:prepare` | Full compiler preparation, including optional reference-proof inputs  |
+| `npm run build`            | Compiler assets when missing or stale, then the production build      |
+| `npm run test:unit`        | Vitest Node domain/capacity cases                                     |
+| `npm run test:browser`     | Real Chromium component/IndexedDB cases                               |
+| `npm run test:e2e`         | Playwright with a fresh production build/server on localhost:3100     |
+| `npm run test:measure`     | Explicit production capacity/interaction/import/compiler measurements |
+| `npm test`                 | Unit, browser, then E2E suites                                        |
 
-Vitest 4.1.0, renderer 2.2.0, Vite 7.3.1 and a Tailwind Vite adapter are scoped to
+Vitest 4.1.12, renderer 2.2.0, Vite 7.3.8 and a Tailwind Vite adapter are scoped to
 testing and preserve the selected Next/React versions. Test browsers live in
 `.cache/ms-playwright`. Test against disposable origins; browser storage belongs
 to the origin/profile. Tests do not establish Safari support, PDF/UA, universal
@@ -486,6 +490,29 @@ Firefox, and WebKit; the Chromium quota case waits for the browser's 30-second
 quota cache to expire. Measurements run separately with one worker and write
 raw samples under `.cache/performance/`; their recorded evidence includes reference
 hardware, browser version, normal/4x CPU runs, and sample counts.
+
+`npm audit` reports 3 low findings in `deepmerge` used only by the shadcn CLI
+(no fixed release; the app imports only `shadcn/tailwind.css`). `overrides` pin
+`minimatch` 11.0.8 for typescript-eslint and ts-morph, which have no patched release.
+
+## Vercel deployment
+
+The guest-only app deploys to Vercel with zero configuration: the Next.js preset
+runs `npm run build`, whose `compiler:build` step
+(`tools/compiler-proof/prepare.mjs --assets-only --if-needed`) regenerates
+`public/compiler/` before `next build`. It downloads the locked archives listed in
+`tools/compiler-proof/resources.lock.json` (about 71 MB from ftp.math.utah.edu,
+GitHub, and CTAN), verifies every SHA-256, and publishes about 20 MB of static
+assets. Downloads retry three times; any failure stops the build and leaves no
+partial `public/compiler/`. On Vercel the download cache lives in
+`.next/cache/verso-compiler-downloads`, which the build cache restores. Existing
+assets that verify are reused without downloads.
+
+Requirements: outbound HTTPS during builds, Python 3.10+ with lzma on the build
+image, and Node 24.x (from `engines`). No environment variables or `vercel.json`
+are needed. The served SwiftLaTeX engine is AGPL-3.0; `/compiler/SOURCE.txt` and
+the `license-*` files identify the corresponding source in this repository.
+Hosted accounts, publication, and hosted acceptance remain future scope.
 
 The application sends no resume content to a backend. Compiler maintenance is
 covered in [compilation proof](docs/compilation-proof.md).

@@ -28,6 +28,9 @@ owner's Overleaf project/PDF pairs under `temp/`, not a newly designed template.
   `tools/compiler-proof/resources.lock.json`, builds local assets, and extracts
   reference inputs. `npm run compiler:proof` serves the independent demonstration
   on localhost:3199. Workers must never fall back to remote package/font fetching.
+- `npm run build` runs `compiler:build` (`prepare.mjs --assets-only --if-needed`),
+  which regenerates the gitignored `public/compiler/` for Vercel and local builds.
+  Keep it deterministic, integrity-checked, and all-or-nothing.
 - The pinned format is rebuilt for LaTeX2e 2021-11-15 / L3 2022-02-24; the upstream
   2020 format is incompatible. Preserve the format hash and build transcript.
   See the proof report for the supported Inter weights and XeTeX adjustments.

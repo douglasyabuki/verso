@@ -952,22 +952,35 @@ production E2E cases across Chromium, Firefox, and WebKit. P7.2–P7.7 have auto
 regression evidence. P7.1 retains owner resource/lifecycle inspection, and P7.8
 retains manual acceptance; neither is counted as passed by those tests.
 
-## Phase 8 — Local acceptance
+## Phase 8 — Vercel deployment readiness
 
-- [ ] P8.1 Verify onboarding, independent language resumes, visibility/order, facts, and overrides.
-- [ ] P8.2 Verify language labels, dates/regions, fonts, direction/hyphenation as applicable,
-      metadata, links, selectable text, and layout; disable unsupported PDF output.
-- [ ] P8.3 Verify presets/starters, settings/routes, save/preview/history, keyboard, and narrow layouts.
-      Include Library discovery, reuse-option clarity, contextual/library entry points,
-      guarded location trails, optional preset/direct layout editing, destructive-action
-      order and wrapping, and short-screen navigation. Include refactored layout
-      defaults, group resets, conditional controls, margin highlighting, and color
-      popovers on desktop, narrow screens, and keyboard navigation.
-- [ ] P8.4 Restore workspace/recovery exports on disposable origins; rejected imports preserve work.
-- [ ] P8.5 Inspect actual PDFs for accents, long text/URLs, omissions, overflow, and stale failures.
-      Page counts do not establish clipping, PDF/UA, or ATS compatibility.
-- [ ] P8.6 Record static/build/manual evidence and update affected documentation.
-- [ ] P8.7 Run relevant unit/browser/application suites; record actual counts and limitations.
+Makes the guest-only app deployable on Vercel. Hosted accounts, publication, and
+hosted acceptance remain Phases 9–12. Removed local-acceptance items are not passed;
+open owner acceptance stays in Pending follow-up and verification.
+
+- [x] P8.1 Generate compiler assets during `npm run build` with one cross-platform
+      script: locked downloads, SHA-256 checks, retries, clear failure, no partial
+      `public/compiler/` output. Skip regeneration when existing assets verify.
+- [ ] P8.2 Run on the Vercel build image (Python 3 + lzma preflight, `python3`/`python`
+      discovery) within Hobby limits; cache downloads in a Vercel-restored directory.
+- [x] P8.3 Pin Node 24.22.1 locally (24.x on Vercel); keep npm and the lockfile.
+      Resolve `npm audit` findings with in-range/patch upgrades; record any
+      dev-only residual.
+- [x] P8.4 Serve the AGPL engine's licenses and corresponding source availability with
+      the deployed assets.
+- [x] P8.5 Document setup, the build flow, and owner Vercel steps in README.md.
+- [x] P8.6 Verify a clean local build regenerates assets, a repeat build skips them,
+      and the full suite passes; record counts.
+- [ ] P8.7 Owner: deploy a preview, confirm the build log, compile English and
+      Portuguese PDFs on the deployed URL, and record the result.
+
+Local implementation delivered on 2026-11-12: a clean asset build (Python 3.12.6,
+Windows) took about 20 s and reproduced bundle SHA-256
+`bb17934203d93c9cbedbed5ad34022f65c7f42487b8e17abd84d211a44ab2f3e`; repeat builds skip;
+a corrupted cached archive fails without touching existing assets. `npm audit` went
+from 17 findings to 3 low (shadcn CLI `deepmerge`, no fixed release). Format, lint,
+typecheck, and `npm test` passed: 169 unit, 145 Browser Mode, 82 production E2E.
+P8.2 (actual Vercel build image) and P8.7 remain open until the owner preview.
 
 ## Phase 9 — Future accounts and Prisma Postgres
 
@@ -1013,7 +1026,7 @@ Requires accounts, hosted artifacts, and an approved latest-release policy.
 
 ## Phase 12 — Future hosted readiness
 
-- [ ] P12.1 Document hosting, secrets/callbacks, migrations, artifact access, and compiler assets.
+- [ ] P12.1 Document hosting, secrets/callbacks, migrations, and artifact access.
 - [ ] P12.2 Define deletion/retention/restore policy and perform a recovery exercise.
 - [ ] P12.3 Bound inputs, compilation, abuse, and storage; avoid logging private content.
 - [ ] P12.4 Verify HTTPS, ownership/origin checks, isolation, caches, browsers, and measured budgets.
@@ -1031,7 +1044,7 @@ groups, user-defined field types, and content-bearing starters.
 These open acceptance items are deferred by the owner. They do not block roadmap
 progression and must not be reported as passed. Preserve the contracts above;
 future changes still need relevant regression checks. Resolve before claiming full
-local acceptance in Phase 8, or explicitly revise that acceptance scope.
+local acceptance; Phase 8 no longer carries it.
 
 - [ ] F1 Final regression pass: formatting, lint, route generation/typecheck, unit,
       Browser Mode, and production E2E/build; record actual counts. The requested run

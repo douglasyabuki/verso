@@ -614,3 +614,17 @@ the missing Firefox/WebKit and blocked-storage coverage. Failure screenshots
 were inspected for diagnosis only. The owner checklist above, visual/PDF
 acceptance, manual resource inspection, and earlier deferred acceptance remain
 open; no performance measurements or sustained-memory acceptance were executed.
+
+## Vercel deployment readiness
+
+Build-time compiler assets and the Vercel preview are separate from local product
+acceptance. Automated/local evidence does not prove the hosted deployment.
+
+- [x] A clean `npm run build` regenerates `public/compiler/` with the recorded bundle
+      SHA-256; a repeat build reports "Compiler assets verified; skipping preparation."
+- [x] A corrupted cached archive fails the build and leaves existing assets unchanged.
+- [ ] Owner: a Vercel preview build log shows the Python version, downloads (or cache
+      reuse), the bundle SHA-256, and a successful `next build`.
+- [ ] Owner: on the preview URL, English and Portuguese PDFs compile; `/compiler/*.wasm`
+      returns 200 with `application/wasm`; `/compiler/SOURCE.txt` is served.
+- [ ] Owner: a second deployment reuses the download cache.
