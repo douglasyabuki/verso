@@ -111,7 +111,10 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
   icon, visibility, supported field-key defaults, and summary visibility.
 - Applying configurations copies values, never live references. Profile selections
   and ordering remain in Content & order; Layout owns positional contact-row sizes,
-  icons/separators/spacing and alignment. Empty contact values produce no empty rows.
+  icons/separators/spacing and alignment, and optional city/country grouping
+  (`contactLocation`; omitted means separate, without load-time writes). A combined
+  location sits at the first selected city/country position, in their Content &
+  order sequence. Empty contact values produce no empty rows.
   New entry selections use copied field defaults without overwriting prior explicit
   selections. Duplicate resume clears composite-creation provenance.
 - `starter-create/<resumeId>` is a dedicated composite lifecycle scope, never a
@@ -191,8 +194,10 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
   row remains visible before compilation and with retained PDFs. Start collapsed
   and preserve the toggle choice while mounted; cap the expanded body at 40dvh
   with independent scrolling. Wording issue actions use
-  guarded navigation, reveal Editor after successful navigation, and focus exact
-  wording cards without changing text. Targets are transient; keep durable scope
+  guarded navigation, reveal Editor after successful navigation, expand the
+  owning entry or excluded content, and focus exact wording rows without changing
+  text. Resume Wording groups rows in one card per Career details owner, lists
+  included content by default, and omits shared facts. Targets are transient; keep durable scope
   URLs free of private wording. Failed/canceled navigation retains drafts.
 - Keep reusable checkbox presentation and rich-text URL validation independent of
   retired editor/review/state modules. Do not mount schema-1 providers or introduce

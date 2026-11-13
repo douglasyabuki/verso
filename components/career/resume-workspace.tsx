@@ -1,11 +1,11 @@
 "use client";
 
+import { cn } from "cn";
 import {
   ArrowLeft,
   ArrowRight,
   Columns2,
   Copy,
-  Eye,
   FileText,
   Languages,
   LayoutDashboard,
@@ -14,6 +14,7 @@ import {
   Palette,
   Pencil,
   Plus,
+  RotateCcw,
   Trash2,
 } from "lucide-react";
 import {
@@ -34,13 +35,13 @@ import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { EntrySearch } from "@/components/content/entry-search";
 import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
 import { SortableList, SortableRow } from "@/components/editor/sortable-list";
-import { SemanticBadge } from "@/components/shared/semantic-badges/semantic-badge";
 import { WordingSourceBadge } from "@/components/shared/semantic-badges/wording-source-badge";
 import { AnimatedListItem } from "@/components/ui/animated-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -101,9 +102,9 @@ import {
   resolveResumeWording,
   resumeComparisonRows,
   type ResumeContent,
-  resumeFactFields,
   type ResumeFieldOwner,
-  resumeWordingFields,
+  resumeWordingGroups,
+  type ResumeWordingRow,
 } from "@/lib/career/resumes";
 import {
   fieldsForNewEntries,
@@ -673,16 +674,8 @@ export function CareerResumeCollection({
             key={resume.id}
             data-list-id={resume.id}
             size="sm"
-            onPointerEnter={(event) =>
-              event.currentTarget
-                .getAnimations()
-                .forEach((animation) => animation.finish())
-            }
-            onFocusCapture={(event) =>
-              event.currentTarget
-                .getAnimations()
-                .forEach((animation) => animation.finish())
-            }
+            onPointerEnter={finishEntrance}
+            onFocusCapture={finishEntrance}
           >
             <CardHeader>
               <CardTitle
@@ -1515,7 +1508,14 @@ function ResumeFieldIcon({
   );
 }
 
-function CareerReferenceList({
+/** Finish a row's entrance once the pointer or focus reaches it. */
+function finishEntrance(event: { currentTarget: HTMLElement }) {
+  event.currentTarget
+    .getAnimations()
+    .forEach((animation) => animation.finish());
+}
+
+function WordingList({
   contextKey,
   children,
 }: {
@@ -1534,255 +1534,331 @@ function CareerReferenceList({
   });
 
   return (
-    <div ref={list} className="flex flex-col gap-2">
+    <div ref={list} className="flex min-w-0 flex-col gap-3">
       {children}
     </div>
   );
 }
 
-function CareerReferenceRow({
-  id,
-  label,
-  value,
-  owner,
-  icon,
-  destination,
-  navigate,
-  showLabel = true,
+function WordingRow({
+  row,
+  resumeId,
+  language,
+  values,
+  onChange,
+  surface,
 }: {
-  id: string;
-  label: string;
-  value: string;
-  owner: ResumeFieldOwner;
-  icon?: SectionIconId;
-  destination: string;
-  navigate: (destination: string) => void;
-  showLabel?: boolean;
+  row: ResumeWordingRow;
+  resumeId: string;
+  language: string;
+  values: CareerResume["overrides"];
+  onChange: (value: CareerResume["overrides"]) => void;
+  surface: "standard" | "nested";
 }) {
+  const custom = Object.hasOwn(values, row.id);
+  const shared = wordingText(row.shared);
   return (
     <AnimatedListItem
-      itemId={id}
-      surface="nested"
-      data-list-id={id}
-      className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl p-3"
-      onPointerEnter={(event) =>
-        event.currentTarget
-          .getAnimations()
-          .forEach((animation) => animation.finish())
-      }
-      onFocusCapture={(event) =>
-        event.currentTarget
-          .getAnimations()
-          .forEach((animation) => animation.finish())
-      }
+      itemId={row.id}
+      data-list-id={row.id}
+      surface={surface}
+      id={`resume-wording-${resumeId}-${row.id}`}
+      tabIndex={-1}
+      role="group"
+      aria-label={row.label}
+      className={cn(
+        "flex flex-col gap-2 rounded-xl p-3",
+        surface === "standard" && "border text-card-foreground shadow-sm",
+      )}
+      onPointerEnter={finishEntrance}
+      onFocusCapture={finishEntrance}
     >
-      <div className="min-w-0 flex-1 basis-48">
-        {showLabel && (
-          <p className="mb-1 flex items-start gap-2 text-sm font-medium">
-            <ResumeFieldIcon owner={owner} icon={icon} />
-            <span className="min-w-0 wrap-anywhere">{label}</span>
-          </p>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="min-w-0 text-sm font-medium wrap-anywhere">
+          {row.shortLabel}
+        </span>
+        {row.archived && <Badge variant="secondary">Archived</Badge>}
+        {custom && (
+          <WordingSourceBadge
+            source="custom"
+            className="h-auto min-h-5 max-w-full whitespace-normal"
+          />
         )}
-        <p className="text-sm wrap-anywhere whitespace-pre-wrap">
-          {value || "Empty"}
-        </p>
+        {!row.included && (
+          <span className="text-xs text-muted-foreground">Excluded</span>
+        )}
+        <Button
+          variant="ghost"
+          size="xs"
+          className="ms-auto"
+          onClick={() => {
+            if (custom) {
+              const next = { ...values };
+              delete next[row.id];
+              onChange(next);
+            } else
+              onChange({ ...values, [row.id]: structuredClone(row.shared) });
+          }}
+        >
+          {custom ? (
+            <RotateCcw aria-hidden="true" data-icon="inline-start" />
+          ) : (
+            <Pencil aria-hidden="true" data-icon="inline-start" />
+          )}
+          {custom ? "Use career wording" : "Customize"}
+        </Button>
       </div>
-      <Button
-        variant="link"
-        size="xs"
-        className="ms-auto h-auto min-h-8 max-w-full whitespace-normal"
-        aria-label={`Open Career details · ${label}`}
-        onClick={() => navigate(destination)}
-      >
-        Open Career details
-        <ArrowRight aria-hidden="true" data-icon="inline-end" />
-      </Button>
+      {custom ? (
+        <>
+          {row.rich ? (
+            <CareerRichField
+              hideLabel
+              language={language}
+              label={row.label}
+              value={values[row.id]}
+              onChange={(value) => onChange({ ...values, [row.id]: value })}
+            />
+          ) : (
+            <CareerTextField
+              hideLabel
+              label={row.label}
+              value={wordingText(values[row.id])}
+              onChange={(value) => onChange({ ...values, [row.id]: value })}
+            />
+          )}
+          <p className="text-xs wrap-anywhere whitespace-pre-wrap text-muted-foreground">
+            Career wording: {shared || "Empty"}
+          </p>
+        </>
+      ) : (
+        <p className="text-sm wrap-anywhere whitespace-pre-wrap">
+          {shared || (
+            <span className="text-muted-foreground">
+              Empty · no career wording in this language
+            </span>
+          )}
+        </p>
+      )}
     </AnimatedListItem>
   );
 }
 
+/** Edit one resume's wording overrides, grouped by their Career details owner.
+ * @param props Committed records, the resume, override draft values, guarded navigation, and an optional transient focus request.
+ * @returns One card per Profile, Summary, and section; entries are disclosures of compact wording rows.
+ * @example <ResumeWordingEditor document={document} resume={resume} values={draft} onChange={change} navigate={navigate} />
+ */
 export function ResumeWordingEditor({
   document,
   resume,
   values,
   onChange,
   navigate,
+  focusRequest = null,
 }: {
   document: CareerDocument;
   resume: CareerResume;
   values: CareerResume["overrides"];
   onChange: (value: CareerResume["overrides"]) => void;
   navigate: (destination: string) => void;
+  focusRequest?: { fieldId: string } | null;
 }) {
-  const fields = useMemo(
-    () => resumeWordingFields(document, resume.language),
-    [document, resume.language],
+  const groups = useMemo(
+    () => resumeWordingGroups(document, resume),
+    [document, resume],
   );
-  const facts = useMemo(() => resumeFactFields(document), [document]);
+  const [showExcluded, setShowExcluded] = useState(false);
+  const [openEntries, setOpenEntries] = useState<Record<string, boolean>>({});
+  const [revealed, setRevealed] = useState<typeof focusRequest>(null);
+  // Reveal a transient issue target before the workspace focuses its row.
+  if (focusRequest !== revealed) {
+    setRevealed(focusRequest);
+    const id = focusRequest?.fieldId;
+    for (const group of id ? groups : []) {
+      const entry = group.entries.find((item) =>
+        item.rows.some((row) => row.id === id),
+      );
+      const target = (entry?.rows ?? group.rows).find((row) => row.id === id);
+      if (!target) continue;
+      if (entry)
+        setOpenEntries((current) => ({ ...current, [entry.id]: true }));
+      if (!group.included || !target.included || (entry && !entry.included))
+        setShowExcluded(true);
+      break;
+    }
+  }
+  const custom = (rows: ResumeWordingRow[]) =>
+    rows.filter((row) => Object.hasOwn(values, row.id)).length;
+  const visible = <T extends { included: boolean }>(items: T[]) =>
+    showExcluded ? items : items.filter((item) => item.included);
+  const groupRows = (group: (typeof groups)[number]) => [
+    ...group.rows,
+    ...group.entries.flatMap((entry) => entry.rows),
+  ];
+  const customCount = custom(groups.flatMap(groupRows));
   return (
     <div className="flex flex-col gap-4" lang={resume.language}>
       <p className="text-sm">
         Editing this resume only · {resume.name || "Untitled resume"} (
-        {resume.language}). Dates, URLs, credentials, and other facts stay
-        shared in Career details.
+        {resume.language}). Custom wording replaces career wording in this
+        resume only.
       </p>
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>Shared facts</CardTitle>
-          <CardDescription>
-            Dates, contact addresses, URLs, and credentials are read-only in
-            this resume.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Collapsible>
-            <CollapsibleTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={disclosureTriggerClassName}
-                />
-              }
-            >
-              <DisclosureChevron />
-              <DisclosureLabel className="flex flex-wrap items-center gap-x-1">
-                <span>Shared facts</span>
-                <SemanticBadge
-                  appearance={{
-                    label: "read only",
-                    icon: Eye,
-                    variant: "outline",
-                  }}
-                />
-              </DisclosureLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <DisclosureGuide>
-                <CareerReferenceList contextKey={`wording-facts:${resume.id}`}>
-                  {facts.map((fact) => (
-                    <CareerReferenceRow
-                      key={fact.id}
-                      {...fact}
-                      navigate={navigate}
-                    />
-                  ))}
-                </CareerReferenceList>
-              </DisclosureGuide>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardContent>
-      </Card>
-      {fields.map((field) => {
-        const custom = Object.hasOwn(values, field.id);
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <Field orientation="horizontal" className="w-auto">
+          <FieldLabel>
+            <Checkbox
+              checked={showExcluded}
+              onCheckedChange={(checked) => setShowExcluded(checked)}
+            />
+            Include excluded content
+          </FieldLabel>
+        </Field>
+        <span className="text-xs text-muted-foreground">
+          {customCount} custom in this resume
+        </span>
+      </div>
+      {visible(groups).map((group) => {
+        const groupCustom = custom(groupRows(group));
         return (
-          <Card
-            key={field.id}
-            id={`resume-wording-${resume.id}-${field.id}`}
-            tabIndex={-1}
-            size="sm"
-            role="group"
-            aria-label={field.label}
-          >
-            <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-              <CardTitle className="flex min-w-0 flex-1 basis-48 items-start gap-2">
-                <ResumeFieldIcon owner={field.owner} icon={field.icon} />
-                <span className="min-w-0 wrap-anywhere">{field.label}</span>
-              </CardTitle>
-              <WordingSourceBadge
-                source={custom ? "custom" : "inherited"}
-                className="ms-auto h-auto min-h-5 max-w-full whitespace-normal"
-              />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {custom ? (
-                field.rich ? (
-                  <CareerRichField
-                    language={resume.language}
-                    label={field.label}
-                    value={values[field.id]}
-                    onChange={(value) =>
-                      onChange({ ...values, [field.id]: value })
-                    }
-                  />
-                ) : (
-                  <CareerTextField
-                    label={field.label}
-                    value={wordingText(values[field.id])}
-                    onChange={(value) =>
-                      onChange({ ...values, [field.id]: value })
-                    }
-                  />
-                )
-              ) : (
-                <p className="text-sm wrap-anywhere whitespace-pre-wrap">
-                  {wordingText(field.shared) ||
-                    "Empty · no career wording in this language"}
-                </p>
-              )}
-              <Collapsible>
-                <CollapsibleTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={disclosureTriggerClassName}
-                    />
-                  }
-                >
-                  <DisclosureChevron />
-                  <DisclosureLabel className="flex flex-wrap items-center gap-x-1">
-                    <span>Career wording</span>
-                    <SemanticBadge
-                      appearance={{
-                        label: "read only",
-                        icon: Eye,
-                        variant: "outline",
-                      }}
-                    />
-                  </DisclosureLabel>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <DisclosureGuide>
-                    <CareerReferenceList
-                      contextKey={`wording-reference:${resume.id}:${field.id}`}
-                    >
-                      <CareerReferenceRow
-                        id={field.id}
-                        label={field.label}
-                        value={wordingText(field.shared)}
-                        owner={field.owner}
-                        icon={field.icon}
-                        destination={field.destination}
-                        navigate={navigate}
-                        showLabel={false}
-                      />
-                    </CareerReferenceList>
-                  </DisclosureGuide>
-                </CollapsibleContent>
-              </Collapsible>
-            </CardContent>
-            <CardFooter className="justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (custom) {
-                    const next = { ...values };
-                    delete next[field.id];
-                    onChange(next);
-                  } else
-                    onChange({
-                      ...values,
-                      [field.id]: structuredClone(field.shared),
-                    });
-                }}
+          <Card key={group.id} size="sm">
+            <CardHeader>
+              <CardTitle
+                size="section"
+                className="flex flex-wrap items-center gap-2 [&>svg]:size-5 [&>svg]:shrink-0"
               >
-                {!custom && (
-                  <Pencil aria-hidden="true" data-icon="inline-start" />
-                )}
-                {custom ? "Use career wording" : "Customize"}
-              </Button>
-            </CardFooter>
+                <ResumeFieldIcon owner={group.owner} icon={group.icon} />
+                <span className="min-w-0 wrap-anywhere">{group.label}</span>
+                {group.archived && <Badge variant="secondary">Archived</Badge>}
+              </CardTitle>
+              <CardDescription>
+                {!group.included && "Excluded · "}
+                {groupCustom
+                  ? `${groupCustom} custom for this resume`
+                  : "Uses career wording"}
+              </CardDescription>
+              <CardAction>
+                <Button
+                  variant="link"
+                  size="xs"
+                  aria-label={`Edit ${group.label} in Career details`}
+                  onClick={() => navigate(group.destination)}
+                >
+                  Edit in Career details
+                  <ArrowRight aria-hidden="true" data-icon="inline-end" />
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              <WordingList
+                contextKey={`wording:${resume.id}:${group.id}:${showExcluded}`}
+              >
+                {visible(group.rows).map((row) => (
+                  <WordingRow
+                    key={row.id}
+                    row={row}
+                    resumeId={resume.id}
+                    language={resume.language}
+                    values={values}
+                    onChange={onChange}
+                    surface="standard"
+                  />
+                ))}
+                {visible(group.entries).map((entry) => {
+                  const entryCustom = custom(entry.rows);
+                  const rows = visible(entry.rows);
+                  return (
+                    <AnimatedListItem
+                      key={entry.id}
+                      itemId={entry.id}
+                      data-list-id={entry.id}
+                      surface="standard"
+                      className="rounded-xl border p-3 text-card-foreground shadow-sm"
+                      onPointerEnter={finishEntrance}
+                      onFocusCapture={finishEntrance}
+                    >
+                      <Collapsible
+                        open={!!openEntries[entry.id]}
+                        onOpenChange={(open) =>
+                          setOpenEntries((current) => ({
+                            ...current,
+                            [entry.id]: open,
+                          }))
+                        }
+                      >
+                        <div className="flex min-w-0 items-center gap-1">
+                          <CollapsibleTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                  disclosureTriggerClassName,
+                                  "min-w-0 flex-1",
+                                )}
+                              />
+                            }
+                          >
+                            <DisclosureChevron />
+                            <DisclosureLabel className="flex min-w-0 flex-wrap items-center gap-x-2">
+                              <span className="wrap-anywhere">
+                                {entry.label}
+                              </span>
+                              {entry.archived && (
+                                <Badge variant="secondary">Archived</Badge>
+                              )}
+                              {(!entry.included || entryCustom > 0) && (
+                                <span className="text-xs font-normal text-muted-foreground">
+                                  {[
+                                    !entry.included && "Excluded",
+                                    entryCustom > 0 && `${entryCustom} custom`,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </span>
+                              )}
+                            </DisclosureLabel>
+                          </CollapsibleTrigger>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label={`Edit ${entry.label} in Career details`}
+                            title="Edit in Career details"
+                            onClick={() => navigate(entry.destination)}
+                          >
+                            <ArrowRight aria-hidden="true" />
+                          </Button>
+                        </div>
+                        <CollapsibleContent>
+                          <DisclosureGuide>
+                            {rows.length ? (
+                              <WordingList
+                                contextKey={`wording:${resume.id}:${entry.id}`}
+                              >
+                                {rows.map((row) => (
+                                  <WordingRow
+                                    key={row.id}
+                                    row={row}
+                                    resumeId={resume.id}
+                                    language={resume.language}
+                                    values={values}
+                                    onChange={onChange}
+                                    surface="nested"
+                                  />
+                                ))}
+                              </WordingList>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                No selected wording in this entry.
+                              </p>
+                            )}
+                          </DisclosureGuide>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </AnimatedListItem>
+                  );
+                })}
+              </WordingList>
+            </CardContent>
           </Card>
         );
       })}

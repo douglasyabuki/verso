@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { careerFieldLabel } from "@/lib/career/labels";
+import { sameLayout } from "@/lib/career/layout";
 import {
   applyScope,
   createCareerDocument,
@@ -10,15 +11,17 @@ import {
   readScope,
   validateDocument,
 } from "@/lib/career/model";
-import { renderCareerResume } from "@/lib/career/output";
+import { renderCareerOutput, renderCareerResume } from "@/lib/career/output";
 import {
   copyResume,
   createResume,
   effectiveResume,
+  profileContactLabels,
   resolveResumeWording,
   resumeComparisonRows,
   resumeFactFields,
   resumeWordingFields,
+  resumeWordingGroups,
 } from "@/lib/career/resumes";
 import { sameScope } from "@/stores/career/persistence";
 
@@ -338,6 +341,140 @@ describe("independent resumes", () => {
     );
     expect(source).not.toContain("English summary");
     expect(source).toContain("Ana English");
+  });
+
+  it("combines city and country into one location in selection order", () => {
+    const { document, resume } = fixture();
+    const field = (key: string) =>
+      document.profile.fields.find((item) => item.key === key)!;
+    field("city").wording["en-US"] = "São Paulo";
+    field("country").wording["en-US"] = "Brazil";
+    resume.profileSelection = [
+      field("country").id,
+      field("email").id,
+      field("city").id,
+    ];
+    const separate = renderCareerResume(document, resume.id, 1);
+    expect(separate.match(/faMapMarker\*/g)).toHaveLength(2);
+    expect(profileContactLabels(document, resume)).toEqual([
+      "Brazil",
+      "ana@example.com",
+      "São Paulo",
+    ]);
+
+    resume.layout.contactLocation = "combined";
+    const combined = renderCareerResume(document, resume.id, 1);
+    expect(combined.match(/faMapMarker\*/g)).toHaveLength(1);
+    expect(combined).toContain("Brazil, São Paulo");
+    expect(combined.indexOf("Brazil")).toBeLessThan(
+      combined.indexOf("ana@example.com"),
+    );
+    expect(profileContactLabels(document, resume)).toEqual([
+      "Brazil, São Paulo",
+      "ana@example.com",
+    ]);
+    expect(renderCareerOutput(document, resume.id, 1)?.fingerprint).not.toBe(
+      renderCareerOutput(
+        {
+          ...document,
+          resumes: [
+            {
+              ...resume,
+              layout: { ...resume.layout, contactLocation: "separate" },
+            },
+          ],
+        },
+        resume.id,
+        1,
+      )?.fingerprint,
+    );
+
+    resume.profileSelection = [field("city").id, field("country").id];
+    expect(profileContactLabels(document, resume)).toEqual([
+      "São Paulo, Brazil",
+    ]);
+    field("country").wording["en-US"] = "";
+    expect(profileContactLabels(document, resume)).toEqual(["São Paulo"]);
+    resume.profileSelection = [field("country").id];
+    expect(profileContactLabels(document, resume)).toEqual([]);
+  });
+
+  it("treats a missing location grouping as separate items", () => {
+    const { document, resume } = fixture();
+    delete resume.layout.contactLocation;
+    const city = document.profile.fields.find((item) => item.key === "city")!;
+    const country = document.profile.fields.find(
+      (item) => item.key === "country",
+    )!;
+    city.wording["en-US"] = "Lisbon";
+    country.wording["en-US"] = "Portugal";
+    resume.profileSelection = [city.id, country.id];
+    expect(profileContactLabels(document, resume)).toEqual([
+      "Lisbon",
+      "Portugal",
+    ]);
+    expect(
+      sameLayout(resume.layout, {
+        ...resume.layout,
+        contactLocation: "separate",
+      }),
+    ).toBe(true);
+    expect(
+      sameLayout(resume.layout, {
+        ...resume.layout,
+        contactLocation: "combined",
+      }),
+    ).toBe(false);
+  });
+
+  it("groups wording by career owner with selected content first", () => {
+    const { document, resume, entry } = fixture();
+    const excluded = createEntry("experience");
+    excluded.name = "Earlier role";
+    document.sections[0].entries.unshift(excluded);
+    entry.achievements.push({
+      id: "unselected",
+      archived: true,
+      wording: { "en-US": "Unselected" },
+    });
+    const groups = resumeWordingGroups(document, resume);
+    expect(groups.slice(0, 3).map((group) => group.label)).toEqual([
+      "Profile",
+      "Summary",
+      document.sections[0].name || document.sections[0].kind,
+    ]);
+    const [profile, summary, experience] = groups;
+    expect(profile.rows[0].shortLabel).toBe("Full name");
+    expect(profile.rows[0].included).toBe(true);
+    expect(
+      profile.rows.find((row) => row.shortLabel === "City")?.included,
+    ).toBe(false);
+    expect(summary.included).toBe(false);
+    expect(experience.included).toBe(true);
+    expect(experience.destination).toBe(`list/${document.sections[0].id}`);
+    expect(experience.rows.map((row) => row.shortLabel)).toEqual(["Heading"]);
+    expect(
+      experience.entries.map((item) => [item.label, item.included]),
+    ).toEqual([
+      ["Engineering", true],
+      ["Earlier role", false],
+    ]);
+    const rows = experience.entries[0].rows;
+    expect(rows[0]).toMatchObject({
+      id: entry.fields[0].id,
+      included: true,
+      label: `${experience.label} · Engineering · ${careerFieldLabel(entry.fields[0].key)}`,
+    });
+    expect(
+      rows
+        .filter((row) => row.shortLabel.startsWith("Achievement"))
+        .map((row) => [row.id, row.included, row.archived]),
+    ).toEqual([
+      ["achievement", true, false],
+      ["unselected", false, true],
+    ]);
+    expect(experience.entries[0].destination).toBe(`entry/${entry.id}`);
+    expect(groups.slice(3).every((group) => !group.included)).toBe(true);
   });
 
   it("keeps older schema-2 defaults and selection requests unchanged", () => {

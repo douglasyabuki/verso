@@ -71,6 +71,7 @@ const choices: Record<string, readonly string[]> = {
   contactIcons: ["on", "off"],
   contactRows: ["auto", "1", "2", "3", "4", "custom"],
   contactSeparator: ["space", "dot", "bar"],
+  contactLocation: ["separate", "combined"],
   sectionWeight: ["regular", "bold", "black"],
   sectionCasing: ["original", "uppercase"],
   sectionDivider: ["on", "off"],
@@ -130,6 +131,7 @@ const groups = [
       "contactRowSizes",
       "contactRowGap",
       "contactSeparator",
+      "contactLocation",
     ],
   },
   {
@@ -178,6 +180,7 @@ const extraLabels: Record<string, string> = {
   contactRowSizes: "Custom row sizes",
   contactRowGap: "Between contact rows (pt)",
   contactSeparator: "Contact separator",
+  contactLocation: "City & country",
 };
 const friendly: Record<string, string> = {
   a4: "A4",
@@ -195,6 +198,8 @@ const friendly: Record<string, string> = {
   "page-x": "Page X",
   "page-x-of-y": "Page X of Y",
   "hollow-circle": "Hollow circle",
+  separate: "Separate",
+  combined: "Combined",
 };
 
 /** Render draft appearance with group resets; only the caller can commit or compile it.
@@ -224,16 +229,24 @@ export function LayoutFields({
   });
   const [hovered, setHovered] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
-  const data = (values && typeof values === "object" ? values : {}) as Record<
+  const raw = (values && typeof values === "object" ? values : {}) as Record<
     string,
     unknown
   >;
+  const data: Record<string, unknown> = {
+    ...raw,
+    contactLocation: raw.contactLocation ?? "separate",
+  };
   const parsed = resumeLayoutSchema.safeParse(values);
   const issues = parsed.success ? [] : parsed.error.issues;
   const copiedDefaults = layoutSchema.safeParse(data.defaults);
-  const baseline = (resumeLayout && copiedDefaults.success
+  const copiedBaseline = (resumeLayout && copiedDefaults.success
     ? copiedDefaults.data
     : defaults) as unknown as Record<string, unknown>;
+  const baseline: Record<string, unknown> = {
+    ...copiedBaseline,
+    contactLocation: copiedBaseline.contactLocation ?? "separate",
+  };
   const change = (key: string, value: unknown) =>
     onChange({ ...data, [key]: value });
   const guide = layoutSchema.safeParse({
@@ -471,6 +484,12 @@ export function LayoutFields({
               <> {templateDimensionExplanation(key)}</>
             )}
           </FieldDescription>
+          {key === "contactLocation" && (
+            <FieldDescription>
+              Combined prints city and country as one location item, in their
+              Content &amp; order sequence.
+            </FieldDescription>
+          )}
           {key === "contactRowSizes" && (
             <FieldDescription>
               Items in each row, e.g. 3, 2. Extra contacts wrap in a final row;
@@ -703,7 +722,9 @@ export function StyleSample({ values }: { values: unknown }) {
             {contactRows(
               [
                 "alex@example.com",
-                "Example City",
+                ...(value.contactLocation === "combined"
+                  ? ["Example City, Country"]
+                  : ["Example City", "Country"]),
                 "example.com",
                 "+1 555 0100",
               ],

@@ -238,9 +238,17 @@ describe("resume editing and transactional lifecycle", () => {
     expect(controller.isDirty()).toBe(true);
   });
 
-  it("shows shared facts read-only in Wording and navigates to their career owner", async () => {
+  it("groups Wording by career section and navigates to the owning Career details", async () => {
     const { document, resume, entry } = fixture();
-    entry.fields.find((field) => field.key === "start")!.fact = "2024-01";
+    resume.selection = [
+      {
+        sectionId: document.sections[0].id,
+        entryIds: [entry.id],
+        fieldIds: [entry.fields[0].id],
+        achievementIds: [],
+        linkIds: [],
+      },
+    ];
     const navigate = vi.fn();
     const change = vi.fn();
     await render(
@@ -252,22 +260,78 @@ describe("resume editing and transactional lifecycle", () => {
         navigate={navigate}
       />,
     );
-    await page
-      .getByRole("button", { name: "Shared facts read only", exact: true })
-      .click();
-    await expect
-      .element(page.getByText("2024-01", { exact: true }))
-      .toBeVisible();
-    expect(page.getByRole("textbox").elements()).toHaveLength(0);
+    expect(page.getByText("Shared facts").elements()).toHaveLength(0);
+    expect(page.getByText("Summary", { exact: true }).elements()).toHaveLength(
+      0,
+    );
     await page
       .getByRole("button", {
-        name: "Open Career details · Experience · Engineer · Start date",
+        name: "Edit Experience in Career details",
         exact: true,
       })
       .click();
-    expect(navigate).toHaveBeenCalledWith(`entry/${entry.id}`);
+    expect(navigate).toHaveBeenLastCalledWith(
+      `list/${document.sections[0].id}`,
+    );
+    await page
+      .getByRole("button", {
+        name: "Edit Engineer in Career details",
+        exact: true,
+      })
+      .click();
+    expect(navigate).toHaveBeenLastCalledWith(`entry/${entry.id}`);
+    const title = page.getByRole("group", {
+      name: "Experience · Engineer · Title",
+      exact: true,
+    });
+    expect(title.elements()).toHaveLength(0);
+    await page.getByRole("button", { name: /^Engineer/ }).click();
+    await expect.element(title).toBeVisible();
+    await expect
+      .element(title.getByText("Engineer", { exact: true }))
+      .toBeVisible();
+    expect(page.getByRole("textbox").elements()).toHaveLength(0);
+    await page
+      .getByRole("checkbox", { name: "Include excluded content", exact: true })
+      .click();
+    await expect
+      .element(page.getByText("Summary", { exact: true }).first())
+      .toBeVisible();
     expect(change).not.toHaveBeenCalled();
   });
+
+  it("reveals an issue target inside a collapsed or excluded entry", async () => {
+    const { document, resume, entry } = fixture();
+    entry.achievements = [
+      { id: "shipped", archived: false, wording: { "en-US": "" } },
+    ];
+    const props = {
+      document,
+      resume,
+      values: {},
+      onChange: vi.fn(),
+      navigate: vi.fn(),
+    };
+    const view = await render(<ResumeWordingEditor {...props} />);
+    const achievement = page.getByRole("group", {
+      name: "Experience · Engineer · Achievement 1",
+      exact: true,
+    });
+    expect(achievement.elements()).toHaveLength(0);
+    await view.rerender(
+      <ResumeWordingEditor {...props} focusRequest={{ fieldId: "shipped" }} />,
+    );
+    await expect.element(achievement).toBeVisible();
+    await expect
+      .element(
+        page.getByRole("checkbox", {
+          name: "Include excluded content",
+          exact: true,
+        }),
+      )
+      .toBeChecked();
+  });
+
   it("undoes and redoes a Content Save after schema normalization without a false conflict", async () => {
     const { document, resume, entry } = fixture();
     const controller = await owner(document);
@@ -918,7 +982,7 @@ it("allocates untransformed sidebar heights without unnecessary scrollbars or wr
   await expect.poll(overflowing).toBe(0);
 });
 
-it("keeps distinct custom-section icons in overview, Content, Wording, references, and comparison", async () => {
+it("keeps distinct custom-section icons in overview, Content, Wording, and comparison", async () => {
   const { document, resume } = fixture();
   document.sections.push(
     {
@@ -968,6 +1032,10 @@ it("keeps distinct custom-section icons in overview, Content, Wording, reference
       </section>
     </>,
   );
+  await page
+    .getByRole("region", { name: "Wording icons" })
+    .getByRole("checkbox", { name: "Include excluded content", exact: true })
+    .click();
   for (const region of [
     "Career icon overview",
     "Content icons",
@@ -978,15 +1046,4 @@ it("keeps distinct custom-section icons in overview, Content, Wording, reference
     expect(surface.querySelector("svg.lucide-heart-handshake")).not.toBeNull();
     expect(surface.querySelector("svg.lucide-flask-conical")).not.toBeNull();
   }
-  await page
-    .getByRole("region", { name: "Wording icons" })
-    .getByRole("button", { name: "Shared facts read only", exact: true })
-    .click();
-  const facts = page
-    .getByRole("region", { name: "Wording icons" })
-    .element()
-    .querySelector('[data-slot="collapsible-content"]');
-  expect(facts).not.toBeNull();
-  expect(facts!.querySelector("svg.lucide-heart-handshake")).not.toBeNull();
-  expect(facts!.querySelector("svg.lucide-flask-conical")).not.toBeNull();
 });

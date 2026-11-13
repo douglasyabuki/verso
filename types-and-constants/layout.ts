@@ -10,6 +10,7 @@ export const appLayoutDefaults = {
   contactRowSizes: [],
   contactRowGap: 0,
   contactSeparator: "space",
+  contactLocation: "separate",
   paper: pageSize,
   font: "inter",
   fontSize: 10,

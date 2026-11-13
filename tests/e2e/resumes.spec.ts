@@ -197,6 +197,10 @@ test("creates, tailors, duplicates, copies languages, compares and deletes indep
     .getByRole("main")
     .getByRole("tab", { name: "Wording", exact: true })
     .click();
+  await page
+    .getByRole("region", { name: "Editing form" })
+    .getByRole("button", { name: /^Product engineering/ })
+    .click();
   const titleCard = page.getByRole("group", {
     name: "Experience · Product engineering · Title",
     exact: true,
@@ -288,6 +292,10 @@ test("creates, tailors, duplicates, copies languages, compares and deletes indep
   await page
     .getByRole("main")
     .getByRole("tab", { name: "Wording", exact: true })
+    .click();
+  await page
+    .getByRole("region", { name: "Editing form" })
+    .getByRole("button", { name: /^Product engineering/ })
     .click();
   await expect(page.getByText("Engenheira", { exact: true })).toBeVisible();
   await expect(

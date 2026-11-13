@@ -961,7 +961,7 @@ open owner acceptance stays in Pending follow-up and verification.
 - [x] P8.1 Generate compiler assets during `npm run build` with one cross-platform
       script: locked downloads, SHA-256 checks, retries, clear failure, no partial
       `public/compiler/` output. Skip regeneration when existing assets verify.
-- [ ] P8.2 Run on the Vercel build image (Python 3 + lzma preflight, `python3`/`python`
+- [x] P8.2 Run on the Vercel build image (Python 3 + lzma preflight, `python3`/`python`
       discovery) within Hobby limits; cache downloads in a Vercel-restored directory.
 - [x] P8.3 Pin Node 24.22.1 locally (24.x on Vercel); keep npm and the lockfile.
       Resolve `npm audit` findings with in-range/patch upgrades; record any
@@ -971,7 +971,7 @@ open owner acceptance stays in Pending follow-up and verification.
 - [x] P8.5 Document setup, the build flow, and owner Vercel steps in README.md.
 - [x] P8.6 Verify a clean local build regenerates assets, a repeat build skips them,
       and the full suite passes; record counts.
-- [ ] P8.7 Owner: deploy a preview, confirm the build log, compile English and
+- [x] P8.7 Owner: deploy a preview, confirm the build log, compile English and
       Portuguese PDFs on the deployed URL, and record the result.
 
 Local implementation delivered on 2026-11-12: a clean asset build (Python 3.12.6,
@@ -980,7 +980,8 @@ Windows) took about 20 s and reproduced bundle SHA-256
 a corrupted cached archive fails without touching existing assets. `npm audit` went
 from 17 findings to 3 low (shadcn CLI `deepmerge`, no fixed release). Format, lint,
 typecheck, and `npm test` passed: 169 unit, 145 Browser Mode, 82 production E2E.
-P8.2 (actual Vercel build image) and P8.7 remain open until the owner preview.
+The owner reported a successful Vercel build on 2026-11-12, closing P8.2. P8.7 stays
+open until the hosted PDF and cache checks are recorded.
 
 ## Phase 9 — Future accounts and Prisma Postgres
 

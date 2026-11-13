@@ -141,6 +141,38 @@ it("resets only one group to copied preset defaults, including retained hidden f
     .toBeDisabled();
 });
 
+it("edits city and country grouping as a draft and resets omitted values to separate", async () => {
+  const { resume } = fixture();
+  const initial = structuredClone(resume.layout);
+  delete initial.contactLocation;
+  delete initial.defaults!.contactLocation;
+  await render(<AppearanceForm initial={initial} />);
+  await page
+    .getByRole("button", { name: "Header & contacts", exact: true })
+    .click();
+  const reset = page.getByRole("button", {
+    name: "Reset Header & contacts to layout defaults",
+    exact: true,
+  });
+  await expect.element(reset).toBeDisabled();
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: "City & country: Separate",
+        exact: true,
+      }),
+    )
+    .toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("button", { name: "City & country: Combined", exact: true })
+    .click();
+  const draft = page.getByRole("status", { name: "Draft appearance" });
+  await expect.element(draft).toHaveTextContent('"contactLocation":"combined"');
+  await reset.click();
+  await expect.element(draft).toHaveTextContent('"contactLocation":"separate"');
+  await expect.element(reset).toBeDisabled();
+});
+
 it("retains automatic dimension semantics on focus and reveals invalid disabled values", async () => {
   const { resume } = fixture();
   await render(<AppearanceForm initial={resume.layout} />);

@@ -13,6 +13,7 @@ const names: Record<string, string> = {
   contactRowSizes: "Custom row sizes",
   contactRowGap: "Contact row spacing",
   contactSeparator: "Contact separator",
+  contactLocation: "City & country",
   defaults: "Frozen layout defaults",
   fullName: "Full name",
   fact: "Shared value",

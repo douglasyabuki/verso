@@ -58,7 +58,10 @@ single-column template remains; free positioning and arbitrary fonts are unsuppo
 **Header & contacts** controls alignment, contact icons, separators, row spacing,
 automatic wrapping, one to four contacts per row, and custom row sizes such as
 `3, 2`. Remaining contacts occupy a final wrapping row; unused rows have no
-effect. Empty values are omitted. Contact inclusion and order stay in
+effect. Empty values are omitted. **City & country** prints them as separate
+items (default) or as one combined location item with a single icon, joined by a
+comma in their Content & order sequence and placed where the first of them is
+selected. Contact inclusion and order stay in
 **Content & order**, linked directly from Header. Full name remains required.
 Custom rows store positions, never contact identities.
 
@@ -289,12 +292,17 @@ Comparison shows two resumes' effective committed values in their own languages;
 drafts are excluded. Content/Wording deep links, reload, and guarded Back/Forward
 use opaque IDs. Earlier selection links open Content.
 
-Wording and comparison cards use the same section icons as the sidebar and
-readable English field labels. Wording source badges sit beside card titles;
-expanded read-only references use the shared nested list-card surface with compact
-Open Career details navigation links and the shared list entrance animation. Card icons align with the
-first title line, including wrapped titles. Comparison separates resume identity, inclusion/source metadata,
-and values.
+Wording shows one card per Career details owner: Profile, Summary, then sections
+in resume order. Each card title carries the sidebar section icon, Archived/Excluded
+badges, its custom count, and **Edit in Career details** (Profile, Summary, or the
+section's entry list). Entries are collapsed disclosures with their own guarded
+Career details link. Each wording row shows its source badge and a Customize /
+Use career wording action; customized rows show the career wording beneath the
+input. By default only content included in the resume is listed; **Include
+excluded content** reveals the rest. Shared facts (dates, URLs, contact addresses,
+credentials) are not listed; they are edited in Career details. Comparison uses the
+same section icons and separates resume identity, inclusion/source metadata, and
+values.
 
 The sidebar restores each resume's tree: its name opens and selects the read-only
 Overview child, above Content & order and Wording. Individual resume views use
@@ -388,9 +396,9 @@ preserved. Excluded sections, hidden entries, unselected children, unrelated
 resumes, archive status, and language deactivation alone do not block output.
 Language activation does not grant verified PDF support.
 
-**Edit wording** opens that resume's Wording view and focuses the affected card.
-Customize repairs only that resume; the existing Career wording link opens shared
-content. Issue navigation uses the ordinary dirty-form guard and reveals Editor on
+**Edit wording** opens that resume's Wording view, expands the affected entry (or
+excluded content) when needed, and focuses the affected row. Customize repairs only
+that resume; Edit in Career details opens shared content. Issue navigation uses the ordinary dirty-form guard and reveals Editor on
 narrow screens only after navigation succeeds. Cancel or failed Save retains the
 draft. Focus targets stay local; durable scope URLs support reload and Back/Forward.
 Saving within the current resume editor reopens the saved form without adding a

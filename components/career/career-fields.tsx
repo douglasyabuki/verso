@@ -52,7 +52,9 @@ export function CareerTextField({
   placeholder,
   type = "text",
   maxLength = 20_000,
+  hideLabel = false,
 }: {
+  hideLabel?: boolean;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -78,7 +80,7 @@ export function CareerTextField({
   };
   return (
     <Field data-invalid={!!error}>
-      <div className="flex items-center gap-2">
+      <div className={hideLabel ? "sr-only" : "flex items-center gap-2"}>
         <FieldLabel htmlFor={id}>{label}</FieldLabel>
         {hint && <InfoHint label={label}>{hint}</InfoHint>}
       </div>
@@ -102,8 +104,10 @@ export function CareerRichField({
   onChange,
   language,
   disabled = false,
+  hideLabel = false,
 }: {
   disabled?: boolean;
+  hideLabel?: boolean;
   label: string;
   value: RichText;
   onChange: (value: RichText) => void;
@@ -112,7 +116,11 @@ export function CareerRichField({
   const id = useId();
   return (
     <Field>
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div
+        className={
+          hideLabel ? "sr-only" : "flex flex-wrap items-center gap-1.5"
+        }
+      >
         <FieldLabel htmlFor={id}>{label}</FieldLabel>
         <span className="text-xs text-muted-foreground">
           {contentLanguageName(language)}

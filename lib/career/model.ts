@@ -161,6 +161,7 @@ export const layoutSchema = settingsSchema
     contactRowSizes: z.array(z.number().int().min(1).max(60)).max(60),
     contactRowGap: z.number().min(0).max(24),
     contactSeparator: z.enum(["space", "dot", "bar"]),
+    contactLocation: z.enum(["separate", "combined"]).optional(),
   });
 export const resumeLayoutSchema = layoutSchema.extend({
   defaults: layoutSchema.optional(),

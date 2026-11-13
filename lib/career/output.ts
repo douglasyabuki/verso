@@ -1,6 +1,10 @@
 import { contactRows, templateSettings } from "@/lib/career/layout";
 import { assessResumeOutput } from "@/lib/career/readiness";
-import { effectiveResume, resolveResumeWording } from "@/lib/career/resumes";
+import {
+  effectiveResume,
+  profileContacts,
+  resolveResumeWording,
+} from "@/lib/career/resumes";
 import {
   renderWording,
   type RichText,
@@ -36,32 +40,22 @@ export function renderCareerResume(
   const capability = outputCapabilities[resume.language];
   const wording = (id: string, values: Record<string, RichText>) =>
     resolveResumeWording(resume, id, values);
-  const fields = document.profile.fields;
-  const nameField = fields.find((field) => field.key === "fullName")!;
+  const nameField = document.profile.fields.find(
+    (field) => field.key === "fullName",
+  )!;
   const name = wordingText(wording(nameField.id, nameField.wording));
-  const contacts = resume
-    .profileSelection!.map((id) => {
-      const field = fields.find((item) => item.id === id);
-      if (field) {
-        const value =
-          field.type === "text"
-            ? wordingText(wording(field.id, field.wording))
-            : field.fact;
-        if (!value.trim()) return "";
-        const icon =
-          field.key === "email"
-            ? "Envelope"
-            : field.key === "phone"
-              ? "Phone"
-              : "MapMarker*";
-        return `${resume.layout.contactIcons === "on" ? `{\\color{icnclr}\\fa${icon}}\\enspace ` : ""}${escapeLatex(value)}`;
-      }
-      const link = document.profile.links.find((item) => item.id === id);
-      return link?.url
-        ? `${resume.layout.contactIcons === "on" ? "{\\color{icnclr}\\faLink}\\enspace " : ""}\\href{${escapeLatexUrl(link.url)}}{${escapeLatex(wordingText(wording(link.id, link.label)) || link.url)}}`
-        : "";
-    })
-    .filter(Boolean);
+  const icons = resume.layout.contactIcons === "on";
+  const contacts = profileContacts(document, resume).map((item) => {
+    if (item.kind === "link")
+      return `${icons ? "{\\color{icnclr}\\faLink}\\enspace " : ""}\\href{${escapeLatexUrl(item.url)}}{${escapeLatex(item.text || item.url)}}`;
+    const icon =
+      item.kind === "email"
+        ? "Envelope"
+        : item.kind === "phone"
+          ? "Phone"
+          : "MapMarker*";
+    return `${icons ? `{\\color{icnclr}\\fa${icon}}\\enspace ` : ""}${escapeLatex(item.text)}`;
+  });
   const body: string[] = [];
   const summary = wording(document.summary.id, document.summary.wording);
   if (resume.summaryIncluded && wordingText(summary).trim())

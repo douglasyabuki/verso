@@ -2386,6 +2386,8 @@ export function CareerWorkspace({
                               contacts={profileContactLabels(
                                 documentValue,
                                 activeResume,
+                                resumeLayoutSchema.safeParse(state.draft.values)
+                                  .data?.contactLocation,
                               )}
                               editContacts={() =>
                                 navigate(`resume-content/${activeResume.id}`)
@@ -2405,6 +2407,11 @@ export function CareerWorkspace({
                             }
                             onChange={(values) => controller.change(values)}
                             navigate={navigate}
+                            focusRequest={
+                              issueFocus?.resumeId === activeResume.id
+                                ? issueFocus
+                                : null
+                            }
                           />
                         ) : (
                           <DraftEditor

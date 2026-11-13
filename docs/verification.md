@@ -623,7 +623,7 @@ acceptance. Automated/local evidence does not prove the hosted deployment.
 - [x] A clean `npm run build` regenerates `public/compiler/` with the recorded bundle
       SHA-256; a repeat build reports "Compiler assets verified; skipping preparation."
 - [x] A corrupted cached archive fails the build and leaves existing assets unchanged.
-- [ ] Owner: a Vercel preview build log shows the Python version, downloads (or cache
+- [x] Owner: a Vercel preview build log shows the Python version, downloads (or cache
       reuse), the bundle SHA-256, and a successful `next build`.
 - [ ] Owner: on the preview URL, English and Portuguese PDFs compile; `/compiler/*.wasm`
       returns 200 with `application/wasm`; `/compiler/SOURCE.txt` is served.

@@ -66,6 +66,19 @@ export function layoutAppearance(layout: CareerResume["layout"]) {
   return layoutSchema.parse(appearance);
 }
 
+/** Resolve optional appearance values to their prior behavior without storing them.
+ * @param layout Validated flat appearance.
+ * @returns Appearance with explicit optional values, so comparisons ignore omission.
+ * @example withResolvedOptions(preset.layout).contactLocation
+ */
+function withResolvedOptions<T extends { contactLocation?: string }>({
+  contactLocation,
+  ...layout
+}: T) {
+  // Re-append so key order is stable whether the value was stored or omitted.
+  return { ...layout, contactLocation: contactLocation ?? "separate" };
+}
+
 /** Copy appearance as both the current layout and its frozen reset baseline.
  * @param layout Appearance supplied by a preset, starter, or workspace.
  * @returns Independent values and defaults with no live library reference.
@@ -100,12 +113,12 @@ export function sameLayout(left: unknown, right: unknown): boolean {
   if (!a.success || !b.success) return false;
   return (
     JSON.stringify({
-      ...layoutAppearance(a.data),
-      defaults: layoutDefaults(a.data),
+      ...withResolvedOptions(layoutAppearance(a.data)),
+      defaults: withResolvedOptions(layoutDefaults(a.data)),
     }) ===
     JSON.stringify({
-      ...layoutAppearance(b.data),
-      defaults: layoutDefaults(b.data),
+      ...withResolvedOptions(layoutAppearance(b.data)),
+      defaults: withResolvedOptions(layoutDefaults(b.data)),
     })
   );
 }
@@ -127,6 +140,9 @@ export function sameAppearance(left: unknown, right: unknown): boolean {
   const a = appearance(left);
   const b = appearance(right);
   return (
-    a.success && b.success && JSON.stringify(a.data) === JSON.stringify(b.data)
+    a.success &&
+    b.success &&
+    JSON.stringify(withResolvedOptions(a.data)) ===
+      JSON.stringify(withResolvedOptions(b.data))
   );
 }
