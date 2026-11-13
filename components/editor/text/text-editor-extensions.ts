@@ -11,7 +11,7 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 
 import { editorContentToSpans } from "@/components/editor/text/text-editor-model";
-import { urlError } from "@/lib/review/validation";
+import { urlError } from "@/lib/url-validation";
 
 export const textAction = "verso.textAction";
 export const textBoundary = "verso.textBoundary";
@@ -21,7 +21,10 @@ export const textBoundary = "verso.textBoundary";
  * @returns Per-editor extensions; rejected transactions never reach history plugin state.
  * @example createTextEditorExtensions(() => announce("Formatting limit reached"));
  */
-export function createTextEditorExtensions(onRejected: () => void) {
+export function createTextEditorExtensions(
+  onRejected: () => void,
+  maxCharacters = 2_000_000,
+) {
   const boundaryKey = new PluginKey<boolean>("versoTextBoundary");
   const guard = Extension.create({
     name: "versoTextGuard",
@@ -47,6 +50,8 @@ export function createTextEditorExtensions(onRejected: () => void) {
             const spans = editorContentToSpans(transaction.doc);
             if (
               spans.length > 100 ||
+              spans.reduce((length, span) => length + span.text.length, 0) >
+                maxCharacters ||
               spans.some((span) => span.href.length > 2_000)
             ) {
               onRejected();

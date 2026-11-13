@@ -19,18 +19,16 @@ import {
   useState,
 } from "react";
 
-import { OrderButtons } from "@/components/editor/fields";
+import { OrderButtons } from "@/components/editor/order-buttons";
 import { AnimatedList, AnimatedListItem } from "@/components/ui/animated-list";
 import { Button } from "@/components/ui/button";
-import { WorkspaceContext } from "@/stores/workspace/provider";
-import type { ResumeDocument } from "@/types-and-constants/resume";
 
 type SortItem = { id: string; label: string };
 
 type SortContextValue = {
   scope: string;
   items: SortItem[];
-  onReorder: (sourceId: string, targetId: string) => void;
+  onReorder: (sourceId: string, targetId: string) => boolean | void;
   announce: (message: string) => void;
 };
 
@@ -61,7 +59,7 @@ function CancelStaleDrag({
   revision,
   contextKey,
 }: {
-  revision: ResumeDocument;
+  revision: object;
   contextKey: string;
 }) {
   const manager = useDragDropManager();
@@ -91,23 +89,26 @@ export function SortableList({
   contextKey = "",
   selectedId,
   onReorder,
+  onBeforeReorder,
   children,
 }: {
   scope: string;
   items: SortItem[];
-  revision: ResumeDocument;
+  revision: object;
   contextKey?: string;
   selectedId?: string | null;
   onReorder: (sourceId: string, targetId: string) => void;
+  onBeforeReorder?: () => boolean;
   children: ReactNode;
 }) {
-  const controller = useContext(WorkspaceContext);
+  const latest = useRef(revision);
+  useEffect(() => {
+    latest.current = revision;
+  }, [revision]);
   const [announcement, announce] = useState("");
   const [dragging, setDragging] = useState(false);
   const mounted = useRef(false);
-  const started = useRef<{ revision: ResumeDocument; key: string } | null>(
-    null,
-  );
+  const started = useRef<{ revision: object; key: string } | null>(null);
   const key = JSON.stringify([scope, contextKey, items.map((item) => item.id)]);
   useEffect(() => {
     mounted.current = true;
@@ -115,8 +116,15 @@ export function SortableList({
       mounted.current = false;
     };
   }, []);
+  const reorder = (source: string, target: string) => {
+    if (onBeforeReorder?.() === false) return false;
+    onReorder(source, target);
+    return true;
+  };
   return (
-    <SortContext.Provider value={{ scope, items, onReorder, announce }}>
+    <SortContext.Provider
+      value={{ scope, items, onReorder: reorder, announce }}
+    >
       <DragDropProvider
         plugins={(defaults) =>
           defaults.map((plugin) =>
@@ -129,7 +137,10 @@ export function SortableList({
         }
         onBeforeDragStart={(event) => {
           const element = event.operation.source?.handle;
-          if (element?.closest("fieldset:disabled, [inert]"))
+          if (
+            element?.closest("fieldset:disabled, [inert]") ||
+            onBeforeReorder?.() === false
+          )
             event.preventDefault();
         }}
         onDragStart={() => {
@@ -158,11 +169,8 @@ export function SortableList({
           if (!from || !to || from.id === to.id) return;
           // Let dnd-kit finish its operation before a document edit can remove nested sources.
           queueMicrotask(() => {
-            if (
-              mounted.current &&
-              controller?.getSnapshot().document === revision
-            )
-              onReorder(from.id, to.id);
+            if (mounted.current && latest.current === revision)
+              reorder(from.id, to.id);
           });
         }}
       >
@@ -255,6 +263,7 @@ function RegisteredRow({
   const handle = useRef<HTMLButtonElement | null>(null);
   const dragHandle = (
     <Button
+      data-sort-handle
       ref={(element) => {
         handle.current = element;
         handleRef(element);
@@ -276,7 +285,7 @@ function RegisteredRow({
       onMove={(offset) => {
         const neighbor = context.items[index + offset];
         if (!neighbor) return;
-        context.onReorder(id, neighbor.id);
+        if (context.onReorder(id, neighbor.id) === false) return;
         context.announce(
           `${label}, position ${index + offset + 1} of ${context.items.length}.`,
         );

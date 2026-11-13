@@ -1,5 +1,4 @@
-﻿import { Workspace } from "@/components/workspace/workspace";
-
+import { CareerWorkspace } from "@/components/career/career-workspace";
 export default function Home() {
-  return <Workspace />;
+  return <CareerWorkspace />;
 }

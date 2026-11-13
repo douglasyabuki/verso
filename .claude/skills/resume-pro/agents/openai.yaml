@@ -1,0 +1,5 @@
+interface:
+  display_name: "Resume Pro"
+  short_description: "Create and tailor truthful US English resumes"
+policy:
+  allow_implicit_invocation: false

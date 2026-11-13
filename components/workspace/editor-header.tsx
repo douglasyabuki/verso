@@ -4,7 +4,6 @@ import { Eraser, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useRef } from "react";
 
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
-import { CareerSectionIconPicker } from "@/components/content/career-section-icon-picker";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,7 +25,6 @@ export function EditorHeader() {
     view,
     summary,
     section,
-    update,
     disabled,
     variant,
     career,
@@ -44,16 +42,7 @@ export function EditorHeader() {
           ) : summary ? (
             <CareerSectionIcon kind="summary" />
           ) : section ? (
-            section.kind === "custom" ? (
-              <CareerSectionIconPicker
-                key={section.id}
-                section={section}
-                update={update}
-                disabled={disabled}
-              />
-            ) : (
-              <CareerSectionIcon kind={section.kind} icon={section.icon} />
-            )
+            <CareerSectionIcon kind={section.kind} icon={section.icon} />
           ) : navigation.destination.kind === "resume" ? (
             <ResumeIcon color={variant.color} />
           ) : null}
@@ -153,13 +142,13 @@ export function EditorHeader() {
                 </span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            {section && (
+            {section?.kind === "custom" && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     variant="destructive"
-                    disabled={disabled || section.kind !== "custom"}
+                    disabled={disabled}
                     onClick={() =>
                       careerActions.remove(
                         section.id,
@@ -170,11 +159,9 @@ export function EditorHeader() {
                     <Trash2 />
                     <span>
                       Delete section
-                      {(disabled || section.kind !== "custom") && (
+                      {disabled && (
                         <span className="block text-xs whitespace-normal text-muted-foreground">
-                          {disabled
-                            ? "Wait for the current action to finish."
-                            : "Built-in sections cannot be deleted."}
+                          Wait for the current action to finish.
                         </span>
                       )}
                     </span>

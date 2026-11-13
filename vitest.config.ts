@@ -8,6 +8,7 @@ process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.resolve(".cache/ms-playwright");
 
 export default defineConfig({
   plugins: [tailwindcss()],
+  optimizeDeps: { include: ["pdfjs-dist", "pdfjs-dist/web/pdf_viewer.mjs"] },
   resolve: { alias: { "@": path.resolve(".") } },
   esbuild: { jsx: "automatic" },
   test: {

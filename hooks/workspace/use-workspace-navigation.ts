@@ -16,7 +16,7 @@ import type {
 } from "@/types-and-constants/resume";
 import { defaultProfileSelection } from "@/types-and-constants/resume";
 import type { ReviewReturnContext } from "@/types-and-constants/review";
-import { defaultSectionIcons } from "@/types-and-constants/sections";
+import { defaultSectionIcons } from "@/types-and-constants/section-icons";
 
 type WorkspaceNavigationOptions = {
   document: ResumeDocument;

@@ -1,0 +1,2176 @@
+{
+  "format": "verso.workspace",
+  "schemaVersion": 2,
+  "workspaceId": "example-alex-morgan",
+  "exportedAt": "2026-11-05T12:00:00.000Z",
+  "document": {
+    "languages": [
+      {
+        "tag": "en-US",
+        "active": true
+      },
+      {
+        "tag": "pt-BR",
+        "active": true
+      }
+    ],
+    "profile": {
+      "id": "example-profile",
+      "fields": [
+        {
+          "id": "example-profile-fullName",
+          "key": "fullName",
+          "type": "text",
+          "fact": "",
+          "wording": {
+            "en-US": "Alex Morgan",
+            "pt-BR": "Alex Morgan"
+          }
+        },
+        {
+          "id": "example-profile-email",
+          "key": "email",
+          "type": "email",
+          "fact": "alex@example.com",
+          "wording": {}
+        },
+        {
+          "id": "example-profile-phone",
+          "key": "phone",
+          "type": "phone",
+          "fact": "+1 202-555-0156",
+          "wording": {}
+        },
+        {
+          "id": "example-profile-city",
+          "key": "city",
+          "type": "text",
+          "fact": "",
+          "wording": {
+            "en-US": "Curitiba",
+            "pt-BR": "Curitiba"
+          }
+        },
+        {
+          "id": "example-profile-country",
+          "key": "country",
+          "type": "text",
+          "fact": "",
+          "wording": {
+            "en-US": "Brazil",
+            "pt-BR": "Brasil"
+          }
+        }
+      ],
+      "links": [
+        {
+          "id": "example-site",
+          "archived": false,
+          "url": "https://example.com",
+          "label": {
+            "en-US": "alexmorgan.dev",
+            "pt-BR": "alexmorgan.dev"
+          }
+        },
+        {
+          "id": "example-github",
+          "archived": false,
+          "url": "https://github.com/alex-morgan-example",
+          "label": {
+            "en-US": "github.com/alex-morgan-example",
+            "pt-BR": "github.com/alex-morgan-example"
+          }
+        },
+        {
+          "id": "example-linkedin",
+          "archived": false,
+          "url": "https://www.linkedin.com/in/alex-morgan-example",
+          "label": {
+            "en-US": "in/alex-morgan-example",
+            "pt-BR": "in/alex-morgan-example"
+          }
+        }
+      ]
+    },
+    "summary": {
+      "id": "example-summary",
+      "wording": {
+        "en-US": [
+          {
+            "text": "Software engineer building thoughtful, accessible experiences for the web. I turn complex problems into clear, dependable products. ",
+            "emphasis": false,
+            "href": ""
+          },
+          {
+            "text": "Fictional demonstration portfolio.",
+            "emphasis": true,
+            "href": "https://example.com"
+          }
+        ],
+        "pt-BR": [
+          {
+            "text": "Engenheiro de software criando experiências acessíveis para a web. Transformo problemas complexos em produtos claros e confiáveis. ",
+            "emphasis": false,
+            "href": ""
+          },
+          {
+            "text": "Portfólio fictício de demonstração.",
+            "emphasis": true,
+            "href": "https://example.com"
+          }
+        ]
+      }
+    },
+    "sections": [
+      {
+        "id": "example-section-experience",
+        "kind": "experience",
+        "name": "Experience",
+        "heading": {
+          "en-US": "Experience",
+          "pt-BR": "Experiência"
+        },
+        "archived": false,
+        "entries": [
+          {
+            "id": "example-role",
+            "name": "Frontend Engineer",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-role-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Frontend Engineer",
+                  "pt-BR": "Engenheiro Frontend"
+                }
+              },
+              {
+                "id": "example-role-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Northstar Studio · Fictional company",
+                  "pt-BR": "Northstar Studio · Fictional company"
+                }
+              },
+              {
+                "id": "example-role-location",
+                "key": "location",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Curitiba, BR",
+                  "pt-BR": "Curitiba, BR"
+                }
+              },
+              {
+                "id": "example-role-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2023-03",
+                "wording": {}
+              },
+              {
+                "id": "example-role-end",
+                "key": "end",
+                "type": "date",
+                "fact": "",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-role-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Led an accessible component library used across three product teams.",
+                  "pt-BR": "Liderei uma biblioteca de componentes acessíveis utilizada por três equipes de produto."
+                }
+              },
+              {
+                "id": "example-role-bullet-1",
+                "archived": false,
+                "wording": {
+                  "en-US": "Reduced dashboard loading time by 35% through focused rendering improvements.",
+                  "pt-BR": "Reduzi o tempo de carregamento do painel em 35% com melhorias de renderização."
+                }
+              },
+              {
+                "id": "example-role-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "React · TypeScript · Design systems",
+                  "pt-BR": "React · TypeScript · Design systems"
+                }
+              }
+            ],
+            "links": []
+          },
+          {
+            "id": "example-role-product",
+            "name": "Software Engineer",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-role-product-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Software Engineer",
+                  "pt-BR": "Engenheiro de Software"
+                }
+              },
+              {
+                "id": "example-role-product-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Cedar Labs · Fictional company",
+                  "pt-BR": "Cedar Labs · Fictional company"
+                }
+              },
+              {
+                "id": "example-role-product-location",
+                "key": "location",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Curitiba, BR",
+                  "pt-BR": "Curitiba, BR"
+                }
+              },
+              {
+                "id": "example-role-product-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2022-01",
+                "wording": {}
+              },
+              {
+                "id": "example-role-product-end",
+                "key": "end",
+                "type": "date",
+                "fact": "2023-02",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-role-product-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Built reporting workflows that helped support teams resolve customer requests faster.",
+                  "pt-BR": "Desenvolvi fluxos de relatórios que ajudaram equipes de suporte a resolver solicitações de clientes mais rapidamente."
+                }
+              },
+              {
+                "id": "example-role-product-bullet-1",
+                "archived": false,
+                "wording": {
+                  "en-US": "Worked with designers to simplify onboarding and document reusable interface patterns.",
+                  "pt-BR": "Colaborei com designers para simplificar a integração de usuários e documentar padrões reutilizáveis de interface."
+                }
+              },
+              {
+                "id": "example-role-product-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "TypeScript · Node.js · PostgreSQL",
+                  "pt-BR": "TypeScript · Node.js · PostgreSQL"
+                }
+              }
+            ],
+            "links": []
+          },
+          {
+            "id": "example-role-intern",
+            "name": "Web Development Intern",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-role-intern-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Web Development Intern",
+                  "pt-BR": "Estagiário em Desenvolvimento Web"
+                }
+              },
+              {
+                "id": "example-role-intern-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Harbor Digital · Fictional company",
+                  "pt-BR": "Harbor Digital · Fictional company"
+                }
+              },
+              {
+                "id": "example-role-intern-location",
+                "key": "location",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Curitiba, BR",
+                  "pt-BR": "Curitiba, BR"
+                }
+              },
+              {
+                "id": "example-role-intern-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2020-08",
+                "wording": {}
+              },
+              {
+                "id": "example-role-intern-end",
+                "key": "end",
+                "type": "date",
+                "fact": "2021-12",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-role-intern-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Created responsive pages and improved keyboard navigation across the company website.",
+                  "pt-BR": "Criei páginas responsivas e melhorei a navegação por teclado no site da empresa."
+                }
+              },
+              {
+                "id": "example-role-intern-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "JavaScript · HTML · CSS · Git",
+                  "pt-BR": "JavaScript · HTML · CSS · Git"
+                }
+              }
+            ],
+            "links": []
+          }
+        ],
+        "icon": "briefcase-business"
+      },
+      {
+        "id": "example-section-projects",
+        "kind": "projects",
+        "name": "Projects",
+        "heading": {
+          "en-US": "Projects",
+          "pt-BR": "Projetos"
+        },
+        "archived": false,
+        "entries": [
+          {
+            "id": "example-project",
+            "name": "Field Notes",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-project-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Field Notes",
+                  "pt-BR": "Notas de Campo"
+                }
+              },
+              {
+                "id": "example-project-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "",
+                  "pt-BR": ""
+                }
+              },
+              {
+                "id": "example-project-url",
+                "key": "url",
+                "type": "url",
+                "fact": "https://example.com/project",
+                "wording": {}
+              },
+              {
+                "id": "example-project-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2024-01",
+                "wording": {}
+              },
+              {
+                "id": "example-project-end",
+                "key": "end",
+                "type": "date",
+                "fact": "2024-06",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-project-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "A small writing tool that makes organizing ideas feel effortless.",
+                  "pt-BR": "Uma ferramenta de escrita que facilita a organização de ideias."
+                }
+              },
+              {
+                "id": "example-project-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "Next.js · TypeScript",
+                  "pt-BR": "Next.js · TypeScript"
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "example-project-link",
+                "archived": false,
+                "url": "https://example.com/project",
+                "label": {
+                  "en-US": "example.com/project",
+                  "pt-BR": "example.com/project"
+                }
+              }
+            ]
+          },
+          {
+            "id": "example-project-transit",
+            "name": "Transit Companion",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-project-transit-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Transit Companion",
+                  "pt-BR": "Companheiro de Transporte"
+                }
+              },
+              {
+                "id": "example-project-transit-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Personal project · Fictional",
+                  "pt-BR": "Personal project · Fictional"
+                }
+              },
+              {
+                "id": "example-project-transit-url",
+                "key": "url",
+                "type": "url",
+                "fact": "",
+                "wording": {}
+              },
+              {
+                "id": "example-project-transit-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2023-07",
+                "wording": {}
+              },
+              {
+                "id": "example-project-transit-end",
+                "key": "end",
+                "type": "date",
+                "fact": "2023-11",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-project-transit-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Designed a responsive journey planner with saved routes and accessible service alerts.",
+                  "pt-BR": "Desenvolvi um planejador responsivo de viagens com rotas salvas e alertas de serviço acessíveis."
+                }
+              },
+              {
+                "id": "example-project-transit-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "React · TypeScript · CSS",
+                  "pt-BR": "React · TypeScript · CSS"
+                }
+              }
+            ],
+            "links": []
+          },
+          {
+            "id": "example-project-community",
+            "name": "Community Pantry",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-project-community-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Community Pantry",
+                  "pt-BR": "Despensa Comunitária"
+                }
+              },
+              {
+                "id": "example-project-community-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Community project · Fictional",
+                  "pt-BR": "Community project · Fictional"
+                }
+              },
+              {
+                "id": "example-project-community-url",
+                "key": "url",
+                "type": "url",
+                "fact": "",
+                "wording": {}
+              },
+              {
+                "id": "example-project-community-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2025-02",
+                "wording": {}
+              },
+              {
+                "id": "example-project-community-end",
+                "key": "end",
+                "type": "date",
+                "fact": "",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-project-community-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Built an inventory dashboard to help volunteers coordinate donations and collection schedules.",
+                  "pt-BR": "Desenvolvi um painel de estoque para ajudar voluntários a coordenar doações e horários de coleta."
+                }
+              },
+              {
+                "id": "example-project-community-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "Next.js · PostgreSQL · Node.js",
+                  "pt-BR": "Next.js · PostgreSQL · Node.js"
+                }
+              }
+            ],
+            "links": []
+          }
+        ],
+        "icon": "folder-kanban"
+      },
+      {
+        "id": "example-section-education",
+        "kind": "education",
+        "name": "Education",
+        "heading": {
+          "en-US": "Education",
+          "pt-BR": "Educação"
+        },
+        "archived": false,
+        "entries": [
+          {
+            "id": "example-education",
+            "name": "BSc · Software Engineering",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-education-degree",
+                "key": "degree",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "BSc · Software Engineering",
+                  "pt-BR": "Bacharelado · Engenharia de Software"
+                }
+              },
+              {
+                "id": "example-education-institution",
+                "key": "institution",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Example University",
+                  "pt-BR": "Example University"
+                }
+              },
+              {
+                "id": "example-education-location",
+                "key": "location",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Curitiba, BR",
+                  "pt-BR": "Curitiba, BR"
+                }
+              },
+              {
+                "id": "example-education-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2018",
+                "wording": {}
+              },
+              {
+                "id": "example-education-end",
+                "key": "end",
+                "type": "date",
+                "fact": "2022",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-education-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "Python · SQL",
+                  "pt-BR": "Python · SQL"
+                }
+              }
+            ],
+            "links": []
+          },
+          {
+            "id": "example-education-specialization",
+            "name": "Specialization · Human-Computer Interaction",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-education-specialization-degree",
+                "key": "degree",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Specialization · Human-Computer Interaction",
+                  "pt-BR": "Especialização · Interação Humano-Computador"
+                }
+              },
+              {
+                "id": "example-education-specialization-institution",
+                "key": "institution",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Example Institute of Technology",
+                  "pt-BR": "Example Institute of Technology"
+                }
+              },
+              {
+                "id": "example-education-specialization-location",
+                "key": "location",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Curitiba, BR",
+                  "pt-BR": "Curitiba, BR"
+                }
+              },
+              {
+                "id": "example-education-specialization-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2023",
+                "wording": {}
+              },
+              {
+                "id": "example-education-specialization-end",
+                "key": "end",
+                "type": "date",
+                "fact": "2024",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-education-specialization-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Studied usability research, inclusive design, and interface evaluation.",
+                  "pt-BR": "Estudei pesquisa de usabilidade, design inclusivo e avaliação de interfaces."
+                }
+              }
+            ],
+            "links": []
+          },
+          {
+            "id": "example-education-course",
+            "name": "Extension Course · Data Visualization",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-education-course-degree",
+                "key": "degree",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Extension Course · Data Visualization",
+                  "pt-BR": "Curso de Extensão · Visualização de Dados"
+                }
+              },
+              {
+                "id": "example-education-course-institution",
+                "key": "institution",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Example Open Learning",
+                  "pt-BR": "Example Open Learning"
+                }
+              },
+              {
+                "id": "example-education-course-location",
+                "key": "location",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Curitiba, BR",
+                  "pt-BR": "Curitiba, BR"
+                }
+              },
+              {
+                "id": "example-education-course-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2022-03",
+                "wording": {}
+              },
+              {
+                "id": "example-education-course-end",
+                "key": "end",
+                "type": "date",
+                "fact": "2022-07",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-education-course-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Created interactive reports using public datasets and clear visual storytelling.",
+                  "pt-BR": "Criei relatórios interativos com dados públicos e narrativas visuais claras."
+                }
+              },
+              {
+                "id": "example-education-course-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "Python · SQL",
+                  "pt-BR": "Python · SQL"
+                }
+              }
+            ],
+            "links": []
+          }
+        ],
+        "icon": "graduation-cap"
+      },
+      {
+        "id": "example-section-skills",
+        "kind": "skills",
+        "name": "Skills",
+        "heading": {
+          "en-US": "Skills",
+          "pt-BR": "Habilidades"
+        },
+        "archived": false,
+        "entries": [
+          {
+            "id": "example-skills",
+            "name": "Tools & technologies",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-skills-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Tools & technologies",
+                  "pt-BR": "Ferramentas e tecnologias"
+                }
+              },
+              {
+                "id": "example-skills-level",
+                "key": "level",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Practical experience",
+                  "pt-BR": "Experiência prática"
+                }
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-localized-skill",
+                "archived": false,
+                "wording": {
+                  "en-US": "Accessible interface design",
+                  "pt-BR": "Design de interfaces acessíveis"
+                }
+              },
+              {
+                "id": "example-skills-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "React · Next.js · TypeScript · CSS · Git · PostgreSQL",
+                  "pt-BR": "React · Next.js · TypeScript · CSS · Git · PostgreSQL"
+                }
+              }
+            ],
+            "links": []
+          },
+          {
+            "id": "example-skills-backend",
+            "name": "Backend & data",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-skills-backend-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Backend & data",
+                  "pt-BR": "Backend e dados"
+                }
+              },
+              {
+                "id": "example-skills-backend-level",
+                "key": "level",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Practical experience",
+                  "pt-BR": "Experiência prática"
+                }
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-skills-backend-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Data modeling and API integration",
+                  "pt-BR": "Modelagem de dados e integração de APIs"
+                }
+              },
+              {
+                "id": "example-skills-backend-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "Node.js · Python · SQL · REST · Docker",
+                  "pt-BR": "Node.js · Python · SQL · REST · Docker"
+                }
+              }
+            ],
+            "links": []
+          },
+          {
+            "id": "example-skills-collaboration",
+            "name": "Design & collaboration",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-skills-collaboration-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Design & collaboration",
+                  "pt-BR": "Design e colaboração"
+                }
+              },
+              {
+                "id": "example-skills-collaboration-level",
+                "key": "level",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Practical experience",
+                  "pt-BR": "Experiência prática"
+                }
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-skills-collaboration-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Usability research and prototyping",
+                  "pt-BR": "Pesquisa de usabilidade e prototipação"
+                }
+              },
+              {
+                "id": "example-skills-collaboration-bullet-1",
+                "archived": false,
+                "wording": {
+                  "en-US": "Technical writing and mentoring",
+                  "pt-BR": "Escrita técnica e mentoria"
+                }
+              },
+              {
+                "id": "example-skills-collaboration-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "Figma · Storybook",
+                  "pt-BR": "Figma · Storybook"
+                }
+              }
+            ],
+            "links": []
+          }
+        ],
+        "icon": "code-2"
+      },
+      {
+        "id": "example-section-certifications",
+        "kind": "certifications",
+        "name": "Certifications",
+        "heading": {
+          "en-US": "Certifications",
+          "pt-BR": "Certificações"
+        },
+        "archived": false,
+        "entries": [
+          {
+            "id": "example-certification",
+            "name": "Cloud Developer Certification",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-certification-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Cloud Developer Certification",
+                  "pt-BR": "Certificação em Desenvolvimento na Nuvem"
+                }
+              },
+              {
+                "id": "example-certification-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Example Cloud Academy",
+                  "pt-BR": "Example Cloud Academy"
+                }
+              },
+              {
+                "id": "example-certification-credential",
+                "key": "credential",
+                "type": "credential",
+                "fact": "DEMO-2024-001",
+                "wording": {}
+              },
+              {
+                "id": "example-certification-issued",
+                "key": "issued",
+                "type": "date",
+                "fact": "2024-12",
+                "wording": {}
+              },
+              {
+                "id": "example-certification-expires",
+                "key": "expires",
+                "type": "date",
+                "fact": "2027",
+                "wording": {}
+              },
+              {
+                "id": "example-certification-url",
+                "key": "url",
+                "type": "url",
+                "fact": "https://example.com/credential",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-certification-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Completed a practical architecture assessment.",
+                  "pt-BR": "Concluí uma avaliação prática de arquitetura."
+                }
+              },
+              {
+                "id": "example-certification-technologies",
+                "archived": false,
+                "wording": {
+                  "en-US": "Cloud platforms",
+                  "pt-BR": "Cloud platforms"
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "example-credential-link",
+                "archived": false,
+                "url": "https://example.com/credential",
+                "label": {
+                  "en-US": "Verify credential",
+                  "pt-BR": "Verify credential"
+                }
+              }
+            ]
+          },
+          {
+            "id": "example-certification-accessibility",
+            "name": "Web Accessibility Foundations",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-certification-accessibility-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Web Accessibility Foundations",
+                  "pt-BR": "Fundamentos de Acessibilidade Web"
+                }
+              },
+              {
+                "id": "example-certification-accessibility-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Example Accessibility Institute",
+                  "pt-BR": "Example Accessibility Institute"
+                }
+              },
+              {
+                "id": "example-certification-accessibility-credential",
+                "key": "credential",
+                "type": "credential",
+                "fact": "DEMO-A11Y-2025-002",
+                "wording": {}
+              },
+              {
+                "id": "example-certification-accessibility-issued",
+                "key": "issued",
+                "type": "date",
+                "fact": "2025-03",
+                "wording": {}
+              },
+              {
+                "id": "example-certification-accessibility-expires",
+                "key": "expires",
+                "type": "date",
+                "fact": "",
+                "wording": {}
+              },
+              {
+                "id": "example-certification-accessibility-url",
+                "key": "url",
+                "type": "url",
+                "fact": "",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-certification-accessibility-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Completed practical exercises in semantic markup, keyboard access, and assistive technology.",
+                  "pt-BR": "Concluí exercícios práticos de marcação semântica, acesso por teclado e tecnologia assistiva."
+                }
+              }
+            ],
+            "links": []
+          },
+          {
+            "id": "example-certification-data",
+            "name": "SQL & Data Analysis Certificate",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-certification-data-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "SQL & Data Analysis Certificate",
+                  "pt-BR": "Certificado em SQL e Análise de Dados"
+                }
+              },
+              {
+                "id": "example-certification-data-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Example Data Academy",
+                  "pt-BR": "Example Data Academy"
+                }
+              },
+              {
+                "id": "example-certification-data-credential",
+                "key": "credential",
+                "type": "credential",
+                "fact": "DEMO-DATA-2023-003",
+                "wording": {}
+              },
+              {
+                "id": "example-certification-data-issued",
+                "key": "issued",
+                "type": "date",
+                "fact": "2023-09",
+                "wording": {}
+              },
+              {
+                "id": "example-certification-data-expires",
+                "key": "expires",
+                "type": "date",
+                "fact": "2026-09",
+                "wording": {}
+              },
+              {
+                "id": "example-certification-data-url",
+                "key": "url",
+                "type": "url",
+                "fact": "",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-certification-data-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Completed a capstone project covering relational queries and reporting.",
+                  "pt-BR": "Concluí um projeto final de consultas relacionais e geração de relatórios."
+                }
+              }
+            ],
+            "links": []
+          }
+        ],
+        "icon": "award"
+      },
+      {
+        "id": "example-section-custom",
+        "kind": "custom",
+        "name": "Community",
+        "heading": {
+          "en-US": "Community",
+          "pt-BR": "Comunidade"
+        },
+        "archived": false,
+        "entries": [
+          {
+            "id": "example-mentoring",
+            "name": "Volunteer mentor",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-mentoring-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Volunteer mentor",
+                  "pt-BR": "Mentoria voluntária"
+                }
+              },
+              {
+                "id": "example-mentoring-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Example Community",
+                  "pt-BR": "Example Community"
+                }
+              },
+              {
+                "id": "example-mentoring-location",
+                "key": "location",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Curitiba, BR",
+                  "pt-BR": "Curitiba, BR"
+                }
+              },
+              {
+                "id": "example-mentoring-start",
+                "key": "start",
+                "type": "date",
+                "fact": "2022",
+                "wording": {}
+              },
+              {
+                "id": "example-mentoring-end",
+                "key": "end",
+                "type": "date",
+                "fact": "",
+                "wording": {}
+              },
+              {
+                "id": "example-mentoring-url",
+                "key": "url",
+                "type": "url",
+                "fact": "",
+                "wording": {}
+              }
+            ],
+            "achievements": [
+              {
+                "id": "example-mentoring-bullet-0",
+                "archived": false,
+                "wording": {
+                  "en-US": "Mentor students on accessible web projects.",
+                  "pt-BR": "Oriento estudantes em projetos web acessíveis."
+                }
+              }
+            ],
+            "links": []
+          }
+        ],
+        "icon": "heart-handshake"
+      }
+    ],
+    "resumes": [
+      {
+        "id": "example-resume-en-US",
+        "name": "Alex Morgan · English",
+        "language": "en-US",
+        "template": "yabuki-reference@1.0.3",
+        "selection": [
+          {
+            "sectionId": "example-section-experience",
+            "entryIds": [
+              "example-role",
+              "example-role-product",
+              "example-role-intern"
+            ],
+            "fieldIds": [
+              "example-role-title",
+              "example-role-organization",
+              "example-role-location",
+              "example-role-start",
+              "example-role-end",
+              "example-role-product-title",
+              "example-role-product-organization",
+              "example-role-product-location",
+              "example-role-product-start",
+              "example-role-product-end",
+              "example-role-intern-title",
+              "example-role-intern-organization",
+              "example-role-intern-location",
+              "example-role-intern-start",
+              "example-role-intern-end"
+            ],
+            "achievementIds": [
+              "example-role-bullet-0",
+              "example-role-bullet-1",
+              "example-role-technologies",
+              "example-role-product-bullet-0",
+              "example-role-product-bullet-1",
+              "example-role-product-technologies",
+              "example-role-intern-bullet-0",
+              "example-role-intern-technologies"
+            ],
+            "linkIds": []
+          },
+          {
+            "sectionId": "example-section-projects",
+            "entryIds": [
+              "example-project",
+              "example-project-transit",
+              "example-project-community"
+            ],
+            "fieldIds": [
+              "example-project-title",
+              "example-project-organization",
+              "example-project-url",
+              "example-project-start",
+              "example-project-end",
+              "example-project-transit-title",
+              "example-project-transit-organization",
+              "example-project-transit-url",
+              "example-project-transit-start",
+              "example-project-transit-end",
+              "example-project-community-title",
+              "example-project-community-organization",
+              "example-project-community-url",
+              "example-project-community-start",
+              "example-project-community-end"
+            ],
+            "achievementIds": [
+              "example-project-bullet-0",
+              "example-project-technologies",
+              "example-project-transit-bullet-0",
+              "example-project-transit-technologies",
+              "example-project-community-bullet-0",
+              "example-project-community-technologies"
+            ],
+            "linkIds": ["example-project-link"]
+          },
+          {
+            "sectionId": "example-section-education",
+            "entryIds": [
+              "example-education",
+              "example-education-specialization",
+              "example-education-course"
+            ],
+            "fieldIds": [
+              "example-education-degree",
+              "example-education-institution",
+              "example-education-location",
+              "example-education-start",
+              "example-education-end",
+              "example-education-specialization-degree",
+              "example-education-specialization-institution",
+              "example-education-specialization-location",
+              "example-education-specialization-start",
+              "example-education-specialization-end",
+              "example-education-course-degree",
+              "example-education-course-institution",
+              "example-education-course-location",
+              "example-education-course-start",
+              "example-education-course-end"
+            ],
+            "achievementIds": [
+              "example-education-technologies",
+              "example-education-specialization-bullet-0",
+              "example-education-course-bullet-0",
+              "example-education-course-technologies"
+            ],
+            "linkIds": []
+          },
+          {
+            "sectionId": "example-section-skills",
+            "entryIds": [
+              "example-skills",
+              "example-skills-backend",
+              "example-skills-collaboration"
+            ],
+            "fieldIds": [
+              "example-skills-title",
+              "example-skills-level",
+              "example-skills-backend-title",
+              "example-skills-backend-level",
+              "example-skills-collaboration-title",
+              "example-skills-collaboration-level"
+            ],
+            "achievementIds": [
+              "example-localized-skill",
+              "example-skills-technologies",
+              "example-skills-backend-bullet-0",
+              "example-skills-backend-technologies",
+              "example-skills-collaboration-bullet-0",
+              "example-skills-collaboration-bullet-1",
+              "example-skills-collaboration-technologies"
+            ],
+            "linkIds": []
+          },
+          {
+            "sectionId": "example-section-certifications",
+            "entryIds": [
+              "example-certification",
+              "example-certification-accessibility",
+              "example-certification-data"
+            ],
+            "fieldIds": [
+              "example-certification-title",
+              "example-certification-organization",
+              "example-certification-credential",
+              "example-certification-issued",
+              "example-certification-expires",
+              "example-certification-url",
+              "example-certification-accessibility-title",
+              "example-certification-accessibility-organization",
+              "example-certification-accessibility-credential",
+              "example-certification-accessibility-issued",
+              "example-certification-accessibility-expires",
+              "example-certification-accessibility-url",
+              "example-certification-data-title",
+              "example-certification-data-organization",
+              "example-certification-data-credential",
+              "example-certification-data-issued",
+              "example-certification-data-expires",
+              "example-certification-data-url"
+            ],
+            "achievementIds": [
+              "example-certification-bullet-0",
+              "example-certification-technologies",
+              "example-certification-accessibility-bullet-0",
+              "example-certification-data-bullet-0"
+            ],
+            "linkIds": ["example-credential-link"]
+          },
+          {
+            "sectionId": "example-section-custom",
+            "entryIds": ["example-mentoring"],
+            "fieldIds": [
+              "example-mentoring-title",
+              "example-mentoring-organization",
+              "example-mentoring-location",
+              "example-mentoring-start",
+              "example-mentoring-end",
+              "example-mentoring-url"
+            ],
+            "achievementIds": ["example-mentoring-bullet-0"],
+            "linkIds": []
+          }
+        ],
+        "overrides": {},
+        "layout": {
+          "headingColor": "template-default",
+          "bodyColor": "template-default",
+          "fontSize": 10,
+          "marginTop": 18,
+          "marginBottom": 25.4,
+          "marginLeft": 25,
+          "marginRight": 25,
+          "lineHeight": 1.2,
+          "sectionGap": 4,
+          "targetPages": 3,
+          "nameSize": "template-default",
+          "nameWeight": "regular",
+          "headerAlignment": "center",
+          "nameContactGap": "template-default",
+          "headerGap": "template-default",
+          "contactIcons": "on",
+          "sectionSize": "template-default",
+          "sectionWeight": "black",
+          "sectionCasing": "uppercase",
+          "sectionBelow": "template-default",
+          "sectionDivider": "on",
+          "dividerThickness": "template-default",
+          "entryTitleSize": "template-default",
+          "entryTitleWeight": "bold",
+          "entrySubtitleSize": "template-default",
+          "entrySubtitleWeight": "bold",
+          "headingSubtitleGap": "template-default",
+          "beforeDetailsGap": "template-default",
+          "entryGap": "template-default",
+          "paragraphGap": "template-default",
+          "bulletMarker": "disc",
+          "bulletIndent": "template-default",
+          "bulletTextGap": "template-default",
+          "bulletGap": "template-default",
+          "listAbove": "template-default",
+          "listBelow": "template-default",
+          "secondaryColor": "template-default",
+          "linkColor": "template-default",
+          "iconColor": "template-default",
+          "dividerColor": "template-default",
+          "pageNumbering": "hidden",
+          "pageNumberAlignment": "center",
+          "pageNumberFormat": "page-x",
+          "paper": "a4",
+          "font": "inter",
+          "contactRows": "3",
+          "contactRowSizes": [],
+          "contactRowGap": 3,
+          "contactSeparator": "dot"
+        },
+        "color": "indigo",
+        "profileSelection": [
+          "example-profile-email",
+          "example-profile-phone",
+          "example-profile-city",
+          "example-profile-country",
+          "example-site",
+          "example-github",
+          "example-linkedin"
+        ],
+        "summaryIncluded": true
+      },
+      {
+        "id": "example-resume-pt-BR",
+        "name": "Alex Morgan · Português",
+        "language": "pt-BR",
+        "template": "yabuki-reference@1.0.3",
+        "selection": [
+          {
+            "sectionId": "example-section-experience",
+            "entryIds": [
+              "example-role",
+              "example-role-product",
+              "example-role-intern"
+            ],
+            "fieldIds": [
+              "example-role-title",
+              "example-role-organization",
+              "example-role-location",
+              "example-role-start",
+              "example-role-end",
+              "example-role-product-title",
+              "example-role-product-organization",
+              "example-role-product-location",
+              "example-role-product-start",
+              "example-role-product-end",
+              "example-role-intern-title",
+              "example-role-intern-organization",
+              "example-role-intern-location",
+              "example-role-intern-start",
+              "example-role-intern-end"
+            ],
+            "achievementIds": [
+              "example-role-bullet-0",
+              "example-role-bullet-1",
+              "example-role-technologies",
+              "example-role-product-bullet-0",
+              "example-role-product-bullet-1",
+              "example-role-product-technologies",
+              "example-role-intern-bullet-0",
+              "example-role-intern-technologies"
+            ],
+            "linkIds": []
+          },
+          {
+            "sectionId": "example-section-projects",
+            "entryIds": [
+              "example-project",
+              "example-project-transit",
+              "example-project-community"
+            ],
+            "fieldIds": [
+              "example-project-title",
+              "example-project-organization",
+              "example-project-url",
+              "example-project-start",
+              "example-project-end",
+              "example-project-transit-title",
+              "example-project-transit-organization",
+              "example-project-transit-url",
+              "example-project-transit-start",
+              "example-project-transit-end",
+              "example-project-community-title",
+              "example-project-community-organization",
+              "example-project-community-url",
+              "example-project-community-start",
+              "example-project-community-end"
+            ],
+            "achievementIds": [
+              "example-project-bullet-0",
+              "example-project-technologies",
+              "example-project-transit-bullet-0",
+              "example-project-transit-technologies",
+              "example-project-community-bullet-0",
+              "example-project-community-technologies"
+            ],
+            "linkIds": ["example-project-link"]
+          },
+          {
+            "sectionId": "example-section-education",
+            "entryIds": [
+              "example-education",
+              "example-education-specialization",
+              "example-education-course"
+            ],
+            "fieldIds": [
+              "example-education-degree",
+              "example-education-institution",
+              "example-education-location",
+              "example-education-start",
+              "example-education-end",
+              "example-education-specialization-degree",
+              "example-education-specialization-institution",
+              "example-education-specialization-location",
+              "example-education-specialization-start",
+              "example-education-specialization-end",
+              "example-education-course-degree",
+              "example-education-course-institution",
+              "example-education-course-location",
+              "example-education-course-start",
+              "example-education-course-end"
+            ],
+            "achievementIds": [
+              "example-education-technologies",
+              "example-education-specialization-bullet-0",
+              "example-education-course-bullet-0",
+              "example-education-course-technologies"
+            ],
+            "linkIds": []
+          },
+          {
+            "sectionId": "example-section-skills",
+            "entryIds": [
+              "example-skills",
+              "example-skills-backend",
+              "example-skills-collaboration"
+            ],
+            "fieldIds": [
+              "example-skills-title",
+              "example-skills-level",
+              "example-skills-backend-title",
+              "example-skills-backend-level",
+              "example-skills-collaboration-title",
+              "example-skills-collaboration-level"
+            ],
+            "achievementIds": [
+              "example-localized-skill",
+              "example-skills-technologies",
+              "example-skills-backend-bullet-0",
+              "example-skills-backend-technologies",
+              "example-skills-collaboration-bullet-0",
+              "example-skills-collaboration-bullet-1",
+              "example-skills-collaboration-technologies"
+            ],
+            "linkIds": []
+          },
+          {
+            "sectionId": "example-section-certifications",
+            "entryIds": [
+              "example-certification",
+              "example-certification-accessibility",
+              "example-certification-data"
+            ],
+            "fieldIds": [
+              "example-certification-title",
+              "example-certification-organization",
+              "example-certification-credential",
+              "example-certification-issued",
+              "example-certification-expires",
+              "example-certification-url",
+              "example-certification-accessibility-title",
+              "example-certification-accessibility-organization",
+              "example-certification-accessibility-credential",
+              "example-certification-accessibility-issued",
+              "example-certification-accessibility-expires",
+              "example-certification-accessibility-url",
+              "example-certification-data-title",
+              "example-certification-data-organization",
+              "example-certification-data-credential",
+              "example-certification-data-issued",
+              "example-certification-data-expires",
+              "example-certification-data-url"
+            ],
+            "achievementIds": [
+              "example-certification-bullet-0",
+              "example-certification-technologies",
+              "example-certification-accessibility-bullet-0",
+              "example-certification-data-bullet-0"
+            ],
+            "linkIds": ["example-credential-link"]
+          },
+          {
+            "sectionId": "example-section-custom",
+            "entryIds": ["example-mentoring"],
+            "fieldIds": [
+              "example-mentoring-title",
+              "example-mentoring-organization",
+              "example-mentoring-location",
+              "example-mentoring-start",
+              "example-mentoring-end",
+              "example-mentoring-url"
+            ],
+            "achievementIds": ["example-mentoring-bullet-0"],
+            "linkIds": []
+          }
+        ],
+        "overrides": {},
+        "layout": {
+          "headingColor": "dark-navy",
+          "bodyColor": "template-default",
+          "fontSize": 9.5,
+          "marginTop": 16,
+          "marginBottom": 18,
+          "marginLeft": 20,
+          "marginRight": 20,
+          "lineHeight": 1.15,
+          "sectionGap": 3,
+          "targetPages": 3,
+          "nameSize": "template-default",
+          "nameWeight": "bold",
+          "headerAlignment": "left",
+          "nameContactGap": "template-default",
+          "headerGap": "template-default",
+          "contactIcons": "on",
+          "sectionSize": "template-default",
+          "sectionWeight": "black",
+          "sectionCasing": "original",
+          "sectionBelow": "template-default",
+          "sectionDivider": "on",
+          "dividerThickness": "template-default",
+          "entryTitleSize": "template-default",
+          "entryTitleWeight": "bold",
+          "entrySubtitleSize": "template-default",
+          "entrySubtitleWeight": "bold",
+          "headingSubtitleGap": "template-default",
+          "beforeDetailsGap": "template-default",
+          "entryGap": 6,
+          "paragraphGap": "template-default",
+          "bulletMarker": "disc",
+          "bulletIndent": "template-default",
+          "bulletTextGap": "template-default",
+          "bulletGap": "template-default",
+          "listAbove": "template-default",
+          "listBelow": "template-default",
+          "secondaryColor": "template-default",
+          "linkColor": "dark-navy",
+          "iconColor": "template-default",
+          "dividerColor": "dark-navy",
+          "pageNumbering": "shown",
+          "pageNumberAlignment": "right",
+          "pageNumberFormat": "page-x-of-y",
+          "paper": "a4",
+          "font": "source-sans",
+          "contactRows": "custom",
+          "contactRowSizes": [3, 2, 2],
+          "contactRowGap": 4,
+          "contactSeparator": "bar"
+        },
+        "color": "indigo",
+        "profileSelection": [
+          "example-profile-email",
+          "example-profile-phone",
+          "example-profile-city",
+          "example-profile-country",
+          "example-site",
+          "example-github",
+          "example-linkedin"
+        ],
+        "summaryIncluded": true
+      }
+    ],
+    "starters": [
+      {
+        "id": "example-starter-complete",
+        "name": "Complete career",
+        "template": "yabuki-reference@1.0.3",
+        "layout": {
+          "headingColor": "template-default",
+          "bodyColor": "template-default",
+          "fontSize": 10,
+          "marginTop": 18,
+          "marginBottom": 25.4,
+          "marginLeft": 25,
+          "marginRight": 25,
+          "lineHeight": 1.2,
+          "sectionGap": 4,
+          "targetPages": 3,
+          "nameSize": "template-default",
+          "nameWeight": "regular",
+          "headerAlignment": "center",
+          "nameContactGap": "template-default",
+          "headerGap": "template-default",
+          "contactIcons": "on",
+          "sectionSize": "template-default",
+          "sectionWeight": "black",
+          "sectionCasing": "uppercase",
+          "sectionBelow": "template-default",
+          "sectionDivider": "on",
+          "dividerThickness": "template-default",
+          "entryTitleSize": "template-default",
+          "entryTitleWeight": "bold",
+          "entrySubtitleSize": "template-default",
+          "entrySubtitleWeight": "bold",
+          "headingSubtitleGap": "template-default",
+          "beforeDetailsGap": "template-default",
+          "entryGap": "template-default",
+          "paragraphGap": "template-default",
+          "bulletMarker": "disc",
+          "bulletIndent": "template-default",
+          "bulletTextGap": "template-default",
+          "bulletGap": "template-default",
+          "listAbove": "template-default",
+          "listBelow": "template-default",
+          "secondaryColor": "template-default",
+          "linkColor": "template-default",
+          "iconColor": "template-default",
+          "dividerColor": "template-default",
+          "pageNumbering": "hidden",
+          "pageNumberAlignment": "center",
+          "pageNumberFormat": "page-x",
+          "paper": "a4",
+          "font": "inter",
+          "contactRows": "3",
+          "contactRowSizes": [],
+          "contactRowGap": 3,
+          "contactSeparator": "dot"
+        },
+        "summaryIncluded": true,
+        "sections": [
+          {
+            "id": "example-full-slot-1",
+            "label": "Experience",
+            "kind": "experience",
+            "icon": "briefcase-business",
+            "hidden": false,
+            "visibleFields": [
+              "title",
+              "organization",
+              "location",
+              "start",
+              "end"
+            ]
+          },
+          {
+            "id": "example-full-slot-2",
+            "label": "Projects",
+            "kind": "projects",
+            "icon": "folder-kanban",
+            "hidden": false,
+            "visibleFields": ["title", "organization", "url", "start", "end"]
+          },
+          {
+            "id": "example-full-slot-3",
+            "label": "Education",
+            "kind": "education",
+            "icon": "graduation-cap",
+            "hidden": false,
+            "visibleFields": [
+              "degree",
+              "institution",
+              "location",
+              "start",
+              "end"
+            ]
+          },
+          {
+            "id": "example-full-slot-4",
+            "label": "Skills",
+            "kind": "skills",
+            "icon": "code-2",
+            "hidden": false,
+            "visibleFields": ["title", "level"]
+          },
+          {
+            "id": "example-full-slot-5",
+            "label": "Certifications",
+            "kind": "certifications",
+            "icon": "award",
+            "hidden": false,
+            "visibleFields": [
+              "title",
+              "organization",
+              "credential",
+              "issued",
+              "expires",
+              "url"
+            ]
+          },
+          {
+            "id": "example-full-slot-6",
+            "label": "Community",
+            "kind": "custom",
+            "icon": "heart-handshake",
+            "hidden": false,
+            "visibleFields": [
+              "title",
+              "organization",
+              "location",
+              "start",
+              "end",
+              "url"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "example-starter-projects",
+        "name": "Project focused",
+        "template": "yabuki-reference@1.0.3",
+        "layout": {
+          "headingColor": "dark-navy",
+          "bodyColor": "template-default",
+          "fontSize": 9.5,
+          "marginTop": 16,
+          "marginBottom": 18,
+          "marginLeft": 20,
+          "marginRight": 20,
+          "lineHeight": 1.15,
+          "sectionGap": 3,
+          "targetPages": 3,
+          "nameSize": "template-default",
+          "nameWeight": "bold",
+          "headerAlignment": "left",
+          "nameContactGap": "template-default",
+          "headerGap": "template-default",
+          "contactIcons": "on",
+          "sectionSize": "template-default",
+          "sectionWeight": "black",
+          "sectionCasing": "original",
+          "sectionBelow": "template-default",
+          "sectionDivider": "on",
+          "dividerThickness": "template-default",
+          "entryTitleSize": "template-default",
+          "entryTitleWeight": "bold",
+          "entrySubtitleSize": "template-default",
+          "entrySubtitleWeight": "bold",
+          "headingSubtitleGap": "template-default",
+          "beforeDetailsGap": "template-default",
+          "entryGap": 6,
+          "paragraphGap": "template-default",
+          "bulletMarker": "disc",
+          "bulletIndent": "template-default",
+          "bulletTextGap": "template-default",
+          "bulletGap": "template-default",
+          "listAbove": "template-default",
+          "listBelow": "template-default",
+          "secondaryColor": "template-default",
+          "linkColor": "dark-navy",
+          "iconColor": "template-default",
+          "dividerColor": "dark-navy",
+          "pageNumbering": "shown",
+          "pageNumberAlignment": "right",
+          "pageNumberFormat": "page-x-of-y",
+          "paper": "a4",
+          "font": "source-sans",
+          "contactRows": "custom",
+          "contactRowSizes": [3, 2, 2],
+          "contactRowGap": 4,
+          "contactSeparator": "bar"
+        },
+        "summaryIncluded": true,
+        "sections": [
+          {
+            "id": "example-project-slot-1",
+            "label": "Projects",
+            "kind": "projects",
+            "icon": "folder-kanban",
+            "hidden": false,
+            "visibleFields": ["title", "organization", "url", "start", "end"]
+          },
+          {
+            "id": "example-project-slot-2",
+            "label": "Skills",
+            "kind": "skills",
+            "icon": "code-2",
+            "hidden": false,
+            "visibleFields": ["title", "level"]
+          },
+          {
+            "id": "example-project-slot-3",
+            "label": "Experience",
+            "kind": "experience",
+            "icon": "briefcase-business",
+            "hidden": false,
+            "visibleFields": [
+              "title",
+              "organization",
+              "location",
+              "start",
+              "end"
+            ]
+          },
+          {
+            "id": "example-project-slot-4",
+            "label": "Education",
+            "kind": "education",
+            "icon": "graduation-cap",
+            "hidden": false,
+            "visibleFields": [
+              "degree",
+              "institution",
+              "location",
+              "start",
+              "end"
+            ]
+          },
+          {
+            "id": "example-project-slot-research",
+            "label": "Research",
+            "kind": "custom",
+            "icon": "flask-conical",
+            "hidden": false,
+            "visibleFields": ["title", "organization", "url"]
+          }
+        ]
+      }
+    ],
+    "presets": [
+      {
+        "id": "example-preset-classic",
+        "name": "Classic",
+        "template": "yabuki-reference@1.0.3",
+        "layout": {
+          "headingColor": "template-default",
+          "bodyColor": "template-default",
+          "fontSize": 10,
+          "marginTop": 18,
+          "marginBottom": 25.4,
+          "marginLeft": 25,
+          "marginRight": 25,
+          "lineHeight": 1.2,
+          "sectionGap": 4,
+          "targetPages": 3,
+          "nameSize": "template-default",
+          "nameWeight": "regular",
+          "headerAlignment": "center",
+          "nameContactGap": "template-default",
+          "headerGap": "template-default",
+          "contactIcons": "on",
+          "sectionSize": "template-default",
+          "sectionWeight": "black",
+          "sectionCasing": "uppercase",
+          "sectionBelow": "template-default",
+          "sectionDivider": "on",
+          "dividerThickness": "template-default",
+          "entryTitleSize": "template-default",
+          "entryTitleWeight": "bold",
+          "entrySubtitleSize": "template-default",
+          "entrySubtitleWeight": "bold",
+          "headingSubtitleGap": "template-default",
+          "beforeDetailsGap": "template-default",
+          "entryGap": "template-default",
+          "paragraphGap": "template-default",
+          "bulletMarker": "disc",
+          "bulletIndent": "template-default",
+          "bulletTextGap": "template-default",
+          "bulletGap": "template-default",
+          "listAbove": "template-default",
+          "listBelow": "template-default",
+          "secondaryColor": "template-default",
+          "linkColor": "template-default",
+          "iconColor": "template-default",
+          "dividerColor": "template-default",
+          "pageNumbering": "hidden",
+          "pageNumberAlignment": "center",
+          "pageNumberFormat": "page-x",
+          "paper": "a4",
+          "font": "inter",
+          "contactRows": "3",
+          "contactRowSizes": [],
+          "contactRowGap": 3,
+          "contactSeparator": "dot"
+        }
+      },
+      {
+        "id": "example-preset-compact-navy",
+        "name": "Compact navy",
+        "template": "yabuki-reference@1.0.3",
+        "layout": {
+          "headingColor": "dark-navy",
+          "bodyColor": "template-default",
+          "fontSize": 9.5,
+          "marginTop": 16,
+          "marginBottom": 18,
+          "marginLeft": 20,
+          "marginRight": 20,
+          "lineHeight": 1.15,
+          "sectionGap": 3,
+          "targetPages": 3,
+          "nameSize": "template-default",
+          "nameWeight": "bold",
+          "headerAlignment": "left",
+          "nameContactGap": "template-default",
+          "headerGap": "template-default",
+          "contactIcons": "on",
+          "sectionSize": "template-default",
+          "sectionWeight": "black",
+          "sectionCasing": "original",
+          "sectionBelow": "template-default",
+          "sectionDivider": "on",
+          "dividerThickness": "template-default",
+          "entryTitleSize": "template-default",
+          "entryTitleWeight": "bold",
+          "entrySubtitleSize": "template-default",
+          "entrySubtitleWeight": "bold",
+          "headingSubtitleGap": "template-default",
+          "beforeDetailsGap": "template-default",
+          "entryGap": 6,
+          "paragraphGap": "template-default",
+          "bulletMarker": "disc",
+          "bulletIndent": "template-default",
+          "bulletTextGap": "template-default",
+          "bulletGap": "template-default",
+          "listAbove": "template-default",
+          "listBelow": "template-default",
+          "secondaryColor": "template-default",
+          "linkColor": "dark-navy",
+          "iconColor": "template-default",
+          "dividerColor": "dark-navy",
+          "pageNumbering": "shown",
+          "pageNumberAlignment": "right",
+          "pageNumberFormat": "page-x-of-y",
+          "paper": "a4",
+          "font": "source-sans",
+          "contactRows": "custom",
+          "contactRowSizes": [3, 2, 2],
+          "contactRowGap": 4,
+          "contactSeparator": "bar"
+        }
+      }
+    ],
+    "defaults": {
+      "headingColor": "template-default",
+      "bodyColor": "template-default",
+      "fontSize": 10,
+      "marginTop": 18,
+      "marginBottom": 25.4,
+      "marginLeft": 25,
+      "marginRight": 25,
+      "lineHeight": 1.2,
+      "sectionGap": 4,
+      "targetPages": 3,
+      "nameSize": "template-default",
+      "nameWeight": "regular",
+      "headerAlignment": "center",
+      "nameContactGap": "template-default",
+      "headerGap": "template-default",
+      "contactIcons": "on",
+      "sectionSize": "template-default",
+      "sectionWeight": "black",
+      "sectionCasing": "uppercase",
+      "sectionBelow": "template-default",
+      "sectionDivider": "on",
+      "dividerThickness": "template-default",
+      "entryTitleSize": "template-default",
+      "entryTitleWeight": "bold",
+      "entrySubtitleSize": "template-default",
+      "entrySubtitleWeight": "bold",
+      "headingSubtitleGap": "template-default",
+      "beforeDetailsGap": "template-default",
+      "entryGap": "template-default",
+      "paragraphGap": "template-default",
+      "bulletMarker": "disc",
+      "bulletIndent": "template-default",
+      "bulletTextGap": "template-default",
+      "bulletGap": "template-default",
+      "listAbove": "template-default",
+      "listBelow": "template-default",
+      "secondaryColor": "template-default",
+      "linkColor": "template-default",
+      "iconColor": "template-default",
+      "dividerColor": "template-default",
+      "pageNumbering": "hidden",
+      "pageNumberAlignment": "center",
+      "pageNumberFormat": "page-x",
+      "paper": "a4",
+      "font": "inter",
+      "contactRows": "auto",
+      "contactRowSizes": [],
+      "contactRowGap": 0,
+      "contactSeparator": "space"
+    }
+  }
+}

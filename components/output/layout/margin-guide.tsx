@@ -35,6 +35,7 @@ export function MarginGuide({
         />
         <g className="fill-primary/15 stroke-primary" strokeWidth="1">
           <rect
+            data-margin-edge="top"
             x="0"
             y="0"
             width={paper.width}
@@ -42,6 +43,7 @@ export function MarginGuide({
             className={cn(active !== "marginTop" && "opacity-0")}
           />
           <rect
+            data-margin-edge="bottom"
             x="0"
             y={paper.height - values.marginBottom}
             width={paper.width}
@@ -50,11 +52,13 @@ export function MarginGuide({
           />
           <g>
             <rect
+              data-margin-edge="left"
               width={x}
               height={paper.height}
               className={cn(active !== "marginLeft" && "opacity-0")}
             />
             <rect
+              data-margin-edge="right"
               x={paper.width - values.marginRight}
               width={values.marginRight}
               height={paper.height}

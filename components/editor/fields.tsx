@@ -1,12 +1,9 @@
 "use client";
 
-import { ArrowDown, ArrowUp } from "lucide-react";
 import { useId } from "react";
 
 import { TextEditor } from "@/components/editor/text/text-editor";
 import { ContentStatusBadge } from "@/components/shared/semantic-badges/content-status-badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
   FieldDescription,
@@ -74,65 +71,7 @@ export function TextField({
   );
 }
 
-export function CheckField({
-  label,
-  checked,
-  onChange,
-  disabled = false,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
-}) {
-  const id = useId();
-  return (
-    <Field orientation="horizontal" data-disabled={disabled}>
-      <Checkbox
-        id={id}
-        checked={checked}
-        onCheckedChange={onChange}
-        disabled={disabled}
-      />
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-    </Field>
-  );
-}
-
-export function OrderButtons({
-  label,
-  first,
-  last,
-  onMove,
-}: {
-  label: string;
-  first: boolean;
-  last: boolean;
-  onMove: (offset: number) => void;
-}) {
-  return (
-    <div className="flex shrink-0 text-muted-foreground">
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        disabled={first}
-        onClick={() => onMove(-1)}
-        aria-label={`Move ${label} up`}
-      >
-        <ArrowUp />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        disabled={last}
-        onClick={() => onMove(1)}
-        aria-label={`Move ${label} down`}
-      >
-        <ArrowDown />
-      </Button>
-    </div>
-  );
-}
+export { OrderButtons } from "@/components/editor/order-buttons";
 
 export function LocalizedField({
   fieldKey,

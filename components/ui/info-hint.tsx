@@ -45,6 +45,7 @@ export function InfoHint({
   children: string;
 } & VariantProps<typeof infoHintVariants>) {
   const id = useId();
+  const contentId = `${id}-content`;
   const [open, setOpen] = useState(false);
   return (
     <Tooltip open={open} onOpenChange={setOpen} triggerId={id}>
@@ -55,6 +56,7 @@ export function InfoHint({
         type="button"
         className={cn(infoHintVariants({ size, variant }))}
         aria-label={`About ${label}`}
+        aria-describedby={open ? contentId : undefined}
         onClick={() => setOpen(true)}
         onKeyDown={(event) => {
           if (event.key === "Escape") setOpen(false);
@@ -62,7 +64,9 @@ export function InfoHint({
       >
         <Info aria-hidden="true" />
       </TooltipTrigger>
-      <TooltipContent>{children}</TooltipContent>
+      <TooltipContent id={contentId} role="tooltip">
+        {children}
+      </TooltipContent>
     </Tooltip>
   );
 }

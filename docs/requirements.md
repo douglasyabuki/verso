@@ -1,92 +1,49 @@
 # Verso — Requirements and implementation order
 
-Updated: 2026-11-02.
+Updated: 2026-11-07.
 
-This replaces the previous bilingual cloud-release checklist. It defines the next
-local-editor milestone and future account/public-download work, not delivered
-features. README.md describes the current implementation.
+This is the accepted product plan. [README](../README.md) describes delivered
+behavior; [evidence](phase-1-evidence.md) records executed checks;
+[handoff](phase-1-handoff.md) records the implementation stopping point.
 
-## Confirmed direction
+## Direction and status
 
-- Design the app the owner needs, even when that requires replacing or recreating
-  existing features. Current code is a reference and reusable asset, not a product
-  constraint. Protect data created under this roadmap's target contracts and their
-  safety guarantees.
-- Career details define available information; resumes select what appears;
-  layout controls its presentation. Hiding fields never deletes career data.
-- Address single-language use, languages beyond en-US/pt-BR, differing content and
-  fields across language versions, and the burden of mandatory translation review.
-- Use a language-agnostic model with user-selected languages, no mandatory locales,
-  fixed language count, or hardcoded counterpart. English and Portuguese remain
-  desired output languages through the same extensible mechanisms as other locales;
-  existing support must not dictate the new architecture.
-- Schema 2 is the sole supported workspace schema. The app is development-only,
-  with no production deployment or users; schema-1 compatibility, migration, and
-  legacy regression coverage are out of scope. Test the new target contracts.
-- No phase requires backward compatibility with the code, development storage,
-  backups, settings, routes, or behavior that predates this roadmap's target
-  implementation. Reuse existing code only where it serves the target contracts;
-  no migration or behavior-parity work is required for that baseline. Keep continuity
-  between roadmap steps: later phases must honor earlier accepted contracts and
-  protect target data, recovery, and released artifacts created under them.
-- Provide a settings menu.
-- Future work: login similar to `temp/dayplan`, authenticated storage through
-  Prisma ORM with Prisma Postgres, and synchronization across tabs and browsers.
-- Future downloadable resumes provide a PDF URL for a specified or latest version.
-- Durable routes and explicit entry/form Save/Cancel are accepted. Preview is
-  manual by default; optional automatic refresh uses committed output changes.
-
-## Accepted decisions and remaining work
-
-This document is the self-contained source for accepted product and technical
-contracts, the test specification, and ordered implementation work. The accepted
-contracts below are part of the requirements, not delivered behavior. README.md
-continues to describe the current application.
-
-Phase 0 is complete as a decision specification. Implementation, transaction
-verification, capacity checks, and measurements remain outstanding. Future account
-implementation and public-release policies still require their respective phase
-activation. This documentation update does not start phase 1.
+- Career details own reusable facts and wording. Independent one-language resumes
+  select content; layout controls appearance. Hiding content never deletes it.
+- English UI; extensible content languages; verified English/Portuguese PDF output.
+  No mandatory counterpart, translation review, fixed language pair, or groups.
+- Schema 2 and recovery format 1 only. No schema-1 migration or behavior parity.
+  Preserve target data, recovery, identities, and safety contracts across phases.
+- Preserve the established workspace shell and responsive presentation. Reuse
+  existing code where useful; do not mount retired schema-1 state.
+- Phase 0 decisions are complete. Phase 1 implementation is delivered with open
+  verification recorded in the final follow-up list. Those items no longer block
+  progression from Phase 1 and are not counted as passed acceptance.
+- Phase 2 implementation adds independent resume lifecycle, Content/Wording,
+  comparison, and committed output choices. Verification is recorded separately
+  below; owner visual/PDF and deferred performance acceptance remain open.
+  Accounts, sync, public downloads, and hosting still require explicit activation.
 
 ## Delivery rules
 
-- Work in phase order and dependency order within phases, through complete slices.
-- Phases 0–7 are the proposed next local milestone. Phases 8–11 are future work;
-  wait for owner activation before installing dependencies or building that work.
-- Read root/applicable nested AGENTS.md, relevant installed Next.js guides, and
-  task-specific skills. Preserve framework settings, selected versions, npm lockfile,
-  and generated Next.js guidance. Do not copy Dayplan dependencies wholesale.
-- Root AGENTS.md still describes bilingual schema 1 and local-only scope. Reconcile
-  affected guidance during accepted product changes; this roadmap does not silently
-  override implementation instructions or remove unrelated constraints.
-- Deliver useful editing, accessibility, undo/redo, safe saving, recovery, backups,
-  and deterministic rendering under the target design. Refactor, replace, or rebuild
-  workflows, schemas, review rules, inheritance, and UI where needed; reproducing
-  current behavior is not acceptance unless that behavior serves an accepted
-  requirement. Protect schema-2 content through explicit backup/recovery,
-  and disclose intentionally changed or retired behavior.
-- Automated tests are in scope as of 2026-11-02, superseding the earlier exclusion.
-  Add meaningful behavior/regression coverage alongside each implementation slice.
-  Use Vitest Node for domain rules and controlled async behavior, Vitest Browser
-  Mode for interactive components, and Playwright for complete application flows.
-  Configure missing runners only with real initial coverage; no empty suites,
-  passWithNoTests, or implementation-shaped assertions.
-- Application changes require format:check, lint, typecheck with route generation,
-  and build under repository guidance, plus relevant non-watch automated tests and
-  meaningful manual verification. Confirm executed file/test counts; starter smoke
-  tests alone are not product acceptance coverage. Use isolated databases when
-  database behavior is the contract; mocks do not prove real persistence or OAuth.
-  Documentation-only changes need formatting and local-link validation.
-- Record actual checks, failures, skipped checks, and blocked infrastructure.
-  Builds do not prove browser, PDF, OAuth, synchronization, or database behavior.
-- Update affected project artifacts in the same implementation slice: this
-  checklist and accepted decisions, README usage/setup/current behavior, applicable
-  AGENTS.md and repository skills, architecture/compiler documentation, schema and
-  backup-format documentation, and configuration/environment examples. Update only
-  artifacts affected by the change; distinguish current behavior from future plans.
-  Keep links and examples valid, preserve customizations/generated guidance, and
-  never copy secrets into documentation. Generated outputs follow their existing
-  generation policy. Check off requirements only with recorded acceptance evidence.
+- Implement the ordered phases in useful slices. The final follow-up list is
+  deferred work, not a prerequisite to starting every subsequent slice.
+- Follow applicable AGENTS.md, installed Next.js guides, and relevant skills.
+  Preserve npm, selected dependency versions, framework settings, and generated guidance.
+- Keep meaningful regression coverage alongside changes. Run proportionate
+  formatting, lint, route generation/typecheck, build, and non-watch tests.
+  Use isolated databases/origins when real persistence is the contract.
+- Record failures and limitations. Never mark unexecuted acceptance as passed.
+  Documentation-only edits need formatting and local-link checks.
+- Update affected requirements, usage, guidance, and format documentation.
+  Keep performance measurements separate from routine regression runs.
+- Whenever updating a maintained artifact, including permanent docs and skills,
+  make it self-contained: state the
+  applicable behavior, contracts, limitations, and instructions directly, without
+  relying on phase numbers or temporary requirements, evidence, or handoff files.
+  Those planning files will be removed after implementation; their removal must
+  not leave missing guidance or broken references. Links to maintained source or
+  permanent reference documentation may supplement, but not replace, that context.
 
 ## Accepted product and technical contracts
 
@@ -162,6 +119,65 @@ workflow and rendering complexity.
 - Resume deletion remains a separate action with confirmation. Deleting a resume
   must never delete its shared career content.
 
+### Editor presentation and direct sorting
+
+- New workspaces start with empty Experience, Projects, Education, Skills, and
+  Certifications sections; existing saved workspaces are never reseeded.
+- Summaries and achievements/details support rich prose with inline links and
+  emphasis. Headings, titles, degrees, names, facts, short skills, and link labels
+  use plain controls. Overall typography remains a later layout concern.
+- Owner visual acceptance is separate from automated behavioral and nonvisual
+  PDF checks. Preserve the restored presentation while completing Phase 1.
+
+- Dialog, popover, and card footer actions align to the end. Ordinary form actions
+  are **Cancel / Save**; dirty-navigation actions are **Cancel / Discard / Save**.
+  The primary action is rightmost; DOM, keyboard, and visual order agree even when
+  actions wrap. Navigation Cancel dismisses the prompt and retains the draft.
+- Form Save and Cancel are disabled while unchanged or saving. Navigation remains
+  available to leave a clean form; navigation-dialog Cancel remains available.
+- Draggable cards retain rounded, bordered semantic surfaces and padding. Compact
+  section-order rows use vertical padding proportional to their smaller content.
+  Selected entries use the existing moving translucent selection surface, honoring
+  reduced motion and accessible focus. Card selection remains highlighted when
+  switching to an order draft and through reorder Save/Cancel. The selectable
+  text area has no separate hover background; Edit precedes Up/Down actions.
+- Entry lists support direct handle dragging and Up/Down/Edit quick actions, with
+  Duplicate and Archive/Restore in a per-entry overflow menu. No separate Edit
+  entry order step is required. Section properties opens from the menu to the right
+  of the section heading; shared-content clear/delete remains deferred.
+- Direct sorting opens the existing entry-order draft scope in the same mounted
+  list, preserving search, archive filtering, and scroll position. Save commits one
+  atomic history step; Cancel restores committed order. Hidden IDs retain their
+  slots. Invalid, canceled, stale, and no-op drops do not change content.
+- Entry editing and the current section's entry order use independent drafts.
+  Dragging does not close the entry form or clear its selection; opening an existing
+  entry does not prompt solely because an order is pending. Save order/Cancel order
+  affect only ordering. Save entry/Cancel entry affect only the entry. Each Save
+  creates its own atomic history step, receipt, and exact-version recovery cleanup.
+- Each draft retains its own baseline, recovery record, diagnostics, and retry
+  identity. Saving one never rebases, commits, or discards the other. Same-section
+  wording changes do not conflict with order-only scopes; real conflicts retain
+  both drafts. Existing entry-order URLs use this inline editor.
+- Switching between dirty entries resolves only the entry draft. Leaving the section
+  resolves remaining drafts independently with Cancel/Discard/Save; successful
+  resolutions remain successful if a later resolution is canceled or fails. Each
+  dialog describes only its own issue, never another dialog or pending prompt.
+- Data & backups can be visited without resolving either draft, so recovery export
+  remains available on save failures. Returning to editing preserves both drafts.
+  Replacement, rollback, creation that changes list membership, and workspace
+  history still require resolving applicable drafts before proceeding.
+- Do not show Compare order/Reconcile order/Export recovery controls or a comparison
+  table in the entry list. Keep recovery discovery/restoration in Data & backups,
+  using readable names and Restore draft actions rather than scope IDs/version
+  counters. Restore remains explicit and uncommitted; no stored drafts are removed
+  merely by hiding recovery UI or exporting.
+- Option controls reuse the shared Select/DropdownMenu/Popover styles, including
+  consistent typography, spacing, viewport-constrained widths, focus, and leading
+  option icons. Action lists use DropdownMenu with keyboard navigation/dismissal.
+- Visual acceptance for this correction belongs to the owner. Test changes are
+  recorded separately from test execution; this correction does not establish
+  completion of the outstanding Phase-1 acceptance criteria.
+
 ### Navigation, editing, saving, and preview
 
 - Durable routes cover Career details, individual sections, the resume collection,
@@ -172,7 +188,8 @@ workflow and rendering complexity.
 - Explicit Save/Cancel operates on one editing scope: a career entry including its
   achievements and links; profile; summary; section properties; resume wording;
   resume content/order; or layout/settings form. Each shows unsaved state. Selection
-  and sorting remain drafts until Save; Cancel restores them together.
+  and sorting remain drafts until Save; Cancel restores the affected scope. Career
+  entry editing and section entry ordering may coexist as independent scopes.
 - Typing does not commit workspace changes, write to the account database, compile PDFs, or
   add committed workspace undo steps. Local draft recovery is a separate boundary.
   Each successful form Save commits one validated edit and one workspace undo step.
@@ -181,11 +198,12 @@ workflow and rendering complexity.
 - Save preserves incomplete progress, including missing titles, dates, or wording.
   Entered malformed values such as invalid dates or unsafe links fail with specific
   messages and leave the draft intact. Output readiness is distinct from saveability.
-- Leaving a dirty scope offers **Save**, **Discard**, or **Stay**. Save navigates only
-  after validation and commit succeed; Discard removes pending changes; Stay keeps
+- Leaving a dirty scope offers **Cancel**, **Discard**, or **Save**. Save navigates only
+  after validation and commit succeed; Discard removes pending changes; Cancel keeps
   editing. Apply this to internal navigation and Back/Forward. Browser close/reload
   uses best-effort native warnings and recoverable local drafts, not a promised
-  custom three-choice close dialog. No multi-form draft manager.
+  custom three-choice close dialog. Support the accepted entry/order draft pair;
+  a general-purpose manager for arbitrary simultaneous form drafts remains out of scope.
 - Recovered drafts are distinguishable from saved workspace content and require
   explicit restoration. Save failures retain drafts; no false saved status.
   Session-memory-only commits require an explicit choice. Preserve conflict
@@ -193,9 +211,9 @@ workflow and rendering complexity.
 - While a form is dirty, keyboard undo/redo stays within the draft. Exhausting
   field/draft history never falls through to committed workspace history.
 - Invoking workspace Undo/Redo with a dirty form requires resolving the draft with
-  **Save**, **Discard**, or **Stay**. Explain that resolution does not execute the
+  **Cancel**, **Discard**, or **Save**. Explain that resolution does not execute the
   pending history action: after Save or Discard, the user invokes workspace
-  Undo/Redo separately. Stay keeps editing. In particular, workspace Undo after a
+  Undo/Redo separately. Cancel keeps editing. In particular, workspace Undo after a
   successful Save would undo that newly saved edit.
 - One successful Save creates one atomic workspace history step. Cancel/Discard
   creates none. Recovery restoration opens an uncommitted draft and creates no
@@ -218,7 +236,10 @@ workflow and rendering complexity.
 - Another tab's save never discards a dirty local draft. Changes affecting its
   scope flag a conflict. Restoring a stale draft never silently overwrites current
   committed content.
-- Offer **Compare**, **Reconcile**, **Discard recovered draft**, or **Export recovery**.
+- For form drafts, offer **Compare**, **Reconcile**, **Discard recovered draft**, or
+  **Export recovery**. Entry-order drafts omit comparison/reconciliation UI: retain
+  pending order on conflicts, provide recovery export through Data & backups, and
+  allow explicit **Cancel order** without changing committed content.
   Preserve the recovered and committed versions until resolution succeeds. Explicit
   discard resolves the recovered draft without changing committed content; export
   alone does not discard it. Reconciliation remains an uncommitted draft until Save.
@@ -311,52 +332,18 @@ workflow and rendering complexity.
   active workspace. Keep target-schema validation, round-trip, recovery, conflict,
   replacement, rollback, and output tests; legacy behavior is not their contract.
 
-### Baseline evidence and phase-1 test specification
+### Test boundaries
 
-The audit read the current model, wording/review derivation, layout resolution,
-renderer, navigation contracts, workspace controller/persistence, backup parser,
-compiler hook, README, runner configuration, and relevant application skills.
-
-| Baseline                                                                         | Consequence for target work                                                       |
-| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Schema 1 fixes en-US/pt-BR and shares variant selections/order                   | Replace fixed-pair contracts with independent output ownership                    |
-| Overrides cover summary/achievements; edits flag counterparts                    | Expand display overrides; retire compulsory review metadata                       |
-| Global review includes unused/archive content                                    | Replace with focused selected-output readiness                                    |
-| Renderer hardcodes labels and language numbers                                   | Add explicit locale capability data; editing alone does not establish PDF support |
-| Four-level layout resolution                                                     | Replace inheritance with the accepted layout model                                |
-| Tab-local navigation; 500 ms autosave; 100-step in-memory history                | Introduce routes and form drafts without confusing recovery with committed state  |
-| Conditional Web Lock writes compare reviewed bytes and guard late work           | Preserve these safety contracts or verify equivalent replacements                 |
-| Session-only replacement and one session recovery copy                           | Implement the specified recovery and previous-workspace contracts                 |
-| One Playwright scaffold test asserts a Next.js logo; no Vitest projects          | Establish target-contract coverage alongside implementation                       |
-| Compiler hook serializes requests and tracks stale output; downloads revoke URLs | Existing cleanup is reusable evidence, not proof of bounded long sessions         |
-
-Phase 0 defines tests only. At the **start of phase 1 and alongside target implementation**:
-
-1. Inspect installed/runtime versions; select compatible Vitest tooling without
-   incidental framework upgrades. Configure Node with real tests under
-   `tests/unit/**/*.unit.test.ts`; expose non-watch `test:unit`. Preserve Playwright
-   `tests/e2e/**/*.spec.ts` and `test:e2e`. Add Browser Mode with real interactive
-   coverage under `tests/browser/**/*.browser.test.tsx` and `test:browser` when the
-   first form/draft slice begins. These are planned commands, not available today.
-2. Establish independent schema-2 fixtures for backup round trips, malformed and
-   unsupported formats, duplicate/dangling IDs, selected and hidden content,
-   inherited/custom wording, extensible languages, and independent resume layout.
-   Test schema-1 rejection as an unsupported format, not legacy parsing/conversion.
-   No baseline tests are required for retired schema-1 behavior.
-3. Test target persistence through controlled transaction boundaries: stale scope
-   baselines, superseded generations, validation/storage failure, operation retries,
-   exact-version cleanup, session-only behavior, and recovery retention. Add real
-   browser IndexedDB checks; mocked boundaries alone do not prove transaction behavior.
-4. Replace the scaffold smoke assertion with actual workspace load/reload behavior;
-   add isolated-origin import/replacement and two-tab conflict flows. Keep browser
-   storage, timers, workers, and listeners isolated; never touch valuable user data.
-5. With target implementation, add schema-2 round-trip and no-write-on-rejection
-   tests, Save/Cancel and dirty-navigation tests, recovery-versus-save tests, and
-   preview stale-result/resource tests. Confirm file/test/pass/fail/skip counts.
-   Retain manual PDF visual/text/font/link checks and measured long-session checks.
-
-No runner installation, tests, application checks, schema implementation, or resource
-measurements were performed in this documentation session.
+- Vitest Node covers domain rules, schema-2 validation, and controlled async races.
+- Chromium Browser Mode covers interactive forms, drafts, recovery, and IndexedDB.
+- Playwright covers production navigation, reload, conflicts, quota failure, and PDFs.
+- Use isolated origins and independent fixtures. Cover malformed/unsupported input,
+  dangling identities, custom wording, hidden content, independent layout, atomic
+  replacement, interrupted Saves, exact cleanup, and stale preview results.
+- Preserve real behavior coverage when renaming tests. Name files by behavior,
+  not implementation phase. Do not add schema-1 compatibility tests.
+- Report actual file/test/pass/fail/skip counts. Builds and mocks do not establish
+  browser atomicity, PDF appearance, or performance acceptance.
 
 ### Target formats and browser storage
 
@@ -449,9 +436,9 @@ measurements were performed in this documentation session.
   See the [Prisma Postgres billing FAQ](https://www.prisma.io/docs/postgres/faq).
 - Avoid redundant refetches after acknowledged saves, use local cross-tab notifications,
   and bound/coalesce remote refresh on focus/reconnect/visibility. Server checks remain
-  authoritative. Set the exact remote freshness bound in phase 9 and measure its
+  authoritative. Set the exact remote freshness bound in phase 10 and measure its
   operation cost; do not copy Dayplan's timing as a new product requirement.
-- Phases 8 and 9 implement and verify these future account/sync contracts. No auth
+- Phases 9 and 10 implement and verify these future account/sync contracts. No auth
   packages, database provisioning, or account adapters are authorized by this decision.
 
 ### Capacity and failure boundaries
@@ -519,355 +506,565 @@ do not mark a phase passed merely because a build succeeds.
   workspace; one compiler instance/worker pair per tab. Retain one last successful
   PDF and one in-flight result; release replaced URLs, PDF documents, canvases, and
   workers when obsolete. Timeout terminates the worker pair before retry.
-- Exercise 30 minutes/100 preview refreshes plus editing, navigation, failures,
-  replacement, and retries. After cleanup, no monotonic growth in owned workers,
-  listeners, timers, or blob URLs; counts return to declared steady-state bounds.
-  Where comparable heap instrumentation exists, target retained JS heap growth
-  <=20 MiB after warm-up and settled cleanup. Record WASM/renderer memory separately;
-  do not claim a portable hard process-memory limit or fabricate unavailable metrics.
+- Verify bounded deterministic preview scenarios covering editing, navigation,
+  failures, replacement, and retries. After settled cleanup, owned workers,
+  listeners, timers, and blob URLs return to their declared steady-state bounds.
+  No mandatory 30-minute/100-refresh soak or sustained heap-growth measurement
+  is required. These checks do not establish long-session memory stability.
 - Verify real IndexedDB abort/quota failures, interrupted acknowledgments, exact-draft
   cleanup races, two-tab unrelated/same-scope saves, replacement generation rejection,
   repeated rollback swaps, protected-record cleanup, and restart/recovery import in
   isolated browser origins. Node mocks alone do not prove transactional storage.
 
-## Phase 0 - Decisions and implementation plan
+## Phase 0 — Decisions
 
-Status: complete as a specification. See the accepted contracts in this document;
-implementation acceptance remains outstanding.
+Complete as a specification: the contracts above define the information model,
+languages, drafts, persistence, recovery, formats, capacity, and performance targets.
+This status does not claim implementation acceptance.
 
-- [x] P0.1 Audit baseline career/language/resume/review/layout, backup, navigation,
-      saving, and compiler contracts; record findings without claiming runtime verification.
-- [x] P0.2 Accept independent one-language resumes; defer groups and translation tracking.
-- [x] P0.3 Accept English UI and extensible content languages with verified
-      English/Portuguese PDFs. Deactivation only hides creation choices; retain wording
-      and usable existing resumes. Use Create copy in another language with compatible
-      layout and rendering warnings; defer in-place changes and permanent wording erasure.
-- [x] P0.4 Accept built-in fields/custom sections, structure-only starters, appearance-only
-      presets, copy-on-apply semantics, and duplication for content-bearing reuse.
-- [x] P0.4a Accept archive/restore only for shared career content. Preserve existing
-      resume selections/output with an Archived editor label and per-resume removal.
-      Defer permanent shared-content deletion until references, customized wording,
-      and durable recovery are defined. Confirm resume deletion without deleting career content.
-- [x] P0.5 Accept durable career/resume/settings destinations, deep links, reload,
-      Back/Forward, and local transient controls; apply dirty-form guards.
-- [x] P0.6 Explicit form Save/Cancel, incomplete saves, dirty-exit choices, separate
-      recovery, and committed-only preview inputs are accepted. Dirty-form keyboard
-      undo/redo stays within the draft; workspace history requires resolving the
-      draft and then a separate invocation. Save creates one atomic step;
-      Cancel/Discard and recovery restoration create none. Accept scope/baseline-aware
-      conflicts, atomic Save rechecks, preservation of both versions through resolution,
-      and stable Save operation IDs for idempotent retries. Unresolved drafts never
-      expire automatically; browser eviction/clearing remains possible. Report recovery
-      failures promptly and offer export. Resolved-draft cleanup targets the exact
-      version after confirmed Save or explicit Discard. Completed-operation cleanup
-      defaults to 30 days or 1,000 per workspace, whichever comes first, configurable;
-      pending/uncertain operations stay protected. Missing history means unknown and
-      requires comparison/reconciliation before retry. Select transactional IndexedDB storage as defined in the accepted contracts below.
-- [x] P0.7 Accept schema 2 as the only workspace format, recovery format 1,
-      and IndexedDB transactions. No schema-1 reader, conversion, original-byte
-      retention, or mandatory original-download workflow is required. Define
-      the real-browser verification plan for atomic replacement. Require
-      snapshot preservation before replacement, validation and atomic revision rechecks,
-      and the same safeguards for rollback as a new revision. Retain one previous
-      workspace with no automatic expiry, subject to browser clearing/eviction.
-      Identify the snapshot being replaced and offer optional export; failed/canceled
-      export leaves adoption uncommitted pending retry or explicit continuation without
-      export. Atomically adopt incoming and preserve outgoing; failure changes neither
-      active workspace nor snapshot. Keep recovery separate from the previous workspace.
-      Successful replacement/
-      rollback invalidates pending saves and stale previews. Backup boundaries are accepted: committed workspace only,
-      device preferences separate, recovery retained through replacement and imported
-      as drafts. Missing draft targets require explicit restore-as-new or export;
-      never silently drop or reattach them. Exclude credentials from both exports.
-- [x] P0.8 Supersede the old bilingual candidate-conversion requirement. Define
-      120-resume/64-MiB capacity for schema 2 and verify target-schema limits without
-      truncation. No 60-candidate migration proof or legacy regression suite is required.
-- [x] P0.9 Reconcile accepted decisions with guidance and skills; distinguish current
-      implementation. Final technical contracts are included in this document.
-- [x] P0.10 Audit scaffold coverage and define target tests, boundaries, discovery,
-      isolation, and planned commands. Executing target coverage moves to P1.0;
-      no runner configuration or test implementation belongs in this session.
+## Phase 1 — Career information and languages
 
-Exit met as specification: local decisions, schema/recovery contracts, capacity
-limits, and performance targets are recorded. Transaction proofs and measurements
-belong to implementation; no application behavior is claimed delivered.
+Implementation delivered; remaining verification is deferred to the final list.
+Checked items retain their previously recorded evidence, not a new test result.
 
-## Phase 1 — Career information and language contracts
+- [x] P1.0 Configure real Node, browser-component, and application-flow coverage.
+- [x] P1.0a Separate form/order drafts, recovery, committed Saves, history, and preview;
+      guard dirty navigation and keep draft undo separate from workspace undo.
+- [x] P1.1 Career details own available sections, fields, facts, and reusable wording.
+- [x] P1.2 Preserve identities through edits/reordering/localization; duplicate independently.
+- [x] P1.2a Archive/restore shared content; preserve existing output and label archived selections.
+- [x] P1.3 Support explicit extensible content languages without compulsory translation.
+- [x] P1.4 Separate shared facts from localized display wording and resume overrides.
+- [x] P1.5 Provide built-in fields, supported custom sections, and typed validation.
+- [x] P1.6 Separate interface language, activation, and verified PDF capability.
 
-- [ ] P1.0 Establish this document's target-contract test tooling and coverage.
-      Verify runner/runtime compatibility, configure Node with real cases, and repair
-      the stale Playwright smoke assertion. Record file/test counts. Add Browser Mode
-      with the first interactive slice.
-- [ ] P1.0a Introduce form drafts and Save/Cancel alongside the first changed editors.
-      Separate recovery from committed workspace, undo, persistence, and preview;
-      do not defer these editing boundaries to phase 6. Dirty-form keyboard undo/redo
-      never falls through to workspace history, even when field history is exhausted.
-      Workspace Undo/Redo requires Save/Discard/Stay resolution, followed by a
-      separate invocation; explain that Save then Undo undoes the newly saved edit.
-      Each successful Save creates one atomic workspace step; Cancel/Discard creates
-      none, and recovery restores an uncommitted draft.
-- [ ] P1.1 Career details own available sections, fields, facts, and reusable wording.
-      Resume selection and layout do not define which career information can exist.
-- [ ] P1.2 Preserve stable section/entry/field/achievement/link identities through
-      rename, reorder, archive, and localization; duplication creates
-      independent identities where appropriate.
-- [ ] P1.2a Archive/restore shared career content; hide archived content from
-      new-selection lists while preserving its appearance in existing resumes.
-      Label existing selections Archived in the editor and allow removal from that
-      resume. Restore availability without changing identity. No permanent deletion
-      of shared career content in this milestone; undo is not durable recovery.
-- [ ] P1.3 Represent active content languages explicitly. One is sufficient; adding
-      another does not require translating the entire library. Remove fixed-pair
-      assumptions from accepted new contracts.
-- [ ] P1.4 Separate facts from localized display wording. Audit organizations,
-      degrees/titles, locations, headings, and link labels without duplicating records.
-- [ ] P1.5 Define field types/validation from the target information model, reusing
-      existing rules where they fit. Use built-in fields and custom sections using supported fields. User-defined
-      fields and an unrestricted form designer are deferred.
-- [ ] P1.6 Keep interface language, activation status, and verified PDF support
-      separate. Deactivation hides creation choices and retains wording/overrides;
-      existing resumes remain editable and exportable where PDF support is verified,
-      without appearing disabled or invalid. Reactivation restores creation choices.
-- [ ] P1.7 Implement schema-2 factories, validation, and backup import/export
-      together. Manually and automatically round-trip schema-2 fixtures on disposable
-      workspaces. Cover malformed/unsupported formats, references, customizations,
-      capacity, and no mutation on rejected input. Schema 1 is unsupported; do not
-      implement legacy parsing, conversion, or regression coverage.
-
-Exit: single-language data works without a counterpart; extra languages and
-schema-2 backup/recovery handling have explicit, safe contracts.
+P1.7 factories, validation, workspace backups, and recovery are implemented.
+Its outstanding round-trip acceptance remains unchecked in follow-up F3.
 
 ## Phase 2 — Independent resumes and output fields
 
-These criteria implement the accepted independent one-language resume model.
+- [x] P2.1 Create/name/duplicate/open/delete resumes; show language and confirm deletion.
+      Resume deletion never deletes career content.
+- [x] P2.2 Select/order sections, entries, achievements, contact fields, and entry fields independently.
+- [x] P2.3 Distinguish excluded, empty, required, and unsupported fields; retain hidden data.
+- [x] P2.4 Inherit or customize all display wording; shared edits preserve overrides.
+      **Use career wording** removes an override; label the editing scope.
+- [x] P2.5 Copy to another language using destination wording and shared identities;
+      copy selection/order and compatible layout, preserve the original, warn about
+      font/rendering differences, and never silently translate or fall back.
+- [x] P2.6 Show resume names/languages and compare effective committed content.
 
-- [ ] P2.1 Create/name/duplicate/open/delete resumes with a language visible in their
-      collection cards and active header. Confirm deletion; deleting a resume never
-      deletes shared career content.
-- [ ] P2.2 Independently select/order sections, entries, achievements, contact fields,
-      and relevant career-entry fields. Language resumes can differ without copied facts.
-- [ ] P2.3 Distinguish excluded, empty, required, and unsupported fields. Explain
-      structural minimums; hiding optional values retains their career data.
-- [ ] P2.4 Allow all display wording to inherit Career details or be explicitly
-      customized. Shared edits update inheriting resumes; customized text stays unchanged.
-      **Use career wording** removes customization. Label scope; no acknowledgment queues.
-- [ ] P2.5 Support creating a copy in another language using shared career identities
-      and copied selection/order with independent presentation. Use destination-language
-      career wording; leave missing wording missing, without translation or silent
-      fallback. Preserve the original and its custom wording. Copy compatible layout
-      settings and warn about different font/rendering requirements; never promise
-      identical appearance. Defer in-place language changes.
-- [ ] P2.6 Show names and language labels; defer groups. Comparisons show effective
-      content; downloads identify the exact committed snapshot.
+Implementation preserves the `master` resume card/dialog/color/disclosure styles
+inside the restored shell, with separate Content and Wording views. Existing
+schema-2 defaults and pending selection operations remain supported without
+schema-1 compatibility. Parent exclusion retains child configuration. Creation
+and deletion use nullable single-resume scopes with transactional retries/history;
+missing-resume recovery remains explicit and uncommitted.
 
-Exit: demonstrate English-only use and English/Portuguese resumes with differing
-fields, achievements, ordering, and layout.
+Presentation refactor: each resume's sidebar name opens a read-only overview,
+with **Overview**, **Content & order**, and **Wording** child destinations.
+Selecting the resume name also selects Overview. Individual views use the resume's
+colored title icon and title-row actions menu, omit All resumes, and show the
+resume name in the breadcrumb. Only the collection/comparison selects Resumes.
+Resume selectors include colored icons in options and selected values; the
+overview card omits the color value.
+The resume views use underlined Overview, Content & order, and Wording tabs with
+icons, controlled by the durable destination and existing dirty-form guard.
+Comparison remains a separate action; narrow tab lists scroll horizontally.
+Shared actions open name/color editing on a dedicated Save/Cancel page, duplicate/copy, or confirm
+deletion. Navigation remains durable and draft-guarded. Labels truncate with
+ellipsis; collection sizing ignores entrance transforms and scrolls only on actual
+overflow. Choice controls align to the first title line. Entry search uses a
+conditional inline clear action and restores input focus.
 
-## Phase 3 - Focused output readiness
+The committed PDF viewer uses existing Verso controls around pinned PDF.js:
+compact direct page entry without spinner or previous/next buttons, a compact spinner-free
+percentage zoom input (25-400%, committed on Enter or blur) with separate Fit width/Fit page buttons, thumbnails, embedded
+outline, button-opened search, download, and on-demand properties. Group toolbar
+controls with the navigation toggle and separator at the start, the actions menu
+at the far right, and the remaining controls centered between them. Allow groups
+to wrap in narrow panes. Document navigation has no
+visible title: a left utility rail uses Lucide Images/Summary icon tabs and the
+navbar's translucent animated selection surface with its leading vertical bar.
+Keep accessible vertical-tab behavior, tooltips, independently scrolling content,
+a bottom Close action, and the existing narrow-pane overlay. Native browser Find
+shortcuts remain
+untouched; manual browser-specific acceptance remains separate. Viewer changes
+preserve explicit refresh, saved-content-only output, stale-job rejection, and
+last-successful-preview labeling. No schema or dependency versions change.
 
-- [ ] P3.1 Remove compulsory counterpart tasks and translation confirmations.
-      Additional languages create no review debt or equivalence promise.
-- [ ] P3.2 Defer directional translation tracking and acknowledgment UI; remove
-      obsolete baseline dependencies rather than implementing the former proposal.
-- [ ] P3.3 Keep customized wording unchanged after shared edits, with clear source
-      labels and Use career wording; no shared-wording acknowledgment workflow.
-- [ ] P3.4 Save valid incomplete records. Reject malformed entered values with specific
-      messages and retain drafts; saveability does not mean export readiness.
-- [ ] P3.5 Validate only selected resume content and language. Hidden fields, unused
-      entries, and inactive languages do not block that output. Selected archived
-      content continues rendering; archive status alone does not invalidate output.
-- [ ] P3.6 Provide active-resume readiness issues and editor navigation. Retire
-      translation-review queues; intentional adaptations create no review tasks.
+Before initial generation, show an illustrated document placeholder with an explicit
+Generate preview action, or guidance to Issues when output is blocked. Distinguish
+compiler preparation, generation, viewer loading, and first-page rendering. Announce
+loading accessibly, respect reduced motion, retain the last successful PDF during
+refresh, and show errors with retry guidance rather than indefinite loading.
 
-Exit: valid partial work saves; only selected-output errors block export.
+Presentation-refactor verification on 2026-11-03: formatting, lint, generated route
+types/TypeScript, 40 Node tests (9 files), 67 Chromium component tests (7 files),
+and 46 production E2E cases passed across Chromium/Firefox/WebKit with a fresh
+build. Suites ran sequentially; production E2E used one worker after overlapping
+runs encountered host resource contention. Native desktop Find UI remains
+unverified because the Computer Use helper could not connect after recovery;
+the automated shortcut check proves non-interception, not native Find coverage.
 
-## Phase 4 — Layout presets and resume starters
+Historical Phase 2 verification (before this presentation refactor):
+Verification on 2026-11-03: formatting, lint, route generation/typecheck, and
+`npm test` passed: 40 Node tests (9 files), 59 Chromium component tests (6 files),
+and 43 production E2E cases across Chromium/Firefox/WebKit, including actual
+English/Portuguese PDF checks. See [phase-2 evidence](phase-2-evidence.md) for
+source/build identity, regressions resolved, and limits. Deferred F1–F7 remain
+historical/open acceptance, not automatically passed by this implementation.
+Owner visual/PDF, manual round-trip, and performance acceptance remain separate.
 
-Implement P0.4's accepted scope. Presets are distinct from template engines. Reuse
-or adapt the bundled renderer where it fits; replace relevant rendering mechanisms
-when necessary for the accepted language/field/layout design. This does not imply
-adding a freeform designer or marketplace.
+## Phase 2.5 — Custom-section icons
 
-- [ ] P4.1 Layout controls positioning, typography, paper, spacing, and colors of
-      selected fields. Switching layout preserves data/selections and explains unsupported fields.
-- [ ] P4.2 Save/name/apply/duplicate/delete layout presets with preview/undo. Presets
-      contain appearance, not private career text or source-resume references.
-- [ ] P4.3 Save/use starters with approved sections/order, field defaults, and layout.
-      Use supported built-in fields; user-defined field definitions are deferred.
-- [ ] P4.4 Keep selected jobs/achievements/custom wording in Duplicate resume;
-      content-bearing starters are deferred.
-- [ ] P4.5 Copy settings on application. Editing/deleting starters does not mutate
-      existing resumes or add live inheritance/review obligations.
-- [ ] P4.6 Offer starters in Create resume and presets in Layout. Include them in
-      backup/recovery/undo. Reuse useful appearance controls where they fit the target
-      model; do not migrate baseline settings or recreate four-scope inheritance for parity.
+Implementation delivered; browser/manual acceptance remains with the owner.
 
-Exit: reusable structure/appearance never owns career data or unexpectedly changes resumes.
+This slice corrects the delivered career model and resume presentation without
+changing the historical completion records above. Earlier development workspaces,
+backups, drafts, and prepared operations need no backward compatibility; do not
+add migration adapters, silently reseed data, or add legacy regression coverage.
+Workspace schema 2 and recovery format 1 remain the development target formats.
 
-## Phase 5 — Settings and navigation
+- [x] P2.5.1 Require validated section icon IDs in the active model, factories,
+      fixtures, starter definitions, and portable validators. Reuse the 25-icon
+      catalog; custom sections default to file-text, and built-in icons are fixed.
+- [x] P2.5.2 Edit icons in Section properties through its existing draft and
+      Cancel / Save. Show draft choices only inside the properties editor;
+      other views use committed icons. No independent picker Save operation.
+- [x] P2.5.3 Resolve each section's saved icon consistently across Career details,
+      section destinations, sidebar, resume Content & order, Wording, comparison,
+      and any other existing section representation. Preserve resume identity
+      colors and generic navigation/action icons; add no new representations.
+- [x] P2.5.4 Include icons in scope baselines, validation, recovery, reconciliation,
+      conflicts, atomic Save receipts, retries, and Undo/Redo. Preserve independent
+      entry-order drafts, exact-version cleanup, archive/restore, replacement,
+      rollback, and workspace/recovery round trips.
+- [x] P2.5.5 Keep icons shared and language-independent, outside wording and output
+      readiness. Starter structure copies icon choices; appearance presets do not
+      overwrite shared icons. Starter workflows remain later layout work. Icons
+      remain app-only; preserve PDF rendering and revision metadata, so an icon Save
+      may mark preview stale but never automatically compiles. Subsequent settings,
+      resource, and local acceptance work includes icon consistency and recovery.
+- [x] P2.5.6 Run formatting, lint, route generation/typecheck, non-watch unit tests,
+      and production build. Update maintained guidance and record actual results.
+      Browser Mode, Playwright, computer-use, visual, and manual PDF validation
+      belong to the owner and remain explicitly unverified for this slice.
 
-- [ ] P5.1 Discoverable settings menu covers appearance, content languages, editing/
-      preview, data/backups, and defaults. Account controls wait for account implementation.
-- [ ] P5.2 Distinguish local preferences, document configuration, and future account
-      settings; state backup/sync scope. Consolidate controls without losing recovery or diagnostics.
-- [ ] P5.3 Implement accepted durable routes supporting deep links, reload, Back/Forward,
-      validated IDs, and useful missing-resource states. Never expose resume text/secrets in URLs.
-- [ ] P5.4 Establish coherent workspace/controller ownership and compiler lifecycle;
-      protect edits, focus,
-      scroll, issue links, narrow-screen access, and dirty-edit policy across navigation.
-      Keep transient controls local; dirty forms use Save/Discard/Stay guards.
+Owner acceptance: verify picker keyboard/focus and narrow-screen behavior; draft
+isolation and Save/Cancel; navigation/reload and recovery; and distinct custom
+section icons across career and resume views. Existing deferred acceptance stays
+open. No dependency upgrades, routes, per-resume icon overrides, PDF section icons,
+or future starter/preset workflows are included.
 
-Exit: settings/navigation consistently follow the recorded policy.
+Non-browser verification on 2026-11-04: formatting, lint, generated route types /
+TypeScript, 58 unit tests across 10 files, and production build passed. Seven local
+documentation links were checked, and requirements through Phase 2 were verified
+unchanged. Controller unit checks exercise explicit session-only behavior, not
+real IndexedDB atomicity. Three icon-specific browser cases were added for picker
+Save/Cancel, distinct icons across views, and real persistence/retry/rollback;
+these and all other browser/manual checks remain unexecuted for this slice.
 
-## Phase 6 — Saving and bounded PDF resources
+## Phase 3 — Output readiness
 
-Saving less often does not prove lower PDF memory use. Persistence, history,
-compilation, and rendering consume different resources.
+- [x] P3.1 Remove compulsory counterpart tasks and translation confirmations.
+- [x] P3.2 Remove obsolete translation tracking/review dependencies.
+- [x] P3.3 Label inherited/custom wording and preserve customizations after shared edits.
+- [x] P3.4 Save valid incomplete content; reject malformed values and retain failed drafts.
+- [x] P3.5 Validate selected output only; unused/inactive/archived status alone never blocks it.
+- [x] P3.6 Show active-resume readiness issues with editor navigation.
 
-- [ ] P6.1 Measure extended sessions: compilers, pending work, retained PDFs, viewer
-      documents/workers/canvases, object URLs, and history bounds where inspectable.
-- [ ] P6.2 Follow P0.6 with distinct truthful recovery, save, preview, backup, and
-      future release statuses.
-- [ ] P6.3 Manual refresh is independent of saving. Optional automatic refresh
-      compiles only committed, active output-affecting changes. Manual refresh is default.
-- [ ] P6.4 Bound concurrent/pending work, supersede stale requests, reject late results,
-      release obsolete PDF/worker/canvas/URL resources, and define hidden-preview behavior.
-- [ ] P6.5 Preserve a labeled last successful preview on failure, identifying revision,
-      stale state, diagnostics, and retry.
-- [ ] P6.6 Complete and verify accepted Save/Cancel, recovery, dirty
-      navigation, validation, undo, and conflicts. Save without compile is possible;
-      refresh/export identify committed snapshot use. Unsaved form drafts never compile.
-- [ ] P6.7 Ensure coordinated conditional guest writes/replacements, session-only
-      recovery, and other-tab conflict protection regardless of save mode. Reuse
-      Web Locks/reviewed tokens or replace them with verified equivalent safeguards;
-      the safety contract matters more than preserving implementation details.
-- [ ] P6.8 Manually verify rapid edits/switches, hidden previews, failures/timeouts,
-      and long sessions against recorded resource bounds.
+Implementation adds one committed-output assessment shared by rendering and the
+PDF-only Issues footer. Overview has no Issues disclosure. The persistent
+count/status row starts collapsed; expansion is user-controlled while mounted,
+with a separately bordered scrolling body capped at 40dvh. The footer remains
+available before compilation, during failures, and alongside the last successful
+PDF. Repair links open exact resume Wording cards through
+existing draft guards and reveal Editor on narrow screens after navigation succeeds.
+Shared URL validation and checkbox presentation no longer import retired workflows.
+Readiness preserves existing PDF blocking rules and does not constrain incomplete
+valid Saves. Workspace schema 2 and recovery format 1 remain unchanged.
 
-Exit: deliberate saving behavior and evidenced bounded preview resources.
+Owner visual/manual acceptance remains open: visual consistency with existing UI,
+keyboard/focus, narrow layouts, dirty navigation and failed Saves, committed-only
+updates, retained preview/download, and English/Portuguese PDF behavior.
+Automated Browser Mode and production E2E results are recorded below.
+Previous deferred acceptance is unchanged and is not counted as passed.
 
-## Phase 7 — Local acceptance and documentation
+Initial non-browser verification on 2026-11-04: formatting, lint, generated route
+types / TypeScript, 64 unit tests across 12 files, and production build passed. The initial
+format check hit a sandbox directory-scan EPERM; the initial unit run hit a
+subprocess EPERM. Both passed after sandbox retries. Three new Browser Mode cases
+and one production E2E case were added, type-checked, and left unexecuted for the
+owner. Static runtime-import inspection of the active page found no retired
+review/workspace workflow imports after shared-helper extraction. No browser,
+computer-use, visual, or manual PDF validation was performed.
 
-- [ ] P7.1 Verify one-language onboarding/editing/export, independent language resumes,
-      visibility/order, shared facts, custom wording, and no compulsory translation review.
-- [ ] P7.2 Verify each added output language's labels, dates/regions, fonts, hyphenation/
-      direction where applicable, metadata, links, selectable/searchable text, and layout.
-      Clearly disable unsupported PDF output instead of silently using wrong labels/glyphs.
-- [ ] P7.3 Verify approved presets/starters, settings, routing, save/preview, undo,
-      keyboard access, and narrow layouts.
-- [ ] P7.4 Restore schema-2 workspace backups and recovery exports on disposable origins; verify identities,
-      wording, order/selection, appearance, and recovery. Invalid imports preserve current
-      work; imports never publish anything.
-- [ ] P7.5 Inspect actual PDFs with accents/special characters, long titles/URLs,
-      optional omissions, and page overflow; exercise failure/stale results. Page counts
-      do not prove clipping detection, PDF/UA, or universal ATS compatibility.
-- [ ] P7.6 Run required static checks/build, record manual evidence/limitations, update
-      README/applicable guidance and all other affected project artifacts.
-- [ ] P7.7 Run relevant Node, browser-component, and application-flow suites with
-      actual file/test/pass/fail/skip counts. Cover single-language use, independent
-      selection, Save/Cancel draft boundaries, persistence conflicts/recovery, stale compiler
-      results, and approved navigation/save behavior at appropriate boundaries.
-      Test observable contracts with independent expectations, not private structure;
-      retain manual visual/PDF inspection and do not hide failures with skips/retries.
+Browser-regression follow-up on 2026-11-04: fixed three test failures caused by
+implicit narrow viewports and unscoped duplicate issue text. Production checks
+then exposed duplicate history entries when Save reopened the current resume
+editor, plus a narrow-panel race where clearing a completed issue-focus request
+could undo a manual switch to PDF. Reopening the same destination now preserves
+its history entry; clearing a request preserves the selected panel, while a new
+issue request still reveals Editor. Added direct history and panel regression
+assertions without changing the readiness UI presentation.
 
-Exit: verified local milestone. Future phases await explicit activation.
+Final follow-up verification: 64 unit tests across 12 files, 75 Chromium Browser
+Mode tests across 7 files, and all 49 production E2E cases across
+Chromium/Firefox/WebKit passed. Formatting, lint, generated route types/TypeScript,
+and the fresh production build passed. E2E used one worker, separately from Browser
+Mode. Initial component runs had three test-setup failures; the first production
+run had three history-regression failures and the second had one narrow-panel
+failure. The final run passed without skips or configured retries. This executes
+the previously deferred icon-specific browser cases as well; owner visual/PDF
+acceptance, manual round trips, and deferred performance/safety acceptance remain
+open. Seven local documentation links were checked successfully.
 
-## Phase 8 — Future authentication and Prisma Postgres storage
+Firefox shell-test follow-up on 2026-11-04: reproduced a scripted rich-text fill
+inserting replacement text before existing summary text, already visible before
+Data & backups navigation. The restored-shell tests now click/focus the editor,
+select all with the native keyboard path, insert text, and immediately assert the
+exact replacement. Existing Save/Cancel, guard, and draft-retention assertions stay
+in place. No application behavior, timeout, skip, or retry settings changed.
 
-Prerequisites: stable local model, owner activation, approved infrastructure. Read
-auth/persistence and Prisma setup skills before implementation.
+All six shell cases (desktop/phone across Chromium/Firefox/WebKit) passed with the
+normal two-worker configuration. Ten isolated Firefox phone repetitions had nine
+passes and one overall 30-second timeout during a slow run, without recurrence of
+the original appended-text error. The baseline had three failures out of five
+attempts, including timeouts. An intermediate per-character typing experiment was
+interrupted after a timeout; final input uses one text event after native selection.
+Changed-test lint/format checks, generated route types/TypeScript, and fresh
+production builds passed. Full unit/component/E2E suites were not rerun for this
+test-only follow-up; earlier complete runs remain separate historical evidence.
 
-- [ ] P8.1 Inspect Dayplan login, isolation, guest import, recovery, and revision-aware
-      saving as references. Verify source/selected-version official docs; do not blindly
-      copy credentials, versions, schemas, or stale README claims. Better Auth
-      Google/GitHub is the reference direction.
-- [ ] P8.2 Record provider/access policy, sessions, runtime/hosting, Prisma version/
-      driver, and Prisma Postgres connection choice. Keep secrets/auth/clients server-only.
-- [ ] P8.3 Implement login/logout/expiry recovery/account settings and server ownership
-      checks for every private read/write; guessed IDs cannot expose drafts.
-- [ ] P8.4 Persist validated user-owned career data, resumes, starters/presets, and applicable settings. Choose snapshot versus normalized storage from
-      actual consistency/query needs.
-- [ ] P8.5 Send explicit Saves immediately after durable local request preparation;
-      confirm account saving only after server acknowledgment. Use scope-aware atomic
-      checks and receipts, safe retries, exact-version cleanup, and truthful offline/
-      pending status. Measure database operations, including auth and refresh reads;
-      no typing-triggered cloud writes or cross-Save debounce.
-- [ ] P8.6 Preserve guest use and explicit previewed import. Login never silently
-      merges/replaces account work; define mapping, retries, and cleanup preserving newer guest edits.
-- [ ] P8.7 Isolate caches/recovery by account/workspace. Logout/switching preserves or
-      resolves pending work without cross-account exposure; guest data stays separate.
-- [ ] P8.8 Add isolated-database integration coverage for ownership, durable writes,
-      stale revisions, idempotent retries, import, and account isolation; use controlled
-      provider-boundary tests for deterministic auth behavior. Manually verify real
-      callbacks/expiry. Record blocked infrastructure rather than claiming completion.
+## Phase 4 — Layout presets and starters
 
-## Phase 9 — Future tab, browser, and device sync
+- [x] P4.1 Control positioning, typography, paper, spacing, and colors; layout changes
+      preserve data/selections and explain unsupported fields.
+- [x] P4.2 Save/name/apply/duplicate/delete appearance-only presets with preview/undo.
+- [x] P4.3 Create structure-only starters with section/order/field defaults and layout.
+- [x] P4.4 Use Duplicate resume for content-bearing reuse; defer content-bearing starters.
+- [x] P4.5 Copy settings on apply; no live inheritance from starters or presets.
+- [x] P4.6 Offer starters in Create resume and presets in Layout; include them in backup/undo.
 
-Guest tab coordination remains local scope. Browser/device sync needs authenticated
-shared storage; localStorage alone cannot provide it.
+Implemented Layout, appearance-only presets, editable empty starters, reviewed
+atomic starter creation, and copied future-selection field defaults. Current
+development data requires template `yabuki-reference@1.0.3` and the complete
+layout model; no earlier layout/template compatibility or automatic reset.
+Browser Mode, production E2E, visual and manual/PDF acceptance are delegated to
+the owner and remain unexecuted for this implementation. Authored browser cases
+are not passing evidence. See maintained README and docs/verification.md for
+behavior and remaining acceptance; earlier deferred work remains open.
 
-- [ ] P9.1 Detect revisions on focus/reconnect and a documented periodic/event mechanism;
-      specify/measure freshness and apply clean updates without discarding dirty drafts.
-- [ ] P9.2 Coordinate local tabs; server revision checks remain authoritative across
-      browsers/devices. Web Locks cannot prevent cross-device conflicts.
-- [ ] P9.3 Preserve local/remote conflict versions with comparison, export, reload,
-      and explicit resolution; no silent full-workspace last-writer-wins.
-- [ ] P9.4 Recover edits through network loss/refresh and retry safely. Bound recovery/
-      history retention; restoration creates a new revision. Define settings sync scope.
-- [ ] P9.5 Verify separate tabs/browser profiles/devices, simultaneous saves, sleeping
-      tabs, offline recovery/retries, account changes, and expiry.
-      Automate reproducible conflict, stale-response, retry, and recovery scenarios;
-      retain manual checks across actual browsers/devices.
+Non-browser verification on 2026-11-05: formatting, lint, generated route types /
+TypeScript, 115 unit tests across 13 files, and production build passed. Compiler
+preparation verified the unchanged font/package bundle and updated template
+metadata. Initial stale-sample and schema-composition failures were fixed;
+sandbox retries resolved unit-startup and formatter-scan EPERM errors. Seven new
+Browser Mode cases and two desktop/phone E2E definitions were type-checked and
+left unexecuted for the owner. No visual, computer-use, or manual/PDF validation
+was performed. Maintained documentation links and diff whitespace were checked.
 
-Full coauthoring and automatic semantic merging are not required.
+## Phase 4.5 — Library navigation and workflow clarity
 
-## Phase 10 — Future downloadable resumes and versioned URLs
+- [x] P4.5.1 Add a permanent navigable Library group between Career details and Resumes.
+      Its durable overview shows Layout presets and Resume starters descriptions,
+      matching card icons, and Edit links without saved-item counts. Collection
+      headings use the same icon sizing as other workspace views. Retain presentation, selection, utility access,
+      and scrolling on short screens and long collections.
+- [x] P4.5.2 Replace Reusable setups discovery with direct library destinations,
+      accurate guarded Library/collection parent location trails, full-width views,
+      and missing/new
+      item labels. Keep contextual Manage links. Library browsing must not remount,
+      expand/select, or replay entrance animations on resume rows; omit unrelated
+      career-language/editor controls and resume return links.
+- [x] P4.5.3 Explain appearance-only presets, empty-structure starters, and
+      content-bearing Duplicate resume; library changes never update existing copies.
+- [x] P4.5.4 Load a library preset into an explicitly chosen resume's Layout draft,
+      rechecking identities after draft resolution; announce unsaved changes and
+      require a separate Save. Capture presets from saved appearance only.
+- [x] P4.5.5 Share explicit Blank resume / From starter creation across entry points;
+      review structure, field defaults, style and section mappings. Missing starters
+      block creation instead of silently falling back to blank.
+- [x] P4.5.6 Order layout groups Typography, Page & margins, Header & contacts,
+      Spacing & details, Colors. Initially expand the first two; reveal invalid
+      fields without changing their meaning or Save/Cancel boundaries.
+- [x] P4.5.7 Author/update browser regression coverage and maintained behavior docs;
+      preserve portable formats, controller operations, recovery and history.
+- [x] P4.5.8 Record executed non-browser checks separately from owner browser,
+      visual/manual and PDF acceptance. Authored tests are not passing evidence.
+- [x] P4.5.9 Place collection creation at the end of the page title row; remove duplicate intro-card titles
+      and all preset/starter search. Item footer order is Edit / Duplicate / Apply or
+      Create / Delete; confirmation is Cancel / Delete, with DOM and visual order
+      agreeing through wrapping. Use consistent untitled-item labels.
+- [x] P4.5.10 Make Resume Layout presets optional in an initially collapsed disclosure.
+      Keep direct controls usable without a preset; selecting a candidate changes
+      nothing until Load. Keep capture/manage actions, explanatory empty state, and
+      an unsaved-load announcement outside the disclosure. No preset is required
+      for Save. Retain appearance matching and no-op loading semantics.
 
-Prerequisites: accounts, persistence, hosted artifacts, and explicit latest policy.
-A local blob URL is not a public share URL.
+The Library overview and optional-preset corrections are implemented with authored
+regression coverage. Automated browser regression results for the corrections
+are recorded in docs/verification.md; prior results remain separate. Owner
+manual/visual/PDF acceptance remains open.
 
-- [ ] P10.1 Owner marks a specific resume downloadable after reviewing its selected
-      public content/language; private resumes remain private.
-- [ ] P10.2 Store immutable PDF releases identifying resume/content revision, locale,
-      template/runtime, settings, and artifact. Compile/store before exposure, not per visitor.
-- [ ] P10.3 Provide pinned and stable latest URLs. Recommended latest advances through
-      explicit release of a valid saved snapshot. Automatic saved-version release, if
-      chosen, needs explicit opt-in/privacy semantics; typing is never implicit publication.
-- [ ] P10.4 Advance latest atomically after successful validation/storage. Failure
-      preserves the old link; pinned bytes never silently change. Drafts/presets/imports
-      cannot mutate existing release artifacts.
-- [ ] P10.5 Expose only released PDFs/intended metadata, not editable backups, career
-      libraries, internal names, or private data. Define public versus unlisted access;
-      unlisted URLs are not authentication.
-- [ ] P10.6 Provide copy-link, history, latest inspection, retained-release rollback,
-      disable/revoke controls, and defined deletion/retention/missing-link behavior.
-      Define cache invalidation; downloaded files cannot be recalled.
-- [ ] P10.7 Serve correct PDF type, attachment disposition, filenames, and version-aware
-      caching with a documented latest-link freshness bound.
-- [ ] P10.8 Verify hosted anonymous downloads, denied private access, pinned stability,
-      latest advancement/failure, rollback, revocation, caches, and artifact/cost bounds.
-      Add integration/application-flow coverage for release atomicity, authorization,
-      pinned/latest behavior, and failed publication preserving the previous release.
+This is a UX follow-up to the implemented layout/configuration slice. It does not
+reopen Phase 4's implementation record or claim its outstanding acceptance passed.
+Use the existing Verso views and UI primitives as visual references. No new storage
+schema, template identity, migration, dependencies, live inheritance, or account
+scope is introduced. Library dialogs are transient; durable destinations retain
+existing opaque-ID scope URLs. Canceling navigation or a failed Save prevents the
+requested follow-up action and retains drafts. Loading presets never commits or
+compiles. Successful starter creation retains the existing atomic lifecycle.
 
-## Phase 11 — Future hosted-release readiness
+The owner subsequently requested automated failing-test repair; executed Browser
+Mode and Playwright evidence is recorded separately from screenshot/computer-use,
+manual interaction, and visual/PDF acceptance, which remain with the owner.
+See README for delivered behavior and
+[verification](verification.md) for the self-contained owner checklist and actual
+non-browser results. Existing deferred acceptance remains open.
 
-- [ ] P11.1 Document hosting/env/callbacks, Prisma migrations, artifact permissions,
-      compiler assets, and recovery. No destructive setup against shared/production data.
-- [ ] P11.2 Define account/artifact deletion, backup/log retention, restore procedures;
-      perform a recovery exercise.
-- [ ] P11.3 Bound input/backup sizes, compilation, mutation/download abuse, and artifacts
-      without routinely logging private resume content.
-- [ ] P11.4 Verify HTTPS, ownership/origin protections, isolation, caching, browsers,
-      and measured save/sync/preview/download targets.
-- [ ] P11.5 Record actual hosted acceptance and limitations in project documentation; local
-      screens or mocks are not deployment evidence.
+## Phase 5 — Layout editor refactoring
 
-## Deferred unless separately requested
+- [x] P5.1 Replace generic Template default placeholders with effective values in
+      controls and muted default descriptions near their labels or inputs. Include
+      units and actual default color swatches. Explain relative/elastic defaults in
+      plain language without inventing fixed equivalents; preserve underlying
+      template-default semantics until the user edits the field.
+- [x] P5.2 Replace individual reset actions with one compact outlined Reset group
+      button and reset icon, right-aligned at the top of each expanded group's
+      content, outside its disclosure trigger. Disable when the group matches its
+      frozen layout defaults for resumes and app defaults for preset/starter
+      authors. Reset all group-owned settings, including hidden values,
+      in one uncommitted draft update, leaving other groups untouched.
+- [x] P5.3 Add representative typography, page, contact-card, spacing, and palette
+      icons between each group caret and title. Use recognizable bullet-marker
+      previews and alignment icons where helpful; preserve accessible text labels
+      and hide decorative icons from assistive technology.
+- [x] P5.4 Use a Section divider checkbox in Typography; show divider thickness only
+      when enabled, directly beneath its checkbox, and retain its value while
+      hidden. Keep the neighboring field anchored while toggling the divider.
+- [x] P5.5 Place Paper above the margin guide. Restore master's margin-edge highlight
+      on hover and provide equivalent keyboard-focus behavior. Hover takes
+      precedence; leaving restores the focused edge. Use a Show page numbers
+      checkbox, revealing format and alignment only when enabled and retaining
+      hidden values. Keep both dependent controls beneath their checkbox and the
+      page-warning threshold alongside it; place its explanation in a label info hint.
+- [x] P5.6 Replace the prominent Edit profile content button with a small inline
+      action in Header & contacts explanatory text, retaining guarded navigation.
+      Use a Contacts per row select with Automatic wrapping as the canonical
+      default, retaining fixed-count and Custom rows choices. Show custom row sizes
+      and row-break controls only for Custom rows, beneath their select. Keep row
+      spacing and separator alongside this column so toggling custom rows does not
+      reposition neighboring fields. Row-break choices share one Start a new row
+      before instruction. Use a Contact icons checkbox.
+- [x] P5.7 Place a compact clickable color swatch beside each color label. Open an
+      accessible popover with named choices and selected-state feedback. Selection
+      updates the draft and closes the popover; Escape/outside dismissal changes
+      nothing. Restore focus to the trigger. Explain that changes require the
+      enclosing Save; do not add a popover Save button. Retain disabled color
+      dependencies and their explanations.
+- [x] P5.8 Update affected existing tests and add meaningful regression coverage
+      for defaults, reset isolation, conditional controls/value retention, margin
+      hover/focus, paper ordering, guarded navigation, and color-popover selection,
+      dismissal, and focus. Cover resume, preset, and starter appearance editors.
+      Verify Cancel restores committed values, Save retains one atomic history
+      step, and unsaved changes never compile or change committed PDF output.
+- [x] P5.9 Copy preset/starter appearance as frozen defaults when applying/creating
+      a resume; blank creation copies workspace defaults. Later library edits or
+      deletion never affect those copies. Preserve defaults through duplication,
+      exact layout Saves, recovery, history, backup, replacement, and rollback.
+      Existing supported resumes without defaults use saved appearance, persisted
+      only on their next layout Save; never infer it from modified draft values.
+      Preserve immutable requests and fingerprints. A baseline-only preset load
+      remains a meaningful edit even when rendered appearance matches.
 
-Portfolio JSON/public APIs and other-repository integration; LinkedIn assistance;
-automatic translation/AI rewriting; arbitrary LaTeX imports/executable user templates;
-template marketplace/freeform designer; billing; coauthoring; all-script PDF promises;
-formal PDF/UA; automatic public release of drafts; translation tracking; resume
-groups; user-defined field types; content-bearing starters.
+Apply this refactoring through the shared active LayoutFields controls. Preserve
+existing group order, initial expansion, values, validation, recovery, history,
+and Save/Cancel boundaries. Hidden invalid fields must remain discoverable and
+actionable through validation-driven disclosure and error presentation. Use
+frozen preset-defined resume defaults, app defaults for library authors, and
+verified template metadata for display and reset behavior. Do not change retired
+editor behavior solely because presentation helpers are shared. No public API,
+template identity, or dependency changes are required. Resume layouts add an
+optional nonrecursive defaults snapshot within workspace schema 2/recovery format
+1; presets and starters remain flat appearance. This narrowly scoped baseline
+initialization is authorized; earlier unsupported templates/layouts remain rejected.
 
-These are not prerequisites for the local-editor or public-PDF-link milestones.
+During implementation, run formatting, lint, generated-route/type checks, and
+relevant non-watch unit tests. Author and update affected Browser Mode and
+production E2E cases. Browser execution was initially left to the owner and later
+authorized for failing-test repair; manual/visual/PDF acceptance remains with the
+owner. Report actual executed counts, failures, and unexecuted coverage separately;
+authored tests are not passing evidence. Preserve all earlier deferred acceptance.
+
+Implementation is delivered with regression coverage. Executed automated browser
+results are separate from owner manual/visual/PDF acceptance, which remains open.
+Executed checks and remaining acceptance are recorded in
+[verification](verification.md).
+
+## Phase 6 — Settings and navigation
+
+- [x] P6.1 Provide appearance, content-language, editing/preview, data/backup, and default settings.
+- [x] P6.2 Identify device-only versus workspace settings and their backup/sync scope.
+- [x] P6.3 Provide durable validated routes, reload, Back/Forward, and missing-resource states;
+      extend the established Library overview/collection/editor destinations alongside
+      all other navigation;
+      never put private text or secrets in URLs. Library work covers only its slice.
+- [x] P6.4 Preserve drafts, focus, scroll, issue navigation, and narrow-screen access;
+      extend the established Library behavior across the workspace; keep transient
+      controls local and guard dirty navigation. Include inline profile-content
+      navigation and transient layout color popovers.
+
+Settings implementation is delivered as a dialog with its own sidebar. Device
+preferences apply immediately; workspace language/defaults forms retain explicit
+Save/Cancel. Automatic preview refresh remains in Phase 7. Browser suites and
+manual/visual validation remain with the owner; authored browser cases are not
+passing evidence. See the self-contained Settings checklist in
+[verification](verification.md). Earlier deferred acceptance remains open.
+
+## Phase 7 — Saving and bounded PDF resources
+
+**Status: Resolved — implementation and automated regression verification complete.**
+Owner manual/resource acceptance remains separate and is not counted as executed.
+
+- [ ] P7.1 Verify compiler, worker, PDF, canvas, URL, timer, listener, and history lifecycles.
+- [x] P7.2 Distinguish recovery, Save, preview, backup, and future release status.
+- [x] P7.3 Default to manual refresh; optional automatic refresh uses committed output changes only.
+- [x] P7.4 Bound active/queued work, reject stale results, and release obsolete resources;
+      define hidden-preview behavior.
+- [x] P7.5 Retain a labeled last successful preview on failure with revision/staleness and retry.
+- [x] P7.6 Verify draft/Save/recovery/conflict/history boundaries; Save never requires compilation.
+      Include library entry points and Style samples: unsaved actions never compile
+      or change committed output. Include layout group resets and color selection
+      in these draft/resource checks. Existing resource/safety obligations remain open.
+- [x] P7.7 Verify conditional guest writes, generation checks, other-tab conflicts, and
+      clearly disclosed session-only recovery when durable storage is unavailable.
+
+Implementation delivered on 2026-11-09 with regression coverage: preview
+coordinator bounds, revision-independent output fingerprint, hidden-preview
+viewer release, optional automatic refresh, typed Save/storage status, and
+reviewed exit from session-only mode. Follow-up corrections protect snapshot
+export before session adoption, disclose tab-only Saves after storage startup
+failure, refresh output that becomes ready, and defer queued automatic work while
+hidden. The final normal `npm test` passed 169 unit, 145 Browser Mode, and 82
+production E2E cases across Chromium, Firefox, and WebKit. P7.2–P7.7 have automated
+regression evidence. P7.1 retains owner resource/lifecycle inspection, and P7.8
+retains manual acceptance; neither is counted as passed by those tests.
+
+## Phase 8 — Vercel deployment readiness
+
+Makes the guest-only app deployable on Vercel. Hosted accounts, publication, and
+hosted acceptance remain Phases 9–12. Removed local-acceptance items are not passed;
+open owner acceptance stays in Pending follow-up and verification.
+
+- [x] P8.1 Generate compiler assets during `npm run build` with one cross-platform
+      script: locked downloads, SHA-256 checks, retries, clear failure, no partial
+      `public/compiler/` output. Skip regeneration when existing assets verify.
+- [x] P8.2 Run on the Vercel build image (Python 3 + lzma preflight, `python3`/`python`
+      discovery) within Hobby limits; cache downloads in a Vercel-restored directory.
+- [x] P8.3 Pin Node 24.22.1 locally (24.x on Vercel); keep npm and the lockfile.
+      Resolve `npm audit` findings with in-range/patch upgrades; record any
+      dev-only residual.
+- [x] P8.4 Serve the AGPL engine's licenses and corresponding source availability with
+      the deployed assets.
+- [x] P8.5 Document setup, the build flow, and owner Vercel steps in README.md.
+- [x] P8.6 Verify a clean local build regenerates assets, a repeat build skips them,
+      and the full suite passes; record counts.
+- [x] P8.7 Owner: deploy a preview, confirm the build log, compile English and
+      Portuguese PDFs on the deployed URL, and record the result.
+
+Local implementation delivered on 2026-11-12: a clean asset build (Python 3.12.6,
+Windows) took about 20 s and reproduced bundle SHA-256
+`bb17934203d93c9cbedbed5ad34022f65c7f42487b8e17abd84d211a44ab2f3e`; repeat builds skip;
+a corrupted cached archive fails without touching existing assets. `npm audit` went
+from 17 findings to 3 low (shadcn CLI `deepmerge`, no fixed release). Format, lint,
+typecheck, and `npm test` passed: 169 unit, 145 Browser Mode, 82 production E2E.
+The owner reported a successful Vercel build on 2026-11-12, closing P8.2. P8.7 stays
+open until the hosted PDF and cache checks are recorded.
+
+## Phase 9 — Future accounts and Prisma Postgres
+
+Requires owner activation, approved infrastructure, and a stable local model.
+
+- [ ] P9.1 Review Dayplan patterns and selected-version official docs; copy no credentials/versions.
+- [ ] P9.2 Decide providers/access, sessions, runtime, Prisma version/driver, and connection mode.
+- [ ] P9.3 Implement login/logout/expiry, settings, and ownership checks on every private operation.
+- [ ] P9.4 Persist user-owned content/configuration; choose schema structure from consistency needs.
+- [ ] P9.5 Prepare immutable local Save requests, send immediately, and confirm only on server
+      acknowledgment; use atomic scope checks/receipts/retries and measure database operations.
+- [ ] P9.6 Provide explicit reviewed guest import; login never silently merges or replaces work.
+- [ ] P9.7 Isolate account/guest caches and recovery; preserve pending work on logout/switch.
+- [ ] P9.8 Test real isolated-database ownership, atomicity, retries, import, and isolation;
+      manually verify real provider callbacks and expiry.
+
+## Phase 10 — Future sync
+
+Requires authenticated shared storage; local tab coordination is not device sync.
+
+- [ ] P10.1 Detect revisions on focus/reconnect and a documented event/periodic mechanism;
+      measure freshness and preserve dirty drafts.
+- [ ] P10.2 Coordinate tabs; server revision checks remain authoritative across devices.
+- [ ] P10.3 Retain both conflict versions with compare/export/explicit resolution.
+- [ ] P10.4 Recover offline work safely; bound eligible history without expiring unresolved recovery.
+- [ ] P10.5 Verify simultaneous/offline/sleeping clients, retries, account changes, and expiry
+      through automation plus actual browsers/devices. No coauthoring requirement.
+
+## Phase 11 — Future public PDF releases
+
+Requires accounts, hosted artifacts, and an approved latest-release policy.
+
+- [ ] P11.1 Explicitly release reviewed content; private resumes stay private.
+- [ ] P11.2 Store immutable PDFs with content, locale, template/runtime, and settings identity.
+- [ ] P11.3 Provide pinned/latest URLs; latest advances through explicit release by default.
+      Automatic release requires opt-in; typing never publishes.
+- [ ] P11.4 Atomically advance latest after successful storage/validation; failures preserve old links.
+- [ ] P11.5 Expose only intended release artifacts/metadata; unlisted URLs are not authentication.
+- [ ] P11.6 Provide link/history/latest/rollback/revocation controls and retention/cache policy.
+- [ ] P11.7 Serve correct PDF headers, filenames, caching, and documented latest freshness.
+- [ ] P11.8 Verify anonymous/private access, pinned stability, advancement/failure, rollback,
+      revocation, caches, and artifact/cost bounds on hosted infrastructure.
+
+## Phase 12 — Future hosted readiness
+
+- [ ] P12.1 Document hosting, secrets/callbacks, migrations, and artifact access.
+- [ ] P12.2 Define deletion/retention/restore policy and perform a recovery exercise.
+- [ ] P12.3 Bound inputs, compilation, abuse, and storage; avoid logging private content.
+- [ ] P12.4 Verify HTTPS, ownership/origin checks, isolation, caches, browsers, and measured budgets.
+- [ ] P12.5 Record real hosted acceptance and limitations; local tests do not prove deployment.
+
+## Out of scope unless separately requested
+
+Portfolio/public APIs, LinkedIn integration, AI translation/rewriting, arbitrary
+LaTeX/templates, a marketplace/freeform designer, billing, coauthoring, all-script
+PDF promises, formal PDF/UA, automatic draft publication, translation tracking,
+groups, user-defined field types, and content-bearing starters.
+
+## Pending follow-up — solve after Phase 1
+
+These open acceptance items are deferred by the owner. They do not block roadmap
+progression and must not be reported as passed. Preserve the contracts above;
+future changes still need relevant regression checks. Resolve before claiming full
+local acceptance; Phase 8 no longer carries it.
+
+- [ ] F1 Final regression pass: formatting, lint, route generation/typecheck, unit,
+      Browser Mode, and production E2E/build; record actual counts. The requested run
+      was interrupted before execution; previous green runs predate the final edits.
+- [ ] F2 Verify final batched import transfer and uncertain-operation discard:
+      Unicode/prototype safety, cancellation/error cleanup, newer-version protection,
+      receipt resolution, restart recovery, and interrupted Save/history retries.
+- [ ] F3 P1.7 acceptance: reverify automatic schema-2 workspace/recovery round trips
+      and obtain manual disposable-workspace sign-off. Cover identities, wording,
+      overrides, selections/order, appearance, capacity, and no writes on rejected input.
+- [ ] F4 Finish performance evidence: retain valid historical results, identify
+      affected/missing rows, and complete the normal/4x matrix with the enriched fixture.
+      Compare p50/p95/max/counts/failures against the recorded budgets; report mixed-build
+      limitations or rerun comparisons on the same build. No mandatory soak.
+- [ ] F5 Close measurement gaps: Save click-to-acknowledgment, recovery during continuous
+      typing, storage-failure announcement latency, real import long tasks/progress,
+      and cached-cold/warm compiler samples. Separate controller timings from UI timings
+      and first fetch/run from proven uncached download. Evaluate budgets explicitly.
+- [ ] F6 Owner review: restored presentation and English/Portuguese PDF layout/clipping;
+      retain automated text/font/link/metadata evidence separately.
+- [ ] F7 Reconcile final results and limitations in requirements, evidence, README,
+      and handoff. Record the final source/build and remaining acceptance gaps.

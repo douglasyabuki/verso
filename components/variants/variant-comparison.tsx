@@ -3,7 +3,7 @@
 import { type ComponentProps, useState } from "react";
 
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
-import { CheckField } from "@/components/editor/fields";
+import { CheckField } from "@/components/editor/check-field";
 import { LanguageFlag } from "@/components/shared/language-flag";
 import { ReviewStatusBadge } from "@/components/shared/semantic-badges/review-status-badge";
 import { WordingSourceBadge } from "@/components/shared/semantic-badges/wording-source-badge";

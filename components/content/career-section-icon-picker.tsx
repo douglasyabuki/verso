@@ -1,10 +1,10 @@
 "use client";
 
-import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useId } from "react";
 
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
   Popover,
   PopoverContent,
@@ -13,124 +13,82 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type { EditorProps } from "@/types-and-constants/editor";
-import type { Section } from "@/types-and-constants/resume";
-import {
+  type SectionIconId,
   sectionIconIds,
   sectionIconLabels,
-} from "@/types-and-constants/sections";
+} from "@/types-and-constants/section-icons";
 
+/** Choose a custom section icon within its owning properties draft; form Save commits it. */
 export function CareerSectionIconPicker({
-  section,
-  update,
-  disabled,
+  value,
+  onChange,
+  disabled = false,
+  description = "Choose an icon shared across Career details and your resumes. Save section properties to apply it.",
 }: {
-  section: Section;
-  update: EditorProps["update"];
-  disabled: boolean;
+  value: SectionIconId;
+  onChange: (icon: SectionIconId) => void;
+  disabled?: boolean;
+  description?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [draftIcon, setDraftIcon] = useState(section.icon);
-
+  const id = useId();
   return (
-    <Popover
-      open={open && !disabled}
-      onOpenChange={(nextOpen) => {
-        if (nextOpen) setDraftIcon(section.icon);
-        setOpen(nextOpen);
-      }}
-    >
-      <Tooltip>
-        <TooltipTrigger
-          disabled={open}
-          render={
-            <PopoverTrigger
-              render={
-                <Button variant="ghost" size="icon" disabled={disabled} />
-              }
-              aria-label="Change section icon"
-              className="size-8 border-0 p-0"
-            />
-          }
+    <Field>
+      <FieldLabel htmlFor={id}>Section icon</FieldLabel>
+      <Popover>
+        <PopoverTrigger
+          id={id}
+          aria-label="Choose section icon"
+          disabled={disabled}
+          render={<Button variant="outline" />}
         >
           <CareerSectionIcon
-            kind={section.kind}
-            icon={section.icon}
-            className="size-8"
+            kind="custom"
+            icon={value}
+            data-icon="inline-start"
           />
-        </TooltipTrigger>
-        <TooltipContent>
-          <Pencil aria-hidden="true" className="size-3" />
-          Change section icon
-        </TooltipContent>
-      </Tooltip>
-      <PopoverContent
-        align="start"
-        className="max-h-(--available-height) max-w-(--available-width) overflow-y-auto"
-      >
-        <PopoverHeader>
-          <PopoverTitle className="text-sm">Section icon</PopoverTitle>
-          <PopoverDescription>
-            Choose an icon for this section across Career details and your
-            resumes.
-          </PopoverDescription>
-        </PopoverHeader>
-        <ToggleGroup
-          multiple={false}
-          value={[draftIcon]}
-          onValueChange={(values) => {
-            const next = sectionIconIds.find((icon) => icon === values[0]);
-            if (next) setDraftIcon(next);
-          }}
-          variant="outline"
-          size="lg"
-          className="grid w-full grid-cols-5"
-          aria-label="Section icon"
-          disabled={disabled}
+          {sectionIconLabels[value]}
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="max-h-(--available-height) max-w-(--available-width) overflow-y-auto"
         >
-          {sectionIconIds.map((icon) => (
-            <ToggleGroupItem
-              key={icon}
-              value={icon}
-              aria-label={sectionIconLabels[icon]}
-            >
-              <CareerSectionIcon kind="custom" icon={icon} />
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-        <p className="text-xs text-muted-foreground" aria-live="polite">
-          {sectionIconLabels[draftIcon]}
-        </p>
-        <Separator />
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            disabled={disabled || draftIcon === section.icon}
-            onClick={() => {
-              if (disabled) return;
-              update((draft) => {
-                const target = draft.sections.find(
-                  (item) => item.id === section.id,
-                );
-                if (target?.kind === "custom") target.icon = draftIcon;
-              });
-              setOpen(false);
+          <PopoverHeader>
+            <PopoverTitle>Section icon</PopoverTitle>
+            <PopoverDescription>{description}</PopoverDescription>
+          </PopoverHeader>
+          <ToggleGroup
+            multiple={false}
+            value={[value]}
+            onValueChange={(values) => {
+              const icon = sectionIconIds.find((id) => id === values[0]);
+              if (icon && !disabled) onChange(icon);
             }}
+            variant="outline"
+            size="lg"
+            className="grid w-full grid-cols-5"
+            aria-label="Section icon"
+            disabled={disabled}
           >
-            Save
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+            {sectionIconIds.map((icon) => (
+              <ToggleGroupItem
+                key={icon}
+                value={icon}
+                aria-label={sectionIconLabels[icon]}
+              >
+                <CareerSectionIcon kind="custom" icon={icon} />
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            {sectionIconLabels[value]}
+          </p>
+        </PopoverContent>
+      </Popover>
+      <FieldDescription>
+        App icon only; does not change PDF appearance.
+      </FieldDescription>
+    </Field>
   );
 }

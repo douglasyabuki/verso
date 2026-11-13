@@ -34,7 +34,7 @@ import { validateOutput } from "@/lib/review/validation";
 import type { Locale } from "@/types-and-constants/languages";
 import { languageNames } from "@/types-and-constants/languages";
 
-const PdfPreview = dynamic(() => import("@/components/output/pdf-preview"), {
+const PdfPreview = dynamic(() => import("@/components/output/legacy-pdf-preview"), {
   ssr: false,
   loading: () => (
     <p className="p-8 text-sm text-muted-foreground">Loading PDF viewer…</p>

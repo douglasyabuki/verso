@@ -1,13 +1,17 @@
 "use client";
 
 import { Search, X } from "lucide-react";
-import { useId } from "react";
+import { useId, useRef } from "react";
 
-import { CheckField } from "@/components/editor/fields";
-import { Button } from "@/components/ui/button";
+import { CheckField } from "@/components/editor/check-field";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 
 export function EntrySearch({
   query,
@@ -25,6 +29,7 @@ export function EntrySearch({
   total: number;
 }) {
   const id = useId();
+  const input = useRef<HTMLInputElement>(null);
   return (
     <FieldGroup className="gap-3">
       <Field>
@@ -37,25 +42,31 @@ export function EntrySearch({
             Searches English and Portuguese, regardless of the editing language.
           </InfoHint>
         </div>
-        <div className="flex items-center gap-2">
-          <Input
+        <InputGroup>
+          <InputGroupInput
+            ref={input}
             appearance="utility"
             id={id}
-            type="search"
+            type="text"
             value={query}
             onChange={(event) => onQuery(event.target.value)}
             placeholder="Organization, title, technology, or achievement"
           />
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!query}
-            onClick={() => onQuery("")}
-          >
-            <X data-icon="inline-start" />
-            Clear
-          </Button>
-        </div>
+          {query.length !== 0 && (
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                size="icon-xs"
+                aria-label="Clear search entries"
+                onClick={() => {
+                  onQuery("");
+                  input.current?.focus();
+                }}
+              >
+                <X />
+              </InputGroupButton>
+            </InputGroupAddon>
+          )}
+        </InputGroup>
       </Field>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <CheckField

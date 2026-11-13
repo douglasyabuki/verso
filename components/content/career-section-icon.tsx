@@ -27,8 +27,9 @@ import {
   Wrench,
 } from "lucide-react";
 
-import type { Section } from "@/types-and-constants/resume";
-import { defaultSectionIcons } from "@/types-and-constants/sections";
+import type { CareerSection } from "@/types-and-constants/career";
+import type { SectionIconId } from "@/types-and-constants/section-icons";
+import { defaultSectionIcons } from "@/types-and-constants/section-icons";
 
 const careerSectionIcons = {
   "user-round": UserRound,
@@ -56,15 +57,15 @@ const careerSectionIcons = {
   target: Target,
   "badge-check": BadgeCheck,
   "book-open": BookOpen,
-} satisfies Record<Section["icon"], LucideIcon>;
+} satisfies Record<SectionIconId, LucideIcon>;
 
 export function CareerSectionIcon({
   kind,
   icon,
   ...props
 }: {
-  kind: Section["kind"] | "profile" | "summary";
-  icon?: Section["icon"];
+  kind: CareerSection["kind"] | "profile" | "summary";
+  icon?: SectionIconId;
   className?: string;
   "data-icon"?: "inline-start";
 }) {
