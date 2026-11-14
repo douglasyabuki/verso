@@ -6,16 +6,16 @@ MIT recommends 10–12 pt text, readable fonts such as Arial, Calibri, or Times 
 
 The following are Resume Pro design defaults, not researched hiring standards:
 
-| Element | Working default | Adaptation |
-| --- | --- | --- |
-| Body | 11–12 pt | Compare apparent size at actual print scale; fonts differ. |
-| Section headings | 12–14 pt, bold | Clear hierarchy without oversized headings. |
-| Name | 18–24 pt | Preserve room for relevant evidence. |
-| Margins | 0.65–0.85 in (about 16.5–21.5 mm) | Adjust within readable bounds and submission rules. |
-| Line spacing | 1.05–1.15 | Inspect wrapping, accents, and text collisions after export. |
-| Paragraph/bullet spacing | 2–4 pt after | Use consistent rhythm rather than empty lines everywhere. |
-| Section spacing | 8–12 pt before, 3–6 pt after heading | Avoid headings stranded at page bottoms. |
-| Page size | Letter for a US target, A4 for Brazil/UK as a starting assumption | Follow explicit instructions and confirm other markets. |
+| Element                  | Working default                                                   | Adaptation                                                   |
+| ------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------ |
+| Body                     | 11–12 pt                                                          | Compare apparent size at actual print scale; fonts differ.   |
+| Section headings         | 12–14 pt, bold                                                    | Clear hierarchy without oversized headings.                  |
+| Name                     | 18–24 pt                                                          | Preserve room for relevant evidence.                         |
+| Margins                  | 0.65–0.85 in (about 16.5–21.5 mm)                                 | Adjust within readable bounds and submission rules.          |
+| Line spacing             | 1.05–1.15                                                         | Inspect wrapping, accents, and text collisions after export. |
+| Paragraph/bullet spacing | 2–4 pt after                                                      | Use consistent rhythm rather than empty lines everywhere.    |
+| Section spacing          | 8–12 pt before, 3–6 pt after heading                              | Avoid headings stranded at page bottoms.                     |
+| Page size                | Letter for a US target, A4 for Brazil/UK as a starting assumption | Follow explicit instructions and confirm other markets.      |
 
 Use an available readable font; do not promise that Arial, Calibri, or Times New Roman is installed or embeddable in every environment. Check glyphs such as ã, ç, é and the candidate's name. Inspect substitution/embedding and export fidelity where tools allow. No evidence here establishes that any font improves hiring outcomes.
 
@@ -25,13 +25,13 @@ Page length is a relevance/career-stage/market/instruction decision. MIT's one-p
 
 ## Five distinct stages
 
-| Stage | What it means | What resume work can improve |
-| --- | --- | --- |
-| Parsing | Extracting text and populating candidate fields | Reading order, complete labels, selectable text. |
-| Recruiter searches/filters | Finding or narrowing candidates by terms/fields | Accurate explicit qualifications, recognizable terminology. Verify the actual platform for claimed syntax or behavior. |
-| AI matching/scoring/ranking | Model-assisted comparison to configured criteria | Evidence and clear wording; algorithms/settings vary. |
-| Automatic disqualification | Employer rules tied to application responses or other configured criteria | Truthful answers; wording cannot supply a genuinely missing eligibility requirement. |
-| Human assessment | People evaluate evidence and make decisions | Relevant accomplishments, clear scope, readable presentation. |
+| Stage                       | What it means                                                             | What resume work can improve                                                                                           |
+| --------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Parsing                     | Extracting text and populating candidate fields                           | Reading order, complete labels, selectable text.                                                                       |
+| Recruiter searches/filters  | Finding or narrowing candidates by terms/fields                           | Accurate explicit qualifications, recognizable terminology. Verify the actual platform for claimed syntax or behavior. |
+| AI matching/scoring/ranking | Model-assisted comparison to configured criteria                          | Evidence and clear wording; algorithms/settings vary.                                                                  |
+| Automatic disqualification  | Employer rules tied to application responses or other configured criteria | Truthful answers; wording cannot supply a genuinely missing eligibility requirement.                                   |
+| Human assessment            | People evaluate evidence and make decisions                               | Relevant accomplishments, clear scope, readable presentation.                                                          |
 
 Greenhouse Talent Matching uses employer calibration and AI match scores; its documentation says it does not itself advance or reject candidates [G2]. Greenhouse Auto-reject is a separate employer-configured application-answer rule [G3]. Do not generalize either feature to every ATS, infer enabled settings, or treat any rejection speed as proof of a mechanism. Do not set arbitrary “ATS score” targets, invent hiring statistics/reading times, or promise a pass.
 

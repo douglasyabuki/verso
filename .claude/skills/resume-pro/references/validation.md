@@ -10,11 +10,12 @@
 
 > **Ana Silva** — ana@example.test  
 > **Education:** Fictional College — BSc in Computer Science, expected June 2027  
-> **Projects:** Booking App — Team Class Project | 2026  
+> **Projects:** Booking App — Team Class Project | 2026
+>
 > - Implemented JavaScript form validation for a booking app developed as a class team project.  
-> **Volunteer Experience:** Library Catalog Entry | 2025  
+>   **Volunteer Experience:** Library Catalog Entry | 2025
 > - Entered library catalog information as a volunteer.  
-> **Technical Skills:** JavaScript
+>   **Technical Skills:** JavaScript
 
 “Draft for a general internship; no posting supplied. Add the library name when confirmed. Keep years where months are unknown.”
 
@@ -26,11 +27,12 @@
 
 **Response:**
 
-> **Analyst — Fictional Retail | 2022–present**  
-> - Produce weekly stock reports using SQL.  
-> - Explain stock discrepancies to purchasing stakeholders.  
+> **Analyst — Fictional Retail | 2022–present**
+>
+> - Produce weekly stock reports using SQL.
+> - Explain stock discrepancies to purchasing stakeholders.
 > - Maintain Excel spreadsheets.  
-> **Additional Experience:** Customer Support | 2019–2022
+>   **Additional Experience:** Customer Support | 2019–2022
 
 “SQL and stakeholder reporting have evidence; Python is a confirmed preferred-skill gap. Senior ownership is unestablished. Keep your actual title. Add the previous employer before finalising.”
 
@@ -43,8 +45,9 @@
 **Response:**
 
 > **Profile:** Teacher moving into customer success, with experience explaining learning plans to families and training new teachers to use a school portal.  
-> **Teacher — Fictional School | 2018–2026**  
-> - Explained learning plans to families.  
+> **Teacher — Fictional School | 2018–2026**
+>
+> - Explained learning plans to families.
 > - Trained new teachers to use the school portal.
 
 “Lead with portal training for training-focused postings; family communication for relationship-focused postings. SaaS, renewals, CRM, and commercial account ownership are not established.”
@@ -57,12 +60,12 @@
 
 **Initial response:**
 
-> - Diagnosed login problems and explained password-reset steps to users.  
+> - Diagnosed login problems and explained password-reset steps to users.
 > - Documented recurring problems for engineering.
 
 **Evaluation and correction:** “Password-reset” is plausible but narrows “reset steps” without confirmation; “users” also adds contextual inference. Corrected wording:
 
-> - Diagnosed login problems and explained reset steps.  
+> - Diagnosed login problems and explained reset steps.
 > - Documented recurring problems for engineering.
 
 No metric or improved outcome is claimed. Use present tense if ongoing. This is a meaningful observed failure caught by factual inspection, despite the skill's prohibition on invention.
@@ -73,17 +76,19 @@ No metric or improved outcome is claimed. Use present tense if ongoing. This is 
 
 **Response:**
 
-> **pt-BR:** Assistente Administrativo — Fictional Serviços | mar. 2021–dez. 2023  
-> - Organizava notas fiscais.  
-> - Encaminhava dúvidas a fornecedores.  
-> Graduação em Administração — curso interrompido em 2020 (não concluído).  
-> Inglês: uso em e-mails.
+> **pt-BR:** Assistente Administrativo — Fictional Serviços | mar. 2021–dez. 2023
 >
-> **UK:** Administrative Assistant — Fictional Serviços | March 2021–December 2023  
-> - Organised invoices.  
+> - Organizava notas fiscais.
+> - Encaminhava dúvidas a fornecedores.  
+>   Graduação em Administração — curso interrompido em 2020 (não concluído).  
+>   Inglês: uso em e-mails.
+>
+> **UK:** Administrative Assistant — Fictional Serviços | March 2021–December 2023
+>
+> - Organised invoices.
 > - Forwarded queries to suppliers.  
-> Studies in Administração (Business Administration) — discontinued in 2020; no degree awarded.  
-> English: email correspondence.
+>   Studies in Administração (Business Administration) — discontinued in 2020; no degree awarded.  
+>   English: email correspondence.
 
 “Proficiency is unassessed; no fluency claim. Add the institution when confirmed. Use relevant name/email/phone/location; omit unnecessary personal identifiers/photo by default. A4, readable single column and 11–12 pt are starting choices, subject to instructions.”
 
@@ -124,6 +129,7 @@ No metric or improved outcome is claimed. Use present tense if ongoing. This is 
 ## Limits and findings
 
 Major factual, prioritization, localization, and uncertainty boundaries held in these drafts. Scenario 4 exposed a small unsupported inference and required correction; scenario 5 exposed translation nuance. This is one agent's behavioral simulation, not installed-discovery validation or hiring evidence. Real exports, accessibility, typography, links, current source changes, specialised CVs, conflicting histories, and additional markets remain untested.
+
 ## Focused retest after narrow instruction changes
 
 On 2026-10-23, re-read the changed verification step and content/localization paragraphs, then reran scenarios 1, 4, and 5. Earlier defects remain part of the record: scenario 1's initial advice said “finalising/prioritising” despite US English; scenario 5 initially used “sem conclusão de diploma” and embedded “nível de proficiência não informado” / “proficiency level not specified” inside candidate text. The scenario 5 excerpt above shows the corrected candidate text rather than those initial defects.

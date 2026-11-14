@@ -6,12 +6,12 @@ Use role, level, country, language, instructions, and supplied history as decisi
 
 Harvard [H] and MIT [M] recommend ordering sections by importance and recent entries first. These are professional recommendations, not software requirements. Practical adaptations:
 
-| Candidate | Likely opening evidence after contact details | Decision rule |
-| --- | --- | --- |
-| Student/first job | Education and relevant projects, research, volunteering, or placement | Let projects lead if they demonstrate the target work better; never manufacture paid experience. |
-| Experienced professional | Relevant employment achievements | Education moves down unless a recent qualification is central to the transition or eligibility. |
-| Career changer | Short evidence-backed bridge summary, relevant projects/skills, then employment | Make transferable work explicit without relabeling prior employment as the new profession. Retain dated history. |
-| Senior leader | Brief leadership proposition and recent leadership outcomes/scope | Prioritize decisions, organizational scope, people, governance, and business evidence where actually supplied. Student page limits do not govern executives. |
+| Candidate                | Likely opening evidence after contact details                                   | Decision rule                                                                                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Student/first job        | Education and relevant projects, research, volunteering, or placement           | Let projects lead if they demonstrate the target work better; never manufacture paid experience.                                                             |
+| Experienced professional | Relevant employment achievements                                                | Education moves down unless a recent qualification is central to the transition or eligibility.                                                              |
+| Career changer           | Short evidence-backed bridge summary, relevant projects/skills, then employment | Make transferable work explicit without relabeling prior employment as the new profession. Retain dated history.                                             |
+| Senior leader            | Brief leadership proposition and recent leadership outcomes/scope               | Prioritize decisions, organizational scope, people, governance, and business evidence where actually supplied. Student page limits do not govern executives. |
 
 A required license or certification can be prominent; technical skills can lead for a technical role, but support them with examples. Leadership can lead when it is the strongest relevant evidence, whether paid or voluntary. Do not duplicate evidence just to fill sections.
 
@@ -38,10 +38,10 @@ These examples are fictional; every detail in each “after” is supplied in it
 
 Use a compact map, explicit or internal:
 
-| Posting criterion | Required/preferred/unclear | Supplied evidence | Match/transferable/gap/unknown | Resume action |
-| --- | --- | --- | --- | --- |
-| Example: SQL reporting | Required | Candidate built SQL sales reports | Match | Move that bullet up; name SQL accurately. |
-| Example: regulated license | Required | Candidate explicitly lacks it | Gap | State gap in advice; do not imply eligibility. |
+| Posting criterion          | Required/preferred/unclear | Supplied evidence                 | Match/transferable/gap/unknown | Resume action                                  |
+| -------------------------- | -------------------------- | --------------------------------- | ------------------------------ | ---------------------------------------------- |
+| Example: SQL reporting     | Required                   | Candidate built SQL sales reports | Match                          | Move that bullet up; name SQL accurately.      |
+| Example: regulated license | Required                   | Candidate explicitly lacks it     | Gap                            | State gap in advice; do not imply eligibility. |
 
 Distinguish absence of evidence from confirmed lack. Prioritize required criteria, then high-value preferences; lack of a preference is not automatic ineligibility. Do not assume a stated requirement can be waived. Suggest clarification from the employer or a better-fit role where helpful, while still producing useful truthful content.
 
