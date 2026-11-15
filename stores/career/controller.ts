@@ -1,4 +1,9 @@
 import {
+  applyCommitted,
+  commitScopeRequest,
+  scopeFingerprint,
+} from "@/lib/career/commit";
+import {
   devicePreferencesSchema,
   readDevicePreferences,
 } from "@/lib/career/device-preferences";
@@ -13,9 +18,9 @@ import {
 } from "@/lib/career/model";
 import { destinationScope, settingsPanel } from "@/lib/career/navigation";
 import { createResume } from "@/lib/career/resumes";
+import type { CareerBackend } from "@/stores/career/backend";
 import {
   type CareerHead,
-  type CareerStorage,
   CareerStorageError,
   openCareerStorage,
   sameScope,
@@ -38,6 +43,10 @@ export type CareerDraftTarget = "form" | "order";
 export type CareerControllerOptions = {
   completedOperationDays?: number;
   completedOperationCount?: number;
+  /** Open this owner's storage; defaults to the guest IndexedDB backend. */
+  openBackend?: () => Promise<CareerBackend>;
+  /** Owner kind of `openBackend`, used for status wording if it fails to open. */
+  owner?: "guest" | "account";
 };
 
 type Step = { scope: string; before: unknown; after: unknown; bytes: number };
@@ -95,7 +104,7 @@ export class CareerController {
     historyBoundary: false,
   };
   private listeners = new Set<() => void>();
-  private storage: CareerStorage | null = null;
+  private storage: CareerBackend | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private maxTimer: ReturnType<typeof setTimeout> | undefined;
   private channel: BroadcastChannel | null = null;
@@ -113,6 +122,11 @@ export class CareerController {
     step: Step;
     request: SaveRequest;
   } | null = null;
+
+  /** Owner kind for status wording before (or without) an open backend. */
+  private get owner(): "guest" | "account" {
+    return this.options.owner ?? "guest";
+  }
 
   /** Configure completed receipt retention without limiting unresolved work.
    * @param options Nonnegative retention days/count, defaulting to 30/1,000.
@@ -233,7 +247,12 @@ export class CareerController {
       ...this.state,
       ...patch,
       ...(patch.saveStatus && !("status" in patch)
-        ? { status: describeSaveStatus(patch.saveStatus) }
+        ? {
+            status: describeSaveStatus(
+              patch.saveStatus,
+              this.storage?.kind ?? this.owner,
+            ),
+          }
         : {}),
       undoCount: this.undo.length,
       redoCount: this.redo.length,
@@ -335,7 +354,7 @@ export class CareerController {
     this.disposed = false;
     const lifecycle = ++this.lifecycle;
     try {
-      const storage = await openCareerStorage();
+      const storage = await (this.options.openBackend ?? openCareerStorage)();
       if (this.disposed || lifecycle !== this.lifecycle) {
         storage.close();
         return;
@@ -349,7 +368,7 @@ export class CareerController {
       }
       // Install coordination before fallible maintenance.
       this.channel?.close();
-      this.channel = new BroadcastChannel("verso-local");
+      this.channel = new BroadcastChannel(storage.channelName);
       this.channel.onmessage = () => {
         void this.refresh();
       };
@@ -376,7 +395,7 @@ export class CareerController {
         head,
         recovery,
         durable: true,
-        storageMode: "durable",
+        storageMode: storage.kind === "account" ? "account" : "durable",
         saveStatus: { kind: "saved", revision: head.revision },
       });
     } catch (error) {
@@ -400,7 +419,9 @@ export class CareerController {
             kind: "unavailable",
             reason: String(error).includes("unsupported layout format")
               ? "unsupported"
-              : "storage",
+              : this.owner === "account"
+                ? "account"
+                : "storage",
           },
           storageMode: "unavailable",
           error: String(error),
@@ -701,17 +722,7 @@ export class CareerController {
       if (!draft.operationId)
         applyScope(head.document, draft.scope, draft.values);
       const operationId = draft.operationId ?? crypto.randomUUID();
-      const fingerprint =
-        draft.fingerprint ??
-        JSON.stringify([
-          draft.workspaceId,
-          draft.generation,
-          draft.scope,
-          draft.baseline,
-          draft.values,
-          draft.draftId,
-          draft.draftVersion,
-        ]);
+      const fingerprint = draft.fingerprint ?? scopeFingerprint(draft);
       const captured = { ...draft, operationId, fingerprint };
       this.publishFor(target, { draft: captured });
       const request: SaveRequest = {
@@ -728,18 +739,12 @@ export class CareerController {
       };
       let next: CareerHead;
       if (memory) {
-        if (
-          head.generation !== draft.generation ||
-          !sameScope(readScope(head.document, draft.scope), draft.baseline)
-        )
+        const decision = commitScopeRequest(head, request);
+        if (!decision.ok)
           throw new Error(
             "Resolve changed content before a session-only Save.",
           );
-        next = {
-          ...head,
-          revision: head.revision + 1,
-          document: applyScope(head.document, draft.scope, draft.values),
-        };
+        next = decision.head;
         this.session = true;
       } else {
         if (!this.storage || this.session)
@@ -967,23 +972,18 @@ export class CareerController {
         draftId: id,
         draftVersion: 1,
         baselineRevision: head.revision,
-        fingerprint: JSON.stringify([
-          head.workspaceId,
-          head.generation,
-          step.scope,
+        fingerprint: scopeFingerprint({
+          workspaceId: head.workspaceId,
+          generation: head.generation,
+          scope: step.scope,
           baseline,
           values,
-          id,
-          1,
-        ]),
+          draftId: id,
+          draftVersion: 1,
+        }),
       };
       let next: CareerHead;
-      if (this.session)
-        next = {
-          ...head,
-          revision: head.revision + 1,
-          document: applyScope(head.document, step.scope, values),
-        };
+      if (this.session) next = applyCommitted(head, step.scope, values);
       else {
         if (!this.storage) throw new Error("Storage unavailable.");
         this.pendingHistory = { direction, step, request };
@@ -1226,6 +1226,7 @@ export class CareerController {
   async replace(
     reviewed: CareerHead,
     incoming?: CareerDocument,
+    kind: "replace" | "import" = "replace",
   ): Promise<boolean> {
     if (
       !this.storage ||
@@ -1238,7 +1239,7 @@ export class CareerController {
     this.publish({ saving: true });
     try {
       if (incoming) validateDocument(incoming);
-      const head = await this.storage.replace(reviewed, incoming);
+      const head = await this.storage.replace(reviewed, incoming, kind);
       this.undo = [];
       this.redo = [];
       this.pendingHistory = null;
@@ -1380,7 +1381,7 @@ export class CareerController {
         head: next,
         error: "",
         historyBoundary: false,
-        storageMode: "durable",
+        storageMode: this.storage.kind === "account" ? "account" : "durable",
         sessionCommits: 0,
         saveStatus: { kind: "saved", revision: next.revision },
         recovery: await this.readRecovery(),

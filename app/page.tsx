@@ -1,4 +1,5 @@
-import { CareerWorkspace } from "@/components/career/career-workspace";
+import { AccountRoot } from "@/components/account/account-root";
+
 export default function Home() {
-  return <CareerWorkspace />;
+  return <AccountRoot />;
 }

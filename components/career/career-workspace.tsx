@@ -18,6 +18,11 @@ import {
 } from "react";
 
 import {
+  AccountPanel,
+  GuestImport,
+  readGuestWorkspace,
+} from "@/components/account/account-panel";
+import {
   careerEntryLabel,
   CareerEntryList,
   CareerOrderEditor,
@@ -123,6 +128,11 @@ import { importPortable } from "@/lib/career/portable-import";
 import { oversizedRecovery, recoveryFiles } from "@/lib/career/recovery-export";
 import { profileContactLabels, type ResumeContent } from "@/lib/career/resumes";
 import { captureStarter } from "@/lib/career/starters";
+import type {
+  AccountSession,
+  AccountSessionStore,
+} from "@/stores/account/session";
+import { openAccountBackend } from "@/stores/career/account-backend";
 import {
   CareerController,
   type CareerDraftTarget,
@@ -136,8 +146,11 @@ import type {
   ResumeOutputTarget,
 } from "@/types-and-constants/career";
 import {
+  mib,
+  RECOVERY_BYTES,
   SECTION_KINDS,
   VERIFIED_OUTPUT_LANGUAGES,
+  WORKSPACE_BYTES,
 } from "@/types-and-constants/career";
 import { appLayoutDefaults } from "@/types-and-constants/layout";
 import { defaultSectionIcons } from "@/types-and-constants/section-icons";
@@ -643,12 +656,40 @@ function LanguagesEditor({
   );
 }
 
+/** Create the controller for the mounted owner: account storage for a signed-in
+ * (or expired, still-mounted) session, guest IndexedDB otherwise.
+ * @param account Optional account session and store.
+ * @returns {CareerController} Controller bound to exactly one owner.
+ * @example createOwnerController({ store, session })
+ */
+function createOwnerController(account?: {
+  store: AccountSessionStore;
+  session: AccountSession;
+}): CareerController {
+  const session = account?.session;
+  if (session?.kind !== "authenticated" && session?.kind !== "expired")
+    return new CareerController();
+  const identity = { userId: session.user.id, sessionId: session.sessionId };
+  return new CareerController({
+    owner: "account",
+    openBackend: () =>
+      openAccountBackend(identity, {
+        onSessionInvalid: () => account?.store.invalidate(),
+      }),
+  });
+}
+
 export function CareerWorkspace({
   controller: supplied,
+  account,
 }: {
   controller?: CareerController;
+  /** Account session; the parent remounts this workspace when the owner changes. */
+  account?: { store: AccountSessionStore; session: AccountSession };
 }) {
-  const [controller] = useState(() => supplied ?? new CareerController());
+  const [controller] = useState(
+    () => supplied ?? createOwnerController(account),
+  );
   const state = useSyncExternalStore(
     controller.subscribe,
     controller.getSnapshot,
@@ -693,6 +734,8 @@ export function CareerWorkspace({
     head: CareerHead;
     incoming?: CareerDocument;
     previous?: CareerHead;
+    /** Guest import into an account; otherwise a file replacement or rollback. */
+    kind?: "import";
   } | null>(null);
   const [localError, setLocalError] = useState("");
   const [sessionReview, setSessionReview] = useState<{
@@ -1069,9 +1112,9 @@ export function CareerWorkspace({
       workspaceId: head.workspaceId,
       document: head.document,
     });
-    if (new TextEncoder().encode(content).byteLength > 64 * 1024 * 1024)
+    if (new TextEncoder().encode(content).byteLength > WORKSPACE_BYTES)
       throw new Error(
-        "Workspace backup exceeds the 64 MiB file limit including its envelope. No content was truncated or changed.",
+        `Workspace backup exceeds the ${mib(WORKSPACE_BYTES)} file limit including its envelope. No content was truncated or changed.`,
       );
     download(content, "verso-workspace.json");
   };
@@ -1110,7 +1153,7 @@ export function CareerWorkspace({
     importJob.current = job;
     const progress = setTimeout(() => setImportPending(true), 500);
     try {
-      if (file.size > (recovery ? 256 : 64) * 1024 * 1024)
+      if (file.size > (recovery ? RECOVERY_BYTES : WORKSPACE_BYTES))
         throw new Error("Import exceeds its byte limit.");
       const envelope = await importPortable(
         file,
@@ -1641,6 +1684,7 @@ export function CareerWorkspace({
         )}
         preferenceStatus={state.preferenceStatus}
         retryPreferences={() => void controller.changePreferences()}
+        accountMode={state.storageMode === "account"}
       >
         {panel === "editing-preview" ? (
           <DeviceSettings
@@ -1688,6 +1732,50 @@ export function CareerWorkspace({
           </>
         ) : ["languages", "defaults"].includes(panel ?? "") ? (
           settingsForm
+        ) : panel === "account" ? (
+          <AccountPanel
+            store={account?.store}
+            session={account?.session}
+            unconfirmed={
+              state.recovery.length +
+              [state.draft, state.orderDraft].filter(
+                (draft) => draft?.operationId,
+              ).length
+            }
+            resolveDrafts={(action) =>
+              resolveTargets(controller.navigationTargets(), action)
+            }
+            exportRecovery={exportRecovery}
+          >
+            {account?.session.kind === "authenticated" && (
+              <GuestImport
+                disabled={state.saving || !state.head}
+                review={() =>
+                  resolveTargets(controller.navigationTargets(), () => {
+                    void readGuestWorkspace()
+                      .then(async (guest) => {
+                        if (!guest) {
+                          setLocalError(
+                            "No workspace is saved in this browser as a guest.",
+                          );
+                          return;
+                        }
+                        setReview({
+                          head: controller.getSnapshot().head!,
+                          incoming: guest.document,
+                          previous: await controller.previous(),
+                          kind: "import",
+                        });
+                        setExportChoice(false);
+                        setLocalError("");
+                      })
+                      .catch((error) => setLocalError(String(error)));
+                  })
+                }
+                error={localError}
+              />
+            )}
+          </AccountPanel>
         ) : null}
       </SettingsDialog>
 
@@ -2458,9 +2546,11 @@ export function CareerWorkspace({
                               ? state.recoveryStatus
                               : "No unsaved changes"}
                           </span>
-                          {(state.storageMode !== "durable" ||
+                          {((state.storageMode !== "durable" &&
+                            state.storageMode !== "account") ||
                             (state.saveStatus.kind === "failed" &&
-                              state.saveStatus.reason === "storage")) && (
+                              (state.saveStatus.reason === "storage" ||
+                                state.saveStatus.reason === "offline"))) && (
                             <Button
                               variant="outline"
                               onClick={() => void controller.save(true)}
@@ -2726,9 +2816,11 @@ export function CareerWorkspace({
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>
-                    {review?.incoming
-                      ? "Review workspace replacement"
-                      : "Review rollback"}
+                    {review?.kind === "import"
+                      ? "Review guest workspace import"
+                      : review?.incoming
+                        ? "Review workspace replacement"
+                        : "Review rollback"}
                   </DialogTitle>
                   <DialogDescription>
                     Replace saved workspace at revision {review?.head.revision}.
@@ -2739,6 +2831,15 @@ export function CareerWorkspace({
                       : "No previous snapshot is currently retained."}
                   </DialogDescription>
                 </DialogHeader>
+                {review?.kind === "import" && (
+                  <p>
+                    This browser&apos;s guest workspace replaces your account
+                    workspace ({review.head.document.sections.length} sections,{" "}
+                    {review.head.document.resumes.length} resumes). Nothing is
+                    merged, and the guest workspace stays in this browser
+                    unchanged.
+                  </p>
+                )}
                 <p>
                   Incoming sections:{" "}
                   {
@@ -2780,7 +2881,11 @@ export function CareerWorkspace({
                     onClick={() => {
                       if (review)
                         void controller
-                          .replace(review.head, review.incoming)
+                          .replace(
+                            review.head,
+                            review.incoming,
+                            review.kind ?? "replace",
+                          )
                           .then((saved) => {
                             if (saved) setReview(null);
                           });

@@ -27,7 +27,7 @@ to this browser, outside workspace Undo. Numeric preferences apply on valid
 Enter/blur; failed persistence reports that choices apply in the current tab and
 offers retry. Device preferences are excluded from both portable formats and survive
 workspace replacement/rollback. Existing pane visibility/split preferences remain
-device-only view controls. No account sync is implemented.
+device-only view controls.
 
 Compiler timeouts default to 120 seconds initialization and 30 seconds compilation,
 with a supported range of 0.1–600 seconds. Changes affect the next compiler instance
@@ -428,6 +428,43 @@ Shared rich-text URL validation and the entry-search checkbox are independent of
 retired review and workspace-state modules. The retired schema-1 assets remain
 unmounted references, with no active counterpart or translation-review workflow.
 
+## Accounts
+
+Accounts are optional and activate only on a deployment configured with a database,
+auth secret/URL, and at least one GitHub or Google OAuth app. Without that
+configuration the app stays guest-only and Settings › Account says so.
+
+- **Guest.** Saves commit to this browser's IndexedDB (`verso-local`).
+- **Signed in.** Saves go to the account's PostgreSQL workspace. A Save is reported
+  as "Saved to account" only after the server acknowledges it. Typing never sends
+  anything: drafts, immutable pending Save requests, and cleanup intents stay in an
+  account-isolated browser database (`verso-account-<userId>`).
+- **Offline or unanswered Saves** show "Not yet saved to your account" and keep the
+  draft. Save again retries the same operation; the server returns its recorded
+  receipt instead of committing twice. A missing receipt is treated as unknown and
+  needs comparison, never blind replay. "Save in this tab only" remains an explicit,
+  disclosed local-only choice.
+- **Expired or replaced sessions** keep the workspace and drafts mounted and ask you
+  to sign in again from Settings › Account.
+- **Sign-in never moves, merges, or replaces a workspace.** Settings › Account offers
+  **Review guest workspace import**: it opens the standard replacement review,
+  replaces the account workspace (kept as the one previous workspace), and leaves
+  the guest workspace in this browser unchanged. There is no merge.
+- **Sign-out** first resolves open forms with Cancel / Discard / Save. Unconfirmed
+  Saves and recovery stay on this device and reappear when the same user signs in
+  again; the dialog offers recovery export. Account-local browser data is never
+  wiped automatically, so on a shared device export and resolve work before leaving.
+- Account linking is explicit only. There is no password sign-in, email-based
+  automatic linking, or account deletion. Cross-device sync of drafts and remote
+  change detection beyond reload/focus are not implemented.
+
+The server stores one schema-2 snapshot per account, one previous workspace, and
+operation receipts (pruned to 30 days / 1,000 per account; clients protect their own
+pending requests). Saves lock the owner's row, recheck only the request's scope
+baseline and generation, and commit content, revision, and receipt in one
+transaction. Every account request is authorized from the database session, bound to
+the client's session ID, origin-checked for writes, and answered `no-store`.
+
 ## Data formats and limits
 
 The supported format is UTF-8 `verso.workspace` schema 2; recovery uses a separate
@@ -445,11 +482,12 @@ language and retains the original recovery. Invalid references require reconcili
 or export. Interrupted creation/deletion receipts are checked before replay; Undo
 and Redo never overwrite a conflicting resume.
 
-Safety ceilings are 120 resumes, 100 sections, 10,000 entries total, 300 entries per
+Safety ceilings are 120 resumes, 100 sections, 2,000 entries total, 300 entries per
 section, 100 achievements and 30 links per entry, 30 profile links, and 100 each of
 starters/presets. Languages are bounded by file size. Workspace documents and files
-each allow 64 MiB, including envelope overhead for files; recovery allows 256 MiB
-per file and 64 MiB per draft including its baseline. Limits never permit truncation
+each allow 4 MiB, including envelope overhead for files, so a whole workspace fits
+one hosted request; typical workspaces are around 100 KB. Recovery allows 32 MiB
+per file and 8 MiB per draft including its baseline. Limits never permit truncation
 or automatic eviction of unresolved recovery. In-memory undo is bounded to 100
 steps or 32 MiB; undo is not a backup. Browser clearing/eviction can still remove data.
 
@@ -468,23 +506,55 @@ pair before the next attempt.
 Use Node 24.22.1 (`.nvmrc`; `engines` accepts >=24.22.1 <25) and npm 11.3 with the
 existing package-lock.json. Python 3.10+ with lzma support must be on PATH
 (`python3`, `python`, or `py -3`) to prepare compiler assets.
-Run `npm ci`, `npm run compiler:prepare`, then `npm run dev`.
+Run `npm ci` and `npm run compiler:prepare`. Install and start Docker Desktop
+with Docker Compose v2, then run `npm run dev` (an alias for `dev:local`).
+This starts PostgreSQL 17, waits for its health check, generates Prisma Client,
+applies checked-in migrations to the local database, and starts Next.js.
 The browser compiler uses locally prepared assets in the gitignored
 `public/compiler/` and needs no account credentials.
+
+The local runner overrides `DATABASE_URL` before loading environment files, even
+when the shell or an env file contains a hosted URL. Its development-only URL is
+`postgresql://verso:verso@127.0.0.1:5433/verso?schema=public`.
+Verso has its own Compose project and persistent `postgres-data` volume. Dayplan
+uses the same host port, so stop its database before starting Verso's.
+`npm run db:local:down` stops the container and retains its data volume.
+
+Accounts are optional. To enable them locally, copy `.env.example` to
+`.env.development.local` and set a random `BETTER_AUTH_SECRET` of at least 32
+characters, `BETTER_AUTH_URL=http://localhost:3000`, and the client ID/secret of a
+GitHub and/or Google OAuth app whose callback is
+`<BETTER_AUTH_URL>/api/auth/callback/<provider>`. Preserve existing credentials;
+the local runner changes only the database selection.
+
+To use hosted Prisma Postgres instead, keep its direct PostgreSQL URL in
+`DATABASE_URL` in `.env.development.local`, explicitly apply migrations with
+`npm run db:prisma:migrate` when needed, and run `npm run dev:prisma`.
+Hosted startup generates Prisma Client but never migrates the database.
+Both development commands accept Next.js flags, for example
+`npm run dev -- --port 3001` (update the auth origin and OAuth callbacks to match).
+Local and hosted databases have separate accounts and workspaces; switching does
+not copy data. `db:migrate:deploy` and direct Prisma CLI commands still use the
+configured `DATABASE_URL`; use `db:local:migrate` to select Docker explicitly.
+The Prisma client is generated into the gitignored `lib/generated/prisma` by
+build, typecheck, and `test:db`.
 Builds use the existing Next.js Google-font integration.
 
-| Command                    | Purpose                                                               |
-| -------------------------- | --------------------------------------------------------------------- |
-| `npm run format:check`     | Formatting                                                            |
-| `npm run lint`             | ESLint/import order                                                   |
-| `npm run typecheck`        | Next route generation and TypeScript                                  |
-| `npm run compiler:prepare` | Full compiler preparation, including optional reference-proof inputs  |
-| `npm run build`            | Compiler assets when missing or stale, then the production build      |
-| `npm run test:unit`        | Vitest Node domain/capacity cases                                     |
-| `npm run test:browser`     | Real Chromium component/IndexedDB cases                               |
-| `npm run test:e2e`         | Playwright with a fresh production build/server on localhost:3100     |
-| `npm run test:measure`     | Explicit production capacity/interaction/import/compiler measurements |
-| `npm test`                 | Unit, browser, then E2E suites                                        |
+| Command                     | Purpose                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| `npm run format:check`      | Formatting                                                            |
+| `npm run lint`              | ESLint/import order                                                   |
+| `npm run typecheck`         | Next route generation and TypeScript                                  |
+| `npm run compiler:prepare`  | Full compiler preparation, including optional reference-proof inputs  |
+| `npm run build`             | Compiler assets when missing or stale, then the production build      |
+| `npm run test:unit`         | Vitest Node domain/capacity cases                                     |
+| `npm run test:db`           | Account storage/API against an isolated in-process Postgres (PGlite)  |
+| `npm run test:browser`      | Real Chromium component/IndexedDB cases                               |
+| `npm run test:e2e`          | Playwright with a fresh production build/server on localhost:3100     |
+| `npm run test:e2e:accounts` | Account flows: isolated database plus a production server on :3101    |
+| `npm run db:migrate:deploy` | Apply checked-in migrations to `DATABASE_URL` (owner-run)             |
+| `npm run test:measure`      | Explicit production capacity/interaction/import/compiler measurements |
+| `npm test`                  | Unit, database, browser, E2E, then account E2E suites                 |
 
 Vitest 4.1.12, renderer 2.2.0, Vite 7.3.8 and a Tailwind Vite adapter are scoped to
 testing and preserve the selected Next/React versions. Test browsers live in
@@ -505,8 +575,8 @@ hardware, browser version, normal/4x CPU runs, and sample counts.
 
 ## Vercel deployment
 
-The guest-only app deploys to Vercel with zero configuration: the Next.js preset
-runs `npm run build`, whose `compiler:build` step
+For a guest-only Vercel deployment, explicitly set the Build Command to
+`npm run build`; this does not require a database or apply migrations. Its `compiler:build` step
 (`tools/compiler-proof/prepare.mjs --assets-only --if-needed`) regenerates
 `public/compiler/` before `next build`. It downloads the locked archives listed in
 `tools/compiler-proof/resources.lock.json` (about 71 MB from ftp.math.utah.edu,
@@ -517,10 +587,24 @@ partial `public/compiler/`. On Vercel the download cache lives in
 assets that verify are reused without downloads.
 
 Requirements: outbound HTTPS during builds, Python 3.10+ with lzma on the build
-image, and Node 24.x (from `engines`). No environment variables or `vercel.json`
-are needed. The served SwiftLaTeX engine is AGPL-3.0; `/compiler/SOURCE.txt` and
-the `license-*` files identify the corresponding source in this repository.
-Hosted accounts, publication, and hosted acceptance remain future scope.
+image, and Node 24.x (from `engines`). No `vercel.json` is needed, and a guest-only
+deployment needs no environment variables.
 
-The application sends no resume content to a backend. Compiler maintenance is
+To enable accounts, connect Prisma Postgres from the Vercel Marketplace (which sets
+`DATABASE_URL`), set `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (the deployment
+origin), and the OAuth variables for each provider, and register the provider
+callback `<BETTER_AUTH_URL>/api/auth/callback/<provider>` for that exact origin.
+For account deployments, set the Vercel Build Command to `npm run vercel-build`.
+It prepares compiler assets through Python, generates Prisma Client, applies
+checked-in migrations to that deployment's `DATABASE_URL`, then builds Next.js.
+Each step must succeed before the next runs. The ordinary `npm run build` does
+not migrate; `npm run db:migrate:deploy` remains available for manual migrations. Whole
+workspaces stay within one request because the workspace ceiling (4 MiB) is below
+Vercel's 4.5 MB request-body limit; an unusually large single-scope Save can still
+be rejected as too large and stays recoverable on the device. The served SwiftLaTeX engine is AGPL-3.0; `/compiler/SOURCE.txt` and
+the `license-*` files identify the corresponding source in this repository.
+Publication and hosted acceptance remain future scope.
+
+Guests send no resume content to a backend; signed-in Saves send committed content
+to the account API only on explicit Save, replacement, or import. Compiler maintenance is
 covered in [compilation proof](docs/compilation-proof.md).

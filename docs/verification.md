@@ -628,3 +628,27 @@ acceptance. Automated/local evidence does not prove the hosted deployment.
 - [ ] Owner: on the preview URL, English and Portuguese PDFs compile; `/compiler/*.wasm`
       returns 200 with `application/wasm`; `/compiler/SOURCE.txt` is served.
 - [ ] Owner: a second deployment reuses the download cache.
+
+## Accounts and account storage
+
+Automated checks use isolated in-process Postgres (PGlite) and seeded database
+sessions. They do not exercise real OAuth providers, hosted Prisma Postgres, or
+concurrent row locking, which PGlite serializes.
+
+- [x] Database tests: owner isolation, receipt replay and mismatch, scope conflict
+      versus unrelated changes, generation rejection, reviewed replace/import/rollback
+      with one previous workspace, all-or-nothing writes under an injected receipt
+      failure, receipt pruning, and API session/origin/body checks.
+- [x] Browser Mode: acknowledgment-only success, offline retry with the same
+      operation, lost acknowledgment replayed without a second commit, adopting a
+      newer server document, expired sessions, and per-account recovery isolation.
+- [x] Account E2E (production server): Save and reload, cross-user isolation,
+      interrupted response retry, expiry before Save, sign-out with unconfirmed work
+      and its return on the next sign-in, and reviewed guest import.
+- [ ] Owner: real GitHub and Google sign-in on localhost and the preview origin,
+      including provider cancellation/denial returning to the app with a message.
+- [ ] Owner: a real session expiry and sign-out in a second tab while a form is dirty.
+- [ ] Owner: two simultaneous Saves to one account against an isolated real Postgres
+      database serialize on the owner row lock.
+- [ ] Owner: `npm run db:migrate:deploy` against Prisma Postgres, then a hosted
+      Save/reload and account isolation check on the preview deployment.

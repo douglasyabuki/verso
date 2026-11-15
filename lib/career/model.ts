@@ -9,7 +9,10 @@ import type {
 } from "@/types-and-constants/career";
 import {
   BUILTIN_FIELDS,
+  CAREER_ENTRY_LIMIT,
+  DRAFT_BYTES,
   FIELD_TYPES,
+  mib,
   RECOVERY_BYTES,
   RESUME_COLORS,
   SECTION_KINDS,
@@ -374,10 +377,10 @@ export const careerDocumentSchema = z
         }
       }
     }
-    if (count > 10_000)
+    if (count > CAREER_ENTRY_LIMIT)
       ctx.addIssue({
         code: "custom",
-        message: "A workspace supports up to 10,000 career entries.",
+        message: `A workspace supports up to ${CAREER_ENTRY_LIMIT.toLocaleString("en-US")} career entries.`,
       });
     for (const field of allFields) {
       addId(field.id);
@@ -546,7 +549,7 @@ export const draftSchema = z.strictObject({
   generation: z.number().int().nonnegative(),
   values: z.unknown(),
   operationId: id.optional(),
-  fingerprint: z.string().max(WORKSPACE_BYTES).optional(),
+  fingerprint: z.string().max(DRAFT_BYTES).optional(),
 });
 export const recoveryEnvelopeSchema = z.strictObject({
   format: z.literal("verso.recovery"),
@@ -565,7 +568,7 @@ export function validateDocument(value: unknown): CareerDocument {
   if (
     new TextEncoder().encode(JSON.stringify(value)).byteLength > WORKSPACE_BYTES
   )
-    throw new Error("Workspace exceeds 64 MiB.");
+    throw new Error(`Workspace exceeds ${mib(WORKSPACE_BYTES)}.`);
   const result = careerDocumentSchema.safeParse(value);
   if (!result.success) {
     if (
@@ -615,11 +618,10 @@ export function parsePortable(source: string, kind: "workspace" | "recovery") {
     if (ids.has(draft.draftId)) throw new Error("Duplicate draft identity.");
     ids.add(draft.draftId);
     if (
-      new TextEncoder().encode(JSON.stringify(draft)).byteLength >
-      WORKSPACE_BYTES
+      new TextEncoder().encode(JSON.stringify(draft)).byteLength > DRAFT_BYTES
     )
       throw new Error(
-        "A recovery draft exceeds 64 MiB; keep the source and export explicit chunks.",
+        `A recovery draft exceeds ${mib(DRAFT_BYTES)}; keep the source and export explicit chunks.`,
       );
   }
   return result;

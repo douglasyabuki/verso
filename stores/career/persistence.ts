@@ -1,10 +1,18 @@
 import {
-  applyScope,
-  draftSchema,
-  readScope,
-  validateDocument,
-} from "@/lib/career/model";
-import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
+  commitScopeRequest,
+  type CommittedHead,
+  replaceHead,
+  scopeFingerprint,
+  type ScopeRequest,
+} from "@/lib/career/commit";
+import { draftSchema, validateDocument } from "@/lib/career/model";
+import type { CareerBackend } from "@/stores/career/backend";
+import {
+  type CareerDocument,
+  type CareerDraft,
+  DRAFT_BYTES,
+  mib,
+} from "@/types-and-constants/career";
 import type { SaveFailureReason } from "@/types-and-constants/career-status";
 
 /** Typed storage failure so callers never classify errors by message text.
@@ -33,25 +41,13 @@ export function saveFailureReason(error: unknown): SaveFailureReason {
   return "invalid";
 }
 
-export type CareerHead = {
-  key: "guest";
-  workspaceId: string;
-  revision: number;
-  generation: number;
-  document: CareerDocument;
-};
-export type SaveRequest = {
-  id: string;
-  workspaceId: string;
-  generation: number;
-  scope: string;
-  baseline: unknown;
-  values: unknown;
-  draftId?: string;
-  draftVersion?: number;
-  fingerprint: string;
-  baselineRevision?: number;
-};
+export { sameScope } from "@/lib/career/commit";
+
+/** Committed head; `key` is present only on guest IndexedDB records. */
+export type CareerHead = CommittedHead & { key?: "guest" };
+
+export type SaveRequest = ScopeRequest;
+
 type Operation = {
   request: SaveRequest;
   completedAt?: number;
@@ -78,51 +74,36 @@ function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 
-/** Compare JSON scope values structurally, keeping array order and ignoring object key order.
- * @param left First scope.
- * @param right Second scope.
- * @returns {boolean} Whether values match; omitted object properties match undefined, while null and array order remain meaningful.
- * @example sameScope({ title: "A" }, { title: "A" })
- */
-export function sameScope(left: unknown, right: unknown): boolean {
-  if (left === right) return true;
-  if (Array.isArray(left) || Array.isArray(right))
-    return (
-      Array.isArray(left) &&
-      Array.isArray(right) &&
-      left.length === right.length &&
-      left.every((value, index) => sameScope(value, right[index]))
-    );
-  if (!left || !right || typeof left !== "object" || typeof right !== "object")
-    return false;
-  const a = left as Record<string, unknown>;
-  const b = right as Record<string, unknown>;
-  const keys = Object.keys(a).filter((key) => a[key] !== undefined);
-  return (
-    keys.length ===
-      Object.keys(b).filter((key) => b[key] !== undefined).length &&
-    keys.every((key) => Object.hasOwn(b, key) && sameScope(a[key], b[key]))
-  );
-}
-
 /** Open the target-only local database; never reads or converts legacy browser storage.
+ * @param name Database name: `verso-local` for guests and device preferences, or an
+ * account-isolated `verso-account-<userId>` database for account recovery.
  * @returns {Promise<CareerStorage>} Open storage owner; caller must close it on unmount.
  * @example const storage = await openCareerStorage()
  */
-export async function openCareerStorage(): Promise<CareerStorage> {
-  const request = indexedDB.open("verso-local", 1);
+export async function openCareerStorage(
+  name = "verso-local",
+): Promise<CareerStorage> {
+  const request = indexedDB.open(name, 1);
   request.onupgradeneeded = () => {
-    for (const name of STORES) request.result.createObjectStore(name);
+    for (const store of STORES) request.result.createObjectStore(store);
   };
-  return new CareerStorage(await requestResult(request));
+  return new CareerStorage(await requestResult(request), name);
 }
 
 /** Own transactional committed workspace, recovery, receipts, and previous-workspace storage.
  * @param database Open IndexedDB database.
  * @example const storage = await openCareerStorage(); await storage.load(); storage.close()
  */
-export class CareerStorage {
-  constructor(private database: IDBDatabase) {
+export class CareerStorage implements CareerBackend {
+  readonly kind = "guest";
+
+  readonly channelName: string;
+
+  constructor(
+    private database: IDBDatabase,
+    name = "verso-local",
+  ) {
+    this.channelName = name;
     database.onversionchange = () => database.close();
   }
 
@@ -232,12 +213,11 @@ export class CareerStorage {
   async writeDraft(draft: CareerDraft): Promise<void> {
     draftSchema.parse(draft);
     if (
-      new TextEncoder().encode(JSON.stringify(draft)).byteLength >
-      64 * 1024 * 1024
+      new TextEncoder().encode(JSON.stringify(draft)).byteLength > DRAFT_BYTES
     )
       throw new CareerStorageError(
         "storage",
-        "Recovery exceeds 64 MiB. Keep this tab open and export recovery chunks.",
+        `Recovery exceeds ${mib(DRAFT_BYTES)}. Keep this tab open and export recovery chunks.`,
       );
     await this.transaction(["drafts"], "readwrite", async (tx) => {
       const store = tx.objectStore("drafts");
@@ -363,16 +343,7 @@ export class CareerStorage {
    * @example await storage.prepare(request)
    */
   async prepare(request: SaveRequest, fresh = true): Promise<void> {
-    const fingerprint = JSON.stringify([
-      request.workspaceId,
-      request.generation,
-      request.scope,
-      request.baseline,
-      request.values,
-      request.draftId,
-      request.draftVersion,
-    ]);
-    if (fingerprint !== request.fingerprint)
+    if (scopeFingerprint(request) !== request.fingerprint)
       throw new CareerStorageError(
         "invalid",
         "Save request fingerprint differs from its immutable content.",
@@ -446,19 +417,10 @@ export class CareerStorage {
           }
           return head;
         }
-        if (
-          !sameScope(readScope(head.document, request.scope), request.baseline)
-        )
-          throw new CareerStorageError(
-            "conflict",
-            "This scope changed in another save. Compare and reconcile; your draft is retained.",
-          );
-        const document = applyScope(
-          head.document,
-          request.scope,
-          request.values,
-        );
-        const next = { ...head, revision: head.revision + 1, document };
+        const decision = commitScopeRequest(head, request);
+        if (!decision.ok)
+          throw new CareerStorageError(decision.reason, decision.message);
+        const next = decision.head;
         heads.put(next, "guest");
         operations.put(
           {
@@ -478,6 +440,66 @@ export class CareerStorage {
             drafts.delete(request.draftId);
         }
         return next;
+      },
+    );
+  }
+
+  /** Read one prepared immutable request.
+   * @param operationId Stable operation ID.
+   * @returns The stored request, or undefined when none is retained.
+   * @example const request = await storage.operation(id)
+   */
+  async operation(operationId: string): Promise<SaveRequest | undefined> {
+    return this.transaction(["operations"], "readonly", async (tx) => {
+      const operation = await requestResult<Operation | undefined>(
+        tx.objectStore("operations").get(operationId),
+      );
+      return operation?.request;
+    });
+  }
+
+  /** Record a commit confirmed elsewhere (the account server) and clean up the exact draft version.
+   * The receipt stays protected until acknowledged, like a local guest commit.
+   * @param operationId Prepared operation that the server acknowledged.
+   * @param result Server-committed revision and generation.
+   * @returns Completion; throws `uncertain` when the request is no longer stored.
+   * @example await storage.recordCommitted(id, { revision: 4, generation: 0 })
+   */
+  async recordCommitted(
+    operationId: string,
+    result: Pick<CareerHead, "revision" | "generation">,
+  ): Promise<void> {
+    await this.transaction(
+      ["operations", "drafts"],
+      "readwrite",
+      async (tx) => {
+        const operations = tx.objectStore("operations");
+        const operation = await requestResult<Operation | undefined>(
+          operations.get(operationId),
+        );
+        if (!operation)
+          throw new CareerStorageError(
+            "uncertain",
+            "Save outcome unknown. Compare current content and reconcile before a new Save.",
+          );
+        if (!operation.result)
+          operations.put(
+            {
+              ...operation,
+              completedAt: Date.now(),
+              awaitingAcknowledgment: true,
+              result,
+            },
+            operationId,
+          );
+        const { draftId, draftVersion } = operation.request;
+        if (draftId) {
+          const drafts = tx.objectStore("drafts");
+          const draft = await requestResult<CareerDraft | undefined>(
+            drafts.get(draftId),
+          );
+          if (draft?.draftVersion === draftVersion) drafts.delete(draftId);
+        }
       },
     );
   }
@@ -547,25 +569,19 @@ export class CareerStorage {
       const heads = tx.objectStore("heads");
       const previous = tx.objectStore("previous");
       const current = await requestResult<CareerHead>(heads.get("guest"));
-      if (
-        current.workspaceId !== reviewed.workspaceId ||
-        current.generation !== reviewed.generation ||
-        current.revision !== reviewed.revision
-      )
-        throw new CareerStorageError(
-          "conflict",
-          "Workspace changed since review. Review the current workspace again.",
-        );
+      const stale = replaceHead(current, reviewed, current.document);
+      if (!stale.ok) throw new CareerStorageError(stale.reason, stale.message);
       const prior = incoming
         ? undefined
         : await requestResult<CareerHead | undefined>(previous.get("guest"));
-      const document = validateDocument(incoming ?? prior?.document);
-      const next = {
-        ...current,
-        revision: current.revision + 1,
-        generation: current.generation + 1,
-        document,
-      };
+      const decision = replaceHead(
+        current,
+        reviewed,
+        validateDocument(incoming ?? prior?.document),
+      );
+      if (!decision.ok)
+        throw new CareerStorageError(decision.reason, decision.message);
+      const next = decision.head;
       previous.put(current, "guest");
       heads.put(next, "guest");
       return next;

@@ -28,7 +28,7 @@ for (const cpuRate of [1, 4])
           ["small", 20, 3],
           ["representative", 300, 30],
           ["multi-resume", 600, 60],
-          ["capacity", 10_000, 120],
+          ["capacity", 2_000, 120],
         ] as const) {
           if (label !== fixture) continue;
           console.log(`Measuring ${label} at ${rate}x CPU`);
@@ -116,7 +116,9 @@ for (const cpuRate of [1, 4])
               }
               if (label === "capacity") {
                 let remaining =
-                  63 * 1024 * 1024 -
+                  // Near the 4-MiB workspace ceiling, leaving envelope headroom.
+                  4 * 1024 * 1024 -
+                  64 * 1024 -
                   new TextEncoder().encode(JSON.stringify(document)).byteLength;
                 for (const entry of document.sections.flatMap(
                   (s) => s.entries,

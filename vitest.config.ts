@@ -24,6 +24,17 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: "db",
+          environment: "node",
+          include: ["tests/db/**/*.db.test.ts"],
+          alias: { "server-only": path.resolve("tests/db/server-only.ts") },
+          testTimeout: 30_000,
+          hookTimeout: 60_000,
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: "browser",
           setupFiles: ["tests/browser/setup.ts"],
           include: ["tests/browser/**/*.browser.test.tsx"],
