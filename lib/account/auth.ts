@@ -39,7 +39,7 @@ export function accountsEnabled(): boolean {
 }
 
 /** Build the auth options from the environment without opening connections.
- * @returns {BetterAuthOptions} Database sessions, configured providers, and explicit-only linking.
+ * @returns {BetterAuthOptions} Database sessions, configured providers, and verified-email linking.
  * @example betterAuth(authOptions())
  */
 export function authOptions(): BetterAuthOptions {
@@ -71,10 +71,11 @@ export function authOptions(): BetterAuthOptions {
     session: { cookieCache: { enabled: false } },
     account: {
       accountLinking: {
-        // Linking happens only through an explicit signed-in linkSocial() call,
-        // never because two providers report the same email.
+        // Match only the providers' resolved, verified emails. Neither provider
+        // may bypass verification, and the existing local email must be verified.
         enabled: true,
-        disableImplicitLinking: true,
+        disableImplicitLinking: false,
+        requireLocalEmailVerified: true,
         trustedProviders: [],
         allowDifferentEmails: true,
         allowUnlinkingAll: false,

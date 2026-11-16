@@ -43,7 +43,7 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 
 - Use npm, the existing package-lock.json, and Node 24.22.1 (`.nvmrc`; Vercel uses 24.x). The application uses Next.js 16.4.2, React 19.3, Tailwind 4, TypeScript, and root app/ routes; @/* resolves from the repository root.
 - Preserve next.config.ts framework and Turbopack settings. Generate route helpers with next typegen before standalone type checks.
-- The active app provides career forms, extensible languages, separate recovery, IndexedDB Saves, schema-2 backups, and minimal imported-resume output; the former schema-1 editor is unmounted. README.md describes implemented capabilities only. Vercel deployment of the guest-only app is active: `npm run build` regenerates the gitignored `public/compiler/` through `tools/compiler-proof/prepare.mjs` (locked, integrity-checked downloads). Optional GitHub/Google accounts with Prisma Postgres persistence are active when configured (see "Account adoption decisions"); unconfigured deployments stay guest-only. Publication, public APIs, portfolio/LinkedIn integration, sync, and hosted acceptance remain future scope until activated. Automated behavior and regression tests are in scope.
+- The active app provides career forms, extensible languages, separate recovery, IndexedDB Saves, schema-2 backups, and minimal imported-resume output; the former schema-1 editor is unmounted. README.md describes implemented capabilities only. Vercel deployment of the guest-only app is active: `npm run build` regenerates the gitignored `public/compiler/` through `tools/compiler-proof/prepare.mjs` (locked, integrity-checked downloads). Optional GitHub/Google accounts with Prisma Postgres persistence are active when configured (see "Account adoption decisions"); unconfigured deployments stay guest-only. Account sync and public PDF releases are active for configured accounts (see "Public release decisions"). Public APIs, portfolio/LinkedIn integration, and hosted acceptance remain future scope until activated. Automated behavior and regression tests are in scope.
 - Authenticated storage is Prisma/Postgres with Better Auth GitHub/Google; see "Account adoption decisions". Add account modules only with working behavior and tests; do not add empty modules or unused adapters. Load `nextjs-oauth-persistence` before changing auth or account storage.
 - Run npm run format:check, npm run lint, npm run typecheck, and npm test for tooling changes. npm test runs unit, database (`test:db`, isolated in-process PGlite), and browser suites, builds and starts a fresh production server on localhost:3100 for Chromium, Firefox, and WebKit E2E coverage, then runs account E2E (`test:e2e:accounts`) against an isolated database and a second production server on :3101; this is not complete product acceptance coverage.
 - Vitest Node/browser projects are configured with target behavior coverage. Add meaningful cases alongside changes. Do not add empty suites or passWithNoTests.
@@ -158,8 +158,8 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 ## Settings and navigation
 
 - Settings is a durable dialog over a mounted workspace, with Account (first and
-  default), Appearance, Content languages, Editing & preview, Data & backups, and
-  Resume defaults panels at `settings/<panel>` scope URLs. The utility rail holds
+  default), Appearance, Content languages, Editing & preview, Data & backups,
+  Resume defaults, and Public PDFs panels at `settings/<panel>` scope URLs. The utility rail holds
   the account avatar menu (Settings; guest Sign in/Sign up; guarded Sign out) and an
   Appearance shortcut toggling `settings/appearance`; it has no Data & backups or
   separate Settings button. Sign-in stays in Settings › Account with provider
@@ -229,7 +229,7 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 - Workspace envelopes use `format: "verso.workspace"`, `schemaVersion: 2`, `exportedAt`, `workspaceId`, and `document`. Recovery envelopes use `format: "verso.recovery"`, `schemaVersion: 1`, `exportedAt`, `sourceWorkspaceId`, and `drafts`. Recovery carries scope identities, draft version/values, baseline values/revision/generation, and pending immutable request context. Imported receipts never prove local commits.
 - Use UTF-8 JSON with stable opaque IDs, canonical language tags, validated references, and explicit template identities. Unknown versions and rejected imports cause no writes. Validate recovery structure while preserving malformed field values for editing. Portable files exclude credentials, device preferences, local operation ledgers, and compiler/PDF assets.
 - Recovery scheduling uses 500 ms inactivity and a 2-second maximum wait. Close-time flushing is best effort. If IndexedDB fails, retain drafts and offer export; session-only commits require explicit choice and never overwrite durable content. Leaving session mode requires resolved drafts and an explicit reviewed choice: reload the durable workspace, or adopt this tab's workspace through the atomic reviewed replacement path (rejecting a newer durable revision).
-- Save, recovery, preview, and backup status stay separate. The controller publishes typed `saveStatus`/`storageMode`/`sessionCommits` (`types-and-constants/career-status.ts`); the toolbar text derives from `saveStatus`. Persistence throws `CareerStorageError` codes (`conflict`, `replaced`, `uncertain`, `storage`, `invalid`), and DOM/IndexedDB exceptions classify as `storage`. UI decisions (session-only action, close warning) use typed state, never message text. Other-tab commits publish `remote-update`; notifications during a local Save are applied after it settles. A confirmed commit whose receipt acknowledgment fails reports `cleanup-retry`, not an error. There is no release status until public releases exist. Do not silently fall back to localStorage or promise durable replacement without snapshot preservation.
+- Save, recovery, preview, and backup status stay separate. The controller publishes typed `saveStatus`/`storageMode`/`sessionCommits` (`types-and-constants/career-status.ts`); the toolbar text derives from `saveStatus`. Persistence throws `CareerStorageError` codes (`conflict`, `replaced`, `uncertain`, `storage`, `invalid`), and DOM/IndexedDB exceptions classify as `storage`. UI decisions (session-only action, close warning) use typed state, never message text. Other-tab commits publish `remote-update`; notifications during a local Save are applied after it settles. A confirmed commit whose receipt acknowledgment fails reports `cleanup-retry`, not an error. Release status lives in the release store and its UI (Release dialog, Settings › Public PDFs), separate from Save, preview, and backup status. Do not silently fall back to localStorage or promise durable replacement without snapshot preservation.
 - Disclose tab-only commits even when storage never opened (`storageMode: unavailable`). Session adoption identifies the retained previous-workspace snapshot and requires its export or explicit continuation without export; export failures retain the review and keep adoption blocked. Discarding tab-only Saves does not replace the snapshot and needs no export decision.
 - Preview target identity persists while readiness blocks output, so a committed Save that makes the same resume ready schedules optional automatic refresh. Hidden previews defer already queued automatic requests as well as timers; explicit queued requests remain explicit. Disabling automatic refresh cancels its queued work without canceling manual requests or active compilation.
 
@@ -262,7 +262,7 @@ Recorded 2026-11-14 after reviewing Dayplan's patterns and the selected releases
 - Stack: Better Auth 1.7.x with its Prisma adapter; Prisma ORM 7.10.x using the `prisma-client` generator (gitignored output), `@prisma/adapter-pg` with `pg`, and `prisma.config.ts` loading env through `@next/env`. Prisma 8 is deferred: it is release-candidate only and outside Better Auth's declared Prisma peer range. Revisit when both are stable.
 - Hosting: Prisma Postgres through the Vercel Marketplace. Local development uses `prisma dev`. Automated database tests (`tests/db/`) and account E2E (`tools/accounts-e2e-database.mjs`) apply the checked-in migrations to isolated in-process PGlite servers; never point tests at shared or hosted data. PGlite serializes connections, so real concurrent row locking remains an owner check against an isolated Postgres database.
 - `getPrisma()` and `getAuth()` are lazy, `server-only` singletons. Building without account env must succeed and keep the app guest-only. Accounts activate only when `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, and at least one provider's `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` or `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are present. Names live in `.env.example` without values.
-- Sessions are database-backed with the cookie cache disabled, so expiry and revocation apply on the next request. Account linking is explicit only: no email-based automatic linking, password auth, or account deletion in this phase.
+- Sessions are database-backed with the cookie cache disabled, so expiry and revocation apply on the next request. Google/GitHub sign-ins automatically link only when resolved emails match and both incoming and existing local emails are verified. Keep trustedProviders empty and requireLocalEmailVerified enabled; preserve the existing profile and workspace. Different-email sign-ins remain separate accounts. No password auth or account deletion. Display safe OAuth callback errors in Settings › Account without exposing provider descriptions.
 - Account data uses Node-runtime Route Handlers, not Server Actions, so retries and uncertainty receive explicit status codes. Each handler derives `userId` from the verified session using `request.headers`, requires a same-origin `Origin` on mutations, binds the request to the client's session ID to reject writes from a previous session, rejects unknown body fields, and responds `no-store`. With Cache Components enabled, the workspace page stays a static client shell; any server component that reads the session sits behind `<Suspense>`.
 - Server storage keeps one schema-2 snapshot per account plus one previous workspace and an operation-receipt table. Saves lock the user row, return a matching receipt unchanged, reject reused IDs with different fingerprints, and apply `lib/career/commit.ts` scope checks so unrelated changes never conflict.
 - One request carries a whole workspace, within the 4-MiB workspace ceiling; no chunked transfer is required. Request bodies above the ceiling plus 64 KiB are rejected as `payload_too_large`.
@@ -274,6 +274,52 @@ Recorded 2026-11-14 after reviewing Dayplan's patterns and the selected releases
 - Conflicts are derived (`lib/career/conflict.ts`) from the draft baseline versus the current committed scope; nothing extra is persisted, so reload recomputes them from recovery. A rejected Save (`conflict`/`replaced`) triggers one refresh so both versions are available. `components/career/conflict-panel.tsx` shows both versions with Export recovery, Keep my draft (rebase onto the saved version, then a separate Save), and Use saved version (confirmed discard, destructive action last) for form, Settings form, and entry-order lanes.
 - Account deployments use `npm run vercel-build`: prepare compiler assets, generate Prisma Client, apply checked-in migrations to the deployment's `DATABASE_URL`, then build Next.js. Ordinary `npm run build` never migrates; explicitly select it for guest-only Vercel deployments without a database. Manual migrations remain available through `db:migrate:deploy`.
 - `npm run dev` defaults to `dev:local`: Docker PostgreSQL 17 on 127.0.0.1:5433 with a Verso-only volume. The runner overrides `DATABASE_URL` before env loading and applies local migrations. `dev:prisma` uses the configured hosted URL and never migrates on startup; hosted migrations run through `vercel-build` during deployment or explicit migration commands.
+
+## Public release decisions
+
+Recorded 2026-11-16 by the owner: PDFs in Postgres, no caching, opt-in automatic
+release, quota retention with explicit deletion.
+
+- Storage: `public_link` (one per `(userId, resumeId)`, 256-bit base64url token,
+  `latestReleaseId`, `nextNumber`, `autoRelease`) and `public_release` (immutable
+  `bytea` PDF plus content/locale/template/runtime/settings/PDF identities, per-link
+  `number`, `(userId, operationId)` receipt with request hash, optional `revokedAt`).
+  Server modules: `lib/account/release-repository.ts`, `release-api.ts`,
+  `public-pdf.ts`; contracts and quotas in `types-and-constants/releases.ts`.
+- Release upload is multipart (strict JSON `metadata` + `pdf`), capped at 4 MiB + 64 KiB
+  before parsing, behind `accountRequest`. Under the owner lock, one transaction
+  replays a matching receipt (different hash → `operation_mismatch`), re-renders the
+  resume from the committed account workspace with `renderCareerOutput`, requires the
+  same workspace/generation and output fingerprint (the claimed revision may be older
+  than the head when output is unchanged), checks readiness/template/PDF markers,
+  enforces quotas (`quota_exceeded`, never pruning), creates the link, inserts the
+  release, and moves latest when `advance` (default). Runtime identity comes from the
+  server's `tools/compiler-proof/resources.lock.json`, not the client. Automatic
+  releases whose source SHA-256 equals latest store nothing (`unchanged`).
+- Latest moves only through explicit release, `set-latest`, or opted-in automatic
+  release. The current latest cannot be revoked or deleted. Revoking a link deletes it
+  and its releases. Owner actions are `PATCH`/`DELETE` on
+  `/api/account/releases/links/[linkId]` and `/api/account/releases/[releaseId]`, each
+  returning the full list.
+- Public `/pdf/[token]` and `/pdf/[token]/[number]` call `connection()`, need no
+  session, read with one SQL statement, answer `no-store` with nosniff/noindex/
+  no-referrer and an inline RFC 5987 file name, and share one 404 for unknown,
+  malformed, revoked, deleted, or accounts-disabled requests. Never add caching
+  without an owner-approved freshness bound and purge path.
+- Client: `stores/releases/release-store.ts` (per-owner, session header, stable
+  in-memory operation IDs reused on unanswered retries), `hooks/releases/use-releases.ts`,
+  `components/career/release-dialog.tsx` (enabled only for a Current preview), and
+  `components/account/releases-panel.tsx`. `PreviewOutput` retains the compiled
+  bytes and template identity. `useCommittedPreview`'s `automaticResumeIds` forces
+  automatic preview refresh (one effective-preferences effect, so a preferences
+  object republished on Save cannot cancel the pending refresh) while the previewed
+  resume's link opts in; `hooks/output/use-automatic-release.ts` releases each
+  committed output at most once per tab under a `verso-release-<userId>` Web Lock
+  and never replays failures.
+- Measured statements (`tests/db/operation-counts.db.test.ts`, including the 2-read
+  session lookup for owner routes): public download 1 read; list 4; release 12
+  (2 writes); first release 14 (4 writes); set-latest 8 (1 write). Treat these as
+  regression bounds and justify new public-download cost before adding queries.
 
 ## Report Next.js feedback
 

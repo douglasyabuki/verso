@@ -41,6 +41,7 @@ const FAILURES: Record<AccountErrorCode, SaveFailureReason> = {
   replaced: "replaced",
   operation_mismatch: "invalid",
   not_found: "invalid",
+  quota_exceeded: "invalid",
   unavailable: "offline",
 };
 

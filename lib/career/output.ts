@@ -163,6 +163,28 @@ export function renderCareerResume(
   });
 }
 
+/** Resolve the effective full-name wording a resume renders, for release file names.
+ * @param document Committed validated workspace.
+ * @param resumeId Independent resume identity.
+ * @returns {string} Plain full name, or an empty string when the resume or wording is missing.
+ * @example releaseFileName(resumeFullName(document, resume.id), resume.language, 3)
+ */
+export function resumeFullName(
+  document: CareerDocument,
+  resumeId: string,
+): string {
+  const stored = document.resumes.find((item) => item.id === resumeId);
+  const field = document.profile.fields.find((item) => item.key === "fullName");
+  if (!stored || !field) return "";
+  return wordingText(
+    resolveResumeWording(
+      effectiveResume(document, stored),
+      field.id,
+      field.wording,
+    ),
+  );
+}
+
 /** Render one committed resume and derive its revision-independent output fingerprint.
  * The fingerprint ignores only the committed revision embedded in PDF metadata, so
  * Saves that do not change this resume's rendered source keep the same fingerprint.

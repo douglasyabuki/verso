@@ -737,3 +737,84 @@ Physical-device sleep/wake, hosted network changes, actual OAuth expiry/re-entry
 and Prisma Postgres billing usage remain unexecuted. Local clock jumps and request
 counts do not prove those acceptance items. These follow-ups remain separate from
 automated completion and must not be reported as passed acceptance.
+
+## Public PDF releases
+
+Releases need a configured account. Owner decisions: PDFs stored in Postgres, no
+caching (`no-store` on every public response), opt-in automatic release per link,
+and quota retention (10 links, 25 releases per link, 50 MiB per account, 4 MiB per
+PDF) with explicit deletion only.
+
+- [x] Database tests (`tests/db/release-repository.db.test.ts`,
+      `tests/db/release-api.db.test.ts`): immutable storage with latest and pinned
+      bytes; idempotent retry and reused-ID rejection; stale fingerprint, replaced
+      workspace or generation, unsaved revision, foreign template, non-PDF,
+      oversized PDF, unready resume, and missing resume rejected without writes;
+      a later revision with unchanged output accepted; release without advancing
+      latest; automatic dedupe of identical output; rollback, guarded revoke/delete
+      of latest, restore, delete, link revocation, and a new token afterwards;
+      owner isolation; each quota refused without pruning; an injected insert
+      failure keeps the old latest. Routes: anonymous/cross-origin/wrong-session/
+      unknown-field/extra-part/oversized uploads rejected; public headers
+      (`application/pdf`, inline file name, `no-store`, ETag, nosniff, noindex,
+      no-referrer); one 404 for unknown, malformed, revoked, deleted, and
+      accounts-disabled requests.
+- [x] Statement counts (`tests/db/operation-counts.db.test.ts`): public download 1
+      read and no session lookup; list 4; release 12 (2 writes); first release 14
+      (4 writes); set-latest 8 (1 write).
+- [x] Unit: file names, automatic-release eligibility, stable operation ID across
+      an unanswered retry, session-invalid signaling.
+- [x] Browser Mode: review dialog (nothing sent on Cancel, advance option, copyable
+      pinned link), disabled without a current preview, hidden for guests; Public
+      PDFs panel history states, orphaned resume label, usage, destructive actions
+      last, confirmed deletion and link revocation; automatic preview refresh forced
+      for an opted-in resume even when preferences are republished on Save.
+- [x] Account E2E (production server, isolated PGlite, Chromium/Firefox/WebKit):
+      explicit reviewed release; anonymous latest and pinned downloads with headers
+      and bytes; a second release advances latest while the pinned URL keeps its
+      bytes; rollback from Settings; automatic release after a confirmed Save with
+      the preview visible; link revocation returns 404 for every URL.
+- [ ] Owner (hosted): anonymous access from another device/network, pinned
+      stability over time, advancement and failure behavior, rollback and
+      revocation seen through any intermediary (no CDN caching is configured),
+      Prisma Postgres storage and operation usage for typical downloads, and
+      release with real OAuth sessions. Local tests do not prove hosted behavior.
+- [ ] Owner: visual review of released English and Portuguese PDFs opened from
+      public links in desktop and mobile browsers.
+
+Automatic release runs only in an open signed-in tab whose preview of that resume is
+visible; full-width pages such as Overview hide the preview, so publishing waits
+until it is shown. Prepared release requests are kept in memory; after a reload the
+release list shows whether an interrupted release landed.
+
+### Local release verification
+
+Verified on 2026-11-16 against the uncommitted release implementation based on commit
+`d70527b`, using Windows, Node 24.22.1, and the pinned Playwright browsers:
+`npm run format:check`, `npm run lint`, and `npm run typecheck` passed; unit 191 tests
+in 19 files; database 37 tests in 6 files; Browser Mode 176 tests in 18 files (with
+`--maxWorkers=2`); guest production E2E 85 passed; account E2E 42 passed across
+Chromium, Firefox, and WebKit. A production build with account variables explicitly
+empty reported no providers and answered 404 `no-store` for latest and pinned
+`/pdf` URLs.
+
+Initial failures are retained separately from final evidence:
+
+- The first release E2E runs failed at automatic release. The test first reloaded the
+  page after Save, then saved from Profile, which returns to the full-width Overview
+  where no preview is visible, so automatic refresh correctly waited. Diagnosis also
+  found a real defect: a device-preferences object republished on Save re-applied
+  manual refresh and cancelled the pending automatic refresh. `useCommittedPreview`
+  now applies the automatic-release override in its single preferences effect (with
+  a Browser Mode regression case), and the E2E edits the resume's Wording view.
+- One full account E2E run failed two WebKit cases (one existing sync case) with
+  HTTP 429 from Better Auth's in-memory rate limiter on `get-session`: every test
+  context shared one localhost IP, and the limiter resets only after a 10-second
+  quiet period, so the suite accumulated past 100 checks. Each signed-in E2E context
+  now sends its own `X-Forwarded-For`; auth configuration is unchanged. Hosted
+  deployments rate-limit per real client IP.
+- Browser Mode at default parallelism failed twice with different cases (a Settings
+  teardown blocked deleting `verso-local`, then two custom-section icon cases); each
+  file passed alone and the whole suite passed with two workers. These failures are
+  load-related and not attributed to release code, but they were not compared against
+  a pre-change baseline.

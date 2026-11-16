@@ -5,6 +5,7 @@ export const settingsPanels = [
   { id: "editing-preview", label: "Editing & preview" },
   { id: "data", label: "Data & backups" },
   { id: "defaults", label: "Resume defaults" },
+  { id: "releases", label: "Public PDFs" },
 ] as const;
 
 export type SettingsPanel = (typeof settingsPanels)[number]["id"];

@@ -11,6 +11,7 @@ export type AccountErrorCode =
   | "replaced"
   | "operation_mismatch"
   | "not_found"
+  | "quota_exceeded"
   | "unavailable";
 
 /** Kinds of committed account operations recorded as receipts. */

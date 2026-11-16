@@ -21,6 +21,8 @@ export type CommittedPreviewOptions = {
   head: CareerHead | null;
   preferences?: DevicePreferences;
   activeResumeId?: string;
+  /** Resumes whose public link releases automatically; automatic refresh is forced on while one is previewed. */
+  automaticResumeIds?: readonly string[];
 };
 
 export type CommittedPreview = {
@@ -33,6 +35,7 @@ export type CommittedPreview = {
   sourceError: string;
   /** Key of the committed target; compare with output.key for staleness. */
   key: string;
+  /** Effective automatic refresh, including the automatic-release override. */
   automaticRefresh: boolean;
   selectResume: (id: string) => void;
   refresh: () => void;
@@ -42,7 +45,7 @@ export type CommittedPreview = {
  * Mount this above views that may hide the preview so the last PDF and any
  * in-flight compile survive hide/show and breakpoint changes. Visibility is
  * reported separately by the rendered view; document visibility is tracked here.
- * @param options Committed head, device preferences, and the destination's resume, if any.
+ * @param options Committed head, device preferences, the destination's resume, if any, and resumes that release automatically.
  * @returns Coordinator snapshot, derived committed target, and refresh/select commands.
  * @example const preview = useCommittedPreview({ head: state.head, preferences: state.preferences });
  */
@@ -50,6 +53,7 @@ export function useCommittedPreview({
   head,
   preferences = devicePreferenceDefaults,
   activeResumeId,
+  automaticResumeIds,
 }: CommittedPreviewOptions): CommittedPreview {
   const [coordinator] = useState(() => new PreviewCoordinator());
   const [resumeId, setResumeId] = useState("");
@@ -103,9 +107,18 @@ export function useCommittedPreview({
         : null,
     );
   }, [coordinator, job, head, active]);
+  const forced = Boolean(
+    active &&
+      !preferences.automaticRefresh &&
+      automaticResumeIds?.includes(active.id),
+  );
+  const effective = useMemo(
+    () => (forced ? { ...preferences, automaticRefresh: true } : preferences),
+    [forced, preferences],
+  );
   useEffect(() => {
-    coordinator.setPreferences(preferences);
-  }, [coordinator, preferences]);
+    coordinator.setPreferences(effective);
+  }, [coordinator, effective]);
   useEffect(() => () => coordinator.dispose(), [coordinator]);
   return {
     coordinator,
@@ -115,7 +128,7 @@ export function useCommittedPreview({
     source,
     sourceError,
     key: job ? previewKey(job.tag) : "",
-    automaticRefresh: Boolean(preferences.automaticRefresh),
+    automaticRefresh: Boolean(effective.automaticRefresh),
     selectResume: setResumeId,
     refresh: () => coordinator.refresh(),
   };

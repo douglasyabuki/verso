@@ -21,10 +21,14 @@ export type PreviewJob = {
   targetPages: number;
 };
 
-/** The one retained successful PDF owned by the coordinator. */
+/** The one retained successful PDF owned by the coordinator. `bytes` is the same
+ * buffer behind `url`, retained for explicit or automatic release uploads. */
 export type PreviewOutput = Omit<PreviewJob, "source"> & {
   url: string;
   key: string;
+  bytes: Uint8Array;
+  /** Compiler-reported template identity, such as `yabuki-reference@1.0.3`. */
+  template: string;
 };
 
 export type PreviewStatus =
@@ -352,6 +356,8 @@ export class PreviewCoordinator {
           targetPages: job.targetPages,
           key,
           url: this.createUrl(result.bytes),
+          bytes: result.bytes,
+          template: `${result.templateId}@${result.templateVersion}`,
         };
         if (previous) this.revokeUrl(previous.url);
       }

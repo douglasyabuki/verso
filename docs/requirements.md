@@ -1035,20 +1035,30 @@ suspension/return, and account switching during an in-flight freshness response 
 Chromium, Firefox, and WebKit, plus isolated real-Postgres lock verification.
 P10.5 stays open for physical devices, actual sleep/wake, and hosted usage;
 
-## Phase 11 — Future public PDF releases
+## Phase 11 — Public PDF releases
+
+**Status: Implemented with automated verification; owner hosted acceptance open.**
 
 Requires accounts, hosted artifacts, and an approved latest-release policy.
 
-- [ ] P11.1 Explicitly release reviewed content; private resumes stay private.
-- [ ] P11.2 Store immutable PDFs with content, locale, template/runtime, and settings identity.
-- [ ] P11.3 Provide pinned/latest URLs; latest advances through explicit release by default.
+- [x] P11.1 Explicitly release reviewed content; private resumes stay private.
+- [x] P11.2 Store immutable PDFs with content, locale, template/runtime, and settings identity.
+- [x] P11.3 Provide pinned/latest URLs; latest advances through explicit release by default.
       Automatic release requires opt-in; typing never publishes.
-- [ ] P11.4 Atomically advance latest after successful storage/validation; failures preserve old links.
-- [ ] P11.5 Expose only intended release artifacts/metadata; unlisted URLs are not authentication.
-- [ ] P11.6 Provide link/history/latest/rollback/revocation controls and retention/cache policy.
-- [ ] P11.7 Serve correct PDF headers, filenames, caching, and documented latest freshness.
+- [x] P11.4 Atomically advance latest after successful storage/validation; failures preserve old links.
+- [x] P11.5 Expose only intended release artifacts/metadata; unlisted URLs are not authentication.
+- [x] P11.6 Provide link/history/latest/rollback/revocation controls and retention/cache policy.
+- [x] P11.7 Serve correct PDF headers, filenames, caching, and documented latest freshness.
 - [ ] P11.8 Verify anonymous/private access, pinned stability, advancement/failure, rollback,
       revocation, caches, and artifact/cost bounds on hosted infrastructure.
+
+Delivered 2026-11-16. Owner decisions: PDF bytes in Postgres (release and latest move in
+one transaction), no caching so latest/rollback/revocation apply on the next request,
+an opt-in per-link automatic release, and quotas (10 links, 25 releases per link,
+50 MiB, 4 MiB per PDF) with explicit deletion only. The server re-renders each resume
+from the committed account workspace and accepts only a matching output fingerprint.
+Automated database, unit, Browser Mode, and account E2E coverage passed against isolated
+in-process Postgres; see verification.md. P11.8 stays open for hosted checks.
 
 ## Phase 12 — Future hosted readiness
 
