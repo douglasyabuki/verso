@@ -39,6 +39,7 @@ import {
 import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
 import { CommittedOutputView } from "@/components/career/committed-output";
+import { ConflictPanel } from "@/components/career/conflict-panel";
 import { LayoutFields } from "@/components/career/layout-editor";
 import { libraryDestinationKind } from "@/components/career/library-navigation";
 import {
@@ -105,6 +106,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useAccountActions } from "@/hooks/account/use-account-actions";
 import { useCommittedPreview } from "@/hooks/output/use-committed-preview";
+import { draftConflict } from "@/lib/career/conflict";
 import {
   layoutAppearance,
   layoutDefaults,
@@ -748,6 +750,19 @@ export function CareerWorkspace({
   const [sessionExportChoice, setSessionExportChoice] = useState(false);
   const [sessionReviewError, setSessionReviewError] = useState("");
   const [compare, setCompare] = useState(false);
+  // Both versions of a conflicted form scope, derived from committed state and the draft baseline.
+  const formConflict = useMemo(
+    () =>
+      state.head && state.draft ? draftConflict(state.head, state.draft) : null,
+    [state.head, state.draft],
+  );
+  const orderConflict = useMemo(
+    () =>
+      state.head && state.orderDraft
+        ? draftConflict(state.head, state.orderDraft)
+        : null,
+    [state.head, state.orderDraft],
+  );
   const [addingSection, setAddingSection] = useState(false);
   const [addingResume, setAddingResume] = useState(false);
   const [libraryEditorRequest, setLibraryEditorRequest] = useState<
@@ -863,13 +878,18 @@ export function CareerWorkspace({
   useEffect(() => {
     void controller.initialize();
     const focus = () => {
-      void controller.refresh();
+      void controller.sync("focus");
     };
     const visibility = () => {
       if (document.visibilityState === "hidden")
         void controller.flushRecovery();
-      else focus();
+      else void controller.sync("visible");
     };
+    const online = () => {
+      void controller.sync("online");
+    };
+    // Input marks the owner active; idle tabs pause periodic account checks.
+    const activity = () => controller.activity();
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (
         controller.hasUnsavedChanges() ||
@@ -878,10 +898,16 @@ export function CareerWorkspace({
         event.preventDefault();
     };
     window.addEventListener("focus", focus);
+    window.addEventListener("online", online);
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("beforeunload", beforeUnload);
+    for (const type of ["pointerdown", "keydown"] as const)
+      window.addEventListener(type, activity, { passive: true });
     return () => {
       window.removeEventListener("focus", focus);
+      window.removeEventListener("online", online);
+      for (const type of ["pointerdown", "keydown"] as const)
+        window.removeEventListener(type, activity);
       document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("beforeunload", beforeUnload);
       controller.dispose();
@@ -1612,29 +1638,49 @@ export function CareerWorkspace({
           {controller.isDirty() ? state.recoveryStatus : "No unsaved changes"}
         </p>
         {state.error && <p role="alert">{state.error}</p>}
-        {compare && (
-          <ScopeComparison
-            current={readScope(documentValue, state.draft.scope)}
-            draft={state.draft.values}
+        {formConflict ? (
+          <ConflictPanel
+            conflict={formConflict}
+            disabled={state.saving}
+            onKeepDraft={() => controller.reconcile()}
+            onUseSaved={() => {
+              const savedScope = state.draft!.scope;
+              return controller
+                .cancel()
+                .then(() => controller.open(savedScope))
+                .catch(() => {});
+            }}
+            onExport={exportRecovery}
           />
+        ) : (
+          compare && (
+            <ScopeComparison
+              current={readScope(documentValue, state.draft.scope)}
+              draft={state.draft.values}
+            />
+          )
         )}
         <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setCompare((value) => !value)}
-          >
-            Compare
-          </Button>
-          <Button
-            variant="outline"
-            disabled={state.saving}
-            onClick={() => controller.reconcile()}
-          >
-            Reconcile
-          </Button>
-          <Button variant="outline" onClick={exportRecovery}>
-            Export recovery
-          </Button>
+          {!formConflict && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setCompare((value) => !value)}
+              >
+                Compare
+              </Button>
+              <Button
+                variant="outline"
+                disabled={state.saving}
+                onClick={() => controller.reconcile()}
+              >
+                Reconcile
+              </Button>
+              <Button variant="outline" onClick={exportRecovery}>
+                Export recovery
+              </Button>
+            </>
+          )}
           <Button
             variant="outline"
             disabled={!controller.isDirty() || state.saving}
@@ -2233,6 +2279,46 @@ export function CareerWorkspace({
                 </AlertDescription>
               </Alert>
             )}
+            {listSection &&
+              orderConflict &&
+              orderConflict.scope === `entries/${listSection.id}` && (
+                <ConflictPanel
+                  conflict={orderConflict}
+                  subject="entry order"
+                  disabled={state.saving}
+                  comparison={
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {(
+                        [
+                          ["Current saved order", orderConflict.saved],
+                          ["Your entry order", orderConflict.draft],
+                        ] as const
+                      ).map(([title, ids]) => (
+                        <section key={title} aria-label={title}>
+                          <h3 className="text-sm font-medium">{title}</h3>
+                          <ol className="list-decimal ps-5 text-sm">
+                            {(Array.isArray(ids) ? ids : []).map((id) => {
+                              const entry = listSection.entries.find(
+                                (item) => item.id === id,
+                              );
+                              return (
+                                <li key={String(id)}>
+                                  {entry
+                                    ? careerEntryLabel(entry, contentLanguage)
+                                    : "Missing entry"}
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        </section>
+                      ))}
+                    </div>
+                  }
+                  onKeepDraft={() => controller.reconcile("order")}
+                  onUseSaved={() => controller.cancel("order").catch(() => {})}
+                  onExport={exportRecovery}
+                />
+              )}
             {listSection && (
               <CareerEntryList
                 key={listSection.id}
@@ -2527,31 +2613,33 @@ export function CareerWorkspace({
                           />
                         )}
                         <div className="flex flex-wrap justify-end gap-2">
-                          {(state.error ||
-                            state.recovery.some(
-                              (draft) => draft.draftId === state.draft?.draftId,
-                            )) && (
-                            <>
-                              <Button
-                                variant="outline"
-                                onClick={() => setCompare(!compare)}
-                              >
-                                Compare
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => controller.reconcile()}
-                              >
-                                Reconcile with current
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={exportRecovery}
-                              >
-                                Export recovery
-                              </Button>
-                            </>
-                          )}
+                          {!formConflict &&
+                            (state.error ||
+                              state.recovery.some(
+                                (draft) =>
+                                  draft.draftId === state.draft?.draftId,
+                              )) && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setCompare(!compare)}
+                                >
+                                  Compare
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => controller.reconcile()}
+                                >
+                                  Reconcile with current
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={exportRecovery}
+                                >
+                                  Export recovery
+                                </Button>
+                              </>
+                            )}
                           <span
                             role="status"
                             className="self-center text-xs text-muted-foreground"
@@ -2574,7 +2662,22 @@ export function CareerWorkspace({
                           )}
                         </div>
                       </fieldset>
-                      {compare && (
+                      {formConflict &&
+                        !(
+                          formConflict.saved === undefined &&
+                          !formConflict.replaced
+                        ) && (
+                          <ConflictPanel
+                            conflict={formConflict}
+                            disabled={state.saving}
+                            onKeepDraft={() => controller.reconcile()}
+                            onUseSaved={() =>
+                              controller.cancel().catch(() => {})
+                            }
+                            onExport={exportRecovery}
+                          />
+                        )}
+                      {compare && !formConflict && (
                         <ScopeComparison
                           current={readScope(documentValue, state.draft.scope)}
                           draft={state.draft.values}
@@ -2705,7 +2808,14 @@ export function CareerWorkspace({
                           })
                         }
                       >
-                        {state.orderDraft ? "Save entry" : "Save"}
+                        {state.draft?.operationId &&
+                        !state.saving &&
+                        !formConflict &&
+                        state.storageMode === "account"
+                          ? "Retry save"
+                          : state.orderDraft
+                            ? "Save entry"
+                            : "Save"}
                       </Button>
                     </CardFooter>
                   </Card>

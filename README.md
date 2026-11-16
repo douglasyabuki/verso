@@ -252,7 +252,8 @@ session, with a persistent disclosure and workspace-export guidance.
 none implies another.
 
 - **Save status** (toolbar): _Saving…_, _Saved locally · revision N_, _Updated
-  from another tab · revision N_, _Saved in this tab only_, _cleanup retries on
+  from another tab · revision N_ (signed in: _another device or tab_), _Offline ·
+  showing last synced revision N_, _Saved in this tab only_, _cleanup retries on
   next load_ (commit confirmed, receipt acknowledgment pending), or _not
   confirmed_ with a reason: changed in another save, workspace replaced, browser
   storage failed, or outcome unknown. Failed Saves always keep the draft. The
@@ -465,13 +466,27 @@ account. There are no separate sign-in or sign-up pages.
   Saves and recovery stay on this device and reappear when the same user signs in
   again; the dialog offers recovery export. Account-local browser data is never
   wiped automatically, so on a shared device export and resolve work before leaving.
+- **Changes from other devices.** A signed-in tab checks whether the account
+  workspace changed without downloading it again when nothing changed: on focus,
+  when the tab becomes visible, on reconnect, and on returning after 15 minutes
+  without input (at most once per minute across this browser's tabs), plus every 5
+  minutes while the tab is visible and in use. Hidden or idle tabs send nothing.
+  Newer content appears with "Updated from another device or tab"; tabs in the same
+  browser share each Save and check locally. Drafts are never replaced: if the same
+  content changed elsewhere, a conflict panel shows both versions with **Export
+  recovery**, **Keep my draft** (start from the saved version, then Save), and **Use
+  saved version** (discards the draft after confirmation).
+- **Reconnecting** looks up each unconfirmed Save once. Saves the server already
+  committed are confirmed without sending them again; unknown ones stay pending
+  behind **Retry save**. Opening while the server is unreachable shows the last
+  synced revision from this device as possibly stale; Saves wait for reconnection.
 - Account linking is explicit only. There is no password sign-in, email-based
-  automatic linking, or account deletion. Cross-device sync of drafts and remote
-  change detection beyond reload/focus are not implemented.
+  automatic linking, account deletion, coauthoring, or live push of remote changes;
+  drafts stay on the device where they were typed.
 
 The server stores one schema-2 snapshot per account, one previous workspace, and
-operation receipts (pruned to 30 days / 1,000 per account; clients protect their own
-pending requests). Saves lock the owner's row, recheck only the request's scope
+operation receipts (pruned to 30 days / 1,000 per account inside at most one Save
+per day; reads never write; clients protect their own pending requests). Saves lock the owner's row, recheck only the request's scope
 baseline and generation, and commit content, revision, and receipt in one
 transaction. Every account request is authorized from the database session, bound to
 the client's session ID, origin-checked for writes, and answered `no-store`.
@@ -574,8 +589,15 @@ to the origin/profile. Tests do not establish Safari support, PDF/UA, universal
 ATS compatibility, or production deployment.
 
 Install the pinned browser engines with `PLAYWRIGHT_BROWSERS_PATH` set to
-`.cache/ms-playwright` before running cross-browser checks. E2E runs Chromium,
-Firefox, and WebKit; the Chromium quota case waits for the browser's 30-second
+`.cache/ms-playwright` before running cross-browser checks. Both guest and account
+E2E run Chromium, Firefox, and WebKit. Account cases use seeded database sessions
+and independent browser contexts, including concurrent Saves, offline retries,
+simulated suspension, expiry, and account changes during a delayed freshness response.
+They do not establish physical-device sleep/wake or hosted OAuth acceptance.
+The guest server explicitly clears account environment values; the account server
+uses isolated database and provider values, so local OAuth configuration cannot
+change either test deployment's mode.
+The Chromium quota case waits for the browser's 30-second
 quota cache to expire. Measurements run separately with one worker and write
 raw samples under `.cache/performance/`; their recorded evidence includes reference
 hardware, browser version, normal/4x CPU runs, and sample counts.

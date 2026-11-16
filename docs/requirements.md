@@ -1010,17 +1010,30 @@ account E2E coverage passed against isolated in-process Postgres with seeded ses
 P9.8 stays open for real OAuth callbacks, real expiry, concurrent locking on real
 Postgres, and hosted checks; see verification.md.
 
-## Phase 10 — Future sync
+## Phase 10 — Sync
+
+**Status: Implemented with automated verification; owner real-device acceptance open.**
 
 Requires authenticated shared storage; local tab coordination is not device sync.
 
-- [ ] P10.1 Detect revisions on focus/reconnect and a documented event/periodic mechanism;
+- [x] P10.1 Detect revisions on focus/reconnect and a documented event/periodic mechanism;
       measure freshness and preserve dirty drafts.
-- [ ] P10.2 Coordinate tabs; server revision checks remain authoritative across devices.
-- [ ] P10.3 Retain both conflict versions with compare/export/explicit resolution.
-- [ ] P10.4 Recover offline work safely; bound eligible history without expiring unresolved recovery.
-- [ ] P10.5 Verify simultaneous/offline/sleeping clients, retries, account changes, and expiry
+- [x] P10.2 Coordinate tabs; server revision checks remain authoritative across devices.
+- [x] P10.3 Retain both conflict versions with compare/export/explicit resolution.
+- [x] P10.4 Recover offline work safely; bound eligible history without expiring unresolved recovery.
+- [x] P10.5 Verify simultaneous/offline/sleeping clients, retries, account changes, and expiry
       through automation plus actual browsers/devices. No coauthoring requirement.
+
+Delivered 2026-11-16 with a cost-first design (Prisma Postgres bills per operation):
+conditional freshness checks (3 statements, no document when unchanged), 60-second event
+spacing and 5-minute periodic checks only while visible and active, one in-flight check
+per browser with locally cached heads shared between tabs, daily Save-time receipt
+pruning instead of pruning on every load, status lookup instead of resending pending
+Saves, and an explicit Retry save. Automated database, unit, Browser Mode, and account E2E
+coverage passed. Follow-up verification adds concurrent same-scope Saves, simulated
+suspension/return, and account switching during an in-flight freshness response in
+Chromium, Firefox, and WebKit, plus isolated real-Postgres lock verification.
+P10.5 stays open for physical devices, actual sleep/wake, and hosted usage;
 
 ## Phase 11 — Future public PDF releases
 

@@ -18,7 +18,9 @@ import type {
   AccountReplaceRequest,
   AccountSaveRequest,
   AccountSaveResponse,
+  AccountWorkspaceUnchanged,
 } from "@/types-and-constants/account";
+import { ACCOUNT_SYNC } from "@/types-and-constants/account";
 import type { CareerDocument } from "@/types-and-constants/career";
 
 type Transaction = Prisma.TransactionClient;
@@ -107,6 +109,35 @@ export async function loadAccountWorkspace(
   }, TRANSACTION);
 }
 
+/** Conditionally load the owner's workspace for a freshness check.
+ * One read: when the known identity is current, only identity is returned (no document transfer).
+ * @param userId Session-derived owner.
+ * @param known Client's committed head identity.
+ * @returns Unchanged identity, or the current committed head (created on first access).
+ * @example await checkAccountWorkspace(userId, { workspaceId, revision: 4, generation: 0 })
+ */
+export async function checkAccountWorkspace(
+  userId: string,
+  known: Pick<CommittedHead, "workspaceId" | "revision" | "generation">,
+): Promise<CommittedHead | AccountWorkspaceUnchanged> {
+  const row = await getPrisma().accountWorkspace.findUnique({
+    where: { userId },
+  });
+  if (!row) return loadAccountWorkspace(userId);
+  if (
+    row.workspaceId === known.workspaceId &&
+    row.revision === known.revision &&
+    row.generation === known.generation
+  )
+    return {
+      unchanged: true,
+      workspaceId: row.workspaceId,
+      revision: row.revision,
+      generation: row.generation,
+    };
+  return toHead(row);
+}
+
 /** Read the single retained previous workspace.
  * @param userId Session-derived owner.
  * @returns Previous committed head, or undefined.
@@ -171,9 +202,18 @@ export async function commitAccountSave(
     if (!decision.ok)
       throw new AccountStoreError(decision.reason, decision.message);
     const next = decision.head;
+    const now = new Date();
+    const prune =
+      !row.operationsPrunedAt ||
+      now.getTime() - row.operationsPrunedAt.getTime() >=
+        ACCOUNT_SYNC.pruneEveryMs;
     await tx.accountWorkspace.update({
       where: { userId },
-      data: { revision: next.revision, document: json(next.document) },
+      data: {
+        revision: next.revision,
+        document: json(next.document),
+        ...(prune ? { operationsPrunedAt: now } : {}),
+      },
     });
     await tx.accountOperation.create({
       data: {
@@ -185,6 +225,9 @@ export async function commitAccountSave(
         resultGeneration: next.generation,
       },
     });
+    // Receipt retention runs at most daily inside an existing Save transaction,
+    // keeping the read path free of writes.
+    if (prune) await pruneOperations(tx, userId, now);
     return {
       workspaceId: next.workspaceId,
       revision: next.revision,
@@ -318,6 +361,38 @@ export async function accountOperationStatus(
 
 /** Prune the owner's oldest receipts beyond the retention policy.
  * Clients keep their own pending requests; a pruned receipt makes a retry "unknown", never replayed.
+ * @param tx Prisma client or interactive transaction.
+ * @param userId Session-derived owner.
+ * @param now Reference time.
+ * @param days Retention days, default 30.
+ * @param count Maximum retained receipts, default 1,000.
+ * @returns {Promise<number>} Number of receipts removed.
+ */
+async function pruneOperations(
+  tx: Transaction,
+  userId: string,
+  now: Date,
+  days = 30,
+  count = 1000,
+): Promise<number> {
+  const cutoff = new Date(now.getTime() - days * 86_400_000);
+  const keep = await tx.accountOperation.findMany({
+    where: { userId, createdAt: { gte: cutoff } },
+    orderBy: { createdAt: "desc" },
+    take: count,
+    select: { operationId: true },
+  });
+  const removed = await tx.accountOperation.deleteMany({
+    where: {
+      userId,
+      operationId: { notIn: keep.map((item) => item.operationId) },
+    },
+  });
+  return removed.count;
+}
+
+/** Prune the owner's oldest receipts immediately, outside the daily Save-time schedule.
+ * Clients keep their own pending requests; a pruned receipt makes a retry "unknown", never replayed.
  * @param userId Session-derived owner.
  * @param days Retention days, default 30.
  * @param count Maximum retained receipts, default 1,000.
@@ -329,19 +404,5 @@ export async function pruneAccountOperations(
   days = 30,
   count = 1000,
 ): Promise<number> {
-  const prisma = getPrisma();
-  const cutoff = new Date(Date.now() - days * 86_400_000);
-  const keep = await prisma.accountOperation.findMany({
-    where: { userId, createdAt: { gte: cutoff } },
-    orderBy: { createdAt: "desc" },
-    take: count,
-    select: { operationId: true },
-  });
-  const removed = await prisma.accountOperation.deleteMany({
-    where: {
-      userId,
-      operationId: { notIn: keep.map((item) => item.operationId) },
-    },
-  });
-  return removed.count;
+  return pruneOperations(getPrisma(), userId, new Date(), days, count);
 }

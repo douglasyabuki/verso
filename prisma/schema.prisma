@@ -80,14 +80,16 @@ model Verification {
 // Verso account workspace: one committed schema-2 snapshot per user.
 
 model AccountWorkspace {
-  userId      String   @id
-  workspaceId String
-  revision    Int
-  generation  Int
-  document    Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String    @id
+  workspaceId        String
+  revision           Int
+  generation         Int
+  document           Json
+  // Last Save-time receipt pruning; pruning runs at most daily and never on reads.
+  operationsPrunedAt DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("account_workspace")
 }

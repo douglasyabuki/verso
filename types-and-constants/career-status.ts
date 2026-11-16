@@ -23,8 +23,11 @@ export type SaveStatus =
   | { kind: "opening" }
   | { kind: "saving" }
   | { kind: "saved"; revision: number }
-  /** Another tab committed a newer revision that this tab now shows. */
+  /** Another tab (or, for accounts, another device) committed a newer revision that this tab now shows. */
   | { kind: "remote-update"; revision: number }
+  /** Account only: the server was unreachable at open; this tab shows the last
+   * server-confirmed head cached on this device, which may be stale. */
+  | { kind: "offline-cached"; revision: number }
   /** Committed in this tab's memory only; durable storage is unchanged. */
   | { kind: "session"; revision: number }
   /** The commit succeeded; only receipt cleanup needs a retry on next load. */
@@ -62,7 +65,11 @@ export function describeSaveStatus(
     case "saved":
       return `${where} · revision ${status.revision}`;
     case "remote-update":
-      return `Updated from another tab · revision ${status.revision}`;
+      return owner === "account"
+        ? `Updated from another device or tab · revision ${status.revision}`
+        : `Updated from another tab · revision ${status.revision}`;
+    case "offline-cached":
+      return `Offline · showing last synced revision ${status.revision} · Saves wait for reconnection`;
     case "session":
       return "Saved in this tab only · durable workspace unchanged";
     case "cleanup-retry":

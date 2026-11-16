@@ -99,12 +99,66 @@ export class CareerStorage implements CareerBackend {
 
   readonly channelName: string;
 
+  /** Key of this database's head record: the committed guest head, or the
+   * last acknowledged account head cached in an account-isolated database. */
+  private readonly headKey: "guest" | "account";
+
   constructor(
     private database: IDBDatabase,
     name = "verso-local",
   ) {
     this.channelName = name;
+    this.headKey = name === "verso-local" ? "guest" : "account";
     database.onversionchange = () => database.close();
+  }
+
+  /** Read the cached account head without any network request.
+   * @returns Last acknowledged/loaded server head, or undefined when none was cached.
+   * @example await local.cachedAccountHead()
+   */
+  async cachedAccountHead(): Promise<CareerHead | undefined> {
+    if (this.headKey !== "account") return undefined;
+    const head = await this.transaction(["heads"], "readonly", (tx) =>
+      requestResult<CareerHead | undefined>(
+        tx.objectStore("heads").get("account"),
+      ),
+    );
+    if (!head) return undefined;
+    validateDocument(head.document);
+    return head;
+  }
+
+  /** Cache a server-acknowledged account head for other tabs and offline start.
+   * Never replaces a newer cached generation/revision written by another tab.
+   * @param head Server-confirmed committed head.
+   * @returns Completion; the cache is a hint and never proves a commit.
+   * @example await local.cacheAccountHead(head)
+   */
+  async cacheAccountHead(head: CommittedHead): Promise<void> {
+    if (this.headKey !== "account") return;
+    await this.transaction(["heads"], "readwrite", async (tx) => {
+      const store = tx.objectStore("heads");
+      const current = await requestResult<CareerHead | undefined>(
+        store.get("account"),
+      );
+      if (
+        current &&
+        current.workspaceId === head.workspaceId &&
+        (current.generation > head.generation ||
+          (current.generation === head.generation &&
+            current.revision > head.revision))
+      )
+        return;
+      store.put(
+        {
+          workspaceId: head.workspaceId,
+          revision: head.revision,
+          generation: head.generation,
+          document: head.document,
+        },
+        "account",
+      );
+    });
   }
 
   /** Read browser preferences independently of workspace/recovery data.
@@ -530,7 +584,7 @@ export class CareerStorage implements CareerBackend {
         tx.objectStore("operations").getAll(),
       );
       const head = await requestResult<CareerHead | undefined>(
-        tx.objectStore("heads").get("guest"),
+        tx.objectStore("heads").get(this.headKey),
       );
       return operations
         .filter(

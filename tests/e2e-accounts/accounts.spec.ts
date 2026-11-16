@@ -61,10 +61,10 @@ async function editFullName(page: Page, name: string) {
   await page.getByRole("textbox", { name: "Full name" }).fill(name);
 }
 
-function saveButton(page: Page) {
+function saveButton(page: Page, name = "Save") {
   return page
     .getByRole("region", { name: "Editing form" })
-    .getByRole("button", { name: "Save", exact: true });
+    .getByRole("button", { name, exact: true });
 }
 
 test("saves to the account, survives reload, and isolates another user", async ({
@@ -121,7 +121,8 @@ test("retries an interrupted Save with the same operation and commits once", asy
   ).toBeVisible();
   expect(await revision(userId)).toBe(1);
 
-  await saveButton(page).click();
+  // The prepared request keeps its operation ID; Save becomes an explicit retry.
+  await saveButton(page, "Retry save").click();
   await expect(status(page, /^Saved to account · revision 1$/)).toBeVisible();
   expect(await revision(userId)).toBe(1);
 });
@@ -242,4 +243,348 @@ test("imports the guest workspace only after review and leaves it unchanged", as
       }),
   );
   expect(guest).toBe("Guest Author");
+});
+
+/** Count freshness reads (full or conditional workspace loads) made by one page. */
+function countWorkspaceReads(page: Page) {
+  const reads: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/account/workspace") reads.push(url.search);
+  });
+  return reads;
+}
+
+async function focus(page: Page) {
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+}
+
+test.describe("account sync", () => {
+  test("concurrent same-scope Saves commit one version and retain the losing draft", async ({
+    browser,
+  }) => {
+    const userId = randomUUID();
+    const deviceA = await browser.newContext();
+    const deviceB = await browser.newContext();
+    try {
+      await signIn(deviceA, userId);
+      await signIn(deviceB, userId);
+      const a = await deviceA.newPage();
+      const b = await deviceB.newPage();
+      await a.goto("/");
+      await b.goto("/");
+      await expect(status(b, /^Saved to account · revision 0$/)).toBeVisible();
+      await editFullName(a, "Concurrent A");
+      await editFullName(b, "Concurrent B");
+
+      // Hold both requests until both clients have dispatched from revision 0.
+      let arrived = 0;
+      let release!: () => void;
+      const ready = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      for (const page of [a, b]) {
+        await page.route(
+          "**/api/account/workspace/operations",
+          async (route) => {
+            if (++arrived === 2) release();
+            await ready;
+            await route.continue();
+          },
+        );
+      }
+      await Promise.all([saveButton(a).click(), saveButton(b).click()]);
+      await expect
+        .poll(async () => {
+          return (
+            (await a
+              .getByRole("region", { name: "Conflicting versions" })
+              .count()) +
+            (await b
+              .getByRole("region", { name: "Conflicting versions" })
+              .count())
+          );
+        })
+        .toBe(1);
+      expect(await revision(userId)).toBe(1);
+      const loser = (await a
+        .getByRole("region", { name: "Conflicting versions" })
+        .count())
+        ? a
+        : b;
+      const panel = loser.getByRole("region", { name: "Conflicting versions" });
+      await expect(panel).toContainText("Concurrent A");
+      await expect(panel).toContainText("Concurrent B");
+      await expect(
+        loser.getByRole("textbox", { name: "Full name" }),
+      ).toHaveValue(loser === a ? "Concurrent A" : "Concurrent B");
+    } finally {
+      await deviceA.close();
+      await deviceB.close();
+    }
+  });
+
+  test("checks once on returning after a long suspended clock and retains a conflicting draft", async ({
+    browser,
+  }) => {
+    const userId = randomUUID();
+    const deviceA = await browser.newContext();
+    const deviceB = await browser.newContext();
+    try {
+      await signIn(deviceA, userId);
+      await signIn(deviceB, userId);
+      const a = await deviceA.newPage();
+      const b = await deviceB.newPage();
+      await b.clock.install();
+      await a.goto("/");
+      await b.goto("/");
+      await expect(status(b, /^Saved to account · revision 0$/)).toBeVisible();
+      await editFullName(b, "Draft before suspension");
+      const reads = countWorkspaceReads(b);
+      await editFullName(a, "Saved while away");
+      await saveButton(a).click();
+      await expect(status(a, /^Saved to account · revision 1$/)).toBeVisible();
+
+      // Jump wall time without firing missed timers, as when a sleeping client resumes.
+      await b.clock.setSystemTime(Date.now() + 2 * 60 * 60_000);
+      await focus(b);
+      const panel = b.getByRole("region", { name: "Conflicting versions" });
+      await expect(panel).toContainText("Saved while away");
+      await expect(panel).toContainText("Draft before suspension");
+      await b.clock.runFor(1_000);
+      expect(reads).toHaveLength(1);
+      expect(await revision(userId)).toBe(1);
+    } finally {
+      await deviceA.close();
+      await deviceB.close();
+    }
+  });
+
+  test("switching accounts during a freshness response never adopts the previous owner's content", async ({
+    page,
+    browser,
+  }) => {
+    const ownerA = await signIn(page.context());
+    await page.clock.install();
+    await page.goto("/");
+    await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
+    await editFullName(page, "Private to A");
+    await saveButton(page).click();
+    await expect(status(page, /^Saved to account · revision 1$/)).toBeVisible();
+
+    // Make the held response carry a newer private document, rather than an
+    // unchanged-identity response, using an independent storage context.
+    const remote = await browser.newContext();
+    try {
+      await signIn(remote, ownerA.userId);
+      const other = await remote.newPage();
+      await other.goto("/");
+      await editFullName(other, "Private remote A");
+      await saveButton(other).click();
+      await expect(
+        status(other, /^Saved to account · revision 2$/),
+      ).toBeVisible();
+    } finally {
+      await remote.close();
+    }
+
+    let captured!: () => void;
+    const requested = new Promise<void>((resolve) => {
+      captured = resolve;
+    });
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/account/workspace?*", async (route) => {
+      const response = await route.fetch();
+      captured();
+      await held;
+      await route.fulfill({ response }).catch(() => {}); // owner disposal may abort it
+    });
+    await page.clock.runFor(61_000);
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await requested;
+    const ownerB = await signIn(page.context());
+    await focus(page);
+    await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
+    release();
+    await page.unrouteAll({ behavior: "wait" });
+    await page.getByRole("button", { name: "Profile", exact: true }).click();
+    await expect(page.getByRole("textbox", { name: "Full name" })).toHaveValue(
+      "",
+    );
+    await page.getByRole("textbox", { name: "Full name" }).fill("Private to B");
+    await saveButton(page).click();
+    await expect(status(page, /^Saved to account · revision 1$/)).toBeVisible();
+    expect(await revision(ownerA.userId)).toBe(2);
+    expect(await revision(ownerB.userId)).toBe(1);
+    await page.reload();
+    await page.getByRole("button", { name: "Profile", exact: true }).click();
+    await expect(page.getByRole("textbox", { name: "Full name" })).toHaveValue(
+      "Private to B",
+    );
+  });
+
+  test("shows another device's Save after a focus check, without refetching unchanged documents", async ({
+    browser,
+  }) => {
+    const userId = randomUUID();
+    const deviceA = await browser.newContext();
+    const deviceB = await browser.newContext();
+    await signIn(deviceA, userId);
+    await signIn(deviceB, userId);
+    const a = await deviceA.newPage();
+    const b = await deviceB.newPage();
+    await b.clock.install();
+    await a.goto("/");
+    await b.goto("/");
+    await expect(status(b, /^Saved to account · revision 0$/)).toBeVisible();
+    const reads = countWorkspaceReads(b);
+
+    // A focus check inside the shared 60-second bound sends nothing.
+    await focus(b);
+    await b.clock.runFor(1_000);
+    expect(reads).toHaveLength(0);
+
+    await b.clock.runFor(61_000);
+    await focus(b);
+    await expect.poll(() => reads.length).toBe(1);
+    expect(reads[0]).toContain("revision=0");
+    await expect(status(b, /^Saved to account · revision 0$/)).toBeVisible();
+
+    await editFullName(a, "Saved on device A");
+    await saveButton(a).click();
+    await expect(status(a, /^Saved to account · revision 1$/)).toBeVisible();
+
+    const savedAt = Date.now();
+    await b.clock.runFor(61_000);
+    await focus(b);
+    await expect(
+      status(b, /^Updated from another device or tab · revision 1$/),
+    ).toBeVisible();
+    console.info(
+      "Account sync freshness after focus (ms, wall clock)",
+      Date.now() - savedAt,
+    );
+    await b.getByRole("button", { name: "Profile", exact: true }).click();
+    await expect(b.getByRole("textbox", { name: "Full name" })).toHaveValue(
+      "Saved on device A",
+    );
+    await deviceA.close();
+    await deviceB.close();
+  });
+
+  test("keeps both versions on a same-scope conflict and commits the kept draft once", async ({
+    browser,
+  }) => {
+    const userId = randomUUID();
+    const deviceA = await browser.newContext();
+    const deviceB = await browser.newContext();
+    await signIn(deviceA, userId);
+    await signIn(deviceB, userId);
+    const a = await deviceA.newPage();
+    const b = await deviceB.newPage();
+    await a.goto("/");
+    await b.goto("/");
+    await expect(status(b, /^Saved to account · revision 0$/)).toBeVisible();
+
+    await editFullName(b, "Device B draft");
+    await editFullName(a, "Device A saved");
+    await saveButton(a).click();
+    await expect(status(a, /^Saved to account · revision 1$/)).toBeVisible();
+
+    await saveButton(b).click();
+    const panel = b.getByRole("region", { name: "Conflicting versions" });
+    await expect(panel).toContainText("Device A saved");
+    await expect(panel).toContainText("Device B draft");
+    expect(await revision(userId)).toBe(1);
+
+    await panel.getByRole("button", { name: "Keep my draft" }).click();
+    await expect(panel).toBeHidden();
+    await saveButton(b).click();
+    await expect(status(b, /^Saved to account · revision 2$/)).toBeVisible();
+    expect(await revision(userId)).toBe(2);
+    await deviceA.close();
+    await deviceB.close();
+  });
+
+  test("checks an offline Save's status on reconnect and retries only when asked", async ({
+    page,
+  }) => {
+    const { userId } = await signIn(page.context());
+    await page.goto("/");
+    await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
+    await editFullName(page, "Written offline");
+    await page.context().setOffline(true);
+    await saveButton(page).click();
+    await expect(
+      status(page, "Not yet saved to your account · kept on this device"),
+    ).toBeVisible();
+
+    const lookups: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/api/account/workspace/operations/"))
+        lookups.push(request.url());
+    });
+    await page.context().setOffline(false);
+    await expect.poll(() => lookups.length).toBe(1);
+    expect(await revision(userId)).toBe(0);
+
+    await saveButton(page, "Retry save").click();
+    await expect(status(page, /^Saved to account · revision 1$/)).toBeVisible();
+    expect(await revision(userId)).toBe(1);
+  });
+
+  test("an idle visible tab stops periodic checks until input returns", async ({
+    page,
+  }) => {
+    await signIn(page.context());
+    await page.clock.install();
+    await page.goto("/");
+    await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
+    const reads = countWorkspaceReads(page);
+
+    // Periodic checks every 5 minutes while active. Each step lets the check's
+    // request run before advancing the fake clock again.
+    await page.clock.runFor(5 * 60_000);
+    await expect.poll(() => reads.length).toBe(1);
+    await page.clock.runFor(5 * 60_000);
+    await expect.poll(() => reads.length).toBe(2);
+    // The next due check falls after 15 minutes without input: none are sent.
+    await page.clock.runFor(6 * 60_000);
+    await page.clock.runFor(60 * 60_000);
+    await page.waitForTimeout(500);
+    expect(reads).toHaveLength(2);
+    const active = reads.length;
+
+    await page.keyboard.press("Shift");
+    await expect.poll(() => reads.length).toBe(active + 1);
+  });
+
+  test("an expired session stops sync checks and keeps the draft", async ({
+    page,
+  }) => {
+    const { sessionId } = await signIn(page.context());
+    await page.clock.install();
+    await page.goto("/");
+    await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
+    await editFullName(page, "Draft before expiry");
+    const reads = countWorkspaceReads(page);
+    await database.query(
+      `UPDATE session SET "expiresAt" = now() - interval '1 minute' WHERE id = $1`,
+      [sessionId],
+    );
+    await page.clock.runFor(61_000);
+    await focus(page);
+    await expect.poll(() => reads.length).toBe(1);
+    await expect(page.getByText("Your sign-in expired").first()).toBeVisible();
+
+    await page.clock.runFor(30 * 60_000);
+    await focus(page);
+    expect(reads).toHaveLength(1);
+    await expect(page.getByRole("textbox", { name: "Full name" })).toHaveValue(
+      "Draft before expiry",
+    );
+  });
 });

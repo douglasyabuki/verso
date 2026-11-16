@@ -17,6 +17,8 @@ export const accountsTestEnv = {
   BETTER_AUTH_SECRET: "isolated-account-e2e-secret-with-32-plus-characters",
   GITHUB_CLIENT_ID: "account-e2e-client",
   GITHUB_CLIENT_SECRET: "account-e2e-secret",
+  GOOGLE_CLIENT_ID: "",
+  GOOGLE_CLIENT_SECRET: "",
 };
 
 export default defineConfig({
@@ -26,8 +28,14 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
   reporter: "list",
+  // Separate from the guest suite so concurrent runs never delete each other's artifacts.
+  outputDir: "test-results/accounts",
   use: { baseURL, trace: "retain-on-failure" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+  ],
   webServer: [
     {
       command: "node tools/accounts-e2e-database.mjs",

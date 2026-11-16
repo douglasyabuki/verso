@@ -12,8 +12,10 @@ import {
   ACCOUNT_ROUTES,
   ACCOUNT_SESSION_HEADER,
   type AccountErrorCode,
+  type AccountOperationStatus,
   type AccountReplaceRequest,
   type AccountSaveResponse,
+  type AccountWorkspaceUnchanged,
 } from "@/types-and-constants/account";
 import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
 import type { SaveFailureReason } from "@/types-and-constants/career-status";
@@ -62,6 +64,13 @@ export class AccountCareerBackend implements CareerBackend {
   private readonly fetcher: typeof fetch;
 
   private localAcknowledgmentFailed = new Set<string>();
+
+  /** Stable replacement operation IDs per reviewed attempt, so a retried
+   * replacement replays its receipt instead of failing as a second operation. */
+  private replaceAttempts = new Map<
+    string,
+    { operationId: string; incoming?: CareerDocument }
+  >();
 
   constructor(
     private readonly local: CareerStorage,
@@ -123,8 +132,83 @@ export class AccountCareerBackend implements CareerBackend {
    */
   async load(): Promise<CareerHead> {
     const head = await this.request<CareerHead>(ACCOUNT_ROUTES.workspace);
-    this.head = { ...head, document: validateDocument(head.document) };
+    return this.adopt(head);
+  }
+
+  /** Validate and remember a server-confirmed head, caching it for other tabs and offline start.
+   * Cache failures are ignored: the cache is a hint and never proves a commit.
+   * @param head Server head.
+   * @returns {Promise<CareerHead>} Validated head.
+   * @example return this.adopt(head)
+   */
+  private async adopt(head: CareerHead): Promise<CareerHead> {
+    this.head = {
+      workspaceId: head.workspaceId,
+      revision: head.revision,
+      generation: head.generation,
+      document: validateDocument(head.document),
+    };
+    await this.local.cacheAccountHead(this.head).catch(() => {});
     return this.head;
+  }
+
+  /** Conditionally load the account head: when `known` is current the server returns
+   * identity only (session lookup plus one read), so freshness checks never transfer the document.
+   * @param known Head currently shown by this tab.
+   * @returns "unchanged", or the newer validated head.
+   * @example const result = await backend.check(head)
+   */
+  async check(known: CareerHead): Promise<CareerHead | "unchanged"> {
+    const query = new URLSearchParams({
+      workspaceId: known.workspaceId,
+      revision: String(known.revision),
+      generation: String(known.generation),
+    });
+    const result = await this.request<CareerHead | AccountWorkspaceUnchanged>(
+      `${ACCOUNT_ROUTES.workspace}?${query}`,
+    );
+    if ("unchanged" in result) {
+      if (
+        this.head?.revision !== known.revision ||
+        this.head.generation !== known.generation
+      )
+        this.head = known;
+      return "unchanged";
+    }
+    return this.adopt(result);
+  }
+
+  /** Read the locally cached server head without a network request.
+   * @returns Cached head, or undefined.
+   * @example await backend.cachedHead()
+   */
+  async cachedHead(): Promise<CareerHead | undefined> {
+    return this.local.cachedAccountHead().catch(() => undefined);
+  }
+
+  /** Ask the server whether an operation committed, without sending it again.
+   * @param operationId Prepared operation ID.
+   * @returns Recorded receipt, or `unknown` (never proof of failure).
+   * @example await backend.operationStatus(draft.operationId)
+   */
+  operationStatus(operationId: string): Promise<AccountOperationStatus> {
+    return this.request<AccountOperationStatus>(
+      `${ACCOUNT_ROUTES.operations}/${encodeURIComponent(operationId)}`,
+    );
+  }
+
+  /** Record a server-confirmed outcome discovered by status lookup, cleaning up the exact draft version.
+   * @param operationId Operation the server reports as committed.
+   * @param result Committed revision and generation.
+   * @returns Completion after local recording and acknowledgment.
+   * @example await backend.resolveCommitted(id, status.result)
+   */
+  async resolveCommitted(
+    operationId: string,
+    result: Pick<CareerHead, "revision" | "generation">,
+  ): Promise<void> {
+    await this.local.recordCommitted(operationId, result);
+    await this.local.acknowledge(operationId);
   }
 
   /** Send a prepared request and confirm it only on server acknowledgment.
@@ -159,7 +243,7 @@ export class AccountCareerBackend implements CareerBackend {
     )
       next = applyCommitted(head, request.scope, request.values);
     else next = await this.load();
-    this.head = next;
+    next = await this.adopt(next);
     try {
       await this.local.recordCommitted(operationId, response);
     } catch {
@@ -196,9 +280,21 @@ export class AccountCareerBackend implements CareerBackend {
     incoming?: CareerDocument,
     kind: "replace" | "import" = "replace",
   ): Promise<CareerHead> {
+    const kindValue = incoming ? kind : "rollback";
+    const key = JSON.stringify([
+      kindValue,
+      reviewed.workspaceId,
+      reviewed.revision,
+      reviewed.generation,
+    ]);
+    let attempt = this.replaceAttempts.get(key);
+    if (!attempt || attempt.incoming !== incoming) {
+      attempt = { operationId: crypto.randomUUID(), incoming };
+      this.replaceAttempts.set(key, attempt);
+    }
     const body: AccountReplaceRequest = {
-      operationId: crypto.randomUUID(),
-      kind: incoming ? kind : "rollback",
+      operationId: attempt.operationId,
+      kind: kindValue,
       reviewed: {
         workspaceId: reviewed.workspaceId,
         revision: reviewed.revision,
@@ -207,8 +303,8 @@ export class AccountCareerBackend implements CareerBackend {
       ...(incoming ? { document: validateDocument(incoming) } : {}),
     };
     const head = await this.request<CareerHead>(ACCOUNT_ROUTES.replace, body);
-    this.head = { ...head, document: validateDocument(head.document) };
-    return this.head;
+    this.replaceAttempts.delete(key);
+    return this.adopt(head);
   }
 
   /** Read the account's one previous workspace.

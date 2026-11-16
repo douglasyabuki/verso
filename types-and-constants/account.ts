@@ -44,6 +44,12 @@ export type AccountSaveResponse = AccountHeadIdentity & {
   document?: CommittedHead["document"];
 };
 
+/** Conditional workspace load result when the client's known head is still current.
+ * The document is omitted so a freshness check transfers only head identity. */
+export type AccountWorkspaceUnchanged = AccountHeadIdentity & {
+  unchanged: true;
+};
+
 /** Recorded outcome of an operation, used to resolve uncertain retries. */
 export type AccountOperationStatus =
   | {
@@ -65,4 +71,18 @@ export const ACCOUNT_ROUTES = {
   operations: "/api/account/workspace/operations",
   replace: "/api/account/workspace/replace",
   previous: "/api/account/workspace/previous",
+} as const;
+
+/** Sync freshness bounds for signed-in workspaces. Checks are conditional loads
+ * (session lookup plus one workspace read when unchanged), so every constant here
+ * trades remote freshness against billed database operations. */
+export const ACCOUNT_SYNC = {
+  /** Minimum spacing between event-driven checks (focus, visibility, reconnect), shared across this browser's tabs. */
+  eventMinMs: 60_000,
+  /** Periodic check interval while a tab is visible and the owner is active; one leader tab per browser. */
+  intervalMs: 300_000,
+  /** Periodic checks pause after this long without input; the next input checks immediately (subject to `eventMinMs`). */
+  idleMs: 900_000,
+  /** Server receipt pruning runs at most once per this interval, inside a Save transaction. */
+  pruneEveryMs: 86_400_000,
 } as const;

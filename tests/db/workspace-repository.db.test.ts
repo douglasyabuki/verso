@@ -4,6 +4,7 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 
 import {
   accountOperationStatus,
+  checkAccountWorkspace,
   commitAccountSave,
   loadAccountWorkspace,
   loadPreviousAccountWorkspace,
@@ -273,5 +274,54 @@ it("prunes the oldest receipts beyond the retention policy for one owner only", 
   });
   expect(await accountOperationStatus(other, otherRequest.id)).toMatchObject({
     status: "committed",
+  });
+});
+
+it("answers a current conditional check with identity only and a stale one with the document", async () => {
+  const user = await createUser(database.prisma, randomUUID());
+  const head = await loadAccountWorkspace(user);
+  const known = {
+    workspaceId: head.workspaceId,
+    revision: head.revision,
+    generation: head.generation,
+  };
+  expect(await checkAccountWorkspace(user, known)).toEqual({
+    unchanged: true,
+    ...known,
+  });
+  await commitAccountSave(user, orderSave(head, true));
+  const changed = await checkAccountWorkspace(user, known);
+  expect(changed).toMatchObject({ revision: head.revision + 1 });
+  expect("document" in changed).toBe(true);
+});
+
+it("prunes receipts inside at most one Save per day and never on reads", async () => {
+  const user = await createUser(database.prisma, randomUUID());
+  let head = await loadAccountWorkspace(user);
+  const first = orderSave(head, true);
+  await commitAccountSave(user, first);
+  const pruned = await database.prisma.accountWorkspace.findUnique({
+    where: { userId: user },
+  });
+  expect(pruned?.operationsPrunedAt).toBeInstanceOf(Date);
+  // An expired receipt survives later Saves until a day has passed since pruning.
+  await database.prisma.accountOperation.update({
+    where: { userId_operationId: { userId: user, operationId: first.id } },
+    data: { createdAt: new Date(Date.now() - 31 * 86_400_000) },
+  });
+  head = await loadAccountWorkspace(user);
+  await commitAccountSave(user, orderSave(head, true));
+  head = await loadAccountWorkspace(user);
+  await checkAccountWorkspace(user, head);
+  expect(await accountOperationStatus(user, first.id)).toMatchObject({
+    status: "committed",
+  });
+  await database.prisma.accountWorkspace.update({
+    where: { userId: user },
+    data: { operationsPrunedAt: new Date(Date.now() - 86_400_001) },
+  });
+  await commitAccountSave(user, orderSave(head, true));
+  expect(await accountOperationStatus(user, first.id)).toEqual({
+    status: "unknown",
   });
 });

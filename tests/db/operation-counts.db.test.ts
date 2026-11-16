@@ -68,6 +68,20 @@ it("records database statements for session checks, loads, Saves, and retries", 
   await get();
   const load = summarize(database.queries.take());
 
+  const check = (known: CommittedHead) =>
+    workspace(
+      new Request(
+        `${ORIGIN}/api/account/workspace?${new URLSearchParams({
+          workspaceId: known.workspaceId,
+          revision: String(known.revision),
+          generation: String(known.generation),
+        })}`,
+        { headers },
+      ),
+    );
+  expect(await (await check(head)).json()).toMatchObject({ unchanged: true });
+  const unchangedCheck = summarize(database.queries.take());
+
   const baseline = [...(readScope(head.document, "sections") as string[])];
   const content = {
     workspaceId: head.workspaceId,
@@ -90,15 +104,58 @@ it("records database statements for session checks, loads, Saves, and retries", 
         body: JSON.stringify(body),
       }),
     );
+  // The first Save also runs the daily receipt pruning inside its transaction.
   expect((await post()).status).toBe(200);
-  const commit = summarize(database.queries.take());
+  const commitWithPrune = summarize(database.queries.take());
   expect((await post()).status).toBe(200);
   const replay = summarize(database.queries.take());
 
-  const report = { firstLoad, load, commit, replay };
+  const changed = (await (await check(head)).json()) as CommittedHead;
+  expect(changed.revision).toBe(head.revision + 1);
+  const changedCheck = summarize(database.queries.take());
+
+  const nextBaseline = [
+    ...(readScope(changed.document, "sections") as string[]),
+  ];
+  const nextContent = {
+    workspaceId: changed.workspaceId,
+    generation: changed.generation,
+    scope: "sections",
+    baseline: nextBaseline,
+    values: [...nextBaseline].reverse(),
+  };
+  const nextResponse = await save(
+    new Request(`${ORIGIN}/api/account/workspace/operations`, {
+      method: "POST",
+      headers: { ...headers, origin: ORIGIN },
+      body: JSON.stringify({
+        id: randomUUID(),
+        ...nextContent,
+        fingerprint: scopeFingerprint(nextContent),
+        knownRevision: changed.revision,
+      }),
+    }),
+  );
+  expect(nextResponse.status).toBe(200);
+  const commit = summarize(database.queries.take());
+
+  const report = {
+    firstLoad,
+    load,
+    unchangedCheck,
+    changedCheck,
+    commit,
+    commitWithPrune,
+    replay,
+  };
   console.info("Account database statements", JSON.stringify(report));
   // Each request includes the session lookup (database sessions, no cookie cache).
-  expect(load.total).toBeLessThanOrEqual(6);
+  expect(load.writes).toBe(0);
+  expect(unchangedCheck.writes).toBe(0);
+  expect(changedCheck.writes).toBe(0);
+  // A freshness check is the session lookup plus one workspace read.
+  expect(unchangedCheck.total).toBeLessThanOrEqual(load.total);
+  expect(load.total).toBeLessThanOrEqual(4);
   expect(commit.writes).toBe(2);
   expect(commit.total).toBeLessThanOrEqual(8);
   expect(replay.writes).toBe(0);

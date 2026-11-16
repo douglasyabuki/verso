@@ -140,6 +140,19 @@ export const saveRequestSchema = z.strictObject({
   knownRevision: revision,
 });
 
+/** Strict query schema for a conditional workspace freshness check. */
+export const workspaceCheckSchema = z.strictObject({
+  workspaceId: opaqueId,
+  revision: z
+    .string()
+    .regex(/^\d{1,15}$/)
+    .transform(Number),
+  generation: z
+    .string()
+    .regex(/^\d{1,15}$/)
+    .transform(Number),
+});
+
 /** Strict body schema for reviewed replacement, import, or rollback. */
 export const replaceRequestSchema = z.strictObject({
   operationId: z.uuid(),

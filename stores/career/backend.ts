@@ -1,4 +1,5 @@
 import type { CareerHead, SaveRequest } from "@/stores/career/persistence";
+import type { AccountOperationStatus } from "@/types-and-constants/account";
 import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
 
 /** Owner of committed workspace, recovery, receipt, and previous-workspace storage.
@@ -34,6 +35,17 @@ export interface CareerBackend {
   previous(): Promise<CareerHead | undefined>;
   pruneCompleted(days?: number, count?: number): Promise<void>;
   readDevicePreferences(): Promise<unknown>;
+  /** Account only: conditional freshness check; "unchanged" transfers no document. */
+  check?(known: CareerHead): Promise<CareerHead | "unchanged">;
+  /** Account only: last server-confirmed head cached locally (no network). */
+  cachedHead?(): Promise<CareerHead | undefined>;
+  /** Account only: recorded server outcome of an operation, without replaying it. */
+  operationStatus?(operationId: string): Promise<AccountOperationStatus>;
+  /** Account only: record a server-confirmed outcome found by status lookup and acknowledge it locally. */
+  resolveCommitted?(
+    operationId: string,
+    result: Pick<CareerHead, "revision" | "generation">,
+  ): Promise<void>;
   writeDevicePreferences(values: unknown): Promise<void>;
   close(): void;
 }
