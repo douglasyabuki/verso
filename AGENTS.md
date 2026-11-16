@@ -157,9 +157,15 @@ Keep maintained artifacts self-contained: state applicable behavior, contracts, 
 
 ## Settings and navigation
 
-- Settings is a durable dialog over a mounted workspace, with Appearance, Content
-  languages, Editing & preview, Data & backups, and Resume defaults panels at
-  `settings/<panel>` scope URLs. Keep old `languages`/`backups` links usable and
+- Settings is a durable dialog over a mounted workspace, with Account (first and
+  default), Appearance, Content languages, Editing & preview, Data & backups, and
+  Resume defaults panels at `settings/<panel>` scope URLs. The utility rail holds
+  the account avatar menu (Settings; guest Sign in/Sign up; guarded Sign out) and an
+  Appearance shortcut toggling `settings/appearance`; it has no Data & backups or
+  separate Settings button. Sign-in stays in Settings › Account with provider
+  buttons (OAuth-only, so Sign in and Sign up share it); do not add separate auth
+  pages. Sign-out from the panel or menu shares `useAccountActions` and one
+  unconfirmed-work confirmation. Keep old `languages`/`backups` links usable and
   distinguish panel destinations from exact editing scopes. Validate routes before
   opening resources; missing resources never create content. Preserve history
   metadata, underlying destination, focus/scroll, drafts, and narrow-screen access.

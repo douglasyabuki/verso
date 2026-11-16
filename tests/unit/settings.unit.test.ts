@@ -24,7 +24,7 @@ describe("validated workspace and Settings destinations", () => {
     ["backups", "settings/data"],
     ["languages", "settings/languages"],
     ["defaults", "settings/defaults"],
-    ["settings", "settings/appearance"],
+    ["settings", "settings/account"],
     ["selection/application", "resume-content/application"],
     ["settings/editing-preview", "settings/editing-preview"],
     ["library", "library"],

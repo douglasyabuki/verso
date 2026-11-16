@@ -17,10 +17,12 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { AccountMenu } from "@/components/account/account-menu";
 import {
   AccountPanel,
   GuestImport,
   readGuestWorkspace,
+  SignOutConfirmation,
 } from "@/components/account/account-panel";
 import {
   careerEntryLabel,
@@ -101,6 +103,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useAccountActions } from "@/hooks/account/use-account-actions";
 import { useCommittedPreview } from "@/hooks/output/use-committed-preview";
 import {
   layoutAppearance,
@@ -1088,6 +1091,16 @@ export function CareerWorkspace({
     }
     resolveTargets(routeTargets(next), perform);
   };
+  const unconfirmedAccountWork =
+    state.recovery.length +
+    [state.draft, state.orderDraft].filter((draft) => draft?.operationId)
+      .length;
+  const accountActions = useAccountActions({
+    store: account?.store,
+    unconfirmed: unconfirmedAccountWork,
+    resolveDrafts: (action) =>
+      resolveTargets(controller.navigationTargets(), action),
+  });
   const closeSettings = () => {
     const background = route.current.background;
     resolveTargets(routeTargets(background), () => {
@@ -1733,20 +1746,7 @@ export function CareerWorkspace({
         ) : ["languages", "defaults"].includes(panel ?? "") ? (
           settingsForm
         ) : panel === "account" ? (
-          <AccountPanel
-            store={account?.store}
-            session={account?.session}
-            unconfirmed={
-              state.recovery.length +
-              [state.draft, state.orderDraft].filter(
-                (draft) => draft?.operationId,
-              ).length
-            }
-            resolveDrafts={(action) =>
-              resolveTargets(controller.navigationTargets(), action)
-            }
-            exportRecovery={exportRecovery}
-          >
+          <AccountPanel session={account?.session} actions={accountActions}>
             {account?.session.kind === "authenticated" && (
               <GuestImport
                 disabled={state.saving || !state.head}
@@ -1778,6 +1778,11 @@ export function CareerWorkspace({
           </AccountPanel>
         ) : null}
       </SettingsDialog>
+      <SignOutConfirmation
+        actions={accountActions}
+        unconfirmed={unconfirmedAccountWork}
+        exportRecovery={exportRecovery}
+      />
 
       <ResumeManager
         document={documentValue}
@@ -1842,6 +1847,15 @@ export function CareerWorkspace({
         {(resumeActions) => (
           <CareerWorkspaceShell
             document={documentValue}
+            accountMenu={(side) => (
+              <AccountMenu
+                session={account?.session}
+                actions={accountActions}
+                navigate={navigate}
+                side={side}
+              />
+            )}
+            closeSettings={closeSettings}
             resumeActions={resumeActions}
             destination={destination}
             editorRequest={issueFocus ?? libraryEditorRequest}

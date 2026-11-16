@@ -64,12 +64,12 @@ import {
 } from "@/types-and-constants/settings";
 
 const icons = [
+  UserRound,
   Palette,
   Languages,
   SlidersHorizontal,
   Database,
   Settings2,
-  UserRound,
 ];
 
 /** Render immediate numeric preferences, retaining malformed input until corrected.

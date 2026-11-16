@@ -6,11 +6,19 @@ and backups are unsupported and are never loaded or converted.
 
 ## Settings and navigation
 
-**Settings** opens a dialog with its own sidebar: Appearance, Content languages,
-Editing & preview, Data & backups, and Resume defaults. On narrow screens the
-panel navigation wraps above its content. Settings panels have durable
+**Settings** opens a dialog with its own sidebar: Account, Appearance, Content
+languages, Editing & preview, Data & backups, and Resume defaults. Account is the
+default panel (`?scope=settings` and the sidebar Settings item open it). On narrow
+screens the panel navigation wraps above its content. Settings panels have durable
 `?scope=settings/<panel>` URLs; reload and browser Back/Forward restore the panel.
-Existing `languages` and `backups` links open the corresponding panels. Closing
+Existing `languages` and `backups` links open the corresponding panels.
+
+The utility rail holds the account avatar menu at the top and an Appearance button
+at the bottom. The avatar menu shows the signed-in name/email (or Guest) and offers
+Settings, plus Sign in and Sign up for guests, Sign in again for expired sessions,
+and the guarded Sign out when signed in. Sign in and Sign up both open Settings ›
+Account; with OAuth-only providers they are the same action. Appearance opens
+Settings › Appearance and closes it when that panel is already showing. Closing
 returns to the underlying workspace, or Overview when opened directly.
 Unknown destinations and missing records offer recovery navigation without creating content.
 
@@ -174,7 +182,7 @@ workspace schema 2 and recovery format 1 remain the portable envelope versions.
 The schema-2 career editor runs inside the retained workspace shell: utility rail,
 collapsible branded sidebar, workspace toolbar/history/status, and wording-language
 header. Career navigation uses the schema-2 dirty-form guard. Narrow screens use
-the existing navigation drawer, with Data & backups and Appearance in its footer.
+the existing navigation drawer, with the account menu and Appearance in its footer.
 Independent resumes expose Content, Wording, and Layout forms and committed-only output in
 the resizable desktop preview panel or narrow-screen Editor/PDF preview tabs.
 Workspace panel arrangement and interface appearance remain device-only. Resume PDF layout is saved in the workspace. Data & backups opens the
@@ -432,7 +440,10 @@ unmounted references, with no active counterpart or translation-review workflow.
 
 Accounts are optional and activate only on a deployment configured with a database,
 auth secret/URL, and at least one GitHub or Google OAuth app. Without that
-configuration the app stays guest-only and Settings › Account says so.
+configuration the app stays guest-only, the avatar menu offers only Settings, and
+Settings › Account says so. Settings › Account shows **Continue with GitHub** /
+**Continue with Google** buttons with provider icons; the first sign-in creates the
+account. There are no separate sign-in or sign-up pages.
 
 - **Guest.** Saves commit to this browser's IndexedDB (`verso-local`).
 - **Signed in.** Saves go to the account's PostgreSQL workspace. A Save is reported

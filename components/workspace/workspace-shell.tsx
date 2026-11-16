@@ -12,6 +12,7 @@ export function WorkspaceShell({
   toolbar,
   overlays,
   dataMenu,
+  railFooter,
   children,
 }: {
   sidebarOpen: boolean;
@@ -20,11 +21,15 @@ export function WorkspaceShell({
   toolbar: ReactNode;
   overlays: ReactNode;
   dataMenu: ReactNode;
+  railFooter?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="flex h-dvh min-h-0 overflow-hidden bg-background">
-      <WorkspaceUtilityRail dataMenu={dataMenu} />
+      <WorkspaceUtilityRail
+        dataMenu={dataMenu}
+        {...(railFooter !== undefined && { footer: railFooter })}
+      />
       <SidebarProvider
         open={sidebarOpen}
         onOpenChange={onSidebarChange}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { LoaderCircle, LogOut } from "lucide-react";
 
+import { ProviderIcon } from "@/components/account/provider-icon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -14,47 +15,36 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import type { AccountActions } from "@/hooks/account/use-account-actions";
 import type {
   AccountProviders,
   AccountSession,
-  AccountSessionStore,
 } from "@/stores/account/session";
 import {
   type CareerHead,
   openCareerStorage,
 } from "@/stores/career/persistence";
 
-const PROVIDER_LABELS: Record<keyof AccountProviders, string> = {
-  github: "Continue with GitHub",
-  google: "Continue with Google",
+const PROVIDER_NAMES: Record<keyof AccountProviders, string> = {
+  github: "GitHub",
+  google: "Google",
 };
 
 /** Settings › Account: sign-in, identity, and guarded sign-out.
- * @param props Session store/state, unconfirmed-work count, guarded sign-out
- * resolution, recovery export, and optional guest-import content.
+ * @param props Session state, shared account actions, and optional guest-import content.
  * @returns Account panel content; never moves or merges workspaces by itself.
- * @example <AccountPanel store={store} session={session} unconfirmed={0} resolveDrafts={run} exportRecovery={exportRecovery} />
+ * @example <AccountPanel session={session} actions={actions} />
  */
 export function AccountPanel({
-  store,
   session,
-  unconfirmed,
-  resolveDrafts,
-  exportRecovery,
+  actions,
   children,
 }: {
-  store?: AccountSessionStore;
   session?: AccountSession;
-  unconfirmed: number;
-  resolveDrafts: (action: () => void) => void;
-  exportRecovery: () => void;
+  actions: AccountActions;
   children?: React.ReactNode;
 }) {
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-
-  if (!store || !session || session.kind === "unavailable")
+  if (!session || session.kind === "unavailable")
     return (
       <p>
         Accounts are not enabled on this deployment. Your workspace is saved in
@@ -64,57 +54,53 @@ export function AccountPanel({
   if (session.kind === "loading") return <p role="status">Checking sign-in…</p>;
   if (session.kind === "error") return <p role="alert">{session.message}</p>;
 
-  const signIn = async (provider: keyof AccountProviders) => {
-    setBusy(true);
-    setError("");
-    const failure = await store.signIn(
-      provider,
-      window.location.pathname + window.location.search,
-    );
-    if (failure) {
-      setError(failure);
-      setBusy(false);
-    }
-  };
   const providerButtons = (
     <div className="flex flex-wrap gap-2">
-      {(Object.keys(PROVIDER_LABELS) as (keyof AccountProviders)[])
+      {(Object.keys(PROVIDER_NAMES) as (keyof AccountProviders)[])
         .filter((provider) => session.providers[provider])
-        .map((provider) => (
-          <Button
-            key={provider}
-            variant="outline"
-            disabled={busy}
-            onClick={() => void signIn(provider)}
-          >
-            {PROVIDER_LABELS[provider]}
-          </Button>
-        ))}
+        .map((provider) => {
+          const pending = actions.pendingProvider === provider;
+          return (
+            <Button
+              key={provider}
+              variant="outline"
+              disabled={actions.busy}
+              aria-busy={pending}
+              onClick={() => void actions.signIn(provider)}
+            >
+              {pending ? (
+                <LoaderCircle
+                  data-icon="inline-start"
+                  className="animate-spin"
+                  aria-hidden="true"
+                />
+              ) : (
+                <ProviderIcon provider={provider} data-icon="inline-start" />
+              )}
+              {pending
+                ? `Connecting to ${PROVIDER_NAMES[provider]}…`
+                : `Continue with ${PROVIDER_NAMES[provider]}`}
+            </Button>
+          );
+        })}
     </div>
   );
-  const signOut = async () => {
-    setConfirming(false);
-    setBusy(true);
-    setError("");
-    const failure = await store.signOut();
-    if (failure) setError(failure);
-    setBusy(false);
-  };
 
   return (
     <div className="flex flex-col gap-5">
-      {error && (
+      {actions.error && (
         <Alert variant="destructive">
           <AlertTitle>Account action failed</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{actions.error}</AlertDescription>
         </Alert>
       )}
       {session.kind === "guest" ? (
         <>
           <p>
-            Sign in to save your workspace to an account. Signing in does not
-            move, merge, or replace the workspace saved in this browser; you can
-            review and import it afterwards.
+            Sign in or create an account to save your workspace to it.
+            Continuing with a provider creates your account the first time.
+            Signing in does not move, merge, or replace the workspace saved in
+            this browser; you can review and import it afterwards.
           </p>
           {providerButtons}
         </>
@@ -145,51 +131,62 @@ export function AccountPanel({
           <div className="flex flex-wrap gap-2">
             <Button
               variant="destructive"
-              disabled={busy}
-              onClick={() =>
-                resolveDrafts(() =>
-                  unconfirmed > 0 ? setConfirming(true) : void signOut(),
-                )
-              }
+              disabled={actions.busy}
+              onClick={actions.requestSignOut}
             >
+              <LogOut data-icon="inline-start" aria-hidden="true" />
               Sign out
             </Button>
           </div>
-          <AlertDialog
-            open={confirming}
-            onOpenChange={(open) => !open && setConfirming(false)}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Sign out with unconfirmed work?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {unconfirmed === 1
-                    ? "1 change has"
-                    : `${unconfirmed} changes have`}{" "}
-                  not been confirmed by your account. They stay on this device
-                  and reappear when you sign in again as this user. Export
-                  recovery if you might sign in elsewhere.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="flex-wrap">
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <Button variant="outline" onClick={exportRecovery}>
-                  Export recovery
-                </Button>
-                <AlertDialogAction
-                  variant="destructive"
-                  onClick={() => void signOut()}
-                >
-                  Sign out
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </>
       )}
     </div>
+  );
+}
+
+/** Confirm signing out while account work is unconfirmed.
+ * @param props Shared account actions, unconfirmed count, and recovery export.
+ * @returns The confirmation dialog; open only while `actions.confirming`.
+ * @example <SignOutConfirmation actions={actions} unconfirmed={2} exportRecovery={exportRecovery} />
+ */
+export function SignOutConfirmation({
+  actions,
+  unconfirmed,
+  exportRecovery,
+}: {
+  actions: AccountActions;
+  unconfirmed: number;
+  exportRecovery: () => void;
+}) {
+  return (
+    <AlertDialog
+      open={actions.confirming}
+      onOpenChange={(open) => !open && actions.cancelSignOut()}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Sign out with unconfirmed work?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {unconfirmed === 1 ? "1 change has" : `${unconfirmed} changes have`}{" "}
+            not been confirmed by your account. They stay on this device and
+            reappear when you sign in again as this user. Export recovery if you
+            might sign in elsewhere.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-wrap">
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <Button variant="outline" onClick={exportRecovery}>
+            Export recovery
+          </Button>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => void actions.signOut()}
+          >
+            Sign out
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

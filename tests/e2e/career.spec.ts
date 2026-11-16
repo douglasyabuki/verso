@@ -4,6 +4,15 @@ import { createCareerDocument, createEntry } from "@/lib/career/model";
 
 import { installPdfInspector } from "./career-harness";
 
+/** Open Settings › Data & backups from the workspace sidebar (desktop or drawer). */
+async function openDataSettings(page: Page) {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Settings", exact: true })
+    .getByRole("button", { name: "Data & backups", exact: true })
+    .click();
+}
+
 /** Close the durable Settings dialog before interacting with its underlying workspace. */
 async function closeSettings(page: Page) {
   const settings = page.getByRole("dialog", { name: "Settings", exact: true });
@@ -172,7 +181,7 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
 }) => {
   const { document } = fixture();
   await page.goto("/");
-  await page.getByRole("button", { name: "Data & backups" }).click();
+  await openDataSettings(page);
   await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
     name: "unsupported.json",
     mimeType: "application/json",
@@ -232,7 +241,7 @@ test("sample button handles failure, cancellation, adoption and reload without a
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Data & backups" }).click();
+  await openDataSettings(page);
   await page.route("**/examples/alex-morgan.schema-2.json", (route) =>
     route.fulfill({ status: 503, body: "Unavailable" }),
   );
@@ -348,7 +357,7 @@ for (const language of ["en-US", "pt-BR"])
       },
     ];
     await page.goto("/");
-    await page.getByRole("button", { name: "Data & backups" }).click();
+    await openDataSettings(page);
     await page
       .getByLabel("Import schema-2 workspace for review")
       .setInputFiles({
@@ -514,9 +523,7 @@ for (const width of [1440, 390]) {
     await expect(field).toHaveText("Retain my draft");
     await replaceSummary("Discard through navigation");
     await openNavigation();
-    await page
-      .getByRole("button", { name: "Data & backups", exact: true })
-      .click();
+    await openDataSettings(page);
     await expect(
       page.getByLabel("Import schema-2 workspace for review"),
     ).toBeVisible();
@@ -535,9 +542,7 @@ for (const width of [1440, 390]) {
       page.getByRole("textbox", { name: "Full name" }),
     ).toBeVisible();
     await openNavigation();
-    await page
-      .getByRole("button", { name: "Data & backups", exact: true })
-      .click();
+    await openDataSettings(page);
     await expect(
       page.getByLabel("Import schema-2 workspace for review"),
     ).toBeVisible();
@@ -558,7 +563,7 @@ test("imported schema-2 resume uses restored desktop split and narrow panel acce
 }) => {
   const { document } = fixture();
   await page.goto("/");
-  await page.getByRole("button", { name: "Data & backups" }).click();
+  await openDataSettings(page);
   await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
     name: "workspace.json",
     mimeType: "application/json",
@@ -605,7 +610,7 @@ test("hidden preview keeps the last PDF and optional automatic refresh compiles 
   const { document } = fixture();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Data & backups" }).click();
+  await openDataSettings(page);
   await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
     name: "workspace.json",
     mimeType: "application/json",
