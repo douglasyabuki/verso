@@ -75,6 +75,8 @@ describe("resume editing and transactional lifecycle", () => {
         document={document}
         destination={`resume-wording/${resume.id}`}
         navigate={vi.fn()}
+        accountMenu={() => null}
+        closeSettings={vi.fn()}
         addSection={vi.fn()}
         addResume={vi.fn()}
         resumeActions={{

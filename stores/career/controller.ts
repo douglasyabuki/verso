@@ -1,4 +1,10 @@
 import {
+  applyCommitted,
+  commitScopeRequest,
+  scopeFingerprint,
+} from "@/lib/career/commit";
+import { draftConflict } from "@/lib/career/conflict";
+import {
   devicePreferencesSchema,
   readDevicePreferences,
 } from "@/lib/career/device-preferences";
@@ -14,8 +20,12 @@ import {
 import { destinationScope, settingsPanel } from "@/lib/career/navigation";
 import { createResume } from "@/lib/career/resumes";
 import {
+  AccountSync,
+  type AccountSyncReason,
+} from "@/stores/career/account-sync";
+import type { CareerBackend } from "@/stores/career/backend";
+import {
   type CareerHead,
-  type CareerStorage,
   CareerStorageError,
   openCareerStorage,
   sameScope,
@@ -38,9 +48,43 @@ export type CareerDraftTarget = "form" | "order";
 export type CareerControllerOptions = {
   completedOperationDays?: number;
   completedOperationCount?: number;
+  /** Open this owner's storage; defaults to the guest IndexedDB backend. */
+  openBackend?: () => Promise<CareerBackend>;
+  /** Owner kind of `openBackend`, used for status wording if it fails to open. */
+  owner?: "guest" | "account";
 };
 
 type Step = { scope: string; before: unknown; after: unknown; bytes: number };
+
+/** Cross-tab notification for one owner's tabs. Messages are hints; storage and
+ * server checks stay authoritative. `at` lets account tabs share freshness. */
+type TabMessage =
+  | {
+      type: "saved" | "checked";
+      at: number;
+      revision: number;
+      generation: number;
+    }
+  | { type: "replaced" };
+
+/** Where a refresh reads committed state: this browser (cached account head or
+ * guest IndexedDB, no network) or a conditional server check (accounts). */
+export type RefreshSource = "local" | "remote";
+
+/** Hex SHA-256 of text, matching the server's receipt request hash.
+ * @param text Request fingerprint.
+ * @returns {Promise<string>} Lowercase hex digest.
+ * @example await sha256(draft.fingerprint)
+ */
+async function sha256(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(text),
+  );
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
 export type CareerState = {
   preferences: DevicePreferences;
   preferenceStatus: string;
@@ -95,7 +139,7 @@ export class CareerController {
     historyBoundary: false,
   };
   private listeners = new Set<() => void>();
-  private storage: CareerStorage | null = null;
+  private storage: CareerBackend | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private maxTimer: ReturnType<typeof setTimeout> | undefined;
   private channel: BroadcastChannel | null = null;
@@ -107,12 +151,18 @@ export class CareerController {
   private lifecycle = 0;
   private session = false;
   private refreshPending = false;
+  private accountSync: AccountSync | null = null;
   private writeChain: Promise<void> = Promise.resolve();
   private pendingHistory: {
     direction: "undo" | "redo";
     step: Step;
     request: SaveRequest;
   } | null = null;
+
+  /** Owner kind for status wording before (or without) an open backend. */
+  private get owner(): "guest" | "account" {
+    return this.options.owner ?? "guest";
+  }
 
   /** Configure completed receipt retention without limiting unresolved work.
    * @param options Nonnegative retention days/count, defaulting to 30/1,000.
@@ -233,7 +283,12 @@ export class CareerController {
       ...this.state,
       ...patch,
       ...(patch.saveStatus && !("status" in patch)
-        ? { status: describeSaveStatus(patch.saveStatus) }
+        ? {
+            status: describeSaveStatus(
+              patch.saveStatus,
+              this.storage?.kind ?? this.owner,
+            ),
+          }
         : {}),
       undoCount: this.undo.length,
       redoCount: this.redo.length,
@@ -335,24 +390,48 @@ export class CareerController {
     this.disposed = false;
     const lifecycle = ++this.lifecycle;
     try {
-      const storage = await openCareerStorage();
+      const storage: CareerBackend = await (
+        this.options.openBackend ?? openCareerStorage
+      )();
       if (this.disposed || lifecycle !== this.lifecycle) {
         storage.close();
         return;
       }
       this.storage = storage;
       this.preferencesLoaded = false;
-      const head = await storage.load(createCareerDocument());
+      let head: CareerHead;
+      let offlineStart = false;
+      try {
+        head = await storage.load(createCareerDocument());
+      } catch (error) {
+        // An unreachable account server opens the last server-confirmed head cached
+        // on this device, disclosed as possibly stale; Saves wait for reconnection.
+        const cached =
+          saveFailureReason(error) === "offline"
+            ? await storage.cachedHead?.()
+            : undefined;
+        if (!cached) throw error;
+        head = cached;
+        offlineStart = true;
+      }
       if (this.disposed || lifecycle !== this.lifecycle) {
         storage.close();
         return;
       }
       // Install coordination before fallible maintenance.
       this.channel?.close();
-      this.channel = new BroadcastChannel("verso-local");
-      this.channel.onmessage = () => {
-        void this.refresh();
-      };
+      this.channel = new BroadcastChannel(storage.channelName);
+      this.channel.onmessage = (event: MessageEvent<unknown>) =>
+        this.receive(event.data);
+      this.accountSync?.stop();
+      this.accountSync =
+        storage.kind === "account" && storage.check
+          ? new AccountSync({
+              lockName: `${storage.channelName}-sync`,
+              check: () => this.refresh("remote"),
+              announce: (at) => this.announce("checked", at),
+            })
+          : null;
       try {
         this.publish({
           preferences: readDevicePreferences(
@@ -376,9 +455,13 @@ export class CareerController {
         head,
         recovery,
         durable: true,
-        storageMode: "durable",
-        saveStatus: { kind: "saved", revision: head.revision },
+        storageMode: storage.kind === "account" ? "account" : "durable",
+        saveStatus: offlineStart
+          ? { kind: "offline-cached", revision: head.revision }
+          : { kind: "saved", revision: head.revision },
       });
+      this.accountSync?.start(offlineStart ? undefined : Date.now());
+      if (!offlineStart) await this.reconcilePending();
     } catch (error) {
       if (this.disposed || lifecycle !== this.lifecycle) return;
       if (!this.state.head) {
@@ -387,6 +470,8 @@ export class CareerController {
         this.storage = null;
         this.channel?.close();
         this.channel = null;
+        this.accountSync?.stop();
+        this.accountSync = null;
         this.publish({
           ready: true,
           head: {
@@ -400,7 +485,9 @@ export class CareerController {
             kind: "unavailable",
             reason: String(error).includes("unsupported layout format")
               ? "unsupported"
-              : "storage",
+              : this.owner === "account"
+                ? "account"
+                : "storage",
           },
           storageMode: "unavailable",
           error: String(error),
@@ -410,28 +497,128 @@ export class CareerController {
     }
   }
 
-  /** Recheck authoritative committed state on tab notifications or focus without replacing a local draft.
-   * @returns {Promise<void>} Updated head; same-scope differences remain recoverable and visible.
+  /** Handle one cross-tab notification; any notice of newer state triggers a local refresh.
+   * @param data Message payload from another tab of the same owner.
+   * @returns {void} No value.
+   */
+  private receive(data: unknown): void {
+    const message = data as Partial<TabMessage> | null;
+    if (
+      message &&
+      (message.type === "saved" || message.type === "checked") &&
+      typeof message.at === "number"
+    ) {
+      this.accountSync?.observe(message.at);
+      const head = this.state.head;
+      if (
+        head &&
+        head.revision === message.revision &&
+        head.generation === message.generation
+      )
+        return;
+    }
+    void this.refresh("local");
+  }
+
+  /** Notify this owner's other tabs; saved/checked notices also share account freshness.
+   * @param type Notification kind.
+   * @param at Completion time for saved/checked notices.
+   * @returns {void} No value.
+   */
+  private announce(type: TabMessage["type"], at = Date.now()): void {
+    const head = this.state.head;
+    const message: TabMessage =
+      type === "replaced" || !head
+        ? { type: "replaced" }
+        : { type, at, revision: head.revision, generation: head.generation };
+    try {
+      this.channel?.postMessage(message);
+    } catch {}
+  }
+
+  /** Request a cost-bounded freshness check for a focus, visibility, reconnect, or input event.
+   * Guests reread local IndexedDB on focus/visibility (no network). Accounts apply the shared
+   * sync bounds; a reconnect also resolves pending account Saves through operation status.
+   * @param reason Trigger.
+   * @returns {Promise<void>} Completion; never throws.
+   * @example void controller.sync("focus")
+   */
+  async sync(reason: AccountSyncReason): Promise<void> {
+    if (!this.accountSync) {
+      if (reason === "focus" || reason === "visible") await this.refresh();
+      return;
+    }
+    await this.accountSync.request(reason);
+    if (reason === "online") await this.reconcilePending();
+  }
+
+  /** Record owner input so idle tabs pause periodic account checks and resume on return.
+   * @returns {void} No value.
+   * @example controller.activity()
+   */
+  activity(): void {
+    this.accountSync?.activity();
+  }
+
+  /** Read committed state for a refresh without transferring unchanged account documents.
+   * @param source Local cache/IndexedDB, or a conditional server check.
+   * @returns Newer or current head, or null when the account head is unchanged.
+   */
+  private async readHead(source: RefreshSource): Promise<CareerHead | null> {
+    const storage = this.storage!;
+    const known = this.state.head;
+    if (!storage.check || !known) return storage.load();
+    if (source === "local") {
+      const cached = await storage.cachedHead?.();
+      if (cached && cached.workspaceId === known.workspaceId) {
+        if (
+          cached.generation === known.generation &&
+          cached.revision === known.revision
+        )
+          return null;
+        if (
+          cached.generation > known.generation ||
+          (cached.generation === known.generation &&
+            cached.revision > known.revision)
+        )
+          return cached;
+      }
+    }
+    const result = await storage.check(known);
+    return result === "unchanged" ? null : result;
+  }
+
+  /** Recheck committed state on tab notifications, focus, or account sync without replacing a local draft.
+   * @param source "local" reads this browser only (cached account head, or guest IndexedDB);
+   * "remote" performs a conditional account check. Guests always read IndexedDB.
+   * @returns {Promise<boolean>} True when committed state was read; same-scope differences remain recoverable and visible.
    * @example await controller.refresh()
    */
-  async refresh(): Promise<void> {
-    if (!this.storage || this.session) return;
+  async refresh(source: RefreshSource = "remote"): Promise<boolean> {
+    if (!this.storage || this.session) return false;
     if (this.state.saving) {
       // Apply other-tab notifications after the local Save settles.
       this.refreshPending = true;
-      return;
+      return false;
     }
     this.refreshPending = false;
     try {
-      const head = await this.storage.load();
+      const head = await this.readHead(source);
+      if (this.disposed) return false;
+      if (!head) {
+        if (this.state.saveStatus.kind === "offline-cached" && this.state.head)
+          this.publish({
+            saveStatus: { kind: "saved", revision: this.state.head.revision },
+          });
+        return true;
+      }
       if (
-        this.disposed ||
-        (this.state.head &&
-          (head.generation < this.state.head.generation ||
-            (head.generation === this.state.head.generation &&
-              head.revision < this.state.head.revision)))
+        this.state.head &&
+        (head.generation < this.state.head.generation ||
+          (head.generation === this.state.head.generation &&
+            head.revision < this.state.head.revision))
       )
-        return;
+        return true;
       const advanced =
         !this.state.head ||
         head.generation !== this.state.head.generation ||
@@ -452,26 +639,100 @@ export class CareerController {
                 head.generation === this.state.head?.generation &&
                 this.state.historyBoundary,
             }
-          : {}),
+          : this.state.saveStatus.kind === "offline-cached"
+            ? { saveStatus: { kind: "saved", revision: head.revision } }
+            : {}),
       });
       for (const target of ["form", "order"] as const) {
         const draft = this.draftFor(target);
-        if (
-          draft &&
-          (head.generation !== draft.generation ||
-            !sameScope(readScope(head.document, draft.scope), draft.baseline))
-        ) {
+        if (draft && draftConflict(head, draft)) {
           this.publishFor(target, {
             error:
               target === "order"
-                ? "Saved entry order changed. Your pending order is retained. Export recovery from Data & backups, or cancel this order and start again."
-                : "Committed content changed. Your draft is retained; Compare and Reconcile before Save.",
+                ? "Saved entry order changed. Your pending order is retained until you choose which order to keep."
+                : "Committed content changed. Your draft is retained until you choose which version to keep.",
           });
         }
       }
+      return true;
     } catch (error) {
-      this.publish({ error: String(error) });
+      const reason = saveFailureReason(error);
+      if (reason === "session") this.accountSync?.pause();
+      // Background account checks stay quiet offline; Saves report their own status.
+      if (reason !== "offline" && reason !== "session")
+        this.publish({ error: String(error) });
+      return false;
     }
+  }
+
+  /** Resolve pending account Saves after reconnecting or opening, without resending them.
+   * Each draft carrying a prepared operation ID is looked up once: a receipt matching its
+   * request hash is recorded and acknowledged, removing that exact draft version; an unknown
+   * outcome stays pending for an explicit Retry save. No request is sent when nothing is pending.
+   * @returns {Promise<number>} Number of Saves the server confirmed.
+   * @example await controller.reconcilePending()
+   */
+  async reconcilePending(): Promise<number> {
+    const storage = this.storage;
+    if (
+      !storage?.operationStatus ||
+      !storage.resolveCommitted ||
+      this.session ||
+      this.state.saving
+    )
+      return 0;
+    const pending = new Map<string, CareerDraft>();
+    for (const draft of [
+      this.state.draft,
+      this.state.orderDraft,
+      ...this.state.recovery,
+    ])
+      if (draft?.operationId && draft.fingerprint)
+        pending.set(draft.operationId, draft);
+    let resolved = 0;
+    for (const draft of pending.values()) {
+      const operationId = draft.operationId!;
+      let status;
+      try {
+        status = await storage.operationStatus(operationId);
+      } catch {
+        return resolved;
+      }
+      if (
+        this.disposed ||
+        status.status !== "committed" ||
+        status.kind !== "save" ||
+        status.requestHash !== (await sha256(draft.fingerprint!))
+      )
+        continue;
+      try {
+        await storage.resolveCommitted(operationId, status.result);
+      } catch {
+        continue;
+      }
+      resolved++;
+      for (const target of ["form", "order"] as const) {
+        const lane = this.draftFor(target);
+        if (
+          lane?.operationId === operationId &&
+          lane.draftVersion === draft.draftVersion
+        )
+          this.publishFor(target, { draft: null, error: "" });
+      }
+      this.publish({
+        recovery: this.state.recovery.filter(
+          (item) => item.operationId !== operationId,
+        ),
+      });
+    }
+    if (resolved > 0 && (await this.refresh("remote"))) {
+      this.accountSync?.observe(Date.now());
+      if (this.state.head)
+        this.publish({
+          saveStatus: { kind: "saved", revision: this.state.head.revision },
+        });
+    }
+    return resolved;
   }
 
   /** Start a clean editing scope; callers must resolve an existing dirty scope first.
@@ -701,17 +962,7 @@ export class CareerController {
       if (!draft.operationId)
         applyScope(head.document, draft.scope, draft.values);
       const operationId = draft.operationId ?? crypto.randomUUID();
-      const fingerprint =
-        draft.fingerprint ??
-        JSON.stringify([
-          draft.workspaceId,
-          draft.generation,
-          draft.scope,
-          draft.baseline,
-          draft.values,
-          draft.draftId,
-          draft.draftVersion,
-        ]);
+      const fingerprint = draft.fingerprint ?? scopeFingerprint(draft);
       const captured = { ...draft, operationId, fingerprint };
       this.publishFor(target, { draft: captured });
       const request: SaveRequest = {
@@ -728,18 +979,12 @@ export class CareerController {
       };
       let next: CareerHead;
       if (memory) {
-        if (
-          head.generation !== draft.generation ||
-          !sameScope(readScope(head.document, draft.scope), draft.baseline)
-        )
+        const decision = commitScopeRequest(head, request);
+        if (!decision.ok)
           throw new Error(
             "Resolve changed content before a session-only Save.",
           );
-        next = {
-          ...head,
-          revision: head.revision + 1,
-          document: applyScope(head.document, draft.scope, draft.values),
-        };
+        next = decision.head;
         this.session = true;
       } else {
         if (!this.storage || this.session)
@@ -859,16 +1104,27 @@ export class CareerController {
         ),
       });
       if (newer) await this.flushRecovery();
-      this.channel?.postMessage("saved");
+      if (!memory) {
+        this.announce("saved");
+        // An acknowledged Save proves the session and returns the current head.
+        this.accountSync?.resume();
+        this.accountSync?.observe(Date.now());
+      }
       await this.maintain();
       return true;
     } catch (error) {
+      const reason = saveFailureReason(error);
+      // A rejected scope means newer committed content exists: read it once so both
+      // versions can be compared. An invalid session pauses sync until sign-in.
+      if (reason === "conflict" || reason === "replaced")
+        this.refreshPending = true;
+      if (reason === "session") this.accountSync?.pause();
       this.publishFor(target, {
         error:
           target === "order"
             ? `Order Save not confirmed. Your pending order is retained. Export recovery from Data & backups, or cancel this order and start again. ${String(error)}`
             : String(error),
-        saveStatus: { kind: "failed", reason: saveFailureReason(error) },
+        saveStatus: { kind: "failed", reason },
       });
       return false;
     } finally {
@@ -967,23 +1223,18 @@ export class CareerController {
         draftId: id,
         draftVersion: 1,
         baselineRevision: head.revision,
-        fingerprint: JSON.stringify([
-          head.workspaceId,
-          head.generation,
-          step.scope,
+        fingerprint: scopeFingerprint({
+          workspaceId: head.workspaceId,
+          generation: head.generation,
+          scope: step.scope,
           baseline,
           values,
-          id,
-          1,
-        ]),
+          draftId: id,
+          draftVersion: 1,
+        }),
       };
       let next: CareerHead;
-      if (this.session)
-        next = {
-          ...head,
-          revision: head.revision + 1,
-          document: applyScope(head.document, step.scope, values),
-        };
+      if (this.session) next = applyCommitted(head, step.scope, values);
       else {
         if (!this.storage) throw new Error("Storage unavailable.");
         this.pendingHistory = { direction, step, request };
@@ -1022,7 +1273,7 @@ export class CareerController {
           ? { sessionCommits: this.state.sessionCommits + 1 }
           : {}),
       });
-      this.channel?.postMessage("saved");
+      if (!this.session) this.announce("saved");
       await this.maintain();
       return true;
     } catch (error) {
@@ -1226,6 +1477,7 @@ export class CareerController {
   async replace(
     reviewed: CareerHead,
     incoming?: CareerDocument,
+    kind: "replace" | "import" = "replace",
   ): Promise<boolean> {
     if (
       !this.storage ||
@@ -1238,7 +1490,7 @@ export class CareerController {
     this.publish({ saving: true });
     try {
       if (incoming) validateDocument(incoming);
-      const head = await this.storage.replace(reviewed, incoming);
+      const head = await this.storage.replace(reviewed, incoming, kind);
       this.undo = [];
       this.redo = [];
       this.pendingHistory = null;
@@ -1250,13 +1502,14 @@ export class CareerController {
         saveStatus: { kind: "saved", revision: head.revision },
         recovery: await this.readRecovery(),
       });
-      this.channel?.postMessage("replaced");
+      this.announce("replaced");
       return true;
     } catch (error) {
       this.publish({ error: String(error) });
       return false;
     } finally {
       this.publish({ saving: false });
+      if (this.refreshPending) void this.refresh();
     }
   }
 
@@ -1317,6 +1570,8 @@ export class CareerController {
     this.maxTimer = undefined;
     this.channel?.close();
     this.channel = null;
+    this.accountSync?.stop();
+    this.accountSync = null;
     this.listeners.clear();
   }
 
@@ -1380,18 +1635,19 @@ export class CareerController {
         head: next,
         error: "",
         historyBoundary: false,
-        storageMode: "durable",
+        storageMode: this.storage.kind === "account" ? "account" : "durable",
         sessionCommits: 0,
         saveStatus: { kind: "saved", revision: next.revision },
         recovery: await this.readRecovery(),
       });
-      if (choice === "replace-durable") this.channel?.postMessage("replaced");
+      if (choice === "replace-durable") this.announce("replaced");
       return true;
     } catch (error) {
       this.publish({ error: String(error) });
       return false;
     } finally {
       this.publish({ saving: false });
+      if (this.refreshPending) void this.refresh();
     }
   }
 }

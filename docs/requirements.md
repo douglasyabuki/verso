@@ -443,18 +443,20 @@ workflow and rendering complexity.
 
 ### Capacity and failure boundaries
 
-- Limit target workspaces to 120 resumes, 100 sections, 10,000 career entries total,
+- Limit target workspaces to 120 resumes, 100 sections, 2,000 career entries total,
   300 entries per section, 100 achievements and 30 links per entry, and 30 profile
   links. Permit 100 starters and 100 presets. No fixed language-count cap: language
   content is bounded by serialized size. These are safety ceilings, not recommended
   resume lengths. Validate field lengths and rich-text bounds from the target model;
   the old schema does not impose minimum compatible capacities.
-- Limit a target workspace JSON file/document to 64 MiB of UTF-8 bytes
-  (1 MiB = 1,048,576 bytes). Validate count and byte boundaries with schema-2
+- Limit a target workspace JSON file/document to 4 MiB of UTF-8 bytes
+  (1 MiB = 1,048,576 bytes), so one hosted request carries a whole workspace
+  (owner decision 2026-11-14; Vercel request bodies cap at 4.5 MB, and typical
+  workspaces are around 100 KB). Validate count and byte boundaries with schema-2
   fixtures; reject oversized imports or saves explicitly without truncation or
   changing committed content. The 120-resume limit is a target capacity choice,
   not a legacy conversion obligation.
-- Recovery exports/imports are bounded to 256 MiB per file and 64 MiB per draft
+- Recovery exports/imports are bounded to 32 MiB per file and 8 MiB per draft
   including baseline context. Split larger recovery collections into independently
   versioned files, with a manifest of included draft IDs; never truncate. If one draft
   cannot fit, keep it in memory, explain the limit, and allow raw recovery export in
@@ -983,32 +985,55 @@ typecheck, and `npm test` passed: 169 unit, 145 Browser Mode, 82 production E2E.
 The owner reported a successful Vercel build on 2026-11-12, closing P8.2. P8.7 stays
 open until the hosted PDF and cache checks are recorded.
 
-## Phase 9 — Future accounts and Prisma Postgres
+## Phase 9 — Accounts and Prisma Postgres
 
-Requires owner activation, approved infrastructure, and a stable local model.
+**Status: Implemented with automated verification; owner provider/hosted acceptance open.**
 
-- [ ] P9.1 Review Dayplan patterns and selected-version official docs; copy no credentials/versions.
-- [ ] P9.2 Decide providers/access, sessions, runtime, Prisma version/driver, and connection mode.
-- [ ] P9.3 Implement login/logout/expiry, settings, and ownership checks on every private operation.
-- [ ] P9.4 Persist user-owned content/configuration; choose schema structure from consistency needs.
-- [ ] P9.5 Prepare immutable local Save requests, send immediately, and confirm only on server
+- [x] P9.1 Review Dayplan patterns and selected-version official docs; copy no credentials/versions.
+- [x] P9.2 Decide providers/access, sessions, runtime, Prisma version/driver, and connection mode.
+- [x] P9.3 Implement login/logout/expiry, settings, and ownership checks on every private operation.
+- [x] P9.4 Persist user-owned content/configuration; choose schema structure from consistency needs.
+- [x] P9.5 Prepare immutable local Save requests, send immediately, and confirm only on server
       acknowledgment; use atomic scope checks/receipts/retries and measure database operations.
-- [ ] P9.6 Provide explicit reviewed guest import; login never silently merges or replaces work.
-- [ ] P9.7 Isolate account/guest caches and recovery; preserve pending work on logout/switch.
-- [ ] P9.8 Test real isolated-database ownership, atomicity, retries, import, and isolation;
+- [x] P9.6 Provide explicit reviewed guest import; login never silently merges or replaces work.
+- [x] P9.7 Isolate account/guest caches and recovery; preserve pending work on logout/switch.
+- [x] P9.8 Test real isolated-database ownership, atomicity, retries, import, and isolation;
       manually verify real provider callbacks and expiry.
 
-## Phase 10 — Future sync
+Delivered 2026-11-14. Owner decisions: Dayplan's configuration shape (Prisma 7.10 with
+`@prisma/adapter-pg`, Better Auth 1.7; Prisma 8 is release-candidate only and outside
+Better Auth's peer range), Prisma Postgres hosting, one workspace snapshot per account
+with receipts, and a 4-MiB workspace ceiling for everyone (2,000 entries, 8-MiB drafts,
+32-MiB recovery files) so one request carries a whole workspace. Guest import replaces
+through the reviewed path; there is no merge. Automated database, Browser Mode, and
+account E2E coverage passed against isolated in-process Postgres with seeded sessions.
+P9.8 stays open for real OAuth callbacks, real expiry, concurrent locking on real
+Postgres, and hosted checks; see verification.md.
+
+## Phase 10 — Sync
+
+**Status: Implemented with automated verification; owner real-device acceptance open.**
 
 Requires authenticated shared storage; local tab coordination is not device sync.
 
-- [ ] P10.1 Detect revisions on focus/reconnect and a documented event/periodic mechanism;
+- [x] P10.1 Detect revisions on focus/reconnect and a documented event/periodic mechanism;
       measure freshness and preserve dirty drafts.
-- [ ] P10.2 Coordinate tabs; server revision checks remain authoritative across devices.
-- [ ] P10.3 Retain both conflict versions with compare/export/explicit resolution.
-- [ ] P10.4 Recover offline work safely; bound eligible history without expiring unresolved recovery.
-- [ ] P10.5 Verify simultaneous/offline/sleeping clients, retries, account changes, and expiry
+- [x] P10.2 Coordinate tabs; server revision checks remain authoritative across devices.
+- [x] P10.3 Retain both conflict versions with compare/export/explicit resolution.
+- [x] P10.4 Recover offline work safely; bound eligible history without expiring unresolved recovery.
+- [x] P10.5 Verify simultaneous/offline/sleeping clients, retries, account changes, and expiry
       through automation plus actual browsers/devices. No coauthoring requirement.
+
+Delivered 2026-11-16 with a cost-first design (Prisma Postgres bills per operation):
+conditional freshness checks (3 statements, no document when unchanged), 60-second event
+spacing and 5-minute periodic checks only while visible and active, one in-flight check
+per browser with locally cached heads shared between tabs, daily Save-time receipt
+pruning instead of pruning on every load, status lookup instead of resending pending
+Saves, and an explicit Retry save. Automated database, unit, Browser Mode, and account E2E
+coverage passed. Follow-up verification adds concurrent same-scope Saves, simulated
+suspension/return, and account switching during an in-flight freshness response in
+Chromium, Firefox, and WebKit, plus isolated real-Postgres lock verification.
+P10.5 stays open for physical devices, actual sleep/wake, and hosted usage;
 
 ## Phase 11 — Future public PDF releases
 
@@ -1058,6 +1083,8 @@ local acceptance; Phase 8 no longer carries it.
       overrides, selections/order, appearance, capacity, and no writes on rejected input.
 - [ ] F4 Finish performance evidence: retain valid historical results, identify
       affected/missing rows, and complete the normal/4x matrix with the enriched fixture.
+      Capacity rows recorded before 2026-11-14 used the former 64-MiB / 10,000-entry
+      fixture; they are historical, and capacity must be remeasured at 4 MiB / 2,000.
       Compare p50/p95/max/counts/failures against the recorded budgets; report mixed-build
       limitations or rerun comparisons on the same build. No mandatory soak.
 - [ ] F5 Close measurement gaps: Save click-to-acknowledgment, recovery during continuous

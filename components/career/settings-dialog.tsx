@@ -6,6 +6,7 @@ import {
   Palette,
   Settings2,
   SlidersHorizontal,
+  UserRound,
   X,
 } from "lucide-react";
 import {
@@ -62,7 +63,14 @@ import {
   settingsPanels,
 } from "@/types-and-constants/settings";
 
-const icons = [Palette, Languages, SlidersHorizontal, Database, Settings2];
+const icons = [
+  UserRound,
+  Palette,
+  Languages,
+  SlidersHorizontal,
+  Database,
+  Settings2,
+];
 
 /** Render immediate numeric preferences, retaining malformed input until corrected.
  * @param props Effective preferences and the owning persistence command.
@@ -238,6 +246,7 @@ export function SettingsDialog({
   preferenceStatus,
   retryPreferences,
   historyKey,
+  accountMode = false,
 }: {
   panel: SettingsPanel | null;
   navigate: (destination: string) => void;
@@ -248,6 +257,8 @@ export function SettingsDialog({
   preferenceStatus: string;
   retryPreferences: () => void;
   historyKey: number;
+  /** Signed-in workspace: saved content lives in the account, not this browser. */
+  accountMode?: boolean;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
@@ -302,8 +313,8 @@ export function SettingsDialog({
           </Button>
         </header>
         <DialogDescription className="sr-only">
-          Manage browser preferences, content languages, backups, and new-resume
-          defaults.
+          Manage browser preferences, content languages, backups, new-resume
+          defaults, and your account.
         </DialogDescription>
         <SidebarProvider
           keyboardShortcut={false}
@@ -362,9 +373,11 @@ export function SettingsDialog({
               <p className="mt-1 text-xs text-muted-foreground">
                 {panel === "data"
                   ? "Workspace backups contain saved content; recovery is separate."
-                  : workspaceSettings
-                    ? "Included in workspace backups. Changes require Save."
-                    : "This browser. Device preferences apply immediately and are excluded from backups."}
+                  : panel === "account"
+                    ? "Sign-in for this browser. Signing in never moves or merges workspaces."
+                    : workspaceSettings
+                      ? "Included in workspace backups. Changes require Save."
+                      : "This browser. Device preferences apply immediately and are excluded from backups."}
               </p>
             </header>
             <div
@@ -416,8 +429,9 @@ export function SettingsDialog({
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                Stored locally in this browser. Clearing or eviction can remove
-                local data. Account sync is not available.
+                {accountMode
+                  ? "Saved content is stored in your account. Drafts and unconfirmed Saves stay in this browser until confirmed; clearing or eviction can remove them."
+                  : "Stored locally in this browser. Clearing or eviction can remove local data."}
               </p>
             </div>
           </section>

@@ -8,7 +8,13 @@ process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.resolve(".cache/ms-playwright");
 
 export default defineConfig({
   plugins: [tailwindcss()],
-  optimizeDeps: { include: ["pdfjs-dist", "pdfjs-dist/web/pdf_viewer.mjs"] },
+  optimizeDeps: {
+    include: [
+      "pdfjs-dist",
+      "pdfjs-dist/web/pdf_viewer.mjs",
+      "@base-ui/react/avatar",
+    ],
+  },
   resolve: { alias: { "@": path.resolve(".") } },
   esbuild: { jsx: "automatic" },
   test: {
@@ -19,6 +25,17 @@ export default defineConfig({
           name: "unit",
           environment: "node",
           include: ["tests/unit/**/*.unit.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "db",
+          environment: "node",
+          include: ["tests/db/**/*.db.test.ts"],
+          alias: { "server-only": path.resolve("tests/db/server-only.ts") },
+          testTimeout: 30_000,
+          hookTimeout: 60_000,
         },
       },
       {

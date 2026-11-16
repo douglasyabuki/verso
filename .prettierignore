@@ -16,6 +16,7 @@ yarn.lock
 bun.lock
 # Keep agent skill reference resources out of automatic formatting.
 .agents/skills/
+.claude/skills/
 .npm-cache/
 .cache/
 public/compiler/
@@ -25,3 +26,5 @@ tools/compiler-proof/licenses/
 .env*
 # Product requirements are deliberately outside this adoption pass.
 docs/requirements.md
+lib/generated/
+prisma/migrations/

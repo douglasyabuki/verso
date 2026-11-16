@@ -60,8 +60,24 @@ export const RESUME_COLORS = [
   "violet",
 ] as const;
 
-export const WORKSPACE_BYTES = 64 * 1024 * 1024;
-export const RECOVERY_BYTES = 256 * 1024 * 1024;
+/** Workspace document and backup-file ceiling (UTF-8 bytes), sized to fit one
+ * hosted request; real workspaces are typically around 100 KB. */
+export const WORKSPACE_BYTES = 4 * 1024 * 1024;
+/** Individual recovery draft ceiling, including baseline and metadata. */
+export const DRAFT_BYTES = 8 * 1024 * 1024;
+/** Recovery export/import file ceiling. */
+export const RECOVERY_BYTES = 32 * 1024 * 1024;
+/** Total career entries across all sections. */
+export const CAREER_ENTRY_LIMIT = 2_000;
+
+/** Format a byte ceiling for messages, e.g. "4 MiB".
+ * @param bytes Whole-MiB byte ceiling.
+ * @returns {string} Human-readable MiB label.
+ * @example mib(WORKSPACE_BYTES) // "4 MiB"
+ */
+export function mib(bytes: number): string {
+  return `${bytes / (1024 * 1024)} MiB`;
+}
 export const SECTION_KINDS = [
   "experience",
   "education",

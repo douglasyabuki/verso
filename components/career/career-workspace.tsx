@@ -17,6 +17,13 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { AccountMenu } from "@/components/account/account-menu";
+import {
+  AccountPanel,
+  GuestImport,
+  readGuestWorkspace,
+  SignOutConfirmation,
+} from "@/components/account/account-panel";
 import {
   careerEntryLabel,
   CareerEntryList,
@@ -32,6 +39,7 @@ import {
 import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
 import { CommittedOutputView } from "@/components/career/committed-output";
+import { ConflictPanel } from "@/components/career/conflict-panel";
 import { LayoutFields } from "@/components/career/layout-editor";
 import { libraryDestinationKind } from "@/components/career/library-navigation";
 import {
@@ -96,7 +104,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useAccountActions } from "@/hooks/account/use-account-actions";
 import { useCommittedPreview } from "@/hooks/output/use-committed-preview";
+import { draftConflict } from "@/lib/career/conflict";
 import {
   layoutAppearance,
   layoutDefaults,
@@ -123,6 +133,11 @@ import { importPortable } from "@/lib/career/portable-import";
 import { oversizedRecovery, recoveryFiles } from "@/lib/career/recovery-export";
 import { profileContactLabels, type ResumeContent } from "@/lib/career/resumes";
 import { captureStarter } from "@/lib/career/starters";
+import type {
+  AccountSession,
+  AccountSessionStore,
+} from "@/stores/account/session";
+import { openAccountBackend } from "@/stores/career/account-backend";
 import {
   CareerController,
   type CareerDraftTarget,
@@ -136,8 +151,11 @@ import type {
   ResumeOutputTarget,
 } from "@/types-and-constants/career";
 import {
+  mib,
+  RECOVERY_BYTES,
   SECTION_KINDS,
   VERIFIED_OUTPUT_LANGUAGES,
+  WORKSPACE_BYTES,
 } from "@/types-and-constants/career";
 import { appLayoutDefaults } from "@/types-and-constants/layout";
 import { defaultSectionIcons } from "@/types-and-constants/section-icons";
@@ -643,12 +661,40 @@ function LanguagesEditor({
   );
 }
 
+/** Create the controller for the mounted owner: account storage for a signed-in
+ * (or expired, still-mounted) session, guest IndexedDB otherwise.
+ * @param account Optional account session and store.
+ * @returns {CareerController} Controller bound to exactly one owner.
+ * @example createOwnerController({ store, session })
+ */
+function createOwnerController(account?: {
+  store: AccountSessionStore;
+  session: AccountSession;
+}): CareerController {
+  const session = account?.session;
+  if (session?.kind !== "authenticated" && session?.kind !== "expired")
+    return new CareerController();
+  const identity = { userId: session.user.id, sessionId: session.sessionId };
+  return new CareerController({
+    owner: "account",
+    openBackend: () =>
+      openAccountBackend(identity, {
+        onSessionInvalid: () => account?.store.invalidate(),
+      }),
+  });
+}
+
 export function CareerWorkspace({
   controller: supplied,
+  account,
 }: {
   controller?: CareerController;
+  /** Account session; the parent remounts this workspace when the owner changes. */
+  account?: { store: AccountSessionStore; session: AccountSession };
 }) {
-  const [controller] = useState(() => supplied ?? new CareerController());
+  const [controller] = useState(
+    () => supplied ?? createOwnerController(account),
+  );
   const state = useSyncExternalStore(
     controller.subscribe,
     controller.getSnapshot,
@@ -693,6 +739,8 @@ export function CareerWorkspace({
     head: CareerHead;
     incoming?: CareerDocument;
     previous?: CareerHead;
+    /** Guest import into an account; otherwise a file replacement or rollback. */
+    kind?: "import";
   } | null>(null);
   const [localError, setLocalError] = useState("");
   const [sessionReview, setSessionReview] = useState<{
@@ -702,6 +750,19 @@ export function CareerWorkspace({
   const [sessionExportChoice, setSessionExportChoice] = useState(false);
   const [sessionReviewError, setSessionReviewError] = useState("");
   const [compare, setCompare] = useState(false);
+  // Both versions of a conflicted form scope, derived from committed state and the draft baseline.
+  const formConflict = useMemo(
+    () =>
+      state.head && state.draft ? draftConflict(state.head, state.draft) : null,
+    [state.head, state.draft],
+  );
+  const orderConflict = useMemo(
+    () =>
+      state.head && state.orderDraft
+        ? draftConflict(state.head, state.orderDraft)
+        : null,
+    [state.head, state.orderDraft],
+  );
   const [addingSection, setAddingSection] = useState(false);
   const [addingResume, setAddingResume] = useState(false);
   const [libraryEditorRequest, setLibraryEditorRequest] = useState<
@@ -817,13 +878,18 @@ export function CareerWorkspace({
   useEffect(() => {
     void controller.initialize();
     const focus = () => {
-      void controller.refresh();
+      void controller.sync("focus");
     };
     const visibility = () => {
       if (document.visibilityState === "hidden")
         void controller.flushRecovery();
-      else focus();
+      else void controller.sync("visible");
     };
+    const online = () => {
+      void controller.sync("online");
+    };
+    // Input marks the owner active; idle tabs pause periodic account checks.
+    const activity = () => controller.activity();
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (
         controller.hasUnsavedChanges() ||
@@ -832,10 +898,16 @@ export function CareerWorkspace({
         event.preventDefault();
     };
     window.addEventListener("focus", focus);
+    window.addEventListener("online", online);
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("beforeunload", beforeUnload);
+    for (const type of ["pointerdown", "keydown"] as const)
+      window.addEventListener(type, activity, { passive: true });
     return () => {
       window.removeEventListener("focus", focus);
+      window.removeEventListener("online", online);
+      for (const type of ["pointerdown", "keydown"] as const)
+        window.removeEventListener(type, activity);
       document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("beforeunload", beforeUnload);
       controller.dispose();
@@ -1045,6 +1117,16 @@ export function CareerWorkspace({
     }
     resolveTargets(routeTargets(next), perform);
   };
+  const unconfirmedAccountWork =
+    state.recovery.length +
+    [state.draft, state.orderDraft].filter((draft) => draft?.operationId)
+      .length;
+  const accountActions = useAccountActions({
+    store: account?.store,
+    unconfirmed: unconfirmedAccountWork,
+    resolveDrafts: (action) =>
+      resolveTargets(controller.navigationTargets(), action),
+  });
   const closeSettings = () => {
     const background = route.current.background;
     resolveTargets(routeTargets(background), () => {
@@ -1069,9 +1151,9 @@ export function CareerWorkspace({
       workspaceId: head.workspaceId,
       document: head.document,
     });
-    if (new TextEncoder().encode(content).byteLength > 64 * 1024 * 1024)
+    if (new TextEncoder().encode(content).byteLength > WORKSPACE_BYTES)
       throw new Error(
-        "Workspace backup exceeds the 64 MiB file limit including its envelope. No content was truncated or changed.",
+        `Workspace backup exceeds the ${mib(WORKSPACE_BYTES)} file limit including its envelope. No content was truncated or changed.`,
       );
     download(content, "verso-workspace.json");
   };
@@ -1110,7 +1192,7 @@ export function CareerWorkspace({
     importJob.current = job;
     const progress = setTimeout(() => setImportPending(true), 500);
     try {
-      if (file.size > (recovery ? 256 : 64) * 1024 * 1024)
+      if (file.size > (recovery ? RECOVERY_BYTES : WORKSPACE_BYTES))
         throw new Error("Import exceeds its byte limit.");
       const envelope = await importPortable(
         file,
@@ -1556,29 +1638,49 @@ export function CareerWorkspace({
           {controller.isDirty() ? state.recoveryStatus : "No unsaved changes"}
         </p>
         {state.error && <p role="alert">{state.error}</p>}
-        {compare && (
-          <ScopeComparison
-            current={readScope(documentValue, state.draft.scope)}
-            draft={state.draft.values}
+        {formConflict ? (
+          <ConflictPanel
+            conflict={formConflict}
+            disabled={state.saving}
+            onKeepDraft={() => controller.reconcile()}
+            onUseSaved={() => {
+              const savedScope = state.draft!.scope;
+              return controller
+                .cancel()
+                .then(() => controller.open(savedScope))
+                .catch(() => {});
+            }}
+            onExport={exportRecovery}
           />
+        ) : (
+          compare && (
+            <ScopeComparison
+              current={readScope(documentValue, state.draft.scope)}
+              draft={state.draft.values}
+            />
+          )
         )}
         <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setCompare((value) => !value)}
-          >
-            Compare
-          </Button>
-          <Button
-            variant="outline"
-            disabled={state.saving}
-            onClick={() => controller.reconcile()}
-          >
-            Reconcile
-          </Button>
-          <Button variant="outline" onClick={exportRecovery}>
-            Export recovery
-          </Button>
+          {!formConflict && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setCompare((value) => !value)}
+              >
+                Compare
+              </Button>
+              <Button
+                variant="outline"
+                disabled={state.saving}
+                onClick={() => controller.reconcile()}
+              >
+                Reconcile
+              </Button>
+              <Button variant="outline" onClick={exportRecovery}>
+                Export recovery
+              </Button>
+            </>
+          )}
           <Button
             variant="outline"
             disabled={!controller.isDirty() || state.saving}
@@ -1641,6 +1743,7 @@ export function CareerWorkspace({
         )}
         preferenceStatus={state.preferenceStatus}
         retryPreferences={() => void controller.changePreferences()}
+        accountMode={state.storageMode === "account"}
       >
         {panel === "editing-preview" ? (
           <DeviceSettings
@@ -1688,8 +1791,44 @@ export function CareerWorkspace({
           </>
         ) : ["languages", "defaults"].includes(panel ?? "") ? (
           settingsForm
+        ) : panel === "account" ? (
+          <AccountPanel session={account?.session} actions={accountActions}>
+            {account?.session.kind === "authenticated" && (
+              <GuestImport
+                disabled={state.saving || !state.head}
+                review={() =>
+                  resolveTargets(controller.navigationTargets(), () => {
+                    void readGuestWorkspace()
+                      .then(async (guest) => {
+                        if (!guest) {
+                          setLocalError(
+                            "No workspace is saved in this browser as a guest.",
+                          );
+                          return;
+                        }
+                        setReview({
+                          head: controller.getSnapshot().head!,
+                          incoming: guest.document,
+                          previous: await controller.previous(),
+                          kind: "import",
+                        });
+                        setExportChoice(false);
+                        setLocalError("");
+                      })
+                      .catch((error) => setLocalError(String(error)));
+                  })
+                }
+                error={localError}
+              />
+            )}
+          </AccountPanel>
         ) : null}
       </SettingsDialog>
+      <SignOutConfirmation
+        actions={accountActions}
+        unconfirmed={unconfirmedAccountWork}
+        exportRecovery={exportRecovery}
+      />
 
       <ResumeManager
         document={documentValue}
@@ -1754,6 +1893,15 @@ export function CareerWorkspace({
         {(resumeActions) => (
           <CareerWorkspaceShell
             document={documentValue}
+            accountMenu={(side) => (
+              <AccountMenu
+                session={account?.session}
+                actions={accountActions}
+                navigate={navigate}
+                side={side}
+              />
+            )}
+            closeSettings={closeSettings}
             resumeActions={resumeActions}
             destination={destination}
             editorRequest={issueFocus ?? libraryEditorRequest}
@@ -2131,6 +2279,46 @@ export function CareerWorkspace({
                 </AlertDescription>
               </Alert>
             )}
+            {listSection &&
+              orderConflict &&
+              orderConflict.scope === `entries/${listSection.id}` && (
+                <ConflictPanel
+                  conflict={orderConflict}
+                  subject="entry order"
+                  disabled={state.saving}
+                  comparison={
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {(
+                        [
+                          ["Current saved order", orderConflict.saved],
+                          ["Your entry order", orderConflict.draft],
+                        ] as const
+                      ).map(([title, ids]) => (
+                        <section key={title} aria-label={title}>
+                          <h3 className="text-sm font-medium">{title}</h3>
+                          <ol className="list-decimal ps-5 text-sm">
+                            {(Array.isArray(ids) ? ids : []).map((id) => {
+                              const entry = listSection.entries.find(
+                                (item) => item.id === id,
+                              );
+                              return (
+                                <li key={String(id)}>
+                                  {entry
+                                    ? careerEntryLabel(entry, contentLanguage)
+                                    : "Missing entry"}
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        </section>
+                      ))}
+                    </div>
+                  }
+                  onKeepDraft={() => controller.reconcile("order")}
+                  onUseSaved={() => controller.cancel("order").catch(() => {})}
+                  onExport={exportRecovery}
+                />
+              )}
             {listSection && (
               <CareerEntryList
                 key={listSection.id}
@@ -2425,31 +2613,33 @@ export function CareerWorkspace({
                           />
                         )}
                         <div className="flex flex-wrap justify-end gap-2">
-                          {(state.error ||
-                            state.recovery.some(
-                              (draft) => draft.draftId === state.draft?.draftId,
-                            )) && (
-                            <>
-                              <Button
-                                variant="outline"
-                                onClick={() => setCompare(!compare)}
-                              >
-                                Compare
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => controller.reconcile()}
-                              >
-                                Reconcile with current
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={exportRecovery}
-                              >
-                                Export recovery
-                              </Button>
-                            </>
-                          )}
+                          {!formConflict &&
+                            (state.error ||
+                              state.recovery.some(
+                                (draft) =>
+                                  draft.draftId === state.draft?.draftId,
+                              )) && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setCompare(!compare)}
+                                >
+                                  Compare
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => controller.reconcile()}
+                                >
+                                  Reconcile with current
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={exportRecovery}
+                                >
+                                  Export recovery
+                                </Button>
+                              </>
+                            )}
                           <span
                             role="status"
                             className="self-center text-xs text-muted-foreground"
@@ -2458,9 +2648,11 @@ export function CareerWorkspace({
                               ? state.recoveryStatus
                               : "No unsaved changes"}
                           </span>
-                          {(state.storageMode !== "durable" ||
+                          {((state.storageMode !== "durable" &&
+                            state.storageMode !== "account") ||
                             (state.saveStatus.kind === "failed" &&
-                              state.saveStatus.reason === "storage")) && (
+                              (state.saveStatus.reason === "storage" ||
+                                state.saveStatus.reason === "offline"))) && (
                             <Button
                               variant="outline"
                               onClick={() => void controller.save(true)}
@@ -2470,7 +2662,22 @@ export function CareerWorkspace({
                           )}
                         </div>
                       </fieldset>
-                      {compare && (
+                      {formConflict &&
+                        !(
+                          formConflict.saved === undefined &&
+                          !formConflict.replaced
+                        ) && (
+                          <ConflictPanel
+                            conflict={formConflict}
+                            disabled={state.saving}
+                            onKeepDraft={() => controller.reconcile()}
+                            onUseSaved={() =>
+                              controller.cancel().catch(() => {})
+                            }
+                            onExport={exportRecovery}
+                          />
+                        )}
+                      {compare && !formConflict && (
                         <ScopeComparison
                           current={readScope(documentValue, state.draft.scope)}
                           draft={state.draft.values}
@@ -2601,7 +2808,14 @@ export function CareerWorkspace({
                           })
                         }
                       >
-                        {state.orderDraft ? "Save entry" : "Save"}
+                        {state.draft?.operationId &&
+                        !state.saving &&
+                        !formConflict &&
+                        state.storageMode === "account"
+                          ? "Retry save"
+                          : state.orderDraft
+                            ? "Save entry"
+                            : "Save"}
                       </Button>
                     </CardFooter>
                   </Card>
@@ -2726,9 +2940,11 @@ export function CareerWorkspace({
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>
-                    {review?.incoming
-                      ? "Review workspace replacement"
-                      : "Review rollback"}
+                    {review?.kind === "import"
+                      ? "Review guest workspace import"
+                      : review?.incoming
+                        ? "Review workspace replacement"
+                        : "Review rollback"}
                   </DialogTitle>
                   <DialogDescription>
                     Replace saved workspace at revision {review?.head.revision}.
@@ -2739,6 +2955,15 @@ export function CareerWorkspace({
                       : "No previous snapshot is currently retained."}
                   </DialogDescription>
                 </DialogHeader>
+                {review?.kind === "import" && (
+                  <p>
+                    This browser&apos;s guest workspace replaces your account
+                    workspace ({review.head.document.sections.length} sections,{" "}
+                    {review.head.document.resumes.length} resumes). Nothing is
+                    merged, and the guest workspace stays in this browser
+                    unchanged.
+                  </p>
+                )}
                 <p>
                   Incoming sections:{" "}
                   {
@@ -2780,7 +3005,11 @@ export function CareerWorkspace({
                     onClick={() => {
                       if (review)
                         void controller
-                          .replace(review.head, review.incoming)
+                          .replace(
+                            review.head,
+                            review.incoming,
+                            review.kind ?? "replace",
+                          )
                           .then((saved) => {
                             if (saved) setReview(null);
                           });

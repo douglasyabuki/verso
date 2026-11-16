@@ -57,3 +57,6 @@ temp
 /public/compiler/
 /public/compiler.tmp/
 /public/compiler.old/
+
+# Generated Prisma client
+/lib/generated/

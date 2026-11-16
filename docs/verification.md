@@ -628,3 +628,112 @@ acceptance. Automated/local evidence does not prove the hosted deployment.
 - [ ] Owner: on the preview URL, English and Portuguese PDFs compile; `/compiler/*.wasm`
       returns 200 with `application/wasm`; `/compiler/SOURCE.txt` is served.
 - [ ] Owner: a second deployment reuses the download cache.
+
+## Accounts and account storage
+
+Routine automated checks use isolated in-process Postgres (PGlite) and seeded
+database sessions. They do not exercise real OAuth providers or hosted Prisma
+Postgres. PGlite serializes connections; the separate real-Postgres experiment
+below verifies concurrent row locking locally.
+
+- [x] Database tests: owner isolation, receipt replay and mismatch, scope conflict
+      versus unrelated changes, generation rejection, reviewed replace/import/rollback
+      with one previous workspace, all-or-nothing writes under an injected receipt
+      failure, receipt pruning, and API session/origin/body checks.
+- [x] Browser Mode: acknowledgment-only success, offline retry with the same
+      operation, lost acknowledgment replayed without a second commit, adopting a
+      newer server document, expired sessions, and per-account recovery isolation.
+- [x] Account E2E (production server): Save and reload, cross-user isolation,
+      interrupted response retry, expiry before Save, sign-out with unconfirmed work
+      and its return on the next sign-in, and reviewed guest import.
+- [ ] Owner: real GitHub and Google sign-in on localhost and the preview origin,
+      including provider cancellation/denial returning to the app with a message.
+- [ ] Owner: a real session expiry and sign-out in a second tab while a form is dirty.
+- [x] Isolated real PostgreSQL 17: two simultaneous Saves to one account serialize
+      on the owner row lock; conflicting Saves commit once, identical retries replay
+      one receipt, and unrelated scopes both commit. This does not verify hosted
+      Prisma Postgres or provider callbacks.
+- [ ] Owner: `npm run db:migrate:deploy` against Prisma Postgres, then a hosted
+      Save/reload and account isolation check on the preview deployment.
+
+## Account sync
+
+Freshness bounds: event checks (focus, visibility, reconnect, input after idle) at
+most once per 60 s per browser; periodic checks every 5 minutes while a tab is
+visible and active; none while hidden, after 15 minutes without input, or with an
+invalid session. A check costs the session lookup plus one read (3 statements) and
+transfers no document when unchanged.
+
+- [x] Database tests: conditional check returns identity only when current and the
+      document when stale; reads never write; receipt pruning runs inside at most one
+      Save per day; statement counts recorded as regression bounds.
+- [x] Unit: event spacing shared across tabs, periodic checks only while visible and
+      active, idle pause and resume on input, no requests while hidden or paused, a
+      failed check does not advance freshness, and a held check lock skips the check.
+- [x] Browser Mode: conditional checks and "another device or tab" status, throttled
+      focus checks after opening, another tab's Save applied from the local cache
+      without a server read, interrupted Saves confirmed through operation status
+      without resending, unknown offline Saves kept for explicit retry, cached-head
+      offline start, and same-scope conflicts retaining both versions until Keep my
+      draft and Save. Conflict panel: both versions, confirmed discard, destructive
+      action last, missing-record case.
+- [x] Account E2E (production server, Chromium/Firefox/WebKit, independent browser
+      contexts representing devices): focus
+      check inside 60 s sends nothing, a later focus shows the other device's Save;
+      same-scope conflict panel and kept-draft Save commit once; offline Save looked
+      up once on reconnect and retried only on Retry save; idle tab stops periodic
+      checks until input; expired session stops checks and keeps the draft;
+      concurrent same-scope Saves commit once and retain both conflicting versions;
+      a two-hour wall-clock jump followed by focus checks once and retains a dirty
+      draft; an account change during a held freshness response never exposes the
+      previous owner's document. Clock simulation is not actual OS sleep/wake.
+- [ ] Owner: two real devices (or browsers) on the hosted deployment, including a
+      laptop sleep/wake and a network change; record observed freshness and request
+      counts.
+- [ ] Owner: Prisma Postgres operation usage for a typical editing hour, compared
+      with the statement counts above and the current billing FAQ.
+- [ ] Owner: real session expiry while sync is running, then signing in again.
+
+### Local sync verification
+
+Verified on 2026-11-16 against the uncommitted sync implementation and verification
+changes based on commit `0e8f731`, using Windows, Node 24.22.1, and the pinned
+Playwright browser engines. Each production E2E command builds a fresh server.
+Browser contexts have separate cookies and IndexedDB and represent independent
+clients; they are not physical devices. Seeded sessions bypass OAuth callbacks.
+
+Real PostgreSQL verification used an ephemeral `postgres:17-alpine` container,
+a random localhost port, no volume, all checked-in migrations, and the actual
+`commitAccountSave` repository with an eight-connection Prisma pool. An independent
+connection held the owner's row lock while both Save transactions started.
+`pg_stat_activity` confirmed two lock waiters before the lock was released; the
+observer cleared its transaction statistics snapshot before each observation.
+All three experiments passed: two conflicting Saves produced one revision and one
+receipt; concurrent identical retries produced one commit and one replay; unrelated
+scope Saves produced two revisions and two receipts while retaining section order.
+The container was stopped and automatically removed. These were one-off experiments,
+separate from the routine PGlite suites, and do not establish hosted concurrency.
+
+Initial failures are retained separately from final evidence:
+
+- Sandbox restrictions blocked Vitest subprocess creation and a formatting directory
+  scan. The same commands ran with approved process/filesystem access.
+- The first `npm test` passed 184 unit and 15 database tests, then passed all 169
+  Browser Mode assertions but failed on one unhandled PDF.js "Transport destroyed"
+  rejection from the preview resource test. That test passed alone and the complete
+  Browser Mode suite passed on rerun without changing preview code. No PDF.js fix
+  is claimed.
+- A subsequent full run reached guest E2E and exposed local OAuth environment
+  contamination: 80/85 cases passed; three accounts-disabled assertions and two
+  Firefox resume cases failed. The latter showed "Could not check your sign-in"
+  instead of a guest workspace. The guest runner now explicitly
+  clears account configuration, and the account runner explicitly overrides both
+  provider configurations with isolated test values.
+- The first PostgreSQL observer reused a transaction statistics snapshot and saw
+  only one waiter. Clearing the snapshot before each poll fixed the observer;
+  all three experiments then passed without changing application persistence.
+
+Physical-device sleep/wake, hosted network changes, actual OAuth expiry/re-entry,
+and Prisma Postgres billing usage remain unexecuted. Local clock jumps and request
+counts do not prove those acceptance items. These follow-ups remain separate from
+automated completion and must not be reported as passed acceptance.

@@ -6,7 +6,7 @@ discards a draft. Keep the downloaded files until restoration and an explicit
 Save have succeeded.
 
 Normal `verso.recovery` format-1 files are independently importable through
-Data & backups. Files are limited to 256 MiB, with each draft limited to 64 MiB
+Data & backups. Files are limited to 32 MiB, with each draft limited to 8 MiB
 including its baseline and metadata. Larger collections are split into normal
 files. Versioned manifest pages list filenames and draft IDs/versions; a filename
 can appear on multiple manifest pages with disjoint draft lists. Manifests are
@@ -28,8 +28,8 @@ survive. The result is a raw draft for manual salvage/reconciliation, not an
 importable file. Retain the originals; oversized or malformed values still need
 resolution within normal recovery limits.
 
-Workspace JSON files have their own 64-MiB ceiling including envelope metadata.
-A document at its independent 64-MiB ceiling may exceed the backup-file ceiling;
+Workspace JSON files have their own 4-MiB ceiling including envelope metadata.
+A document at its independent 4-MiB ceiling may exceed the backup-file ceiling;
 export reports this explicitly instead of downloading a file the app cannot import.
 No export contains device preferences, local operation ledgers, or credentials.
 

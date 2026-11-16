@@ -18,6 +18,9 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
   reporter: "list",
+  // Each Playwright config owns its output directory: a run empties it on start,
+  // so a shared folder would delete another run's in-progress trace artifacts.
+  outputDir: "test-results/e2e",
   use: { baseURL, trace: "retain-on-failure" },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
@@ -36,6 +39,17 @@ export default defineConfig({
     command:
       "npm run build && npm run start -- --hostname localhost --port 3100",
     url: baseURL,
+    // Guest acceptance must stay guest-only even when local account env exists.
+    // Explicit process values take precedence over Next's .env files.
+    env: {
+      DATABASE_URL: "",
+      BETTER_AUTH_SECRET: "",
+      BETTER_AUTH_URL: baseURL,
+      GITHUB_CLIENT_ID: "",
+      GITHUB_CLIENT_SECRET: "",
+      GOOGLE_CLIENT_ID: "",
+      GOOGLE_CLIENT_SECRET: "",
+    },
     reuseExistingServer: false,
     stdout: "pipe",
     stderr: "pipe",

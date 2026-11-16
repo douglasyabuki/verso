@@ -28,7 +28,7 @@ const views = new Set([
 export function parseDestination(input: unknown): string {
   if (typeof input !== "string" || /[^A-Za-z0-9_/-]/.test(input))
     return "unavailable";
-  if (input === "settings") return "settings/appearance";
+  if (input === "settings") return "settings/account";
   if (input === "languages") return "settings/languages";
   if (input === "defaults") return "settings/defaults";
   if (input === "backups") return "settings/data";

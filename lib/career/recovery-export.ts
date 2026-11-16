@@ -1,22 +1,22 @@
 import type { CareerDraft } from "@/types-and-constants/career";
-import { RECOVERY_BYTES, WORKSPACE_BYTES } from "@/types-and-constants/career";
+import { DRAFT_BYTES, RECOVERY_BYTES } from "@/types-and-constants/career";
 
 type RecoveryExportLimits = { fileBytes: number; draftBytes: number };
 const defaults: RecoveryExportLimits = {
   fileBytes: RECOVERY_BYTES,
-  draftBytes: WORKSPACE_BYTES,
+  draftBytes: DRAFT_BYTES,
 };
 const bytes = (value: string) => new TextEncoder().encode(value).byteLength;
 
 /** Identify drafts that cannot be imported as normal bounded recovery records.
  * @param drafts Captured unresolved draft versions.
- * @param ceiling Maximum serialized draft bytes, normally 64 MiB.
+ * @param ceiling Maximum serialized draft bytes, normally `DRAFT_BYTES`.
  * @returns IDs requiring explicit raw-chunk export instead of a durable-recovery claim.
  * @example oversizedRecovery(drafts)
  */
 export function oversizedRecovery(
   drafts: CareerDraft[],
-  ceiling = WORKSPACE_BYTES,
+  ceiling = DRAFT_BYTES,
 ): string[] {
   return drafts
     .filter((draft) => bytes(JSON.stringify(draft)) > ceiling)

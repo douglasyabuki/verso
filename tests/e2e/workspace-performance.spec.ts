@@ -1,9 +1,18 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 import { installHarness } from "./career-harness";
+
+/** Open Settings › Data & backups from the workspace sidebar (desktop or drawer). */
+async function openDataSettings(page: Page) {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Settings", exact: true })
+    .getByRole("button", { name: "Data & backups", exact: true })
+    .click();
+}
 
 for (const cpuRate of [1, 4])
   for (const fixture of [
@@ -28,7 +37,7 @@ for (const cpuRate of [1, 4])
           ["small", 20, 3],
           ["representative", 300, 30],
           ["multi-resume", 600, 60],
-          ["capacity", 10_000, 120],
+          ["capacity", 2_000, 120],
         ] as const) {
           if (label !== fixture) continue;
           console.log(`Measuring ${label} at ${rate}x CPU`);
@@ -116,7 +125,9 @@ for (const cpuRate of [1, 4])
               }
               if (label === "capacity") {
                 let remaining =
-                  63 * 1024 * 1024 -
+                  // Near the 4-MiB workspace ceiling, leaving envelope headroom.
+                  4 * 1024 * 1024 -
+                  64 * 1024 -
                   new TextEncoder().encode(JSON.stringify(document)).byteLength;
                 for (const entry of document.sections.flatMap(
                   (s) => s.entries,
@@ -290,9 +301,7 @@ for (const cpuRate of [1, 4])
             );
             (i < 20 ? reordering : selection).push(elapsed);
           }
-          await page
-            .getByRole("button", { name: "Data & backups", exact: true })
-            .click();
+          await openDataSettings(page);
           console.log(`${label}: selection/reorder samples complete`);
           // Twenty inverse moves leave clean drafts; overview closes only those clean scopes.
           await page
@@ -301,9 +310,7 @@ for (const cpuRate of [1, 4])
           await expect(
             page.getByRole("heading", { name: /Career details.*Overview/ }),
           ).toBeVisible();
-          await page
-            .getByRole("button", { name: "Data & backups", exact: true })
-            .click();
+          await openDataSettings(page);
           await installHarness(page);
           const workerImport = await page.evaluate(async () => {
             const owner = await window.careerHarness.openCareerStorage();

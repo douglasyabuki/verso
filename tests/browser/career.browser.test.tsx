@@ -1164,6 +1164,13 @@ describe("career editing boundaries", () => {
         .element(screen.getByRole("region", { name: "Unresolved recovery" }))
         .not.toBeInTheDocument();
       await screen
+        .getByRole("button", { name: "Account menu", exact: true })
+        .click();
+      await screen
+        .getByRole("menuitem", { name: "Settings", exact: true })
+        .click();
+      await screen
+        .getByRole("dialog", { name: "Settings", exact: true })
         .getByRole("button", { name: "Data & backups", exact: true })
         .click();
       await expect
@@ -1676,6 +1683,13 @@ describe("restored schema-2 editing controls", () => {
       const editingDraft = controller.getSnapshot().draft;
       const editingOrder = controller.getSnapshot().orderDraft;
       await screen
+        .getByRole("button", { name: "Account menu", exact: true })
+        .click();
+      await screen
+        .getByRole("menuitem", { name: "Settings", exact: true })
+        .click();
+      await screen
+        .getByRole("dialog", { name: "Settings", exact: true })
         .getByRole("button", { name: "Data & backups", exact: true })
         .click();
       await expect

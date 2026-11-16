@@ -20,8 +20,11 @@ import {
 
 export function WorkspaceUtilityRail({
   dataMenu,
+  footer = <AppearanceControl />,
 }: {
   dataMenu: React.ReactNode;
+  /** Bottom rail controls; defaults to the theme popover. */
+  footer?: React.ReactNode;
 }) {
   return (
     <nav
@@ -29,9 +32,7 @@ export function WorkspaceUtilityRail({
       className="hidden w-14 shrink-0 flex-col items-center gap-4 border-r bg-card py-4 md:flex"
     >
       {dataMenu}
-      <div className="mt-auto">
-        <AppearanceControl />
-      </div>
+      <div className="mt-auto">{footer}</div>
     </nav>
   );
 }

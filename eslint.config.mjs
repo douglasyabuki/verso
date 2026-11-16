@@ -33,5 +33,6 @@ export default defineConfig([
     ".vitest/**",
     ".vitest-attachments/**",
     "next-env.d.ts",
+    "lib/generated/**",
   ]),
 ]);

@@ -8,6 +8,7 @@ export default defineConfig({
   ...application,
   testIgnore: [],
   testMatch: /workspace-performance\.spec\.ts/,
+  outputDir: "test-results/measure",
   workers: 1,
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

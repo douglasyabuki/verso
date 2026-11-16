@@ -2,11 +2,16 @@ import { expect, it } from "vitest";
 
 import { createCareerDocument, parsePortable } from "@/lib/career/model";
 import { recoveryFiles } from "@/lib/career/recovery-export";
-import type { CareerDraft } from "@/types-and-constants/career";
+import {
+  type CareerDraft,
+  DRAFT_BYTES,
+  RECOVERY_BYTES,
+  WORKSPACE_BYTES,
+} from "@/types-and-constants/career";
 
 it("accepts exact UTF-8 file ceilings including envelope overhead and rejects one extra byte", () => {
   for (const kind of ["workspace", "recovery"] as const) {
-    const ceiling = (kind === "workspace" ? 64 : 256) * 1024 * 1024;
+    const ceiling = kind === "workspace" ? WORKSPACE_BYTES : RECOVERY_BYTES;
     const envelope =
       kind === "workspace"
         ? {
@@ -31,8 +36,8 @@ it("accepts exact UTF-8 file ceilings including envelope overhead and rejects on
   }
 }, 60_000);
 
-it("preserves an exact 64-MiB recovery draft and exports the next byte only as explicit raw chunks", () => {
-  const ceiling = 64 * 1024 * 1024;
+it("preserves an exact 8-MiB recovery draft and exports the next byte only as explicit raw chunks", () => {
+  const ceiling = DRAFT_BYTES;
   const draft: CareerDraft = {
     draftId: "boundary",
     draftVersion: 1,
@@ -62,6 +67,6 @@ it("preserves an exact 64-MiB recovery draft and exports the next byte only as e
     drafts: [draft],
   });
   expect(() => parsePortable(oversized, "recovery")).toThrow(
-    /draft exceeds 64 MiB/,
+    /draft exceeds 8 MiB/,
   );
 }, 60_000);

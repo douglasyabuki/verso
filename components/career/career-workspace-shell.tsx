@@ -2,11 +2,11 @@
 
 import { cn } from "cn";
 import {
-  Database,
   FileText,
   Languages,
   LayoutDashboard,
   ListOrdered,
+  Monitor,
   Palette,
   Settings,
   X,
@@ -60,11 +60,15 @@ import {
 } from "@/components/ui/sidebar";
 import { SidebarSelection } from "@/components/ui/sidebar-selection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { SidebarCollection } from "@/components/workspace/sidebar-collection";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { WorkspaceToolbarView } from "@/components/workspace/workspace-toolbar-view";
-import { AppearanceControl } from "@/components/workspace/workspace-utility-rail";
 import { useListEntrance } from "@/hooks/use-list-entrance";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useWorkspaceLayout } from "@/hooks/workspace/use-workspace-layout";
@@ -74,6 +78,10 @@ type CareerNavigation = {
   document: CareerDocument;
   destination: string;
   navigate: (destination: string) => void;
+  /** Avatar menu for the rail or mobile sidebar footer. */
+  accountMenu: (side: "right" | "top") => ReactNode;
+  /** Close Settings through its guarded route handling. */
+  closeSettings: () => void;
   addSection: () => void;
   addResume: () => void;
   resumeActions: ResumeActions;
@@ -224,10 +232,45 @@ function ResumeSidebarCollection({
   );
 }
 
+/** Rail shortcut that toggles Settings › Appearance. */
+function AppearanceToggle({
+  destination,
+  open,
+  close,
+  side,
+}: {
+  destination: string;
+  open: (destination: string) => void;
+  close: () => void;
+  side: "right" | "top";
+}) {
+  const active = destination === "settings/appearance";
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Appearance"
+            aria-pressed={active}
+            onClick={() => (active ? close() : open("settings/appearance"))}
+          />
+        }
+      >
+        <Monitor aria-hidden="true" />
+      </TooltipTrigger>
+      <TooltipContent side={side}>Appearance</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function CareerSidebar({
   document,
   destination,
   navigate,
+  accountMenu,
+  closeSettings,
   addSection,
   addResume,
   resumeActions,
@@ -373,25 +416,20 @@ function CareerSidebar({
       <SidebarFooter ref={footerRef} className="shrink-0 px-3 py-2">
         <SidebarMenu>
           {item(
-            "settings/appearance",
+            "settings/account",
             "Settings",
             <Settings aria-hidden="true" />,
           )}
         </SidebarMenu>
         {isMobile && (
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Data & backups"
-              onClick={() => go("backups")}
-            >
-              <Database />
-            </Button>
-            <AppearanceControl />
-            <span className="text-xs text-muted-foreground">
-              Data & appearance
-            </span>
+            {accountMenu("top")}
+            <AppearanceToggle
+              destination={destination}
+              open={go}
+              close={closeSettings}
+              side="top"
+            />
           </div>
         )}
       </SidebarFooter>
@@ -404,6 +442,8 @@ export function CareerWorkspaceShell({
   document,
   destination,
   navigate,
+  accountMenu,
+  closeSettings,
   addSection,
   addResume,
   resumeActions,
@@ -516,33 +556,22 @@ export function CareerWorkspaceShell({
         <WorkspaceShell
           sidebarOpen={layout.sidebar}
           onSidebarChange={(sidebar) => changeLayout({ sidebar })}
-          dataMenu={
-            <div className="flex flex-col gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Settings"
-                title="Settings"
-                onClick={() => open("settings/appearance")}
-              >
-                <Settings aria-hidden="true" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Data & backups"
-                title="Data & backups"
-                onClick={() => open("backups")}
-              >
-                <Database />
-              </Button>
-            </div>
+          dataMenu={accountMenu("right")}
+          railFooter={
+            <AppearanceToggle
+              destination={destination}
+              open={open}
+              close={closeSettings}
+              side="right"
+            />
           }
           sidebar={
             <CareerSidebar
               document={document}
               destination={destination}
               navigate={open}
+              accountMenu={accountMenu}
+              closeSettings={closeSettings}
               addSection={addSection}
               addResume={addResume}
               resumeActions={resumeActions}

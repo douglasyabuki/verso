@@ -14,16 +14,16 @@ Keep country, application language, and candidate nationality separate. A Brazil
 
 These are practical defaults; specific application instructions and current local sources can change them:
 
-| Item | Decision |
-| --- | --- |
-| Contact | Name, usable phone/email, location relevant to the work arrangement, and useful professional links. Avoid unnecessary full street address or identifiers by default. |
-| Photo | Omit by default for ordinary employment resumes in the US/UK/Brazil unless the application context calls for it. Harvard discourages it; Brazilian MG says only if requested [H, B1]. Other markets or performing/modeling applications need specific guidance. |
-| Personal details | Do not add age, marital status, national IDs, or nationality by habit. A legitimate eligibility question belongs in the requested application channel; accurately state work authorization only when supplied and relevant. No legal inference from a name, address, or language. |
-| Objective/summary | Omit generic aspirations. A targeted objective can clarify a first job/transition when expected; a summary must contribute concrete evidence. Neither is universally required. |
-| References | Usually omit names/contact details and boilerplate unless requested. UK guidance allows a reference statement while Harvard omits references [N, H]; follow application expectations and protect referees' details. |
-| Salary | Keep expectations/history out of ordinary resume content unless specifically requested in this context. Do not invent an amount. Brazilian PUC-Rio discourages salary details [B2]. |
-| Links | Include a relevant, accessible portfolio/GitHub/LinkedIn with a recognizable label; do not rely on icons alone. Inspect content/permissions when authorized; do not publish or create accounts. Remove broken or irrelevant links. |
-| Interests | Include only when they supply useful evidence or fit a specific audience; they should not crowd out stronger qualifications. |
+| Item              | Decision                                                                                                                                                                                                                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contact           | Name, usable phone/email, location relevant to the work arrangement, and useful professional links. Avoid unnecessary full street address or identifiers by default.                                                                                                              |
+| Photo             | Omit by default for ordinary employment resumes in the US/UK/Brazil unless the application context calls for it. Harvard discourages it; Brazilian MG says only if requested [H, B1]. Other markets or performing/modeling applications need specific guidance.                   |
+| Personal details  | Do not add age, marital status, national IDs, or nationality by habit. A legitimate eligibility question belongs in the requested application channel; accurately state work authorization only when supplied and relevant. No legal inference from a name, address, or language. |
+| Objective/summary | Omit generic aspirations. A targeted objective can clarify a first job/transition when expected; a summary must contribute concrete evidence. Neither is universally required.                                                                                                    |
+| References        | Usually omit names/contact details and boilerplate unless requested. UK guidance allows a reference statement while Harvard omits references [N, H]; follow application expectations and protect referees' details.                                                               |
+| Salary            | Keep expectations/history out of ordinary resume content unless specifically requested in this context. Do not invent an amount. Brazilian PUC-Rio discourages salary details [B2].                                                                                               |
+| Links             | Include a relevant, accessible portfolio/GitHub/LinkedIn with a recognizable label; do not rely on icons alone. Inspect content/permissions when authorized; do not publish or create accounts. Remove broken or irrelevant links.                                                |
+| Interests         | Include only when they supply useful evidence or fit a specific audience; they should not crowd out stronger qualifications.                                                                                                                                                      |
 
 ## English and Brazilian Portuguese adaptation
 
