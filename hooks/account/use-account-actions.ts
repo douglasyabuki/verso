@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { toast } from "@/components/ui/toast";
+import { authErrorMessage } from "@/lib/account/auth-feedback";
 import type {
   AccountProviders,
   AccountSessionStore,
@@ -44,7 +45,13 @@ export function useAccountActions({
   resolveDrafts,
 }: AccountActionsOptions): AccountActions {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : authErrorMessage(
+          new URLSearchParams(window.location.search).get("error"),
+        ),
+  );
   const [pendingProvider, setPendingProvider] = useState<
     keyof AccountProviders | null
   >(null);

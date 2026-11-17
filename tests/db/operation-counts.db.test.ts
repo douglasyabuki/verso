@@ -2,11 +2,19 @@ import { randomUUID } from "node:crypto";
 
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 
+import { PATCH as patchLink } from "@/app/api/account/releases/links/[linkId]/route";
+import {
+  GET as listReleases,
+  POST as upload,
+} from "@/app/api/account/releases/route";
 import { POST as save } from "@/app/api/account/workspace/operations/route";
 import { GET as workspace } from "@/app/api/account/workspace/route";
+import { GET as pinnedPdf } from "@/app/pdf/[token]/[number]/route";
+import { GET as latestPdf } from "@/app/pdf/[token]/route";
 import { type CommittedHead, scopeFingerprint } from "@/lib/career/commit";
 import { readScope } from "@/lib/career/model";
 import { ACCOUNT_SESSION_HEADER } from "@/types-and-constants/account";
+import type { CreateReleaseResponse } from "@/types-and-constants/releases";
 
 import {
   createSession,
@@ -14,6 +22,12 @@ import {
   startTestDatabase,
   type TestDatabase,
 } from "./database";
+import { pdf, releaseMetadata, seedWorkspace } from "./releases";
+
+vi.mock("next/server", async (original) => ({
+  ...(await original<typeof import("next/server")>()),
+  connection: async () => {},
+}));
 
 const ORIGIN = "http://localhost:3000";
 
@@ -159,4 +173,88 @@ it("records database statements for session checks, loads, Saves, and retries", 
   expect(commit.writes).toBe(2);
   expect(commit.total).toBeLessThanOrEqual(8);
   expect(replay.writes).toBe(0);
+});
+
+it("records database statements for release uploads, lists, latest moves, and public downloads", async () => {
+  const userId = await createUser(database.prisma, randomUUID());
+  const client = await createSession(database.prisma, userId);
+  const head = await seedWorkspace(database, userId);
+  const headers = {
+    cookie: client.cookie,
+    [ACCOUNT_SESSION_HEADER]: client.sessionId,
+  };
+  const send = (title: string) => {
+    const form = new FormData();
+    form.set("metadata", JSON.stringify(releaseMetadata(head)));
+    form.set("pdf", new Blob([pdf(title)]));
+    return upload(
+      new Request(`${ORIGIN}/api/account/releases`, {
+        method: "POST",
+        headers: { ...headers, origin: ORIGIN },
+        body: form,
+      }),
+    );
+  };
+
+  database.queries.take();
+  const first = (await (await send("one")).json()) as CreateReleaseResponse;
+  const firstRelease = summarize(database.queries.take());
+  await send("two");
+  const release = summarize(database.queries.take());
+
+  await listReleases(
+    new Request(`${ORIGIN}/api/account/releases`, { headers }),
+  );
+  const list = summarize(database.queries.take());
+
+  const link = first.list.links[0];
+  const moved = await patchLink(
+    new Request(`${ORIGIN}/api/account/releases/links/${link.id}`, {
+      method: "PATCH",
+      headers: { ...headers, origin: ORIGIN },
+      body: JSON.stringify({
+        action: "set-latest",
+        releaseId: first.releaseId,
+      }),
+    }),
+    { params: Promise.resolve({ linkId: link.id }) },
+  );
+  expect(moved.status).toBe(200);
+  const setLatest = summarize(database.queries.take());
+
+  const anonymous = new Request(`${ORIGIN}/pdf/${link.token}`);
+  expect(
+    (
+      await latestPdf(anonymous, {
+        params: Promise.resolve({ token: link.token }),
+      })
+    ).status,
+  ).toBe(200);
+  const latestDownload = summarize(database.queries.take());
+  expect(
+    (
+      await pinnedPdf(anonymous, {
+        params: Promise.resolve({ token: link.token, number: "2" }),
+      })
+    ).status,
+  ).toBe(200);
+  const pinnedDownload = summarize(database.queries.take());
+
+  const report = {
+    firstRelease,
+    release,
+    list,
+    setLatest,
+    latestDownload,
+    pinnedDownload,
+  };
+  console.info("Release database statements", JSON.stringify(report));
+  // Public downloads never touch sessions: one read, no writes.
+  expect(latestDownload).toEqual({ total: 1, reads: 1, writes: 0 });
+  expect(pinnedDownload).toEqual({ total: 1, reads: 1, writes: 0 });
+  expect(list.writes).toBe(0);
+  expect(release.writes).toBe(2);
+  expect(release.total).toBeLessThanOrEqual(12);
+  expect(firstRelease.writes).toBe(4);
+  expect(setLatest.writes).toBe(1);
 });

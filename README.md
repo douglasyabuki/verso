@@ -7,7 +7,7 @@ and backups are unsupported and are never loaded or converted.
 ## Settings and navigation
 
 **Settings** opens a dialog with its own sidebar: Account, Appearance, Content
-languages, Editing & preview, Data & backups, and Resume defaults. Account is the
+languages, Editing & preview, Data & backups, Resume defaults, and Public PDFs. Account is the
 default panel (`?scope=settings` and the sidebar Settings item open it). On narrow
 screens the panel navigation wraps above its content. Settings panels have durable
 `?scope=settings/<panel>` URLs; reload and browser Back/Forward restore the panel.
@@ -266,7 +266,10 @@ none implies another.
   available), and the retained PDF label with its revision, generation, and
   **Current** or **Outdated**.
 - **Backup**: workspace exports say _saved workspace only_; recovery exports are
-  separate. There is no release status; public releases are not implemented.
+  separate.
+- **Release status** (Release dialog and Settings › Public PDFs): uploading, failed
+  with retry, and each link's latest and revoked releases. Releases never change Save
+  or preview status.
 
 Notifications from other tabs that arrive during a local Save are applied after
 that Save settles.
@@ -480,9 +483,13 @@ account. There are no separate sign-in or sign-up pages.
   committed are confirmed without sending them again; unknown ones stay pending
   behind **Retry save**. Opening while the server is unreachable shows the last
   synced revision from this device as possibly stale; Saves wait for reconnection.
-- Account linking is explicit only. There is no password sign-in, email-based
-  automatic linking, account deletion, coauthoring, or live push of remote changes;
-  drafts stay on the device where they were typed.
+- Google and GitHub sign-ins link to the same account when their resolved emails
+  match and both the incoming provider email and existing account email are
+  verified. Neither provider bypasses verification. Linking preserves the existing
+  profile and workspace; different emails remain separate accounts. OAuth callback
+  failures appear in Settings › Account. There is no password sign-in, account
+  deletion, coauthoring, or live push of remote changes; drafts stay on the device
+  where they were typed.
 
 The server stores one schema-2 snapshot per account, one previous workspace, and
 operation receipts (pruned to 30 days / 1,000 per account inside at most one Save
@@ -490,6 +497,55 @@ per day; reads never write; clients protect their own pending requests). Saves l
 baseline and generation, and commit content, revision, and receipt in one
 transaction. Every account request is authorized from the database session, bound to
 the client's session ID, origin-checked for writes, and answered `no-store`.
+
+## Public PDF releases
+
+Signed-in owners can publish a resume's compiled PDF at an unlisted public link.
+Guests and unconfigured deployments never publish; `/pdf/*` answers 404 there.
+
+- **Explicit, reviewed release.** **Release…** in the PDF preview header is enabled
+  only while the preview is Current for saved account content. The dialog shows the
+  resume, language, saved revision, and whether a new link is created, warns that
+  unlisted is not private (the PDF title metadata includes your name and the resume
+  name), and uploads only after **Release**. Drafts, typing, other resumes, and
+  workspace data are never published.
+- **Server checks.** The server re-renders the resume from the committed account
+  workspace and accepts the PDF only when the workspace generation and output
+  fingerprint match, the resume is ready, the template matches, and the file is a PDF
+  of at most 4 MiB. Each release records its content (revision, generation,
+  fingerprint, source SHA-256), locale, template, compiler runtime (locked engine and
+  format), layout settings SHA-256, and PDF SHA-256. Retrying an interrupted upload
+  reuses its operation ID and never publishes twice; the prepared request lives in
+  the tab, so after a reload the release list shows whether it landed.
+- **URLs.** Each resume has one link with a 256-bit random token:
+  `/pdf/<token>` serves the latest release and `/pdf/<token>/<number>` serves one
+  immutable release. A release advances latest by default; untick **Make this the
+  latest version** to publish only its numbered link. Storing the release and moving
+  latest happen in one transaction, so a failed release leaves existing links unchanged.
+- **Management** in Settings › Public PDFs: copy links, **Make latest** (rollback or
+  advance), **Revoke** / **Restore** a numbered release, **Delete** a release (its
+  bytes are removed), and **Revoke link** (deletes the link and all of its releases;
+  releasing again creates a new token). The current latest cannot be revoked or
+  deleted until another release is made latest. Links for deleted resumes stay
+  listed until revoked.
+- **Automatic release** is an opt-in per link, off by default. While the resume's
+  preview is open in a visible signed-in tab, each confirmed Save that changes its
+  PDF compiles (even with automatic preview refresh off) and becomes the latest
+  release; output identical to the latest is skipped. Closed tabs, hidden tabs, and
+  full-width pages such as Overview (which hide the preview) publish nothing until
+  the preview is shown and compiles.
+- **Serving and freshness.** Public responses are `application/pdf`, inline with the
+  release file name (`<name>-<locale>-v<number>.pdf`), `Cache-Control: no-store`,
+  `ETag`, `X-Content-Type-Options: nosniff`, `X-Robots-Tag: noindex, nofollow`, and
+  `Referrer-Policy: no-referrer`. Nothing is cached, so new latest releases,
+  rollbacks, and revocations apply on the next request. Unknown, revoked, and
+  deleted links share one 404. Unlisted links are not authentication.
+- **Retention.** Releases are kept until you delete them; nothing is pruned
+  automatically. Limits: 10 links, 25 releases per link, 50 MiB of PDFs per account,
+  4 MiB per PDF. Releasing past a limit is refused with an explanation.
+
+Each public download costs one database read and no session lookup. Workspace
+backups and recovery exports never include link tokens or release data.
 
 ## Data formats and limits
 
@@ -636,7 +692,9 @@ workspaces stay within one request because the workspace ceiling (4 MiB) is belo
 Vercel's 4.5 MB request-body limit; an unusually large single-scope Save can still
 be rejected as too large and stays recoverable on the device. The served SwiftLaTeX engine is AGPL-3.0; `/compiler/SOURCE.txt` and
 the `license-*` files identify the corresponding source in this repository.
-Publication and hosted acceptance remain future scope.
+Public PDF releases need the same account configuration and no extra
+credentials; PDFs are stored in the account database. Hosted acceptance remains
+future scope.
 
 Guests send no resume content to a backend; signed-in Saves send committed content
 to the account API only on explicit Save, replacement, or import. Compiler maintenance is

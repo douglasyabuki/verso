@@ -25,6 +25,8 @@ model User {
   workspace     AccountWorkspace?
   previous      AccountPreviousWorkspace?
   operations    AccountOperation[]
+  publicLinks   PublicLink[]
+  releases      PublicRelease[]
 
   @@map("user")
 }
@@ -122,4 +124,58 @@ model AccountOperation {
   @@id([userId, operationId])
   @@index([userId, createdAt])
   @@map("account_operation")
+}
+
+// Public PDF releases. A link owns one unguessable token for one resume; its
+// releases are immutable PDFs addressed by per-link number (pinned) or through
+// the link's latest pointer. Revoking a link deletes it with its releases, so
+// every URL under its token stops working and its storage is freed.
+model PublicLink {
+  id              String          @id
+  userId          String
+  token           String          @unique
+  resumeId        String
+  resumeName      String
+  autoRelease     Boolean         @default(false)
+  latestReleaseId String?
+  nextNumber      Int             @default(1)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  releases        PublicRelease[]
+
+  @@unique([userId, resumeId])
+  @@map("public_link")
+}
+
+model PublicRelease {
+  id             String     @id
+  linkId         String
+  userId         String
+  number         Int
+  operationId    String
+  requestHash    String
+  resumeId       String
+  workspaceId    String
+  revision       Int
+  generation     Int
+  fingerprint    String
+  sourceSha256   String
+  locale         String
+  templateId     String
+  runtimeId      String
+  settingsSha256 String
+  pdfSha256      String
+  bytes          Int
+  fileName       String
+  pdf            Bytes
+  revokedAt      DateTime?
+  createdAt      DateTime   @default(now())
+  link           PublicLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([linkId, number])
+  @@unique([userId, operationId])
+  @@index([userId])
+  @@map("public_release")
 }

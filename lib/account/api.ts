@@ -21,6 +21,7 @@ const STATUS: Record<AccountErrorCode, number> = {
   replaced: 409,
   operation_mismatch: 409,
   not_found: 404,
+  quota_exceeded: 409,
   unavailable: 503,
 };
 

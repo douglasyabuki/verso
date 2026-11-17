@@ -24,6 +24,7 @@ import {
   readGuestWorkspace,
   SignOutConfirmation,
 } from "@/components/account/account-panel";
+import { ReleasesPanel } from "@/components/account/releases-panel";
 import {
   careerEntryLabel,
   CareerEntryList,
@@ -42,6 +43,7 @@ import { CommittedOutputView } from "@/components/career/committed-output";
 import { ConflictPanel } from "@/components/career/conflict-panel";
 import { LayoutFields } from "@/components/career/layout-editor";
 import { libraryDestinationKind } from "@/components/career/library-navigation";
+import { ReleaseControl } from "@/components/career/release-dialog";
 import {
   CareerResumeCollection,
   ResumeActionsMenu,
@@ -105,7 +107,9 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useAccountActions } from "@/hooks/account/use-account-actions";
+import { useAutomaticRelease } from "@/hooks/output/use-automatic-release";
 import { useCommittedPreview } from "@/hooks/output/use-committed-preview";
+import { useReleases } from "@/hooks/releases/use-releases";
 import { draftConflict } from "@/lib/career/conflict";
 import {
   layoutAppearance,
@@ -1015,11 +1019,32 @@ export function CareerWorkspace({
         destination,
       ),
   );
+  const releases = useReleases({
+    session: account?.session,
+    onSessionInvalid: () => account?.store.invalidate(),
+  });
+  const accountMode = state.storageMode === "account";
+  const releaseLinks = releases?.state.list?.links;
+  const automaticResumeIds = useMemo(
+    () =>
+      accountMode
+        ? (releaseLinks ?? [])
+            .filter((link) => link.autoRelease)
+            .map((link) => link.resumeId)
+        : [],
+    [accountMode, releaseLinks],
+  );
   const preview = useCommittedPreview({
     head: state.head,
     preferences: state.preferences,
     activeResumeId: activeResume?.id,
+    automaticResumeIds,
   });
+  useAutomaticRelease({ preview, releases, accountMode });
+  const currentOutput =
+    preview.state.output && preview.state.output.key === preview.key
+      ? preview.state.output
+      : null;
   const contentLanguage =
     activeResume?.language ||
     language ||
@@ -1822,6 +1847,12 @@ export function CareerWorkspace({
               />
             )}
           </AccountPanel>
+        ) : panel === "releases" ? (
+          <ReleasesPanel
+            releases={releases}
+            session={account?.session}
+            resumes={documentValue?.resumes ?? []}
+          />
         ) : null}
       </SettingsDialog>
       <SignOutConfirmation
@@ -1944,6 +1975,15 @@ export function CareerWorkspace({
                 visible={visible}
                 showSelector={!activeResume}
                 onIssue={openOutputIssue}
+                actions={
+                  state.head && (
+                    <ReleaseControl
+                      releases={accountMode ? releases : null}
+                      output={currentOutput}
+                      workspaceId={state.head.workspaceId}
+                    />
+                  )
+                }
               />
             )}
           >

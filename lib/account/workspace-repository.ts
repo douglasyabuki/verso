@@ -25,7 +25,7 @@ import type { CareerDocument } from "@/types-and-constants/career";
 
 type Transaction = Prisma.TransactionClient;
 
-const TRANSACTION = { maxWait: 10_000, timeout: 20_000 };
+export const TRANSACTION = { maxWait: 10_000, timeout: 20_000 };
 
 /** Typed account storage failure mapped to an HTTP status by the API layer. */
 export class AccountStoreError extends Error {
@@ -53,7 +53,10 @@ export function requestHash(value: string): string {
  * @returns Completion; throws `unauthorized` when the user no longer exists.
  * @example await lockOwner(tx, userId)
  */
-async function lockOwner(tx: Transaction, userId: string): Promise<void> {
+export async function lockOwner(
+  tx: Transaction,
+  userId: string,
+): Promise<void> {
   const rows = await tx.$queryRaw<{ id: string }[]>`
     SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`;
   if (rows.length === 0)

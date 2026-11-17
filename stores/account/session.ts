@@ -189,7 +189,13 @@ export class AccountSessionStore {
     returnPath: string,
   ): Promise<string | null> {
     if (!this.client) return "Sign-in is not available.";
-    const callbackURL = safeReturnPath(returnPath);
+    const destination = new URL(
+      safeReturnPath(returnPath),
+      "https://verso.invalid",
+    );
+    destination.searchParams.delete("error");
+    destination.searchParams.delete("error_description");
+    const callbackURL = `${destination.pathname}${destination.search}`;
     const result = await this.client.signIn
       .social({ provider, callbackURL, errorCallbackURL: callbackURL })
       .catch(() => null);

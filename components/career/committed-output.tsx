@@ -2,7 +2,7 @@
 
 import { cn } from "cn";
 import { FileText, RefreshCw } from "lucide-react";
-import { memo, useEffect, useState } from "react";
+import { memo, type ReactNode, useEffect, useState } from "react";
 
 import { ResumeReadiness } from "@/components/career/resume-readiness";
 import PdfPreview from "@/components/output/lazy-pdf-preview";
@@ -63,7 +63,7 @@ export const CommittedOutput = memo(function CommittedOutput({
 /** Render committed preview state without owning compiler or URL lifecycles.
  * When not visible, the PDF viewer is unmounted so its document, canvases, and
  * worker are released while the coordinator retains the PDF and in-flight job.
- * @param props Coordinator-backed preview, visibility, selector flag, and issue navigation.
+ * @param props Coordinator-backed preview, visibility, selector flag, issue navigation, and optional header actions.
  * @returns Preview header, retained-PDF label, viewer, and Issues footer.
  * @example <CommittedOutputView preview={preview} visible onIssue={openIssue} />
  */
@@ -72,11 +72,14 @@ export const CommittedOutputView = memo(function CommittedOutputView({
   visible,
   showSelector,
   onIssue,
+  actions,
 }: {
   preview: CommittedPreview;
   visible: boolean;
   showSelector: boolean;
   onIssue: (target: ResumeOutputTarget) => void;
+  /** Optional header actions, such as the account Release control. */
+  actions?: ReactNode;
 }) {
   const { coordinator, state, head, active, source, sourceError, key } =
     preview;
@@ -107,21 +110,24 @@ export const CommittedOutputView = memo(function CommittedOutputView({
       <div className="flex shrink-0 flex-col gap-3 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-medium">PDF preview</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={!source || state.active === key || state.queued === key}
-            aria-busy={pending}
-            onClick={compile}
-          >
-            <RefreshCw
-              aria-hidden="true"
-              data-icon="inline-start"
-              className={cn(pending && "motion-safe:animate-spin")}
-            />
-            {pending ? "Refreshing…" : "Refresh"}
-            <span className="sr-only"> preview</span>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {actions}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!source || state.active === key || state.queued === key}
+              aria-busy={pending}
+              onClick={compile}
+            >
+              <RefreshCw
+                aria-hidden="true"
+                data-icon="inline-start"
+                className={cn(pending && "motion-safe:animate-spin")}
+              />
+              {pending ? "Refreshing…" : "Refresh"}
+              <span className="sr-only"> preview</span>
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground">
           {preview.automaticRefresh ? "Automatic refresh" : "Manual refresh"} ·

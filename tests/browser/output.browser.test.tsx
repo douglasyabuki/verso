@@ -1,8 +1,12 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { CommittedOutput } from "@/components/career/committed-output";
+import {
+  CommittedOutput,
+  CommittedOutputView,
+} from "@/components/career/committed-output";
 import { ResumeOverview } from "@/components/career/resume-workspace";
+import { useCommittedPreview } from "@/hooks/output/use-committed-preview";
 import { createCareerDocument } from "@/lib/career/model";
 import type { CareerHead } from "@/stores/career/persistence";
 import { devicePreferenceDefaults } from "@/types-and-constants/settings";
@@ -509,6 +513,69 @@ it("refreshes automatically only after committed output changes while visible wh
     await expect
       .element(screen.getByText(/Last successful preview/))
       .toHaveTextContent(/Renamed application.*revision 9.*Current/);
+  } finally {
+    await screen.unmount();
+  }
+});
+
+it("forces automatic refresh for a resume that releases automatically, even when preferences change identity on Save", async () => {
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:auto-release");
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  runtime.compile.mockResolvedValue({
+    bytes: new Uint8Array([37, 80, 68, 70]),
+  });
+  function Preview({
+    value,
+    ids,
+    preferences,
+  }: {
+    value: CareerHead;
+    ids: string[];
+    preferences: typeof devicePreferenceDefaults;
+  }) {
+    const preview = useCommittedPreview({
+      head: value,
+      preferences,
+      automaticResumeIds: ids,
+    });
+    return (
+      <CommittedOutputView
+        preview={preview}
+        visible
+        showSelector
+        onIssue={() => {}}
+      />
+    );
+  }
+  // A fresh preferences object with each Save, as the controller publishes.
+  const view = (value: CareerHead, ids: string[]) => (
+    <Preview
+      value={value}
+      ids={ids}
+      preferences={{ ...devicePreferenceDefaults }}
+    />
+  );
+  const committed = head();
+  const id = committed.document.resumes[0].id;
+  const screen = await render(view(committed, [id]));
+  try {
+    await expect
+      .element(screen.getByText(/Automatic refresh · Saved content only/))
+      .toBeVisible();
+    const changed = structuredClone(committed);
+    changed.revision += 1;
+    changed.document.resumes[0].name = "Released application";
+    await screen.rerender(view(changed, [id]));
+    await expect.poll(() => runtime.compile.mock.calls.length).toBe(1);
+    const manual = structuredClone(changed);
+    manual.revision += 1;
+    manual.document.resumes[0].name = "Manual again";
+    await screen.rerender(view(manual, []));
+    await expect
+      .element(screen.getByText(/Manual refresh · Saved content only/))
+      .toBeVisible();
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    expect(runtime.compile).toHaveBeenCalledTimes(1);
   } finally {
     await screen.unmount();
   }

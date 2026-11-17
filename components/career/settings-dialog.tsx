@@ -2,6 +2,7 @@
 
 import {
   Database,
+  Globe,
   Languages,
   Palette,
   Settings2,
@@ -70,6 +71,7 @@ const icons = [
   SlidersHorizontal,
   Database,
   Settings2,
+  Globe,
 ];
 
 /** Render immediate numeric preferences, retaining malformed input until corrected.
@@ -375,9 +377,11 @@ export function SettingsDialog({
                   ? "Workspace backups contain saved content; recovery is separate."
                   : panel === "account"
                     ? "Sign-in for this browser. Signing in never moves or merges workspaces."
-                    : workspaceSettings
-                      ? "Included in workspace backups. Changes require Save."
-                      : "This browser. Device preferences apply immediately and are excluded from backups."}
+                    : panel === "releases"
+                      ? "Unlisted public links to released PDFs, stored in your account."
+                      : workspaceSettings
+                        ? "Included in workspace backups. Changes require Save."
+                        : "This browser. Device preferences apply immediately and are excluded from backups."}
               </p>
             </header>
             <div
