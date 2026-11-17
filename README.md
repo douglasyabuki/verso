@@ -27,7 +27,7 @@ saved; the preview's Issues list explains missing wording that blocks generation
 
 ## Technology
 
-Next.js 16.4.2, React 19.3, TypeScript, Tailwind CSS 4, and shadcn/Base UI form the
+Next.js 16.4.6, React 19.3, TypeScript, Tailwind CSS 4, and shadcn/Base UI form the
 application. Guests use transactional IndexedDB; configured accounts use Better
 Auth and Prisma 7 with PostgreSQL. A pinned, self-hosted SwiftLaTeX WebAssembly
 bundle generates PDFs locally, and PDF.js displays them.

@@ -35,7 +35,7 @@ limitations. Keep it current when shipped behavior changes.
 ## Toolchain and skills
 
 - Use npm and `package-lock.json`; Node is pinned by `.nvmrc` to 24.22.1
-  (`engines`: 24.x from that patch). Preserve selected dependencies: Next.js 16.4.2,
+  (`engines`: 24.x from that patch). Preserve selected dependencies: Next.js 16.4.6,
   React 19.3, Tailwind 4, and Prisma 7.10.1. Check the manifest, lockfile, and
   installed declarations before using examples or changing versions.
 - Follow the generated Next.js guidance above before framework changes. If bundled
