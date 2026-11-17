@@ -8,11 +8,11 @@ process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.join(
   ".cache/ms-playwright",
 );
 
-const baseURL = "http://localhost:3100";
+// Use IPv4 loopback consistently so readiness cannot find an unrelated IPv6 server.
+const baseURL = "http://127.0.0.1:3100";
 
 export default defineConfig({
-  testDir: "./tests/e2e",
-  testIgnore: /workspace-performance\.spec\.ts/,
+  testDir: "./tests/e2e/guest",
   fullyParallel: true,
   workers: 2,
   forbidOnly: Boolean(process.env.CI),
@@ -27,17 +27,17 @@ export default defineConfig({
     {
       name: "firefox",
       use: { ...devices["Desktop Firefox"] },
-      testIgnore: /(storage-quota|workspace-performance)\.spec\.ts/,
+      testIgnore: /storage-quota\.spec\.ts/,
     },
     {
       name: "webkit",
       use: { ...devices["Desktop Safari"] },
-      testIgnore: /(storage-quota|workspace-performance)\.spec\.ts/,
+      testIgnore: /storage-quota\.spec\.ts/,
     },
   ],
   webServer: {
     command:
-      "npm run build && npm run start -- --hostname localhost --port 3100",
+      "npm run build && npm run start -- --hostname 127.0.0.1 --port 3100",
     url: baseURL,
     // Guest acceptance must stay guest-only even when local account env exists.
     // Explicit process values take precedence over Next's .env files.
