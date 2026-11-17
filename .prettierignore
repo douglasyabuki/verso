@@ -22,6 +22,8 @@ bun.lock
 public/compiler/
 temp/
 output/
+!tests/**/output/
+!tests/**/output/**
 tools/compiler-proof/licenses/
 .env*
 # Product requirements are deliberately outside this adoption pass.

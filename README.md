@@ -108,19 +108,21 @@ third-party notices must remain available with the served compiler assets; see
 
 ## Development commands
 
-| Command                       | Purpose                                                  |
-| ----------------------------- | -------------------------------------------------------- |
-| `npm run format:check`        | Check formatting                                         |
-| `npm run lint`                | ESLint and import ordering                               |
-| `npm run typecheck`           | Generate Prisma/Next route types and check TypeScript    |
-| `npm run build` / `npm start` | Build and serve production output                        |
-| `npm run test:unit`           | Vitest Node domain and validation tests                  |
-| `npm run test:db`             | Account/API tests against isolated PGlite                |
-| `npm run test:browser`        | Real Chromium component and IndexedDB tests              |
-| `npm run test:e2e`            | Production guest flows in Chromium, Firefox, and WebKit  |
-| `npm run test:e2e:accounts`   | Isolated account flows in all three engines              |
-| `npm test`                    | Run unit, database, browser, guest E2E, then account E2E |
-| `npm run test:measure`        | Separate production performance measurements             |
+| Command                         | Purpose                                                  |
+| ------------------------------- | -------------------------------------------------------- |
+| `npm run format:check`          | Check formatting                                         |
+| `npm run lint`                  | ESLint and import ordering                               |
+| `npm run typecheck`             | Generate Prisma/Next route types and check TypeScript    |
+| `npm run build` / `npm start`   | Build and serve production output                        |
+| `npm run test:unit`             | Vitest Node domain and validation tests                  |
+| `npm run test:db`               | Account/API tests against isolated PGlite                |
+| `npm run test:browser`          | Real Chromium component and IndexedDB tests              |
+| `npm run test:e2e`              | Core production guest flows in Chromium                  |
+| `npm run test:e2e:accounts`     | Core isolated account flows in Chromium                  |
+| `npm run test:e2e:all`          | Guest flows in Chromium, Firefox, and WebKit             |
+| `npm run test:e2e:accounts:all` | Account flows in Chromium, Firefox, and WebKit           |
+| `npm test`                      | Run unit, database, browser, guest E2E, then account E2E |
+| `npm run test:measure`          | Separate production performance measurements             |
 
 Before browser tests, install the pinned engines into the shared test-browser path:
 
@@ -135,10 +137,19 @@ $env:PLAYWRIGHT_BROWSERS_PATH = ".cache/ms-playwright"
 npx playwright install chromium firefox webkit
 ```
 
-E2E commands build fresh production servers on ports 3100 (guest) and 3101
+E2E commands build fresh production servers on `127.0.0.1` ports 3100 (guest) and 3101
 (accounts). Tests use isolated origins/databases and do not require real OAuth
 credentials. Run focused checks for the behavior being changed; documentation
 changes generally need only formatting and link/configuration validation.
+
+Tests are grouped by runner, then feature under `tests/unit/`, `tests/db/`,
+`tests/browser/`, and `tests/e2e/{guest,accounts}/`. Shared harnesses live in
+`tests/support/`; static fixtures live in `tests/fixtures/`. The core suite protects
+data integrity, security, resume output, and essential user journeys, with each
+rule primarily tested at its owning layer. Production performance scenarios live
+in `tests/measurements/` and run only through `test:measure`. `npm test` uses Chromium
+for E2E; the `:all` commands opt into the three-engine matrix. Real OAuth and
+concurrent PostgreSQL row locking remain separate acceptance checks.
 
 ## Limitations and data safety
 

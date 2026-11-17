@@ -7,7 +7,7 @@ process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.join(
   ".cache/ms-playwright",
 );
 
-const baseURL = "http://localhost:3101";
+const baseURL = "http://127.0.0.1:3101";
 
 /** Test-only values for an isolated database; not credentials for any real service.
  * OAuth providers are never contacted: specs seed database sessions directly. */
@@ -22,7 +22,7 @@ export const accountsTestEnv = {
 };
 
 export default defineConfig({
-  testDir: "./tests/e2e-accounts",
+  testDir: "./tests/e2e/accounts",
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
@@ -47,7 +47,7 @@ export default defineConfig({
     },
     {
       command:
-        "npm run build && npm run start -- --hostname localhost --port 3101",
+        "npm run build && npm run start -- --hostname 127.0.0.1 --port 3101",
       url: baseURL,
       env: accountsTestEnv,
       reuseExistingServer: false,

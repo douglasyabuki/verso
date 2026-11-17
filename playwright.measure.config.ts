@@ -6,6 +6,7 @@ import application from "./playwright.config";
 // from routine regression runs. No retries or skipped behavioral cases.
 export default defineConfig({
   ...application,
+  testDir: "./tests/measurements",
   testIgnore: [],
   testMatch: /workspace-performance\.spec\.ts/,
   outputDir: "test-results/measure",
