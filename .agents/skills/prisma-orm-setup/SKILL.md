@@ -51,6 +51,10 @@ Run the installed CLI through the project's package manager:
 prisma skills sync
 ```
 
+This is a conditional Prisma 8 workflow; Verso currently uses Prisma 7 and does
+not vendor the `prisma-8` skill. Do not expect that directory before an authorized
+Prisma 8 setup and sync.
+
 Then **read** the synced `prisma-8/SKILL.md`, for example `.agents/skills/prisma-8/SKILL.md`, and follow its preconditions and selected references. Syncing alone does not load the instructions. If the package-owned guidance cannot be loaded, report the blocker. Continue with step 6.
 
 ## 5. Set up or repair an earlier version

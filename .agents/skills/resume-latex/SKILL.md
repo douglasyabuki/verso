@@ -5,11 +5,16 @@ description: Adapt or maintain Verso's supported LaTeX resume template, pinned b
 
 # Verso LaTeX maintenance
 
-Read `docs/compilation-proof.md` before changing the compiler or bundle and
+Paths below are relative to the repository root. Read
+[compiler maintenance](../../../docs/compilation-proof.md) before changing the compiler or bundle and
 `lib/career/output.ts` before changing active generated source, plus
 `lib/output/template.ts` and `lib/output/encoding.ts` for template assembly and
 escaping. The reference is the
-owner's Overleaf project/PDF pairs under `temp/`, not a newly designed template.
+owner's optional private Overleaf ZIP/PDF pairs, supplied under `temp/` for the
+independent proof. These files are not distributed with a checkout; their absence
+does not block ordinary compiler asset preparation. Use fictional fixtures for
+automated checks and report private-reference visual comparison as unavailable
+when the owner has not supplied those inputs.
 
 - The active application uses workspace schema 2, one language per resume, and
   extensible content languages. Schema-1 modules are unmounted reference assets;
@@ -26,7 +31,7 @@ owner's Overleaf project/PDF pairs under `temp/`, not a newly designed template.
   versions on import.
 - `npm run compiler:prepare` verifies archives/resources in
   `tools/compiler-proof/resources.lock.json`, builds local assets, and extracts
-  reference inputs. `npm run compiler:proof` serves the independent demonstration
+  private reference inputs only when supplied. `npm run compiler:proof` serves the independent demonstration
   on localhost:3199. Workers must never fall back to remote package/font fetching.
 - `npm run build` runs `compiler:build` (`prepare.mjs --assets-only --if-needed`),
   which regenerates the gitignored `public/compiler/` for Vercel and local builds.

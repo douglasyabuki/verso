@@ -8,318 +8,116 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Application agent guidance
+# Working in Verso
 
-Active configurations and agent skills live at the application root. This file records lasting engineering and product contracts; README.md records only current code behavior, limitations, setup, and available checks; keep plans, outstanding work, acceptance checklists, and dated verification reports out of it. Keep both current as work ships. New product scope requires user direction.
+Verso is a career-information and resume editor with explicit Saves, guest
+IndexedDB storage, optional PostgreSQL accounts, and browser-generated PDFs.
+Read [README.md](README.md) for setup, configuration, commands, and user-visible
+limitations. Keep it current when shipped behavior changes.
 
-Keep maintained artifacts self-contained: state applicable behavior, contracts, limitations, and instructions directly in README.md, agent guidance, skills, and permanent reference docs. Do not rely on phase numbers or temporary requirements, evidence, or handoff files for essential context. Those planning files will be deleted after implementation; preserve lasting guidance and outstanding acceptance in maintained artifacts before removing them. Links to maintained source or permanent references may supplement that context.
+## Instruction scope and references
 
-## Framework and dependencies
+- Read applicable nested `AGENTS.md` files before editing a directory. Root
+  instructions apply repository-wide; closer instructions specialize their subtree.
+  `CLAUDE.md` imports this file; preserve that integration.
+- Keep root instructions actionable and global. Put directory-specific rules in
+  nested instructions and detailed technical contracts in permanent `docs/`
+  references. Do not make maintained guidance depend on temporary plans or reports.
+- Consult [architecture](docs/architecture.md) for state ownership, resume semantics,
+  navigation, output, and capacity; [Save and recovery](docs/recovery-files.md) for
+  transactions, portable data, cleanup, and replacement; and
+  [accounts and public PDFs](docs/accounts-and-public-pdfs.md) for session security,
+  synchronization, and publication. Preserve these contracts when changing behavior.
+- Consult [compiler maintenance](docs/compilation-proof.md) for the pinned bundle
+  and [brand identity](docs/brand-identity.md) for application presentation.
+  Historical observations are not current acceptance evidence.
 
-- Read the relevant installed Next.js guide in `node_modules/next/dist/docs/` before framework code changes. Resolve Next.js from the application package in a monorepo. If bundled guides are absent, consult official docs for the installed release. Do not assume APIs or conventions from memory. Preserve Next.js-generated agent guidance when merging this file.
-- Inspect the manifest, lockfile, runtime, and installed declarations before adopting examples. Use the existing package manager. Keep dependency changes scoped and preserve the application's selected versions.
-- Load `.agents/skills/nextjs-oauth-persistence/SKILL.md` for auth, protected data, and persistence work. Load `prisma-orm-setup` before Prisma setup or connection repair; the bundled CLI/client references target Prisma 7 and do not define a new app's default version.
-- Load `vitest-testing` when choosing or implementing regression checks, `react-state-performance` for rendering/state investigations, and `shadcn` only if that UI system is used. Read conditional Prisma migration/adapter skills only when their work applies.
-- Load `.agents/skills/dnd-kit/SKILL.md` for drag-and-drop work and verify its guidance against the installed package declarations.
+## Toolchain and skills
 
-## Code organization and conventions
+- Use npm and `package-lock.json`; Node is pinned by `.nvmrc` to 24.22.1
+  (`engines`: 24.x from that patch). Preserve selected dependencies: Next.js 16.4.6,
+  React 19.3, Tailwind 4, and Prisma 7.10.1. Check the manifest, lockfile, and
+  installed declarations before using examples or changing versions.
+- Follow the generated Next.js guidance above before framework changes. If bundled
+  guides are absent, use official documentation for the installed release.
+  Preserve `next.config.ts` settings and both generated instruction blocks.
+- Project skills live in `.agents/skills/`. Load `nextjs-oauth-persistence` for
+  auth/protected-data/persistence work, and `prisma-orm-setup` for Prisma setup or
+  connection repair. Use version-appropriate Prisma references; do not upgrade
+  this application to a new major as part of setup or repair.
+- Load `vitest-testing` when choosing or authoring regression checks,
+  `react-state-performance` for state/rendering investigations, `dnd-kit` for
+  sorting, `resume-latex` for PDF/template/compiler work, and `shadcn` for that UI
+  system. Load specialized Prisma migration/adapter skills only when applicable.
+- Skill references may describe newer library releases. Installed versions and
+  declarations take precedence. Skills are excluded from automatic formatting
+  and linting; preserve local customizations and validate their references when edited.
 
-- Before working in a folder, read and follow its applicable `AGENTS.md` instructions, including those in parent folders. Root guidance applies throughout the repository; more specific folder guidance applies within its scope.
-- Keep routes and layouts in `app/` or `src/app/`, following the existing layout. Keep domain rules independent of React, transport, and persistence. Keep credentials, auth configuration, and database clients in server-only modules. Put only necessary interactive code behind client boundaries.
-- Keep reusable hooks directly in `hooks/` and feature-specific hooks in feature subfolders. Name a hook's options type `<HookWithoutUse>Options`.
-- Leave a blank line after imports and between declarations. Use the formatter and import-sort rules rather than manual formatting conventions that conflict with tooling.
-- Document custom hooks and library functions with one JSDoc block describing purpose, parameters, meaningful return values/alternatives, and a useful example. Keep TypeScript types in signatures.
-- Keep observable application state and persistence in `stores/`, shared contracts and declarative defaults in `types-and-constants/`, and external-library declarations in `types/`. Keep private implementation types local and avoid runtime cycles through schema-derived contracts.
-- Preserve existing UI primitives and accessible interactions. Choose client state tools based on coordination and subscription needs; persistence alone does not justify a global store.
+## Architecture boundaries
 
-## Validation
+- Root `app/` owns routes/layouts (`@/*` resolves from the repository root).
+  `app/page.tsx` mounts `AccountRoot`, which selects the owner and mounts the active
+  career workspace. Keep server credentials, auth, and database clients server-only;
+  add client boundaries only where interaction requires them.
+- Keep pure domain rules in `lib/`, observable state and persistence in `stores/`,
+  interaction hooks in `hooks/`, presentation in `components/`, and React workflow
+  coordination in `contexts/`. Shared contracts/defaults belong in
+  `types-and-constants/`; external-library declarations belong in `types/`.
+  Follow nested instructions for local conventions and documentation requirements.
+- Active schema-2 rules live in `lib/career/`; `stores/career/controller.ts` owns
+  committed state, independent form/order drafts, recovery, and bounded history.
+  Reuse presentation without mounting retired schema-1 providers. Retained
+  `lib/resume/`, `stores/workspace/`, and old contexts are not active architecture.
+- Preserve one writable state owner. Do not copy store snapshots into contexts or
+  hooks, or introduce a global store solely to persist component-local state.
 
-- Use the smallest check that verifies the changed contract. Add tests for meaningful behavior and regressions, not trivial edits or implementation-shaped assertions.
-- Run relevant non-watch tests and confirm file/test counts. Check types for changed TypeScript and lint changed code. Use a production build for framework, bundling, server/client, and deployment changes.
-- Test database behavior against isolated test infrastructure when database correctness is the contract. Mocked APIs do not prove real OAuth or durable writes. Never point destructive test setup at shared or production data.
-- Report checks actually executed, failures, skipped tests, and blocked infrastructure. Documentation-only changes need link/config validation rather than the whole application suite.
+## Data integrity and security
 
-## Verso adoption decisions
+- Keep drafts/recovery separate from committed content, history, and preview inputs.
+  Explicit Save validates and commits one scope atomically; failures retain drafts.
+  Incomplete valid content may be saved independently of PDF readiness.
+- Recheck generation and scope baselines at commit; unrelated edits must not conflict.
+  Prepare immutable requests and stable operation IDs before dispatch. Retry the
+  same request; unknown outcomes require receipt checks or reconciliation, never
+  blind replay. Cross-tab notifications do not replace authoritative transactions.
+- Preserve exact-version recovery cleanup and protected receipts. Never expire
+  unresolved drafts, truncate recovery, or silently fall back to another storage
+  mechanism. Tab-only commits require an explicit choice and visible disclosure.
+- Replacement/rollback must atomically adopt content and preserve one previous
+  workspace, rechecking the reviewed revision. Keep recovery separate and invalidate
+  stale Saves/previews. Do not implement whole-document replacement as an edit scope.
+- Only workspace schema 2, recovery format 1, and the current complete template/layout
+  model are supported. Reject unsupported imports without writes; do not add schema-1
+  conversion, silent reseeding, resets, or automatic storage clearing.
+- Keep guest/account data isolated. Derive private ownership from the verified
+  server session on every request. Account Save success requires server acknowledgment;
+  typing remains local recovery. Preserve session/origin checks and atomic receipts.
+- Render committed effective content only; use safe text encoding and verified
+  language capabilities. Saving, recovery, compilation, backup, and release status
+  are distinct. Public PDFs require reviewed publication or explicit automatic-release
+  opt-in; preserve immutable releases, quotas, and uncached revocation behavior.
 
-- Use npm, the existing package-lock.json, and Node 24.22.1 (`.nvmrc`; Vercel uses 24.x). The application uses Next.js 16.4.2, React 19.3, Tailwind 4, TypeScript, and root app/ routes; @/* resolves from the repository root.
-- Preserve next.config.ts framework and Turbopack settings. Generate route helpers with next typegen before standalone type checks.
-- The active app provides career forms, extensible languages, separate recovery, IndexedDB Saves, schema-2 backups, and minimal imported-resume output; the former schema-1 editor is unmounted. README.md describes implemented capabilities only. Vercel deployment of the guest-only app is active: `npm run build` regenerates the gitignored `public/compiler/` through `tools/compiler-proof/prepare.mjs` (locked, integrity-checked downloads). Optional GitHub/Google accounts with Prisma Postgres persistence are active when configured (see "Account adoption decisions"); unconfigured deployments stay guest-only. Account sync and public PDF releases are active for configured accounts (see "Public release decisions"). Public APIs, portfolio/LinkedIn integration, and hosted acceptance remain future scope until activated. Automated behavior and regression tests are in scope.
-- Authenticated storage is Prisma/Postgres with Better Auth GitHub/Google; see "Account adoption decisions". Add account modules only with working behavior and tests; do not add empty modules or unused adapters. Load `nextjs-oauth-persistence` before changing auth or account storage.
-- Run npm run format:check, npm run lint, npm run typecheck, and npm test for tooling changes. npm test runs unit, database (`test:db`, isolated in-process PGlite), and browser suites, builds and starts a fresh production server on localhost:3100 for Chromium, Firefox, and WebKit E2E coverage, then runs account E2E (`test:e2e:accounts`) against an isolated database and a second production server on :3101; this is not complete product acceptance coverage.
-- Vitest Node/browser projects are configured with target behavior coverage. Add meaningful cases alongside changes. Do not add empty suites or passWithNoTests.
-- .agents/skills/ is excluded from automatic formatting/linting. Preserve customizations if updating skills later.
-- See README.md for setup and verification commands. Current tooling requires no external credentials.
+## Validation and maintenance
 
-## Accepted target architecture
-
-- Preserve the contracts in this file when extending the app. Target capabilities in this file and deferred acceptance in docs/verification.md are not claims of delivered or verified behavior. Deferred verification does not block subsequent user-authorized development; do not silently count it as passed.
-- One language per resume; English UI; extensible content languages with verified English/Portuguese PDF output. Defer translation tracking, review acknowledgments, groups, and user-defined field types. Built-in fields and custom sections remain in scope.
-- Language deactivation hides creation choices while retaining wording and usable existing resumes; activation, interface language, and verified PDF support are separate. Use Create copy in another language with destination career wording, copied selection/order, compatible layout, and font/rendering warnings; no silent wording fallback or identical-appearance promise. Defer in-place language changes and permanent language-wording erasure.
-- Career details own shared facts and reusable wording. All display wording can be customized per resume; shared edits never overwrite customizations. Use career wording removes the override. Starters copy empty structure/default visibility/layout; presets copy appearance, without live inheritance.
-- Shared career content supports archive/restore only: hide archived content from new-selection lists, preserve existing resume output, label selections Archived in the editor, and allow per-resume removal. Defer permanent deletion until references, customizations, and durable recovery are defined; undo alone is not durable recovery. Resume deletion requires confirmation and never deletes shared career content.
-- Explicit entry/form Save/Cancel includes selection and sorting. Drafts and recovery must not mutate committed workspace state, undo history, or preview inputs. Save permits incomplete content, rejects malformed values, and retains failed drafts. Dirty navigation offers Cancel/Discard/Save. Durable routes support reload and Back/Forward.
-- Dirty-form keyboard undo/redo stays within the draft and never falls through to workspace history. Workspace Undo/Redo requires resolving the draft through Cancel/Discard/Save and then a separate history invocation; explain that Undo after Save undoes that save. A successful Save creates one atomic workspace step; Cancel/Discard creates none, and recovery restores an uncommitted draft.
-- Draft recovery tracks scope, baseline values, and starting revision; unrelated changes alone do not cause conflicts. Offer compare/reconcile/discard recovered draft/export recovery, retaining both versions until resolution succeeds. Save atomically rechecks current state and uses a stable operation ID across interrupted-response checks/retries without duplicate commits or history steps. Conflicts and failed reconciliation retain the recoverable draft and current committed content.
-- Unresolved drafts never expire automatically or get silently removed by cleanup; export does not remove them. Browser clearing/eviction can still prevent recovery. Report recovery failures promptly and offer export. Remove only the exact resolved draft version after confirmed Save or explicit Discard; retry failed cleanup on next load without deleting newer edits. Completed-operation retention defaults to 30 days or 1,000 per workspace, whichever comes first, configurable; protect pending/uncertain operations until resolved. Missing operation history means unknown, requiring comparison/reconciliation before retry, never blind replay.
-- Manual preview is the default; optional automatic refresh uses only committed output-affecting changes. Saving and compilation are independent. Preserve conflicts/undo and measure responsiveness/resources separately.
-- Schema 2 is the sole supported target workspace schema. This development-only app has no production deployment or users. Do not implement schema-1 compatibility, conversion, retained originals, mandatory original downloads, or legacy regression coverage. Start clean with schema 2; test its behavior, validation, backup/recovery, and safety contracts.
-- Replacement validates and atomically rechecks the reviewed revision. Atomically adopt incoming and preserve outgoing committed workspace as one durable snapshot; any recoverable protocol must verify all-or-nothing behavior, with failure changing neither active workspace nor snapshot. Rollback uses the same safeguards and preserves the pre-rollback workspace. Describe this as “one previous workspace,” never version history; no automatic expiry, subject to browser clearing/eviction. Identify the snapshot being replaced and offer optional export; failure/cancellation leaves adoption uncommitted until retry or explicit continuation without export. Keep unresolved recovery separate from the previous workspace. Successful replacement/rollback invalidates pending saves and stale previews.
-- Workspace backups contain committed content/configuration and say “saved workspace only” when drafts exist, with separate recovery export. Device appearance/preview/compiler preferences stay device-only and survive import. Recovery exports have a separate versioned format with scope identities/baselines; import restores uncommitted drafts. Replacement preserves recovery; missing original records require explicit restore-as-new or export, never silent dropping or attachment to unrelated records. Neither export includes account or public-release credentials.
-- Establish behavior coverage alongside implementation, including real browser-component coverage for interactive slices. Name tests by behavior rather than roadmap stage.
-
-- Guest storage uses IndexedDB transactions, workspace schema 2, and separate recovery format 1. Save atomically checks the current generation/revision and scope baseline, applies a validated patch, writes the revision/receipt, and cleans only the exact resolved draft version. Prepare immutable requests before dispatch; retry identical requests with the same operation ID. Replacement increments generation. Cross-tab notifications are hints; transaction checks are authoritative. Verify atomicity and capacity in real browsers.
-
-- Guests commit explicit Saves to IndexedDB. Authenticated Saves persist immutable local recovery requests and send immediately to PostgreSQL; success requires server acknowledgment. Typing remains local recovery only. Keep account/guest isolation, scope-aware server checks, atomic receipts, and safe retries; do not copy Dayplan autosave debounce or assume one HTTP request equals one database operation.
-
-## Active architecture and retained baseline
-
-- The active root page mounts `components/career/career-workspace.tsx`. Its canonical schema-2 model and scope rules live in `lib/career/`; derived contracts live in `types-and-constants/career.ts`. `stores/career/controller.ts` owns committed state, one form draft plus an independent section entry-order draft, recovery scheduling, and bounded history. `stores/career/persistence.ts` uses IndexedDB transactions across `verso-local` stores. IndexedDB replaces the baseline Web Lock/localStorage protocol for the active application.
-- Order scopes contain IDs only; independent wording changes do not change order baselines. Shared identities cannot be removed or retyped by ordinary Saves. Creation uses distinct scopes; Undo archives created content and Redo restores its identities. Whole-document replacement must use the reviewed atomic head/previous-workspace path, never an editing scope.
-- Independent resumes use exact `resume-details/<id>` (name/color), `resume-content/<id>` (selection/contact order/summary visibility), and `resume-wording/<id>` (overrides) scopes. Nullable `resume/<id>` is only for single-resume creation/deletion and their history, never ordinary record replacement. Undo resume creation removes that resume; Undo deletion restores its identity/configuration without touching career content. Keep older `selection/<id>` requests executable and their fingerprints unchanged. Optional schema-2 resume configuration resolves prior defaults without load-time writes; new resumes explicitly start with no optional selections. Prepared lifecycle retries check receipts before attempting creation again. Missing-resume recovery requires explicit restore-as-new with validated references or export/reconciliation; retain original recovery separately.
-- Workspace schema 2 and recovery format 1 are the sole portable formats. No schema-1 migration/compatibility. The former `lib/resume`, `stores/workspace`, and schema-1 workflow contexts remain unmounted reference assets, not active behavior or target constraints. The active career editor reuses `WorkspaceShell`, the utility rail, extracted sidebar collections/toolbar presentation, layout preferences, and responsive UI primitives through `components/career/career-workspace-shell.tsx`; do not mount schema-1 providers to use that presentation. Do not add retired features for parity.
-- `lib/output/template.ts` assembles the pinned template independently of content schemas; `lib/output/encoding.ts` escapes text. `lib/career/output.ts` resolves selected schema-2 wording/facts using explicit output capabilities. Output consumes committed content only. Existing selected archived content remains rendered. Minimal output does not establish full resume-editor delivery or PDF acceptance.
-- Preserve the generated Next.js blocks below and above. Keep current code behavior and limitations in README.md, and acceptance checklists in docs/verification.md, so they remain usable without temporary planning or handoff documents.
-- Preserve the established presentation. Exact-version discard cleanup intents use the existing IndexedDB preferences store; completed receipts stay protected until acknowledgment, with interrupted requests available for explicit recovery. Imports validate in a disposable worker. `npm run test:measure` runs explicit production measurements separately from routine `npm test`. Owner visual/PDF and manual round-trip acceptance remain separate from automated evidence.
-- Vitest Node and real Chromium Browser Mode are configured with actual cases. Run `test:unit` and `test:browser` non-watch, plus relevant Playwright checks. Preserve npm and selected framework versions. Test harness versions are Vitest 4.1.12 / vitest-browser-react 2.2.0, rather than the newer versions described by skill reference notes.
-
-## Resume layout and reusable configurations
-
-- Resume layout has optional `defaults` containing a complete, nonrecursive flat
-  appearance snapshot. Blank creation copies workspace appearance; starter
-  creation and preset loading copy their appearance as both values and frozen
-  defaults. Later library changes never affect existing resumes. Presets,
-  starters, and workspace defaults remain flat appearance only; capture excludes
-  resume baseline metadata. Resume duplication retains an independent snapshot.
-- Existing otherwise-supported layouts without this optional baseline use saved
-  appearance and persist the baseline on the next layout Save, with no load-time
-  writes or broad legacy migration. Preserve immutable prepared requests and
-  fingerprints; missing baseline metadata in old requests initializes from
-  pre-edit committed appearance, never modified draft values. Recovery, history,
-  backups, replacement, and rollback retain values and defaults in the same scope.
-  Workspace schema 2, recovery format 1, and template identity stay unchanged.
-- Resume group resets use frozen layout defaults; preset/starter editors reset
-  to canonical app defaults. Keep automatic/relative template dimensions as
-  sentinels until explicitly edited. Baseline-only preset loads are meaningful
-  edits even when appearance matches. All resets and color selections remain
-  drafts; Save and compilation remain separate. Hidden dependent values are
-  retained, and invalid ones remain actionable. Keep profile navigation guarded.
-
-- Resume appearance uses the canonical complete layout schema, with exact
-  `resume-layout/<id>` Saves. `preset/<id>` and `starter/<id>` are independently
-  recoverable nullable library scopes. Presets carry template identity and
-  appearance only; starters add empty structural row identities, labels, kind,
-  icon, visibility, supported field-key defaults, and summary visibility.
-- Applying configurations copies values, never live references. Profile selections
-  and ordering remain in Content & order; Layout owns positional contact-row sizes,
-  icons/separators/spacing and alignment, and optional city/country grouping
-  (`contactLocation`; omitted means separate, without load-time writes). A combined
-  location sits at the first selected city/country position, in their Content &
-  order sequence. Empty contact values produce no empty rows.
-  New entry selections use copied field defaults without overwriting prior explicit
-  selections. Duplicate resume clears composite-creation provenance.
-- `starter-create/<resumeId>` is a dedicated composite lifecycle scope, never a
-  whole-workspace editing scope. One validated transaction rechecks reviewed
-  section metadata, creates missing empty sections and the independent resume,
-  and commits its receipt. Prepared identities survive retries. History records
-  committed values; Undo removes that resume and archives its created sections,
-  while Redo restores identities and rejects changed/conflicting sections.
-- Appearance schemas are independent of retired schema-1 state. Output consumes
-  committed settings only; the fictional style sample never compiles or promises
-  pagination. Page warnings describe the PDF being viewed, including retained PDFs.
-- Only template `yabuki-reference@1.0.3` and the complete current development layout
-  model are supported. No earlier layout/template migration, automatic reset, or
-  storage clearing. Workspace schema 2 and recovery format 1 retain their envelope
-  versions. Library configuration participates in backups, recovery, history, and
-  previous-workspace replacement/rollback; device preferences remain separate.
-
-- Library is a permanent, navigable sidebar group between Career details and Resumes.
-  Its `?scope=library` overview shows descriptions, icons, and Edit links to Layout presets
-  and Resume starters; descendant location trails use guarded Library parent links.
-  Collection creation aligns to the end of the page title row; omit preset/starter search throughout collections
-  and contextual pickers. Library footers place destructive actions last in DOM,
-  keyboard, and visual order, overriding primary-rightmost where both occur.
-  Resume Layout remains directly editable without a preset. Its initially collapsed
-  Layout presets (optional) disclosure contains selection, sample, load/capture/manage
-  actions, or an explanatory empty state. Selection alone does not load; explicit
-  loading remains uncommitted and its announcement stays visible outside the disclosure.
-  Library collection/editor views use the full editor width and no
-  unrelated resume PDF. Follow existing Verso text/color/action hierarchy and UI
-  primitives. Keep Library accessible alongside independently scrolling collections.
-  Keep resume rows mounted during library navigation; do not use route-dependent
-  keys to reset expansion. Library navigation must not expand/select resumes or
-  replay their entrance animation, or expose career-language/editor controls.
-- Library preset use requires an explicit target, guarded draft resolution and
-  identity rechecks; it opens an uncommitted resume Layout draft. Starter cards
-  share explicit Blank resume / From starter creation and mapping review. Never
-  silently create blank when a chosen starter is missing. Loading appearance does
-  not compile or commit; explicit creation retains its atomic lifecycle. Existing
-  Save/recovery contracts remain authoritative.
-
-## Settings and navigation
-
-- Settings is a durable dialog over a mounted workspace, with Account (first and
-  default), Appearance, Content languages, Editing & preview, Data & backups,
-  Resume defaults, and Public PDFs panels at `settings/<panel>` scope URLs. The utility rail holds
-  the account avatar menu (Settings; guest Sign in/Sign up; guarded Sign out) and an
-  Appearance shortcut toggling `settings/appearance`; it has no Data & backups or
-  separate Settings button. Sign-in stays in Settings › Account with provider
-  buttons (OAuth-only, so Sign in and Sign up share it); do not add separate auth
-  pages. Sign-out from the panel or menu shares `useAccountActions` and one
-  unconfirmed-work confirmation. Keep old `languages`/`backups` links usable and
-  distinguish panel destinations from exact editing scopes. Validate routes before
-  opening resources; missing resources never create content. Preserve history
-  metadata, underlying destination, focus/scroll, drafts, and narrow-screen access.
-- Opening Settings and visiting device/data panels preserves career drafts. Resolve
-  occupied drafts before opening language/defaults forms; guard dirty Settings-form
-  departure, including Back/Forward, closure, and workspace data actions. Data viewing/export remains accessible without
-  resolution. Keep language/defaults Save/Cancel, recovery, conflicts, and history
-  under the career controller; exact `defaults` edits the complete flat workspace
-  appearance and affects future blank creation only.
-- Device theme and compiler/receipt-retention preferences apply immediately, outside
-  workspace history and portable exports. New device settings use a validated,
-  versioned record in the IndexedDB preferences store, separate from cleanup intents.
-  Serialize writes and report current-tab-only failures with retry. Load retention
-  settings before startup pruning; if their read fails, skip receipt pruning until
-  preferences can be saved. Protect pending, uncertain, unacknowledged, and
-  recovery-referenced operations regardless of limits. Compiler preference changes
-  apply to the next instance without interrupting active work. Preview is manual by
-  default; the optional device-only `automaticRefresh` preference (optional field in
-  preference record version 1, default off) refreshes the visible preview after
-  committed output changes only.
-
-## Active output readiness
-
-- `lib/career/readiness.ts` assesses committed effective selections for one resume;
-  the UI and `renderCareerResume` share its blockers: unverified PDF language,
-  missing full name, rendered custom heading, selected title/degree, or selected
-  achievement wording. Other empty values remain optional. Preserve built-in
-  headings, URL-label fallback, and explicit empty overrides without cross-language
-  fallback. Excluded/hidden content and archive/deactivation status alone do not
-  block output. Save validation remains independent of readiness.
-- Issues appear only in the PDF preview footer, never Overview. The count/status
-  row remains visible before compilation and with retained PDFs. Start collapsed
-  and preserve the toggle choice while mounted; cap the expanded body at 40dvh
-  with independent scrolling. Wording issue actions use
-  guarded navigation, reveal Editor after successful navigation, expand the
-  owning entry or excluded content, and focus exact wording rows without changing
-  text. Resume Wording groups rows in one card per Career details owner, lists
-  included content by default, and omits shared facts. Targets are transient; keep durable scope
-  URLs free of private wording. Failed/canceled navigation retains drafts.
-- Keep reusable checkbox presentation and rich-text URL validation independent of
-  retired editor/review/state modules. Do not mount schema-1 providers or introduce
-  translation tracking to reuse UI. Manual/browser readiness acceptance belongs to
-  the owner; document unexecuted coverage separately from non-browser results.
-
-## Editing and portable-data contracts
-
-- Current schema-2 sections and starter section definitions require validated icon
-  IDs from `types-and-constants/section-icons.ts`. Custom sections start with
-  `file-text`; built-in icons are fixed. Section properties owns icon draft editing
-  and its existing Save/Cancel; no separate picker commit. All existing section
-  representations resolve the saved icon, including resume wording/fact/comparison
-  descriptors. Icons are shared, language-independent app metadata, outside wording
-  overrides and PDF graphics/readiness. Preview staleness ignores revision metadata.
-  Include icons in scope baselines, recovery, history, backups, and rollback. No
-  compatibility or migration for earlier development icon data; never silently
-  reseed it. Starters copy structural icons into newly created sections; presets do not change shared icons.
-
-- New workspaces start with empty Experience, Projects, Education, Skills, and Certifications sections; never reseed existing content. Rich prose belongs in summaries and achievements/details; names, headings, facts, short values, and link labels use plain controls.
-- Entry forms and section entry-order drafts are independent. Sorting preserves the entry draft, selection, search/filter, scroll, and hidden-ID slots. Save/Cancel affects only its scope. Leaving a section resolves each applicable draft independently; later cancellation never undoes an earlier explicit resolution. Data & backups remains accessible without resolving drafts.
-- Use Cancel / Save for forms and Cancel / Discard / Save for dirty navigation, with the primary action rightmost. Disable form actions while unchanged or saving; navigation Cancel retains the draft. Recovery discovery/restoration belongs in Data & backups, not entry-order comparison panels. Preserve shared accessible controls and narrow-screen Editor/PDF switching without closing drafts.
-- Workspace envelopes use `format: "verso.workspace"`, `schemaVersion: 2`, `exportedAt`, `workspaceId`, and `document`. Recovery envelopes use `format: "verso.recovery"`, `schemaVersion: 1`, `exportedAt`, `sourceWorkspaceId`, and `drafts`. Recovery carries scope identities, draft version/values, baseline values/revision/generation, and pending immutable request context. Imported receipts never prove local commits.
-- Use UTF-8 JSON with stable opaque IDs, canonical language tags, validated references, and explicit template identities. Unknown versions and rejected imports cause no writes. Validate recovery structure while preserving malformed field values for editing. Portable files exclude credentials, device preferences, local operation ledgers, and compiler/PDF assets.
-- Recovery scheduling uses 500 ms inactivity and a 2-second maximum wait. Close-time flushing is best effort. If IndexedDB fails, retain drafts and offer export; session-only commits require explicit choice and never overwrite durable content. Leaving session mode requires resolved drafts and an explicit reviewed choice: reload the durable workspace, or adopt this tab's workspace through the atomic reviewed replacement path (rejecting a newer durable revision).
-- Save, recovery, preview, and backup status stay separate. The controller publishes typed `saveStatus`/`storageMode`/`sessionCommits` (`types-and-constants/career-status.ts`); the toolbar text derives from `saveStatus`. Persistence throws `CareerStorageError` codes (`conflict`, `replaced`, `uncertain`, `storage`, `invalid`), and DOM/IndexedDB exceptions classify as `storage`. UI decisions (session-only action, close warning) use typed state, never message text. Other-tab commits publish `remote-update`; notifications during a local Save are applied after it settles. A confirmed commit whose receipt acknowledgment fails reports `cleanup-retry`, not an error. Release status lives in the release store and its UI (Release dialog, Settings › Public PDFs), separate from Save, preview, and backup status. Do not silently fall back to localStorage or promise durable replacement without snapshot preservation.
-- Disclose tab-only commits even when storage never opened (`storageMode: unavailable`). Session adoption identifies the retained previous-workspace snapshot and requires its export or explicit continuation without export; export failures retain the review and keep adoption blocked. Discarding tab-only Saves does not replace the snapshot and needs no export decision.
-- Preview target identity persists while readiness blocks output, so a committed Save that makes the same resume ready schedules optional automatic refresh. Hidden previews defer already queued automatic requests as well as timers; explicit queued requests remain explicit. Disabling automatic refresh cancels its queued work without canceling manual requests or active compilation.
-
-## Capacity, performance, and resource targets
-
-- Safety ceilings: 120 resumes, 100 sections, 2,000 entries total, 300 entries per section, 100 achievements and 30 links per entry, 30 profile links, 100 starters, and 100 presets. Languages are byte-bounded rather than count-bounded. Preserve field/rich-text validation in the canonical model.
-- Workspace documents and backup files each have a 4-MiB UTF-8 ceiling (`WORKSPACE_BYTES`), including the file envelope where applicable, so one hosted request (Vercel caps request bodies at 4.5 MB) carries a whole workspace without chunking. Recovery files allow 32 MiB and individual drafts 8 MiB including baseline/metadata. Limits live in `types-and-constants/career.ts`. Split larger collections with versioned inventories; oversized individual drafts require explicit raw-chunk export. Never truncate or evict protected recovery to make room.
-- Bound in-memory undo to 100 successful steps or 32 MiB of retained serialized patches, whichever comes first. Disclose dropped history and unavailable undo for oversized Saves. Replacement starts a new history generation; undo is not a backup.
-- Production measurements record OS/CPU/RAM/browser/build/fixtures, p50/p95/max, counts, and failures. Report normal and 4x CPU separately. Compare the same build/fixtures; label historical or mixed-build limitations. Use small (20 entries/3 resumes), representative (300/30), multi-resume (60 independently selected/customized resumes), and capacity (near-byte/count limits, 120 resumes) fixtures with English/Portuguese content.
-- Normal-speed p95 targets: input/selection/reorder <=100 ms; Save click-to-committed acknowledgment <=500 ms representative / <=2 s capacity; workspace open <=2 s representative / <=5 s capacity excluding compiler initialization. Collect at least 100 interactions and 30 Saves/opens per data fixture. Typing must not scan the whole workspace.
-- Recovery acknowledgment targets <=3 s during continuous input; expose storage failure within 1 s of detection. Capacity import preview targets <=5 s with progress after 500 ms and no recurring main-thread parsing/transfer tasks above 50 ms. Targets require measurement, not assumptions from worker use.
-- Compiler defaults: configurable 120-second initialization / 30-second compilation timeout; 1,000,000-byte source limit. Measure 10 warm runs (target <=5 s) and 5 cached-cold initialization-plus-compilation runs (target <=20 s) on representative 1–3-page resumes. Report proven uncached download separately.
-- `stores/output/preview-coordinator.ts` owns preview resources for one workspace per tab and is mounted through `hooks/output/use-committed-preview.ts` in the career workspace, above the editor/preview layout, so hiding the preview never discards the retained PDF or in-flight compile. `components/career/committed-output.tsx` renders it and unmounts the PDF.js viewer whenever the preview is not visible (desktop pane hidden, full-width destination, inactive narrow tab). Staleness and stale-result rejection use `{generation, resumeId, fingerprint}`, where `renderCareerOutput` fingerprints the rendered source excluding only its revision metadata; Saves that do not change a resume's output keep its preview Current. Automatic refresh (off by default) debounces 800 ms after a committed fingerprint change for the same resume and generation, never on resume switches, generation changes, or drafts, and waits while the preview or document is hidden. A running job is never interrupted; one queued request compiles the latest committed target for the same resume afterwards.
-- Allow one active compile and one replaceable latest queued request per workspace, one compiler instance/worker pair per tab, one last successful PDF, and one in-flight result. Tag work with generation/resume/output identity; reject stale results. Terminate timed-out workers before retry and release obsolete URLs/documents/canvases/listeners/timers. Verify deterministic settled bounds; no mandatory 30-minute/100-refresh soak or sustained heap-growth claim.
-- Verify real IndexedDB abort/quota behavior, interrupted acknowledgments, exact cleanup races, two-tab scope conflicts, generation rejection, repeated rollback, protected-record cleanup, and restart/recovery imports on isolated origins. Mocked exceptions alone do not prove transactional safety.
-
-## Account and release safeguards
-
-- Account storage remains PostgreSQL-authoritative with ownership checks on every private operation. Persist local immutable Save requests before sending immediately; report success only after server acknowledgment. Server scope checks, patch/revision, and receipt commit atomically. Local IndexedDB acknowledgment is a separate reconciliation step, never a cross-database transaction.
-- Preserve guest/account isolation through login/logout/expiry/switching. Guest import is explicit and reviewed. Offline or uncertain account Saves remain recoverable; never debounce explicit Saves together or silently replay unknown operations. Measure actual auth/read/write/retry/refresh database operations.
-- Sync must preserve dirty drafts and both conflict versions. Remote freshness bounds and their measured operation cost are recorded under "Account adoption decisions"; local tab coordination is not device sync, and there is no coauthoring.
-- Public PDFs require explicit reviewed release, immutable artifacts, pinned/latest identities, atomic latest advancement, rollback/revocation/retention/cache policy, and hosted access tests. Failed publication preserves prior links. Typing/imports never publish; unlisted links are not authentication. Keep private career content, backups, and credentials out of public artifacts.
+- Use the smallest check that verifies the changed contract. Add meaningful behavior
+  coverage rather than implementation-shaped assertions. Run non-watch tests and
+  confirm intended file/test counts; report failures, skips, and blocked checks.
+- For TypeScript changes run `npm run typecheck` (generates Prisma and Next route
+  types), lint changed code, and check formatting. Build for framework, bundling,
+  server/client, or deployment changes. Use the README's focused test commands.
+- Test database correctness against isolated infrastructure, never shared/production
+  data. Mocked APIs and seeded sessions do not prove live OAuth or PostgreSQL locking.
+  Browser transactional claims need real-browser verification; visual/PDF acceptance
+  remains separate from automated checks.
+- For tooling changes run `npm run format:check`, `npm run lint`,
+  `npm run typecheck`, and `npm test`. Production measurements use
+  `npm run test:measure` separately. Do not claim measurements or acceptance not run.
+- Documentation-only changes need formatting, link/path/configuration checks, and
+  diff review rather than the application suite. Keep README behavior accurate,
+  technical contracts in their authoritative reference, and local links valid.
+  New product scope requires user direction.
 
 <!-- BEGIN:nextjs-agent-feedback -->
-
-## Account adoption decisions
-
-Recorded 2026-11-14 after reviewing Dayplan's patterns and the selected releases. Reuse Dayplan's configuration shape, not its pinned versions or credentials.
-
-- Stack: Better Auth 1.7.x with its Prisma adapter; Prisma ORM 7.10.x using the `prisma-client` generator (gitignored output), `@prisma/adapter-pg` with `pg`, and `prisma.config.ts` loading env through `@next/env`. Prisma 8 is deferred: it is release-candidate only and outside Better Auth's declared Prisma peer range. Revisit when both are stable.
-- Hosting: Prisma Postgres through the Vercel Marketplace. Local development uses `prisma dev`. Automated database tests (`tests/db/`) and account E2E (`tools/accounts-e2e-database.mjs`) apply the checked-in migrations to isolated in-process PGlite servers; never point tests at shared or hosted data. PGlite serializes connections, so real concurrent row locking remains an owner check against an isolated Postgres database.
-- `getPrisma()` and `getAuth()` are lazy, `server-only` singletons. Building without account env must succeed and keep the app guest-only. Accounts activate only when `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, and at least one provider's `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` or `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are present. Names live in `.env.example` without values.
-- Sessions are database-backed with the cookie cache disabled, so expiry and revocation apply on the next request. Google/GitHub sign-ins automatically link only when resolved emails match and both incoming and existing local emails are verified. Keep trustedProviders empty and requireLocalEmailVerified enabled; preserve the existing profile and workspace. Different-email sign-ins remain separate accounts. No password auth or account deletion. Display safe OAuth callback errors in Settings › Account without exposing provider descriptions.
-- Account data uses Node-runtime Route Handlers, not Server Actions, so retries and uncertainty receive explicit status codes. Each handler derives `userId` from the verified session using `request.headers`, requires a same-origin `Origin` on mutations, binds the request to the client's session ID to reject writes from a previous session, rejects unknown body fields, and responds `no-store`. With Cache Components enabled, the workspace page stays a static client shell; any server component that reads the session sits behind `<Suspense>`.
-- Server storage keeps one schema-2 snapshot per account plus one previous workspace and an operation-receipt table. Saves lock the user row, return a matching receipt unchanged, reject reused IDs with different fingerprints, and apply `lib/career/commit.ts` scope checks so unrelated changes never conflict.
-- One request carries a whole workspace, within the 4-MiB workspace ceiling; no chunked transfer is required. Request bodies above the ceiling plus 64 KiB are rejected as `payload_too_large`.
-- Client structure: `components/account/account-root.tsx` resolves the session (`stores/account/session.ts`) and mounts `CareerWorkspace` keyed by `account:<userId>:<sessionId>` or `guest`, so an owner change disposes the controller, its storage, and in-flight requests. `stores/career/account-backend.ts` implements `CareerBackend`, reusing `CareerStorage` against `verso-account-<userId>` for drafts, pending requests, and cleanup intents; device preferences stay in `verso-local`. Expired sessions keep the owner mounted. Server modules live in `lib/account/`; the shared Save decision lives in `lib/career/commit.ts` for both guest and server commits.
-- Measured statements per request, including the database session lookup (2 reads) (`tests/db/operation-counts.db.test.ts`): load 3, freshness check 3 (unchanged or changed), first load 7, Save 7 (2 writes), the day's first Save 9 (receipt pruning inside its transaction), replayed retry 5 reads. Reads never write. Treat these as regression bounds; one request is not one billable operation. Prisma Postgres bills per operation, so new account traffic must justify its operations and be measured here.
-- Sync (`stores/career/account-sync.ts`, constants `ACCOUNT_SYNC` in `types-and-constants/account.ts`) is cost-bounded remote freshness, not live collaboration. A freshness check is a conditional `GET /api/account/workspace?workspaceId=&revision=&generation=` that returns identity only when unchanged. Focus, visibility, reconnect, and input-after-idle request a check at most once per 60 s; a visible, active tab checks every 5 minutes; periodic checks stop after 15 minutes without input or while hidden, and an invalid session pauses sync until an acknowledged Save. Tabs of one owner share the last check time over BroadcastChannel and a Web Lock keeps one check in flight per browser. An acknowledged Save or check caches the head in the account database (`heads/account`); other tabs apply that cache on a `saved`/`checked` notice without a server read. Changes made on another device appear within 5 minutes while a tab is visible and active, or at the next focus/reconnect at least 60 s after the last check.
-- Receipt pruning (30 days / 1,000) runs inside at most one Save transaction per account per 24 hours (`operationsPrunedAt`), never on reads. A pruned receipt reports `unknown` and requires comparison, never blind replay.
-- Pending account Saves are resolved without resending: on open and on reconnect, each draft carrying a prepared operation ID is looked up once through `GET /api/account/workspace/operations/<id>`; a receipt whose hash matches the request fingerprint is recorded and acknowledged locally, and an unknown outcome stays pending behind an explicit **Retry save** (same operation ID). Nothing is requested when nothing is pending. If the server is unreachable at open, the last cached head opens with an "Offline · showing last synced revision" status; server scope checks remain authoritative on retry.
-- Conflicts are derived (`lib/career/conflict.ts`) from the draft baseline versus the current committed scope; nothing extra is persisted, so reload recomputes them from recovery. A rejected Save (`conflict`/`replaced`) triggers one refresh so both versions are available. `components/career/conflict-panel.tsx` shows both versions with Export recovery, Keep my draft (rebase onto the saved version, then a separate Save), and Use saved version (confirmed discard, destructive action last) for form, Settings form, and entry-order lanes.
-- Account deployments use `npm run vercel-build`: prepare compiler assets, generate Prisma Client, apply checked-in migrations to the deployment's `DATABASE_URL`, then build Next.js. Ordinary `npm run build` never migrates; explicitly select it for guest-only Vercel deployments without a database. Manual migrations remain available through `db:migrate:deploy`.
-- `npm run dev` defaults to `dev:local`: Docker PostgreSQL 17 on 127.0.0.1:5433 with a Verso-only volume. The runner overrides `DATABASE_URL` before env loading and applies local migrations. `dev:prisma` uses the configured hosted URL and never migrates on startup; hosted migrations run through `vercel-build` during deployment or explicit migration commands.
-
-## Public release decisions
-
-Recorded 2026-11-16 by the owner: PDFs in Postgres, no caching, opt-in automatic
-release, quota retention with explicit deletion.
-
-- Storage: `public_link` (one per `(userId, resumeId)`, 256-bit base64url token,
-  `latestReleaseId`, `nextNumber`, `autoRelease`) and `public_release` (immutable
-  `bytea` PDF plus content/locale/template/runtime/settings/PDF identities, per-link
-  `number`, `(userId, operationId)` receipt with request hash, optional `revokedAt`).
-  Server modules: `lib/account/release-repository.ts`, `release-api.ts`,
-  `public-pdf.ts`; contracts and quotas in `types-and-constants/releases.ts`.
-- Release upload is multipart (strict JSON `metadata` + `pdf`), capped at 4 MiB + 64 KiB
-  before parsing, behind `accountRequest`. Under the owner lock, one transaction
-  replays a matching receipt (different hash → `operation_mismatch`), re-renders the
-  resume from the committed account workspace with `renderCareerOutput`, requires the
-  same workspace/generation and output fingerprint (the claimed revision may be older
-  than the head when output is unchanged), checks readiness/template/PDF markers,
-  enforces quotas (`quota_exceeded`, never pruning), creates the link, inserts the
-  release, and moves latest when `advance` (default). Runtime identity comes from the
-  server's `tools/compiler-proof/resources.lock.json`, not the client. Automatic
-  releases whose source SHA-256 equals latest store nothing (`unchanged`).
-- Latest moves only through explicit release, `set-latest`, or opted-in automatic
-  release. The current latest cannot be revoked or deleted. Revoking a link deletes it
-  and its releases. Owner actions are `PATCH`/`DELETE` on
-  `/api/account/releases/links/[linkId]` and `/api/account/releases/[releaseId]`, each
-  returning the full list.
-- Public `/pdf/[token]` and `/pdf/[token]/[number]` call `connection()`, need no
-  session, read with one SQL statement, answer `no-store` with nosniff/noindex/
-  no-referrer and an inline RFC 5987 file name, and share one 404 for unknown,
-  malformed, revoked, deleted, or accounts-disabled requests. Never add caching
-  without an owner-approved freshness bound and purge path.
-- Client: `stores/releases/release-store.ts` (per-owner, session header, stable
-  in-memory operation IDs reused on unanswered retries), `hooks/releases/use-releases.ts`,
-  `components/career/release-dialog.tsx` (enabled only for a Current preview), and
-  `components/account/releases-panel.tsx`. `PreviewOutput` retains the compiled
-  bytes and template identity. `useCommittedPreview`'s `automaticResumeIds` forces
-  automatic preview refresh (one effective-preferences effect, so a preferences
-  object republished on Save cannot cancel the pending refresh) while the previewed
-  resume's link opts in; `hooks/output/use-automatic-release.ts` releases each
-  committed output at most once per tab under a `verso-release-<userId>` Web Lock
-  and never replays failures.
-- Measured statements (`tests/db/operation-counts.db.test.ts`, including the 2-read
-  session lookup for owner routes): public download 1 read; list 4; release 12
-  (2 writes); first release 14 (4 writes); set-latest 8 (1 write). Treat these as
-  regression bounds and justify new public-download cost before adding queries.
 
 ## Report Next.js feedback
 
