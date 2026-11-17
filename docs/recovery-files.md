@@ -1,4 +1,103 @@
-# Recovery exports
+# Save, recovery, and portable data
+
+This reference owns transaction, recovery, replacement, and portable-file
+contracts. Code paths in backticks are relative to the repository root. See
+[architecture](architecture.md) for editing/output ownership and
+[account storage](accounts-and-public-pdfs.md) for server-specific safeguards.
+
+## Save and recovery protocol
+
+Guest explicit Saves use IndexedDB transactions across affected `verso-local`
+stores. Atomically recheck generation/revision and scope baseline, apply a
+validated patch, and write the head and receipt. Cross-tab notifications are hints;
+transaction checks are authoritative. Account Saves share the domain decision on
+the server, with separate local recovery and acknowledgment rather than a
+cross-database transaction.
+
+Prepare immutable requests before dispatch. Keep operation IDs, identities,
+payloads, and fingerprints stable through interrupted-response checks and retries.
+A matching receipt proves the original outcome; missing operation history means
+unknown, requiring comparison/reconciliation before retry, never blind replay.
+Imported receipts do not prove local commits. Unrelated scope edits alone do not
+cause conflicts. Retain the committed version and draft until resolution succeeds.
+
+Recovery records scope identities, baseline values, starting revision/generation,
+draft version/values, and prepared request context. It schedules after 500 ms of
+inactivity with a 2-second maximum wait. Close-time flushing is best effort.
+Restoration opens an uncommitted draft, not a Save/history step. Offer compare,
+reconcile, discard, and export. Missing source records require explicit
+restore-as-new with valid references, or reconciliation/export, never attachment
+to an unrelated record. Retain original recovery separately until resolution.
+
+Unresolved drafts never expire automatically; export does not remove them. Remove
+only the exact resolved draft version after confirmed Save or explicit Discard.
+Durable exact-version cleanup intents use the IndexedDB preferences store; retry
+failures on next load without deleting newer edits. Protect pending, uncertain,
+unacknowledged, and recovery-referenced receipts regardless of retention limits.
+Eligible completed receipts default to 30 days or 1,000 per workspace, whichever
+limit is reached first, configurable. Zero retains no eligible receipts. Read
+retention preferences before pruning; if the read fails, skip pruning until
+preferences can be saved. Never delete protected recovery to satisfy a limit.
+
+Save, recovery, preview, backup, and release status are independent. The controller
+publishes typed `saveStatus`, `storageMode`, and `sessionCommits` from
+`types-and-constants/career-status.ts`. Toolbar text derives from Save status.
+`CareerStorageError` codes are `conflict`, `replaced`, `uncertain`, `storage`, and
+`invalid`; DOM/IndexedDB exceptions classify as `storage`. Use typed state rather
+than message matching for close warnings/session-only choices. A confirmed commit
+with failed receipt acknowledgment reports `cleanup-retry`, not failed Save.
+Other-tab notifications during a local Save are applied after it settles.
+
+Order scopes contain IDs only; independent wording edits do not change their
+baselines. Ordinary Saves cannot remove or retype shared identities. Creation uses
+dedicated scopes; whole-document replacement never uses an editing scope.
+
+### Storage failures and tab-only Saves
+
+If IndexedDB fails, retain drafts, promptly report recovery failure, and offer
+export. Session-only commits require explicit choice and leave durable bytes
+unchanged. Disclose tab-only Saves even if storage never opened
+(`storageMode: unavailable`), and warn on close. Never silently fall back to
+localStorage or promise recovery after browser clearing/eviction.
+
+Returning to durable saving requires resolved drafts and review of the durable
+head. Explicitly reload durable content or adopt this tab's workspace through the
+replacement protocol. Reject adoption if the durable revision changed since review.
+Identify the previous snapshot being replaced; require its export or explicit
+continuation without export. Failed export retains the review and blocks adoption
+until retry or that explicit choice. Discarding tab-only Saves leaves the previous
+snapshot unchanged and needs no export decision.
+
+### Replacement and rollback
+
+Validate incoming data before writes, then atomically recheck the reviewed revision,
+adopt incoming content, and preserve outgoing committed content as one previous
+workspace. Failure changes neither the active workspace nor the snapshot. Rollback
+uses the same checks and preserves the pre-rollback workspace. Identify the snapshot
+being replaced and offer export; failed/canceled export leaves adoption uncommitted
+until retry or explicit continuation without export.
+
+This is **one previous workspace**, not version history. It does not expire
+automatically but remains subject to browser clearing/eviction. Recovery is separate
+and survives replacement. Successful replacement/rollback increments generation,
+invalidates pending Saves/stale previews, and begins a new history generation.
+Device preferences survive. Recovery with missing source identities requires
+explicit restore-as-new/reconciliation rather than silent dropping.
+
+### Validation boundaries
+
+Workspace imports reject unknown versions, malformed committed values, invalid
+references, and unsupported template identities without writes. Recovery structure
+is validated while malformed field values remain available for correction. Parsing
+and validation use a disposable worker, with progress after 500 ms. Enforce UTF-8
+byte limits rather than character counts; never truncate protected recovery.
+
+Verify real-browser abort/quota behavior, interrupted acknowledgments, exact cleanup
+races, two-tab scope conflicts, generation rejection, repeated rollback, protected
+cleanup, and restart/import recovery on isolated origins. Mocked exceptions alone
+do not prove transactional safety. No new verification is implied by this reference.
+
+## Recovery exports
 
 Workspace backups contain saved content only. Recovery exports preserve unsaved
 form and entry-order versions, including their baseline context. Export never
@@ -104,7 +203,8 @@ The exact `resume-layout/<id>` scope includes appearance and defaults together.
 Save, conflicts, recovery, history, workspace backup, previous-workspace
 replacement, and rollback preserve that pair. Loading an identical appearance
 with different defaults is a meaningful draft change. Baseline-only metadata
-does not alter generated layout commands; revision metadata may stale a preview.
+does not alter generated layout commands. Fingerprints exclude revision metadata,
+so a baseline-only Save does not stale otherwise unchanged output.
 Malformed recovered baseline metadata remains recoverable and blocks Save until
 corrected. Workspace/recovery envelope versions and template identity are unchanged.
 

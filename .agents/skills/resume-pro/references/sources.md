@@ -26,7 +26,7 @@ Accessed **2026-10-23**. All pages below were opened and read, not used only thr
 ## Authoring sources
 
 - **OpenAI, Build skills:** https://learn.chatgpt.com/docs/build-skills — accessed 2026-10-23; supports focused scope, concise discovery metadata, progressive disclosure, optional resources, and behavioral prompt checks. Live docs list `~/.agents/skills` for personal skills, differing from the installed creator's default. Initially created as a personal skill, this skill was moved to the repository's `.agents/skills/resume-pro` at the user's request for repository-local availability. No configuration or aliases were added. Structural validation does not prove discovery. The optional `.md` endpoint returned unsupported content type in the web reader; the HTML page was successfully read, so no source substitution was needed.
-- **Installed Skill Creator:** `C:/Users/yuji/.codex/skills/.system/skill-creator/SKILL.md` and `references/openai_yaml.md` — read 2026-10-23. Defines `$CODEX_HOME/skills`, falling back to `~/.codex/skills`; CODEX_HOME was unset here. Supplies initializer, validator, UI metadata requirements, and independent forward-testing guidance. Installed host instructions are not a guarantee of future host discovery behavior.
+- **Installed Skill Creator:** the host-provided `skill-creator` skill and its UI-metadata reference (resolved from that skill, not this directory) — read 2026-10-23. Defines `$CODEX_HOME/skills`, falling back to `~/.codex/skills`; CODEX_HOME was unset here. Supplies initializer, validator, UI metadata requirements, and independent forward-testing guidance. Installed host instructions are not a guarantee of future host discovery behavior.
 
 ## Applying the evidence
 

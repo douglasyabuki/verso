@@ -1,4 +1,13 @@
-# Browser compilation milestone
+# Browser compiler maintenance and historical proof
+
+The active application uses workspace schema 2 and template
+`yabuki-reference@1.0.3`. Earlier schema/template descriptions and dated results
+below are historical observations, not current acceptance claims. The
+[architecture reference](architecture.md#readiness-and-output) describes active
+output and preview ownership; the [README](../README.md#getting-started) covers
+editor setup.
+
+## Independent compiler proof
 
 The independent demonstration server can be started separately from the editor:
 
@@ -8,7 +17,7 @@ npm run compiler:prepare
 npm run compiler:proof
 ```
 
-Open <http://127.0.0.1:3199>. Python 3.12+ prepares assets using its standard
+Open <http://127.0.0.1:3199>. Python 3.10+ with lzma support prepares assets using its standard
 library. The browser runtime uses no compilation server, Docker, package proxy,
 or third-party font/package requests. The local Node process only serves files.
 
@@ -55,8 +64,10 @@ Content Security Policy limiting script, worker, and connection origins to self.
 Preparation removes unconditional BibTeX execution because resumes have no
 bibliography. Logs retain the remaining upstream warnings.
 
-The final bundle uses the exact template identity exported by
-`lib/resume/model.ts` and mirrored in `tools/compiler-proof/prepare.py`.
+Keep the template identities in `lib/career/model.ts`, `lib/output/template.ts`,
+and `tools/compiler-proof/prepare.py` aligned; preparation writes the identity to
+the generated manifest. Retained schema-1 code also declares an identity in
+`lib/resume/model.ts`.
 Page-boundary review added
 the pinned `needspace` package to keep section/entry headings with their details.
 Both reference outputs were rechecked in all three available browsers afterward.
@@ -183,8 +194,9 @@ PDF.js uses Apache-2.0. Exact original archives remain in the download cache.
 The supplied template readme credits Rover Resume by Subidit; its Overleaf page
 identifies CC BY 4.0. The source readme, attribution, and changes are retained
 with source exports.
-This is a local implementation; hosted deployment and redistribution packaging
-are outside this pass.
+For deployment, preserve the generated `/compiler/SOURCE.txt` and license notices;
+see [deployment setup](../README.md#deployment). Historical local observations below
+do not establish hosted acceptance.
 
 After changing fonts, packages, worker patches, or the template, regenerate the
 bundle and repeat both language compilations with external fetching disabled.
@@ -261,8 +273,10 @@ Compiler preparation regenerated current metadata and verified the existing
 A manifest-only refresh rejected the older identity; full preparation passed.
 This is asset verification, not compilation or rendered-PDF evidence. Browser
 initialization/compilation and visual/text/font/link/metadata acceptance of the
-current output are explicitly delegated to the owner in
-[verification guidance](verification.md).
+current output require separate owner verification: compile both languages in the
+target browsers, render every page, and inspect extracted text, fonts, links,
+metadata, clipping, overlaps, and pagination. Historical observations above do not
+establish those checks for the current renderer.
 
 ### Location icon command
 

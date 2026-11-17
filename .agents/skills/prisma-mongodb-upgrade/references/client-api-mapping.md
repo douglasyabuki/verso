@@ -72,4 +72,8 @@ try {
 - [Prisma ORM 6 to 8 (MongoDB) guide, step 3](https://www.prisma.io/docs/guides/upgrade-prisma-orm/mongodb#3-port-client-calls)
 - [Prisma 8 transactions on MongoDB](https://www.prisma.io/docs/orm/fundamentals/transactions#transactions-on-mongodb)
 - [v6 MongoDB raw queries](https://www.prisma.io/docs/orm/prisma-client/using-raw-sql/raw-queries#raw-queries-with-mongodb)
-- The `prisma-8` skill's `references/queries-mongo.md` — authoritative for the Prisma 8 side
+- The package-owned `prisma-8` skill's MongoDB query guidance — authoritative for the Prisma 8 side
+
+This Prisma 8 guidance is external to this skill and is not vendored in Verso.
+Load the installed package-owned skill after the authorized Prisma 8 setup/sync;
+if unavailable, use the official guide linked above and report the missing guidance.

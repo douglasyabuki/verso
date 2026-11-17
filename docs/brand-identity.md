@@ -36,8 +36,8 @@ Exported assets live in `public/brand/`: horizontal and standalone versions for 
 
 ## Workspace components
 
-The 56px utility rail remains separate from the 256px navigation sidebar at widths of 768px and above. It contains data/backup and appearance controls, without an avatar. Below 768px the off-canvas navigation exposes the same controls. Selected navigation receives a teal-tinted surface, medium text, and a slim teal marker.
+The 56px utility rail remains separate from the 256px navigation sidebar at widths of 768px and above. The account menu and Appearance shortcut follow the [navigation contract](architecture.md#editing-history-and-navigation), including narrow-screen access. Selected navigation receives a teal-tinted surface, medium text, and a slim teal marker.
 
-`WorkspaceHeader` owns both header rows. `WorkspaceToolbar` composes navigation context, history, local-save status, and preview controls into the first row. Contextual controls occupy the second row: resume selection and output language where applicable, JSON backup freshness, and downloads. Local-save status and backup freshness remain independent. Groups wrap without a horizontal header scroller. Save/recovery feedback remains a separate visible region below the header.
+Header control groups wrap without a horizontal header scroller. Save/recovery feedback remains a separate visible region below the header. Follow the [active architecture](architecture.md) for control ownership and behavior rather than the retained schema-1 header composition.
 
 Below 1024px retain the editor/PDF switch; desktop retains the saved preview split and resizable panes. Keep PDF pages white on `bg-preview-surface`. Use the existing menu, dialog, field, card, review, and feedback primitives so tokens and keyboard interactions remain consistent.

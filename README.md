@@ -1,701 +1,179 @@
 # Verso
 
-Local career information and resume editor. The active application uses workspace schema 2,
-explicit form Save/Cancel, and transactional IndexedDB. Schema-1 development data
-and backups are unsupported and are never loaded or converted.
-
-## Settings and navigation
-
-**Settings** opens a dialog with its own sidebar: Account, Appearance, Content
-languages, Editing & preview, Data & backups, Resume defaults, and Public PDFs. Account is the
-default panel (`?scope=settings` and the sidebar Settings item open it). On narrow
-screens the panel navigation wraps above its content. Settings panels have durable
-`?scope=settings/<panel>` URLs; reload and browser Back/Forward restore the panel.
-Existing `languages` and `backups` links open the corresponding panels.
-
-The utility rail holds the account avatar menu at the top and an Appearance button
-at the bottom. The avatar menu shows the signed-in name/email (or Guest) and offers
-Settings, plus Sign in and Sign up for guests, Sign in again for expired sessions,
-and the guarded Sign out when signed in. Sign in and Sign up both open Settings ›
-Account; with OAuth-only providers they are the same action. Appearance opens
-Settings › Appearance and closes it when that panel is already showing. Closing
-returns to the underlying workspace, or Overview when opened directly.
-Unknown destinations and missing records offer recovery navigation without creating content.
-
-Opening Settings preserves editor drafts. Device panels and Data & backups remain
-accessible without resolving them. Editing workspace languages/defaults resolves
-occupied editor drafts first. These workspace forms use explicit Cancel / Save,
-atomic history, and separate recovery. Dirty closure offers Cancel / Discard / Save;
-failed Saves retain the form. Leaving a Settings workspace form for another panel,
-including through Back/Forward, uses the same guard. Data & backups is the exception:
-a Data detour retains the unsaved Settings form without resolution.
-
-Theme choices and advanced compiler/receipt-retention preferences apply immediately
-to this browser, outside workspace Undo. Numeric preferences apply on valid
-Enter/blur; failed persistence reports that choices apply in the current tab and
-offers retry. Device preferences are excluded from both portable formats and survive
-workspace replacement/rollback. Existing pane visibility/split preferences remain
-device-only view controls.
-
-Compiler timeouts default to 120 seconds initialization and 30 seconds compilation,
-with a supported range of 0.1–600 seconds. Changes affect the next compiler instance
-without interrupting active work. Preview refresh is manual by default; an optional
-device-only **Refresh preview automatically after Save** setting is described under
-saving and preview status below. Completed-operation
-retention defaults to 30 days or 1,000 eligible receipts, whichever limit is reached
-first. Both limits accept nonnegative whole numbers; zero retains no eligible
-completed receipts. Pending/uncertain, unacknowledged, and recovery-referenced
-operations remain protected. Missing receipts require comparison before retry.
-Preference changes affect subsequent maintenance; unresolved recovery never expires.
-If reading device preferences fails, receipt pruning waits until preferences can be
-saved, avoiding cleanup under an unknown retention policy.
-
-**Resume defaults** edits the appearance copied into new blank resumes. Save affects
-future creation only; existing resumes, presets, and starters keep independent copies.
-Group resets use app defaults, and the Style sample does not compile a PDF. Languages
-and resume defaults are workspace data included in backups; device preferences are not.
-
-## Resume layout and reusable setups
-
-Each resume has an independent **Layout** view with explicit Cancel / Save.
-Controls cover A4/Letter, margins, bundled fonts, body and heading typography,
-spacing, bullets, colors, dividers, and page numbering. The page-count threshold
-is a warning, not automatic fitting or content removal. The established
-single-column template remains; free positioning and arbitrary fonts are unsupported.
-
-**Header & contacts** controls alignment, contact icons, separators, row spacing,
-automatic wrapping, one to four contacts per row, and custom row sizes such as
-`3, 2`. Remaining contacts occupy a final wrapping row; unused rows have no
-effect. Empty values are omitted. **City & country** prints them as separate
-items (default) or as one combined location item with a single icon, joined by a
-comma in their Content & order sequence and placed where the first of them is
-selected. Contact inclusion and order stay in
-**Content & order**, linked directly from Header. Full name remains required.
-Custom rows store positions, never contact identities.
-
-Each expanded layout group has one compact reset action. Resume **Reset group**
-restores the frozen defaults copied from its last loaded preset, starter, or
-initial workspace appearance. Preset changes or deletion never change those
-copies. Loading a preset replaces both appearance and defaults in the draft;
-Save keeps both together. Existing resumes without stored defaults use their
-saved appearance, recording it on their next layout Save without load-time writes.
-Preset and starter editors instead offer **Reset to app defaults**.
-
-Controls show effective values and muted default descriptions. Relative and
-automatic spacing remains relative until explicitly edited. Divider thickness,
-page-number options, and custom contact rows appear when enabled; hidden values
-are retained and invalid ones remain available for correction. Paper appears
-above the margin guide, whose edges respond to margin hover and keyboard focus.
-Divider thickness stays beneath its checkbox. Numbering options stay beneath
-their checkbox, alongside the page-warning
-threshold; its explanation is available from the label info hint. Custom contact
-rows stay beneath their select, alongside row spacing and separator controls.
-Row-break choices share one instruction rather than repeating it for each contact.
-Color swatches open named-choice popovers; selection changes the draft and closes
-the popover, while the enclosing Save still commits the form. Swatches and the
-Style sample approximate PDF colors; the compiled PDF remains authoritative.
-
-The fictional **Style sample** responds immediately without compiling; it is not
-a PDF and does not predict pagination or exact font metrics. The real PDF always
-uses saved content. Save does not compile: use Refresh preview. The labeled last
-successful PDF remains available if new output fails. Its page warning uses the
-threshold associated with that PDF, including when the preview is outdated.
-
-**Presets** contain named appearance only and are optional. Edit Layout directly,
-or expand the initially collapsed **Layout presets (optional)** disclosure,
-select a preset, then **Load into layout** and Save. Selecting alone changes
-nothing; no preset is required to edit or save layout. With no presets, the
-disclosure explains direct editing instead of showing an empty selector.
-The unsaved-load announcement remains visible when the disclosure is collapsed.
-
-**Save as preset** captures saved appearance,
-resolving dirty changes first. Manage, edit, duplicate, or confirm deletion from
-**Library > Layout presets**, also linked by Manage presets in Layout. Matching is determined
-by settings values; there is no live connection to a preset.
-
-**Save as starter** in a resume's actions captures empty section structure,
-order, visibility, icons, field defaults, summary visibility, and layout. The
-starter editor can add/remove/reorder sections and change these settings. It
-copies no entries, achievements, links, contact selections, or localized wording.
-Structural labels identify empty sections; newly created custom sections still
-need career heading wording before output. Use **Duplicate resume** to reuse
-content. Starters can also be created from scratch through **Library > Resume starters**.
-
-Create resume explicitly offers **Blank resume / From starter**, defaulting to
-Blank resume. From starter shows the ordered empty structure, summary/field
-visibility defaults and illustrative style before reviewing which active Career
-sections to reuse or create. **Create resume…** on a starter card opens the same
-flow with that starter selected. A missing starter blocks creation rather than
-silently creating blank content. Ambiguous matches require a choice; archived
-sections must be restored separately. Creation commits the resume and any missing
-empty sections atomically. Selecting entries later uses the copied field defaults;
-explicit subsequent visibility edits remain independent. Undo removes the resume
-and archives only the sections created by that operation. Redo preserves identities.
-Later edits or deletion of a starter/preset never change existing resumes.
-
-The sidebar order is **Career details > Library > Resumes**. Clicking **Library**
-opens its overview with collection descriptions, icons, and Edit links to
-Layout presets and Resume starters. The overview uses the durable `?scope=library`
-destination. Both collection links remain visible when empty, with selection and
-guarded Library/collection parent location links; reload and Back/Forward restore
-the destination. Collection creation sits at the far end of the page title row, matching Career details. Preset/starter search is omitted throughout collections
-and contextual pickers. Library item footers order Edit, Duplicate, Use/Create,
-then Delete; destructive actions remain last in keyboard and visual order,
-including wrapping. Delete confirmation uses Cancel / Delete.
-
-Library views use the full editor width without an unrelated
-resume PDF, career-language selector, or career-editor return links; the existing
-Style sample remains illustrative. Library navigation never expands/selects a
-resume or replays its entrance animation. Resume rows remain mounted, retaining
-scroll and entrance history; only explicit resume navigation or Apply preset crosses
-into resume editing. Collection space reserves Library access, with independent collection scrolling and an outer
-sidebar scroll area for exceptionally short windows.
-
-**Apply preset…** on a library card requires an explicit target resume, resolves
-pending forms, and rechecks both records before opening that resume's Layout
-draft. Loading is announced as unsaved; Cancel restores saved appearance and Save
-commits one history step. A matching preset creates no change. With no resumes,
-the dialog offers ordinary creation without automatically applying the preset.
-Neither preset loading nor the Style sample compiles. Existing resumes retain
-independent copies after library edits or deletion.
-
-Layout groups follow **Typography > Page & margins > Header & contacts >
-Spacing & details > Colors**. Typography and Page & margins initially expand;
-validation reveals other groups as needed. The resume workflow remains Overview,
-Content & order, Wording, Layout, with free guarded navigation between views.
-
-**Load sample workspace** in Data & backups opens the normal replacement review.
-The sample contains complete fictional English/Portuguese resumes using the
-Classic and Compact navy presets, plus Complete career and Project focused
-structure-only starters. Project focused demonstrates creating a missing empty
-Research section; both starters retain field defaults without selecting entries.
-
-The current development format requires the complete layout model and template
-`yabuki-reference@1.0.3`. Earlier layout/template data is rejected without migration,
-automatic storage clearing, or reseeding. Export anything needed using the previous
-application before upgrading; use an explicitly cleared or disposable browser
-origin for a fresh workspace. Browser clearing removes local recovery too. Current
-workspace schema 2 and recovery format 1 remain the portable envelope versions.
-
-## Current capabilities
-
-The schema-2 career editor runs inside the retained workspace shell: utility rail,
-collapsible branded sidebar, workspace toolbar/history/status, and wording-language
-header. Career navigation uses the schema-2 dirty-form guard. Narrow screens use
-the existing navigation drawer, with the account menu and Appearance in its footer.
-Independent resumes expose Content, Wording, and Layout forms and committed-only output in
-the resizable desktop preview panel or narrow-screen Editor/PDF preview tabs.
-Workspace panel arrangement and interface appearance remain device-only. Resume PDF layout is saved in the workspace. Data & backups opens the
-schema-2 backup/recovery/replacement controls; it offers no retired reset/autosave actions.
-Light/dark appearance changes suppress color transitions through the next paint,
-then restore normal interaction transitions; system-theme changes follow the same path.
-
-The editor uses the previous career overview card grid, destination headings/icons,
-entry-list card, and grouped form layout. Schema-2 drafts supply these views without
-changing the shared utility rail, sidebar, or workspace shell.
-Overview cards and sidebar navigation use shared staggered pop entrances, honoring
-reduced motion; reopening the sidebar replays its entrance.
-
-Career details owns profile, summary, built-in/custom sections, entries, achievements,
-links, shared facts, and reusable wording. One content language is sufficient.
-Content languages use canonical tags; activation is separate from the English UI
-and PDF capability. Deactivation retains wording and existing resumes.
-
-Custom sections have one shared, language-independent app icon. Open **Section
-properties** from the section heading menu and choose **Section icon**. The picker
-edits the properties draft; the form's Cancel / Save resolves the whole edit.
-Until Save succeeds, other views retain the committed icon. Saved choices follow
-section representations in career navigation/overview, section headings, resume
-Content & order, Wording, shared references, and comparison. Resume identity
-colors and navigation icons remain separate. Built-in section icons are fixed.
-
-Section icons are required in the current development model and portable section
-and starter definitions. Earlier development data without icons is unsupported;
-there is no conversion or silent reseeding. Workspace schema 2 and recovery
-format 1 are the supported formats. Icons survive recovery, history,
-archive/restore, and workspace replacement/rollback. They do not add PDF graphics
-or readiness requirements. An icon Save advances the workspace revision but does
-not mark the preview outdated, because staleness compares rendered output, not
-revision numbers.
-Portable starter definitions also carry icon choices.
-
-Create sections/entries explicitly, then edit their wording and facts. Ordinary
-forms, ordering, and language changes stay uncommitted until Save. Cancel discards
-the affected form. Entry editing and section entry ordering can stay open as
-independent drafts with separate Save/Cancel actions and history steps. Opening an
-entry preserves pending order; dragging preserves the entry draft and selection.
-Dirty navigation and browser Back/Forward offer Cancel/Discard/Save;
-close/reload warnings and recovery flushing are best effort. Keyboard undo remains
-inside dirty forms. Workspace Undo/Redo is invoked separately after resolving a
-form; Undo after Save undoes that Save. Undo of creation archives the new shared
-record; Redo restores the same identity. Shared content has archive/restore only.
-
-Recovery is separate from saved content. It writes after 500 ms of inactivity,
-with a two-second maximum scheduling wait. Restore opens an uncommitted draft;
-compare and reconcile it before Save. Failed/uncertain Saves retain drafts and
-reuse immutable operation IDs. Unknown operation history requires reconciliation.
-Unresolved drafts do not expire. Browser clearing/eviction can still remove data.
-Session-only Save is an explicit choice and does not replace durable content.
-While Saves exist only in this tab, the workspace shows **Saving in this tab only**
-and the browser warns on close. **Return to durable saving** first requires resolving
-open forms, then shows the durable revision for review. **Discard tab-only Saves**
-reloads the durable workspace; **Keep this tab's workspace** adopts it through the
-reviewed atomic replacement path, keeping the outgoing durable workspace as the one
-previous workspace. A durable revision newer than the one reviewed rejects adoption.
-Before adoption, the dialog identifies the previous snapshot being replaced and
-requires exporting it or explicitly continuing without export. Failed export keeps
-adoption blocked until retry or explicit continuation. Export remains available
-in that dialog. If browser storage never opened, Saves stay tab-only for this
-session, with a persistent disclosure and workspace-export guidance.
-
-**Saving and preview status.** Each kind of status has its own place and meaning;
-none implies another.
-
-- **Save status** (toolbar): _Saving…_, _Saved locally · revision N_, _Updated
-  from another tab · revision N_ (signed in: _another device or tab_), _Offline ·
-  showing last synced revision N_, _Saved in this tab only_, _cleanup retries on
-  next load_ (commit confirmed, receipt acknowledgment pending), or _not
-  confirmed_ with a reason: changed in another save, workspace replaced, browser
-  storage failed, or outcome unknown. Failed Saves always keep the draft. The
-  **Save in this tab only** action appears only when durable storage is unavailable
-  or a Save failed because browser storage failed.
-- **Recovery status** (beside the form): pending, stored with its draft version,
-  or failed with export guidance. Recovery is never a Save.
-- **Preview status** (PDF pane): preparing, generating, queued, failed with retry
-  (timeouts note the compiler restart; a compiler log disclosure appears when
-  available), and the retained PDF label with its revision, generation, and
-  **Current** or **Outdated**.
-- **Backup**: workspace exports say _saved workspace only_; recovery exports are
-  separate.
-- **Release status** (Release dialog and Settings › Public PDFs): uploading, failed
-  with retry, and each link's latest and revoked releases. Releases never change Save
-  or preview status.
-
-Notifications from other tabs that arrive during a local Save are applied after
-that Save settles.
-
-Data & backups exports committed schema-2 content and separate format-1 recovery.
-It can be visited without resolving open drafts. Stored draft recovery appears
-there with readable names and explicit Restore draft actions; entry lists do not
-show recovery comparison panels.
-Workspace replacement requires review and an atomic current-revision check,
-preserving one previous workspace. Rollback rotates that same snapshot. Recovery
-is retained separately. Downloads are reported as initiated, not completed.
-Device preferences and operation ledgers are excluded from portable exports.
-
-Resumes can be created, named, colored, duplicated, opened, and deleted with
-confirmation. The final resume can be deleted without deleting career content.
-New resumes choose an active language and start with full name only; optional
-contacts, summary, sections, entries, fields, achievements, and links are selected
-and ordered in Content & order. Hiding a section or entry retains its nested choices.
-The six icon colors identify resumes in the app and do not change PDF appearance.
-Existing archived selections remain labeled and rendered; archived content cannot
-be newly selected. Every Content Save commits one independent scope/history step.
-
-Wording customizes profile text, summaries, section headings, entry text,
-achievements, and link labels for one resume. Shared facts remain in Career
-details. Shared wording changes update inheriting resumes while preserving custom
-text, including explicit empty customizations. Use career wording removes the
-override on Save. Copying into another language retains shared identities,
-selection/order, color, and compatible layout, clears source customizations, and
-uses destination career wording without translation or cross-language fallback.
-Missing destination wording stays missing. Language-dependent wrapping can differ.
-Comparison shows two resumes' effective committed values in their own languages;
-drafts are excluded. Content/Wording deep links, reload, and guarded Back/Forward
-use opaque IDs. Earlier selection links open Content.
-
-Wording shows one card per Career details owner: Profile, Summary, then sections
-in resume order. Each card title carries the sidebar section icon, Archived/Excluded
-badges, its custom count, and **Edit in Career details** (Profile, Summary, or the
-section's entry list). Entries are collapsed disclosures with their own guarded
-Career details link. Each wording row shows its source badge and a Customize /
-Use career wording action; customized rows show the career wording beneath the
-input. By default only content included in the resume is listed; **Include
-excluded content** reveals the rest. Shared facts (dates, URLs, contact addresses,
-credentials) are not listed; they are edited in Career details. Comparison uses the
-same section icons and separates resume identity, inclusion/source metadata, and
-values.
-
-The sidebar restores each resume's tree: its name opens and selects the read-only
-Overview child, above Content & order and Wording. Individual resume views use
-their colored icon beside the title, with the actions menu in the title row.
-Overview, Content & order, and Wording use underlined tabs with icons; tab changes
-follow the same dirty-form guard as sidebar navigation. Compare resumes remains
-a separate action. Narrow tab lists scroll horizontally.
-Name & color hides those controls and offers Back to overview through the same
-dirty-form guard.
-Resume selectors show the same colored icons in options and selected values.
-The overview card omits color; edit it on the Name & color page. Return to the
-collection through the sidebar's Resumes destination. That destination is selected
-only for the collection and comparison; individual views show the resume name
-and current view in the workspace breadcrumb. The read-only overview card has no
-footer actions or navigation instructions. Empty Content & order groups show an
-explicit message; search misses are distinguished from unavailable choices.
-Overview, sidebar, and collection
-share actions for editing name/color, duplication, language copying, and confirmed
-deletion. Name/color editing uses a dedicated Save/Cancel page. Overview/details
-URLs support reload and guarded Back/Forward. Sidebar names stay on one line
-with ellipsis; full names/languages remain available in tooltips. Collection sizing
-uses layout heights so entrance animations do not create unnecessary scrollbars;
-short windows and long collections retain independent scrolling.
-
-The committed-snapshot output panel manually compiles the pinned template for
-English/Portuguese; unsupported languages have no PDF output. Save never compiles
-a draft. The Verso-styled PDF.js viewer provides page navigation, percentage zoom,
-separate Fit width/Fit page buttons with resize updates, on-demand thumbnails,
-embedded document outline, search, download, and a document-properties dialog.
-Page navigation uses a compact direct-entry field without spinner or previous/next
-buttons. The zoom uses a compact percentage input without spinner arrows (25-400%,
-committed on Enter or blur); grouped toolbar controls wrap
-with navigation at the start, the remaining controls centered, and the actions
-menu at the far right. Document navigation starts closed and
-overlays the PDF in narrow panes. Its left utility rail uses Images/Summary icon
-tabs, tooltips, and the same animated selection surface and vertical bar as the
-workspace navbar; the selected content scrolls independently beside it.
-Search opens through its button;
-Ctrl/Cmd+F is left to the browser. Native browser Find across unrendered pages is
-not guaranteed. Compilation
-failure retains the labeled last successful PDF. Viewer replacement cancels its
-owned rendering tasks, releases cached pages, detaches find/link services, and
-destroys the PDF.js document and worker. The workspace preview coordinator, which
-lives above the editor/preview layout, owns the compiler and the retained PDF URL.
-
-Hiding the preview (Hide PDF preview, a full-width destination, or the narrow
-Editor tab) unmounts the PDF viewer and releases its document, canvases, and
-worker, but keeps the last successful PDF and any compilation in progress.
-Showing the preview again redisplays that PDF without recompiling.
-
-Before the first PDF, an illustrated document placeholder offers **Generate preview**
-or directs blocked resumes to Issues. Preparation, generation, viewer loading, and
-first-page rendering have distinct status messages; loading motion respects reduced
-motion. Refresh keeps the last successful PDF visible and downloadable. Failed
-generation offers retry; viewer failures retain download access through PDF actions.
-
-Entry search uses a conditional inline X that clears the query and restores
-input focus. Resume selection checkboxes and sorting controls align with the
-first title line, including multiline labels.
-
-New workspaces start with empty Experience, Projects, Education, Skills, and
-Certifications sections. Existing saved workspaces are not reseeded. Summaries
-and achievements support rich prose; headings and short fields remain plain.
-Switching the narrow Editor/PDF preview panel preserves open drafts.
-
-Import parsing/validation uses a disposable worker and reports progress after
-500 ms. See [recovery-file boundaries and raw reassembly](docs/recovery-files.md).
-Explicit discard cleanup uses durable exact-version intents and retries on load;
-uncertain commit receipts remain protected until acknowledgment and are discoverable
-after restart. Completed receipt retention is configurable through controller
-options (30 days/1,000 acknowledged operations by default).
-
-The former bilingual schema-1 editor, translation-review queues, automatic
-workspace autosaving, and full resume/layout controls are retired from the active
-root page. Schema-1 workflow/state modules remain unmounted reference assets;
-their reusable shell, sidebar collection, toolbar presentation, and UI primitives
-are shared with the active schema-2 composition.
-
-## Resume output readiness
-
-The PDF preview panel alone has an Issues footer for the selected resume's
-**saved content only**. Its count/status row remains visible before compilation
-and alongside retained PDFs. It starts collapsed, preserves the toggle choice
-while mounted, and expands into a separately bordered body with independent
-scrolling capped at 40% of the dynamic viewport height. Overview has no Issues
-disclosure. The footer lists all blockers in output order: unverified
-PDF language, missing full name, missing heading for a rendered custom section,
-empty selected title/degree, and empty selected achievements. Other empty values
-remain optional; built-in section headings and blank link-label URL fallback are
-preserved. Excluded sections, hidden entries, unselected children, unrelated
-resumes, archive status, and language deactivation alone do not block output.
-Language activation does not grant verified PDF support.
-
-**Edit wording** opens that resume's Wording view, expands the affected entry (or
-excluded content) when needed, and focuses the affected row. Customize repairs only
-that resume; Edit in Career details opens shared content. Issue navigation uses the ordinary dirty-form guard and reveals Editor on
-narrow screens only after navigation succeeds. Cancel or failed Save retains the
-draft. Focus targets stay local; durable scope URLs support reload and Back/Forward.
-Saving within the current resume editor reopens the saved form without adding a
-duplicate browser-history entry.
-
-Readiness and TeX rendering use the same assessment. Incomplete valid content can
-still be saved; malformed values retain the failed draft. Typing, recovery
-restoration, and unsaved wording never update readiness or compile a PDF. Refresh
-preview is disabled while blocked, and compilation errors remain separate. A last
-successful PDF remains labeled and downloadable, becoming outdated only when the
-saved output of that resume changes. Staleness compares a fingerprint of the
-rendered source that ignores the revision number embedded in PDF metadata, so
-Saves elsewhere (other resumes, presets, unselected content, icons) keep it
-**Current**.
-
-With **Refresh preview automatically after Save** enabled (Settings → Editing &
-preview, device-only, off by default), a saved change to the selected resume's
-output refreshes the visible preview about 800 ms later. Unsaved edits, recovery,
-preset loads, style samples, layout resets, and color picks never trigger it. While
-the preview is hidden or the browser tab is in the background, the refresh waits,
-including automatic work already queued behind a compile. The header shows
-_Refresh pending_. A Save that makes the selected resume ready again also schedules
-refresh; switching resumes alone does not. Ready for PDF establishes content eligibility, not visual layout,
-clipping, PDF/UA, or ATS acceptance.
-
-Shared rich-text URL validation and the entry-search checkbox are independent of
-retired review and workspace-state modules. The retired schema-1 assets remain
-unmounted references, with no active counterpart or translation-review workflow.
-
-## Accounts
-
-Accounts are optional and activate only on a deployment configured with a database,
-auth secret/URL, and at least one GitHub or Google OAuth app. Without that
-configuration the app stays guest-only, the avatar menu offers only Settings, and
-Settings › Account says so. Settings › Account shows **Continue with GitHub** /
-**Continue with Google** buttons with provider icons; the first sign-in creates the
-account. There are no separate sign-in or sign-up pages.
-
-- **Guest.** Saves commit to this browser's IndexedDB (`verso-local`).
-- **Signed in.** Saves go to the account's PostgreSQL workspace. A Save is reported
-  as "Saved to account" only after the server acknowledges it. Typing never sends
-  anything: drafts, immutable pending Save requests, and cleanup intents stay in an
-  account-isolated browser database (`verso-account-<userId>`).
-- **Offline or unanswered Saves** show "Not yet saved to your account" and keep the
-  draft. Save again retries the same operation; the server returns its recorded
-  receipt instead of committing twice. A missing receipt is treated as unknown and
-  needs comparison, never blind replay. "Save in this tab only" remains an explicit,
-  disclosed local-only choice.
-- **Expired or replaced sessions** keep the workspace and drafts mounted and ask you
-  to sign in again from Settings › Account.
-- **Sign-in never moves, merges, or replaces a workspace.** Settings › Account offers
-  **Review guest workspace import**: it opens the standard replacement review,
-  replaces the account workspace (kept as the one previous workspace), and leaves
-  the guest workspace in this browser unchanged. There is no merge.
-- **Sign-out** first resolves open forms with Cancel / Discard / Save. Unconfirmed
-  Saves and recovery stay on this device and reappear when the same user signs in
-  again; the dialog offers recovery export. Account-local browser data is never
-  wiped automatically, so on a shared device export and resolve work before leaving.
-- **Changes from other devices.** A signed-in tab checks whether the account
-  workspace changed without downloading it again when nothing changed: on focus,
-  when the tab becomes visible, on reconnect, and on returning after 15 minutes
-  without input (at most once per minute across this browser's tabs), plus every 5
-  minutes while the tab is visible and in use. Hidden or idle tabs send nothing.
-  Newer content appears with "Updated from another device or tab"; tabs in the same
-  browser share each Save and check locally. Drafts are never replaced: if the same
-  content changed elsewhere, a conflict panel shows both versions with **Export
-  recovery**, **Keep my draft** (start from the saved version, then Save), and **Use
-  saved version** (discards the draft after confirmation).
-- **Reconnecting** looks up each unconfirmed Save once. Saves the server already
-  committed are confirmed without sending them again; unknown ones stay pending
-  behind **Retry save**. Opening while the server is unreachable shows the last
-  synced revision from this device as possibly stale; Saves wait for reconnection.
-- Google and GitHub sign-ins link to the same account when their resolved emails
-  match and both the incoming provider email and existing account email are
-  verified. Neither provider bypasses verification. Linking preserves the existing
-  profile and workspace; different emails remain separate accounts. OAuth callback
-  failures appear in Settings › Account. There is no password sign-in, account
-  deletion, coauthoring, or live push of remote changes; drafts stay on the device
-  where they were typed.
-
-The server stores one schema-2 snapshot per account, one previous workspace, and
-operation receipts (pruned to 30 days / 1,000 per account inside at most one Save
-per day; reads never write; clients protect their own pending requests). Saves lock the owner's row, recheck only the request's scope
-baseline and generation, and commit content, revision, and receipt in one
-transaction. Every account request is authorized from the database session, bound to
-the client's session ID, origin-checked for writes, and answered `no-store`.
-
-## Public PDF releases
-
-Signed-in owners can publish a resume's compiled PDF at an unlisted public link.
-Guests and unconfigured deployments never publish; `/pdf/*` answers 404 there.
-
-- **Explicit, reviewed release.** **Release…** in the PDF preview header is enabled
-  only while the preview is Current for saved account content. The dialog shows the
-  resume, language, saved revision, and whether a new link is created, warns that
-  unlisted is not private (the PDF title metadata includes your name and the resume
-  name), and uploads only after **Release**. Drafts, typing, other resumes, and
-  workspace data are never published.
-- **Server checks.** The server re-renders the resume from the committed account
-  workspace and accepts the PDF only when the workspace generation and output
-  fingerprint match, the resume is ready, the template matches, and the file is a PDF
-  of at most 4 MiB. Each release records its content (revision, generation,
-  fingerprint, source SHA-256), locale, template, compiler runtime (locked engine and
-  format), layout settings SHA-256, and PDF SHA-256. Retrying an interrupted upload
-  reuses its operation ID and never publishes twice; the prepared request lives in
-  the tab, so after a reload the release list shows whether it landed.
-- **URLs.** Each resume has one link with a 256-bit random token:
-  `/pdf/<token>` serves the latest release and `/pdf/<token>/<number>` serves one
-  immutable release. A release advances latest by default; untick **Make this the
-  latest version** to publish only its numbered link. Storing the release and moving
-  latest happen in one transaction, so a failed release leaves existing links unchanged.
-- **Management** in Settings › Public PDFs: copy links, **Make latest** (rollback or
-  advance), **Revoke** / **Restore** a numbered release, **Delete** a release (its
-  bytes are removed), and **Revoke link** (deletes the link and all of its releases;
-  releasing again creates a new token). The current latest cannot be revoked or
-  deleted until another release is made latest. Links for deleted resumes stay
-  listed until revoked.
-- **Automatic release** is an opt-in per link, off by default. While the resume's
-  preview is open in a visible signed-in tab, each confirmed Save that changes its
-  PDF compiles (even with automatic preview refresh off) and becomes the latest
-  release; output identical to the latest is skipped. Closed tabs, hidden tabs, and
-  full-width pages such as Overview (which hide the preview) publish nothing until
-  the preview is shown and compiles.
-- **Serving and freshness.** Public responses are `application/pdf`, inline with the
-  release file name (`<name>-<locale>-v<number>.pdf`), `Cache-Control: no-store`,
-  `ETag`, `X-Content-Type-Options: nosniff`, `X-Robots-Tag: noindex, nofollow`, and
-  `Referrer-Policy: no-referrer`. Nothing is cached, so new latest releases,
-  rollbacks, and revocations apply on the next request. Unknown, revoked, and
-  deleted links share one 404. Unlisted links are not authentication.
-- **Retention.** Releases are kept until you delete them; nothing is pruned
-  automatically. Limits: 10 links, 25 releases per link, 50 MiB of PDFs per account,
-  4 MiB per PDF. Releasing past a limit is refused with an explanation.
-
-Each public download costs one database read and no session lookup. Workspace
-backups and recovery exports never include link tokens or release data.
-
-## Data formats and limits
-
-The supported format is UTF-8 `verso.workspace` schema 2; recovery uses a separate
-`verso.recovery` schema 1. Unsupported versions are rejected without changing saved
-content. Backups include committed content/configuration, not device preferences or
-credentials. Recovery imports restore drafts, never automatically committed edits.
-Resume color/contact/summary configuration and hidden selection flags are optional
-schema-2 additions. When absent, older schema-2 resumes retain their prior output
-defaults without writes on load. New resumes explicitly store unselected defaults.
-Name/color, Content, Wording, and single-resume lifecycle scopes commit separately;
-older selection drafts and immutable pending requests remain supported unchanged.
-Deleting a resume retains unresolved recovery. When its shared references still
-exist, Restore as new creates an uncommitted resume in an explicitly chosen active
-language and retains the original recovery. Invalid references require reconciliation
-or export. Interrupted creation/deletion receipts are checked before replay; Undo
-and Redo never overwrite a conflicting resume.
-
-Safety ceilings are 120 resumes, 100 sections, 2,000 entries total, 300 entries per
-section, 100 achievements and 30 links per entry, 30 profile links, and 100 each of
-starters/presets. Languages are bounded by file size. Workspace documents and files
-each allow 4 MiB, including envelope overhead for files, so a whole workspace fits
-one hosted request; typical workspaces are around 100 KB. Recovery allows 32 MiB
-per file and 8 MiB per draft including its baseline. Limits never permit truncation
-or automatic eviction of unresolved recovery. In-memory undo is bounded to 100
-steps or 32 MiB; undo is not a backup. Browser clearing/eviction can still remove data.
-
-Compiler defaults are a 120-second initialization timeout, 30-second compilation
-timeout, and 1,000,000-byte source limit. Compilation uses one active request and
-one replaceable queued request, one compiler/worker pair per tab, and one retained
-successful PDF plus an in-flight result. A running compilation is never interrupted
-by a newer request; when it finishes, the queued request compiles the latest saved
-output for the same resume. Results whose generation, resume, or output fingerprint
-no longer match are discarded before any PDF URL is created. Workspace replacement
-closes the compiler and drops queued work. A timeout terminates the compiler worker
-pair before the next attempt.
-
-## Setup and checks
-
-Use Node 24.22.1 (`.nvmrc`; `engines` accepts >=24.22.1 <25) and npm 11.3 with the
-existing package-lock.json. Python 3.10+ with lzma support must be on PATH
-(`python3`, `python`, or `py -3`) to prepare compiler assets.
-Run `npm ci` and `npm run compiler:prepare`. Install and start Docker Desktop
-with Docker Compose v2, then run `npm run dev` (an alias for `dev:local`).
-This starts PostgreSQL 17, waits for its health check, generates Prisma Client,
-applies checked-in migrations to the local database, and starts Next.js.
-The browser compiler uses locally prepared assets in the gitignored
-`public/compiler/` and needs no account credentials.
-
-The local runner overrides `DATABASE_URL` before loading environment files, even
-when the shell or an env file contains a hosted URL. Its development-only URL is
-`postgresql://verso:verso@127.0.0.1:5433/verso?schema=public`.
-Verso has its own Compose project and persistent `postgres-data` volume. Dayplan
-uses the same host port, so stop its database before starting Verso's.
-`npm run db:local:down` stops the container and retains its data volume.
-
-Accounts are optional. To enable them locally, copy `.env.example` to
-`.env.development.local` and set a random `BETTER_AUTH_SECRET` of at least 32
-characters, `BETTER_AUTH_URL=http://localhost:3000`, and the client ID/secret of a
-GitHub and/or Google OAuth app whose callback is
-`<BETTER_AUTH_URL>/api/auth/callback/<provider>`. Preserve existing credentials;
-the local runner changes only the database selection.
-
-To use hosted Prisma Postgres instead, keep its direct PostgreSQL URL in
-`DATABASE_URL` in `.env.development.local`, explicitly apply migrations with
-`npm run db:prisma:migrate` when needed, and run `npm run dev:prisma`.
-Hosted startup generates Prisma Client but never migrates the database.
-Both development commands accept Next.js flags, for example
-`npm run dev -- --port 3001` (update the auth origin and OAuth callbacks to match).
-Local and hosted databases have separate accounts and workspaces; switching does
-not copy data. `db:migrate:deploy` and direct Prisma CLI commands still use the
-configured `DATABASE_URL`; use `db:local:migrate` to select Docker explicitly.
-The Prisma client is generated into the gitignored `lib/generated/prisma` by
-build, typecheck, and `test:db`.
-Builds use the existing Next.js Google-font integration.
-
-| Command                     | Purpose                                                               |
-| --------------------------- | --------------------------------------------------------------------- |
-| `npm run format:check`      | Formatting                                                            |
-| `npm run lint`              | ESLint/import order                                                   |
-| `npm run typecheck`         | Next route generation and TypeScript                                  |
-| `npm run compiler:prepare`  | Full compiler preparation, including optional reference-proof inputs  |
-| `npm run build`             | Compiler assets when missing or stale, then the production build      |
-| `npm run test:unit`         | Vitest Node domain/capacity cases                                     |
-| `npm run test:db`           | Account storage/API against an isolated in-process Postgres (PGlite)  |
-| `npm run test:browser`      | Real Chromium component/IndexedDB cases                               |
-| `npm run test:e2e`          | Playwright with a fresh production build/server on localhost:3100     |
-| `npm run test:e2e:accounts` | Account flows: isolated database plus a production server on :3101    |
-| `npm run db:migrate:deploy` | Apply checked-in migrations to `DATABASE_URL` (owner-run)             |
-| `npm run test:measure`      | Explicit production capacity/interaction/import/compiler measurements |
-| `npm test`                  | Unit, database, browser, E2E, then account E2E suites                 |
-
-Vitest 4.1.12, renderer 2.2.0, Vite 7.3.8 and a Tailwind Vite adapter are scoped to
-testing and preserve the selected Next/React versions. Test browsers live in
-`.cache/ms-playwright`. Test against disposable origins; browser storage belongs
-to the origin/profile. Tests do not establish Safari support, PDF/UA, universal
-ATS compatibility, or production deployment.
-
-Install the pinned browser engines with `PLAYWRIGHT_BROWSERS_PATH` set to
-`.cache/ms-playwright` before running cross-browser checks. Both guest and account
-E2E run Chromium, Firefox, and WebKit. Account cases use seeded database sessions
-and independent browser contexts, including concurrent Saves, offline retries,
-simulated suspension, expiry, and account changes during a delayed freshness response.
-They do not establish physical-device sleep/wake or hosted OAuth acceptance.
-The guest server explicitly clears account environment values; the account server
-uses isolated database and provider values, so local OAuth configuration cannot
-change either test deployment's mode.
-The Chromium quota case waits for the browser's 30-second
-quota cache to expire. Measurements run separately with one worker and write
-raw samples under `.cache/performance/`; their recorded evidence includes reference
-hardware, browser version, normal/4x CPU runs, and sample counts.
-
-`npm audit` reports 3 low findings in `deepmerge` used only by the shadcn CLI
-(no fixed release; the app imports only `shadcn/tailwind.css`). `overrides` pin
-`minimatch` 11.0.8 for typescript-eslint and ts-morph, which have no patched release.
-
-## Vercel deployment
-
-For a guest-only Vercel deployment, explicitly set the Build Command to
-`npm run build`; this does not require a database or apply migrations. Its `compiler:build` step
-(`tools/compiler-proof/prepare.mjs --assets-only --if-needed`) regenerates
-`public/compiler/` before `next build`. It downloads the locked archives listed in
-`tools/compiler-proof/resources.lock.json` (about 71 MB from ftp.math.utah.edu,
-GitHub, and CTAN), verifies every SHA-256, and publishes about 20 MB of static
-assets. Downloads retry three times; any failure stops the build and leaves no
-partial `public/compiler/`. On Vercel the download cache lives in
-`.next/cache/verso-compiler-downloads`, which the build cache restores. Existing
-assets that verify are reused without downloads.
-
-Requirements: outbound HTTPS during builds, Python 3.10+ with lzma on the build
-image, and Node 24.x (from `engines`). No `vercel.json` is needed, and a guest-only
-deployment needs no environment variables.
-
-To enable accounts, connect Prisma Postgres from the Vercel Marketplace (which sets
-`DATABASE_URL`), set `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (the deployment
-origin), and the OAuth variables for each provider, and register the provider
-callback `<BETTER_AUTH_URL>/api/auth/callback/<provider>` for that exact origin.
-For account deployments, set the Vercel Build Command to `npm run vercel-build`.
-It prepares compiler assets through Python, generates Prisma Client, applies
-checked-in migrations to that deployment's `DATABASE_URL`, then builds Next.js.
-Each step must succeed before the next runs. The ordinary `npm run build` does
-not migrate; `npm run db:migrate:deploy` remains available for manual migrations. Whole
-workspaces stay within one request because the workspace ceiling (4 MiB) is below
-Vercel's 4.5 MB request-body limit; an unusually large single-scope Save can still
-be rejected as too large and stays recoverable on the device. The served SwiftLaTeX engine is AGPL-3.0; `/compiler/SOURCE.txt` and
-the `license-*` files identify the corresponding source in this repository.
-Public PDF releases need the same account configuration and no extra
-credentials; PDFs are stored in the account database. Hosted acceptance remains
-future scope.
-
-Guests send no resume content to a backend; signed-in Saves send committed content
-to the account API only on explicit Save, replacement, or import. Compiler maintenance is
-covered in [compilation proof](docs/compilation-proof.md).
+Verso is a career-information and resume editor for people maintaining tailored
+resumes from one shared career record. Reuse facts and wording across independent
+resumes, customize each resume, and generate PDFs in the browser.
+
+## Features
+
+- Career profile, summaries, built-in and custom sections, entries, achievements,
+  and links, with archive/restore for shared content.
+- Independent resumes with their own content selection, order, wording overrides,
+  and layout. Appearance presets, empty-structure starters, duplication, and a
+  fictional sample workspace help reuse existing setups.
+- Extensible content languages, one language per resume, and verified PDF output
+  capabilities for English and Brazilian Portuguese. The interface is English.
+- Explicit Save/Cancel, workspace Undo/Redo, separate unsaved-draft recovery,
+  JSON backups, and reviewed replacement retaining one previous workspace.
+- Browser-based LaTeX compilation and PDF preview/download. Refresh is manual by
+  default; automatic refresh after saved output changes is optional.
+- Guest workspaces stored in this browser. Optional GitHub/Google sign-in adds
+  account storage and cross-device freshness checks. Configured accounts can
+  publish PDFs through latest and pinned public links, with optional automatic releases.
+
+Saving, draft recovery, PDF generation, backups, and publication are separate
+operations. Unsaved text does not enter a generated PDF. Incomplete content can be
+saved; the preview's Issues list explains missing wording that blocks generation.
+
+## Technology
+
+Next.js 16.4.2, React 19.3, TypeScript, Tailwind CSS 4, and shadcn/Base UI form the
+application. Guests use transactional IndexedDB; configured accounts use Better
+Auth and Prisma 7 with PostgreSQL. A pinned, self-hosted SwiftLaTeX WebAssembly
+bundle generates PDFs locally, and PDF.js displays them.
+
+## Getting started
+
+Prerequisites:
+
+- Node **24.22.1**, as pinned in [.nvmrc](.nvmrc), and npm (the manifest selects
+  **11.3.0**). Use the existing `package-lock.json`.
+- Python **3.10+** with `lzma` support, available as `python3`, `python`, or `py -3`,
+  for compiler asset preparation.
+- Docker with Compose v2 running for the default local database workflow.
+- Network access for npm installation, locked compiler downloads, and build-time
+  Google fonts.
+
+```sh
+npm ci
+npm run compiler:prepare
+npm run dev
+```
+
+Open <http://localhost:3000>. `dev` aliases `dev:local`: it starts PostgreSQL 17
+on `127.0.0.1:5433`, waits for readiness, generates Prisma Client, applies local
+migrations, and starts Next.js. The runner overrides `DATABASE_URL` before loading
+environment files, so it cannot accidentally select a hosted database. The app
+remains guest-only until account settings are complete, even though this default
+development command starts PostgreSQL.
+
+The Compose database has its own persistent volume. Port 5433 must be available.
+`npm run db:local:down` stops it while retaining data. Both development commands
+accept Next.js flags, for example `npm run dev -- --port 3001`.
+
+Compiler assets are generated into gitignored `public/compiler/`. Private reference
+ZIP/PDF inputs are optional and not distributed; a fresh checkout can prepare the
+editor assets without them. See [compiler maintenance](docs/compilation-proof.md).
+
+## Configuration
+
+Accounts are optional. Guest-only deployments require no environment variables.
+To configure development accounts, copy [.env.example](.env.example) to
+`.env.development.local` and supply:
+
+| Variable                                   | Purpose                                                                                |
+| ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                             | PostgreSQL connection for hosted development and deployment; overridden by `dev:local` |
+| `BETTER_AUTH_SECRET`                       | Random secret of at least 32 characters                                                |
+| `BETTER_AUTH_URL`                          | Application origin, normally `http://localhost:3000` locally                           |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | GitHub OAuth application credentials                                                   |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google OAuth application credentials                                                   |
+
+Accounts activate only when the database, secret, origin, and at least one
+provider's complete credential pair are present. Register each callback as
+`<BETTER_AUTH_URL>/api/auth/callback/github` or
+`<BETTER_AUTH_URL>/api/auth/callback/google`. Update origins/callbacks if changing
+ports. Keep secrets server-side, outside source control and `NEXT_PUBLIC_*` variables.
+
+The default Docker runner supplies its development database connection. To use
+hosted Prisma Postgres instead, set `DATABASE_URL`, explicitly apply migrations
+with `npm run db:prisma:migrate`, and start `npm run dev:prisma`. Hosted startup
+generates the client but does not migrate. Local and hosted databases are separate;
+switching does not transfer accounts or workspaces. `db:local:migrate` explicitly
+selects Docker; `db:migrate:deploy` uses the configured database.
+
+### Deployment
+
+For guest-only Vercel deployments, select **`npm run build`**. For account deployments,
+configure the variables above for the exact deployment origin and select
+**`npm run vercel-build`**: it prepares compiler assets, generates Prisma Client,
+applies checked-in migrations, and builds Next.js. Ordinary `build` never migrates.
+Public PDFs use the same account database and need no additional credentials.
+
+The build image needs Node 24.x within the manifest's range, Python 3.10+ with
+`lzma`, and outbound HTTPS. Builds verify locked compiler downloads and reuse valid
+assets/cache; a failed preparation stops the build. SwiftLaTeX's AGPL source and
+third-party notices must remain available with the served compiler assets; see
+[licenses and maintenance](docs/compilation-proof.md#licenses-and-maintenance).
+
+## Development commands
+
+| Command                       | Purpose                                                  |
+| ----------------------------- | -------------------------------------------------------- |
+| `npm run format:check`        | Check formatting                                         |
+| `npm run lint`                | ESLint and import ordering                               |
+| `npm run typecheck`           | Generate Prisma/Next route types and check TypeScript    |
+| `npm run build` / `npm start` | Build and serve production output                        |
+| `npm run test:unit`           | Vitest Node domain and validation tests                  |
+| `npm run test:db`             | Account/API tests against isolated PGlite                |
+| `npm run test:browser`        | Real Chromium component and IndexedDB tests              |
+| `npm run test:e2e`            | Production guest flows in Chromium, Firefox, and WebKit  |
+| `npm run test:e2e:accounts`   | Isolated account flows in all three engines              |
+| `npm test`                    | Run unit, database, browser, guest E2E, then account E2E |
+| `npm run test:measure`        | Separate production performance measurements             |
+
+Before browser tests, install the pinned engines into the shared test-browser path:
+
+```sh
+# POSIX shell
+PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright npx playwright install chromium firefox webkit
+```
+
+```powershell
+# PowerShell
+$env:PLAYWRIGHT_BROWSERS_PATH = ".cache/ms-playwright"
+npx playwright install chromium firefox webkit
+```
+
+E2E commands build fresh production servers on ports 3100 (guest) and 3101
+(accounts). Tests use isolated origins/databases and do not require real OAuth
+credentials. Run focused checks for the behavior being changed; documentation
+changes generally need only formatting and link/configuration validation.
+
+## Limitations and data safety
+
+- Browser clearing or eviction can remove guest content and local recovery,
+  including unsent account edits. Download backups; recovery exports preserve
+  unsaved drafts separately. Workspace replacement retains **one previous workspace**,
+  not version history. Undo is bounded and is not a backup.
+- Accounts use periodic/event-driven freshness checks rather than live coauthoring.
+  Offline or uncertain Saves retain recoverable work; they are not confirmed server Saves.
+  Guest content is imported into an account only through explicit reviewed replacement.
+- Workspace schema 2 and recovery format 1 are supported. Earlier development data,
+  incomplete layout models, and old template identities are rejected without conversion,
+  silent resets, or reseeding. Workspace/backup files are capped at 4 MiB; recovery
+  files at 32 MiB, with an 8-MiB draft limit and separate raw-salvage export for oversized drafts.
+- Layout uses the supported single-column template and bundled fonts. A style sample
+  approximates appearance; the compiled PDF determines pagination. Unsupported
+  content languages cannot generate PDFs. No PDF/UA, universal ATS, or Safari
+  compatibility is claimed.
+- Public PDF links allow anyone holding the URL to download the published PDF.
+  Release quotas require explicit cleanup; publishing never silently removes older
+  releases. Revocation cannot retrieve copies already downloaded.
+- Automated checks and historical compiler observations do not establish hosted
+  OAuth/deployment acceptance, current visual/PDF acceptance, or physical-device behavior.
+
+## Architecture and documentation
+
+The root route mounts an account-aware shell around the career workspace.
+`lib/career/` owns the canonical model and pure rules; `stores/career/` owns committed
+state, drafts, history, and storage backends. Components and hooks provide the UI,
+while `lib/account/` owns server-side account and release access. Retained schema-1
+modules are unmounted reference code.
+
+- [Architecture and behavior contracts](docs/architecture.md)
+- [Save, recovery, and portable data](docs/recovery-files.md)
+- [Accounts and public PDFs](docs/accounts-and-public-pdfs.md)
+- [Compiler maintenance and historical proof](docs/compilation-proof.md)
+- [Brand identity](docs/brand-identity.md)
+- [Coding agent instructions](AGENTS.md)

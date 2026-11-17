@@ -62,4 +62,8 @@ older MongoDB servers, so check the server version before planning a migration.
 - [Prisma ORM 6 to 8 (MongoDB) guide, step 2](https://www.prisma.io/docs/guides/upgrade-prisma-orm/mongodb#2-port-the-schema-to-a-contract)
 - [v6 MongoDB schema documentation](https://www.prisma.io/docs/orm/overview/databases/mongodb)
 - [v6 composite types (MongoDB-only)](https://www.prisma.io/docs/orm/prisma-client/special-fields-and-types/composite-types)
-- The `prisma-8` skill's `references/contract.md` — authoritative for the Prisma 8 side
+- The package-owned `prisma-8` skill's contract-authoring guidance — authoritative for the Prisma 8 side
+
+This Prisma 8 guidance is external to this skill and is not vendored in Verso.
+Load the installed package-owned skill after the authorized Prisma 8 setup/sync;
+if unavailable, use the official guide linked above and report the missing guidance.
