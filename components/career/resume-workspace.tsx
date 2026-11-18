@@ -1526,7 +1526,7 @@ function WordingRow({
       onFocusCapture={finishEntrance}
     >
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="min-w-0 text-sm font-medium wrap-anywhere">
+        <span className="min-w-0 text-xs font-medium wrap-anywhere text-muted-foreground">
           {row.shortLabel}
         </span>
         {row.archived && <Badge variant="secondary">Archived</Badge>}
