@@ -522,7 +522,7 @@ function CareerSidebar({
       <SidebarFooter ref={footerRef} className="shrink-0 px-3 py-2">
         <SidebarMenu>
           {item(
-            "settings/account",
+            "settings/editing-preview",
             "Settings",
             <Settings aria-hidden="true" />,
           )}
@@ -687,7 +687,7 @@ export function CareerWorkspaceShell({
           }
           toolbar={
             <header
-              className="shrink-0 border-b bg-card"
+              className="flex min-h-16 shrink-0 flex-col border-b bg-card"
               aria-label="Workspace controls"
             >
               <WorkspaceToolbarView
