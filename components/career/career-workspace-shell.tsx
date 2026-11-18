@@ -102,6 +102,36 @@ type CareerNavigation = {
   careerActions: CareerActions;
 };
 
+/**
+ * Expanded resume pages own their entrance: expansion is local state, so the
+ * sidebar-wide entrance would not rerender to see rows mounted by each expand.
+ */
+function ResumePagesSub({ id, children }: { id: string; children: ReactNode }) {
+  const { isMobile, openMobile, open } = useSidebar();
+  const visible = isMobile ? openMobile : open;
+  const list = useRef<HTMLUListElement>(null);
+  useListEntrance({
+    getElements: () => [
+      ...(list.current?.querySelectorAll<HTMLElement>(
+        '[data-sidebar="menu-sub-button"]',
+      ) ?? []),
+    ],
+    contextKey: `${id}:${isMobile}:${visible}`,
+    disabled: !visible,
+    mode: "all",
+  });
+  return (
+    <SidebarMenuSub
+      ref={list}
+      id={id}
+      data-resume-pages=""
+      className="ms-3.5 me-3.5 border-border ps-4 pe-0"
+    >
+      {children}
+    </SidebarMenuSub>
+  );
+}
+
 /** Keep resume expansion local without remounting rows or replaying their entrances during Library navigation. */
 function ResumeSidebarCollection({
   document,
@@ -221,10 +251,7 @@ function ResumeSidebarCollection({
                 </div>
               </QuickActionsContextMenu>
               {expanded && (
-                <SidebarMenuSub
-                  id={`resume-pages-${resume.id}`}
-                  className="ms-3.5 me-3.5 border-border ps-4 pe-0"
-                >
+                <ResumePagesSub id={`resume-pages-${resume.id}`}>
                   {(
                     [
                       ["resume-overview", "Overview", LayoutDashboard],
@@ -254,7 +281,7 @@ function ResumeSidebarCollection({
                       </SidebarMenuSubItem>
                     </QuickActionsContextMenu>
                   ))}
-                </SidebarMenuSub>
+                </ResumePagesSub>
               )}
             </SidebarMenuItem>
           );
@@ -327,8 +354,9 @@ function CareerSidebar({
         ])
         .filter(
           (element) =>
-            !libraryDestination ||
-            !element.closest('[data-sidebar-collection="Resumes"]'),
+            !element.closest("[data-resume-pages]") &&
+            (!libraryDestination ||
+              !element.closest('[data-sidebar-collection="Resumes"]')),
         ),
     contextKey: `sidebar:${isMobile}:${isMobile ? openMobile : sidebarOpen}`,
     disabled: !(isMobile ? openMobile : sidebarOpen),
