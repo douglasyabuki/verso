@@ -4,6 +4,10 @@ import { Plus } from "lucide-react";
 import { type ReactNode, useLayoutEffect, useRef } from "react";
 
 import {
+  type QuickAction,
+  QuickActionsContextMenu,
+} from "@/components/ui/quick-actions";
+import {
   SidebarGroup,
   SidebarGroupAction,
   SidebarGroupLabel,
@@ -34,6 +38,7 @@ export function SidebarCollection({
   onCreate,
   createLabel,
   createDisabled,
+  contextActions = [],
   children,
 }: {
   label: string;
@@ -42,6 +47,8 @@ export function SidebarCollection({
   onCreate?: () => void;
   createLabel?: string;
   createDisabled?: boolean;
+  /** Right-click actions for the collection heading. */
+  contextActions?: QuickAction[];
   children: ReactNode;
 }) {
   const groupRef = useRef<HTMLDivElement>(null);
@@ -120,15 +127,17 @@ export function SidebarCollection({
       className="min-h-0 shrink px-3 py-0"
     >
       <SidebarSelection className="shrink-0">
-        <SidebarGroupLabel
-          render={<button type="button" />}
-          aria-current={active ? "page" : undefined}
-          data-active={active || undefined}
-          className="h-9 w-full pr-9 hover:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
-          onClick={onOpen}
-        >
-          {label}
-        </SidebarGroupLabel>
+        <QuickActionsContextMenu actions={contextActions}>
+          <SidebarGroupLabel
+            render={<button type="button" />}
+            aria-current={active ? "page" : undefined}
+            data-active={active || undefined}
+            className="h-9 w-full pr-9 hover:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+            onClick={onOpen}
+          >
+            {label}
+          </SidebarGroupLabel>
+        </QuickActionsContextMenu>
       </SidebarSelection>
       {onCreate && (
         <SidebarGroupAction

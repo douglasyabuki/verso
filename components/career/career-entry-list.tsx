@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Archive,
-  ArchiveRestore,
-  Copy,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-} from "lucide-react";
+import { Archive, ArchiveRestore, Copy, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 
 import { CareerTextField } from "@/components/career/career-fields";
@@ -25,15 +18,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
+import { QuickActionsMenu } from "@/components/ui/quick-actions";
 import { wordingText } from "@/lib/career/wording";
 import { reorderVisible } from "@/lib/ordering";
 import type { CareerEntry, CareerSection } from "@/types-and-constants/career";
@@ -213,7 +200,10 @@ export function CareerEntryList({
                   >
                     {({ dragHandle, orderButtons }) => (
                       <SortableItemLayout dragHandle={dragHandle}>
-                        <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div
+                          data-quick-actions-row
+                          className="flex flex-wrap items-start justify-between gap-2"
+                        >
                           <button
                             type="button"
                             className="flex min-w-0 flex-1 cursor-pointer flex-col items-start gap-1 rounded-lg px-2.5 py-1 text-left text-sm whitespace-normal outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -252,41 +242,33 @@ export function CareerEntryList({
                               <Pencil aria-hidden="true" />
                             </Button>
                             {orderButtons}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                render={
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-xs"
-                                    aria-label={`Actions for ${careerEntryLabel(entry, language)}`}
-                                  />
-                                }
-                              >
-                                <MoreHorizontal aria-hidden="true" />
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuGroup>
-                                  <DropdownMenuItem
-                                    onClick={() => onDuplicate(entry)}
-                                  >
-                                    <Copy aria-hidden="true" />
-                                    Duplicate entry
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => onArchive(entry)}
-                                  >
-                                    {entry.archived ? (
-                                      <ArchiveRestore aria-hidden="true" />
-                                    ) : (
-                                      <Archive aria-hidden="true" />
-                                    )}
-                                    {entry.archived
-                                      ? "Restore entry"
-                                      : "Archive entry"}
-                                  </DropdownMenuItem>
-                                </DropdownMenuGroup>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <QuickActionsMenu
+                              actions={[
+                                {
+                                  key: "duplicate",
+                                  label: "Duplicate entry",
+                                  icon: Copy,
+                                  onSelect: () => onDuplicate(entry),
+                                },
+                                {
+                                  key: "archive",
+                                  label: entry.archived
+                                    ? "Restore entry"
+                                    : "Archive entry",
+                                  icon: entry.archived
+                                    ? ArchiveRestore
+                                    : Archive,
+                                  onSelect: () => onArchive(entry),
+                                },
+                              ]}
+                              trigger={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  aria-label={`Actions for ${careerEntryLabel(entry, language)}`}
+                                />
+                              }
+                            />
                           </div>
                         </div>
                       </SortableItemLayout>

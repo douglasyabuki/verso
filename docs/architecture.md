@@ -121,6 +121,13 @@ accessible beside independently scrolling collections. Collection creation align
 with the title-row end; omit preset/starter search in collections and pickers.
 Library destructive actions are last in DOM, keyboard, and visual order.
 
+Sidebar rows with actions (Profile, Summary, sections, Layout presets, Resume
+starters, and resumes) open the same quick-action list from their "…" button and on
+right-click. Collection headings and resume sub-pages offer right-click actions
+only. Navigation actions use guarded navigation; commands such as Archive section
+resolve open drafts first and commit through the controller. Negative actions sit
+last, after a divider.
+
 Resume Layout is directly editable. Its initially collapsed optional preset
 disclosure offers an explanatory empty state or explicit selection/load/capture/
 manage actions. Selection alone does not load; loading opens an uncommitted draft

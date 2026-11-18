@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  FileText,
-  MoreHorizontal,
-  Palette,
-  Pencil,
-  Plus,
-} from "lucide-react";
+import { ArrowLeft, FileText, Palette, Plus } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -43,6 +36,11 @@ import { CommittedOutputView } from "@/components/career/committed-output";
 import { ConflictPanel } from "@/components/career/conflict-panel";
 import { LayoutFields } from "@/components/career/layout-editor";
 import { libraryDestinationKind } from "@/components/career/library-navigation";
+import {
+  type CareerActions,
+  careerDetailsQuickActions,
+  sectionQuickActions,
+} from "@/components/career/quick-actions";
 import { ReleaseControl } from "@/components/career/release-dialog";
 import {
   CareerResumeCollection,
@@ -88,15 +86,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { QuickActionsMenu } from "@/components/ui/quick-actions";
 import {
   Select,
   SelectContent,
@@ -1449,6 +1441,48 @@ export function CareerWorkspace({
     else navigate(scope);
     return saved;
   };
+  const careerActions: CareerActions = {
+    busy: state.saving,
+    addSection: () =>
+      resolveTargets(controller.navigationTargets(), () => {
+        navigate("overview");
+        setAddingSection(true);
+      }),
+    toggleSectionArchived: (sectionId) =>
+      resolveTargets(controller.navigationTargets(), () => {
+        const current = controller
+          .getSnapshot()
+          .head?.document.sections.find((section) => section.id === sectionId);
+        if (!current) return;
+        // Properties-only scope: entries are not part of `section/<id>`.
+        void controller.command(`section/${current.id}`, {
+          id: current.id,
+          kind: current.kind,
+          icon: current.icon,
+          name: current.name,
+          heading: current.heading,
+          archived: !current.archived,
+        });
+      }),
+    createLibraryItem: (kind) => {
+      const document = controller.getSnapshot().head!.document;
+      const collection = kind === "preset" ? "presets" : "starters";
+      if (controller.getSnapshot().saving || document[collection].length >= 100)
+        return;
+      const base = {
+        id: crypto.randomUUID(),
+        name: "",
+        template: "yabuki-reference@1.0.3",
+        layout: structuredClone(document.defaults),
+      };
+      navigate(
+        `${kind}/${base.id}`,
+        kind === "starter"
+          ? { ...base, sections: [], summaryIncluded: false }
+          : base,
+      );
+    },
+  };
   const backupPanel = (
     <section className="flex flex-col gap-4">
       <p>
@@ -1934,6 +1968,7 @@ export function CareerWorkspace({
             )}
             closeSettings={closeSettings}
             resumeActions={resumeActions}
+            careerActions={careerActions}
             destination={destination}
             editorRequest={issueFocus ?? libraryEditorRequest}
             libraryItemState={
@@ -1942,12 +1977,7 @@ export function CareerWorkspace({
                 : "missing"
             }
             navigate={navigate}
-            addSection={() =>
-              resolveTargets(controller.navigationTargets(), () => {
-                navigate("overview");
-                setAddingSection(true);
-              })
-            }
+            addSection={careerActions.addSection}
             addResume={() =>
               resolveTargets(controller.navigationTargets(), () => {
                 navigate("resumes");
@@ -2035,22 +2065,11 @@ export function CareerWorkspace({
                   disabled={
                     state.saving || documentValue[destination].length >= 100
                   }
-                  onClick={() => {
-                    const kind =
-                      destination === "presets" ? "preset" : "starter";
-                    const base = {
-                      id: crypto.randomUUID(),
-                      name: "",
-                      template: "yabuki-reference@1.0.3",
-                      layout: structuredClone(documentValue.defaults),
-                    };
-                    navigate(
-                      `${kind}/${base.id}`,
-                      kind === "starter"
-                        ? { ...base, sections: [], summaryIncluded: false }
-                        : base,
-                    );
-                  }}
+                  onClick={() =>
+                    careerActions.createLibraryItem(
+                      destination === "presets" ? "preset" : "starter",
+                    )
+                  }
                 >
                   <Plus data-icon="inline-start" />
                   Create {destination === "presets" ? "preset" : "starter"}
@@ -2067,41 +2086,39 @@ export function CareerWorkspace({
               )}
               {(contextSection ||
                 (destination === "overview" && !state.draft)) && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={
-                          contextSection
-                            ? "Section actions"
-                            : "Overview actions"
-                        }
-                      />
-                    }
-                  >
-                    <MoreHorizontal />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          navigate(
-                            contextSection
-                              ? `section/${contextSection.id}`
-                              : "sections",
-                          )
-                        }
-                      >
-                        <Pencil />
-                        {contextSection
-                          ? "Edit section properties"
-                          : "Edit section order"}
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <QuickActionsMenu
+                  actions={
+                    contextSection
+                      ? sectionQuickActions(
+                          contextSection,
+                          careerActions,
+                          navigate,
+                        ).filter(
+                          // Omit the action for the page already open.
+                          (action) =>
+                            !(
+                              (action.key === "open" &&
+                                destination === `list/${contextSection.id}`) ||
+                              (action.key === "properties" &&
+                                destination === `section/${contextSection.id}`)
+                            ),
+                        )
+                      : careerDetailsQuickActions(
+                          documentValue,
+                          careerActions,
+                          navigate,
+                        ).filter((action) => action.key === "order")
+                  }
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={
+                        contextSection ? "Section actions" : "Overview actions"
+                      }
+                    />
+                  }
+                />
               )}
             </div>
             {!activeResume &&

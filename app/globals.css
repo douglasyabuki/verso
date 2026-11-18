@@ -20,12 +20,16 @@ html[data-theme-switching] *::after {
 
 @layer components {
   .quick-actions-dropdown {
-    width: 14rem !important;
-    max-width: var(--available-width) !important;
+    /* Fit the options; only cap at the owning item's width (set on open). */
+    width: max-content !important;
+    max-width: min(
+      var(--available-width),
+      var(--quick-actions-row-width, 100vw)
+    ) !important;
   }
 
   .quick-actions-dropdown [data-slot="dropdown-menu-item"] {
-    height: 2rem !important;
+    min-height: 2rem !important;
     font-size: 13px !important;
     line-height: 1rem !important;
   }
