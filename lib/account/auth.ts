@@ -54,6 +54,8 @@ export function authOptions(): BetterAuthOptions {
             github: {
               clientId: process.env.GITHUB_CLIENT_ID!,
               clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+              // Sign-in never creates an account; the sign-up page requests it explicitly.
+              disableImplicitSignUp: true,
             },
           }
         : {}),
@@ -63,6 +65,7 @@ export function authOptions(): BetterAuthOptions {
               clientId: process.env.GOOGLE_CLIENT_ID!,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
               prompt: "select_account" as const,
+              disableImplicitSignUp: true,
             },
           }
         : {}),

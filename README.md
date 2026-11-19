@@ -17,8 +17,13 @@ resumes, customize each resume, and generate PDFs in the browser.
   JSON backups, and reviewed replacement retaining one previous workspace.
 - Browser-based LaTeX compilation and PDF preview/download. Refresh is manual by
   default; automatic refresh after saved output changes is optional.
+- A product presentation at `/` with Sign in, Sign up, and Continue as guest. The
+  workspace lives at `/app` for guests and account owners; `/app/<view>` deep links
+  (for example `/app/settings/account`) survive reload and sign-in.
 - Guest workspaces stored in this browser. Optional GitHub/Google sign-in adds
-  account storage and cross-device freshness checks. Configured accounts can
+  account storage and cross-device freshness checks. Sign-up is explicit; Settings ›
+  Account shows which providers are connected, connects or disconnects them (keeping
+  at least one), and permanently deletes the account. Configured accounts can
   publish PDFs through latest and pinned public links, with optional automatic releases.
 
 Saving, draft recovery, PDF generation, backups, and publication are separate
@@ -168,6 +173,8 @@ concurrent PostgreSQL row locking remain separate acceptance checks.
   approximates appearance; the compiled PDF determines pagination. Unsupported
   content languages cannot generate PDFs. No PDF/UA, universal ATS, or Safari
   compatibility is claimed.
+- Deleting an account is permanent: its workspace, previous workspace, connected
+  sign-in methods, sessions, and public PDF links are removed. Download a backup first.
 - Public PDF links allow anyone holding the URL to download the published PDF.
   Release quotas require explicit cleanup; publishing never silently removes older
   releases. Revocation cannot retrieve copies already downloaded.
@@ -176,7 +183,8 @@ concurrent PostgreSQL row locking remain separate acceptance checks.
 
 ## Architecture and documentation
 
-The root route mounts an account-aware shell around the career workspace.
+The root route is the static product presentation; `/app` mounts an account-aware
+shell around the career workspace, and `proxy.ts` sends signed-in visitors there.
 `lib/career/` owns the canonical model and pure rules; `stores/career/` owns committed
 state, drafts, history, and storage backends. Components and hooks provide the UI,
 while `lib/account/` owns server-side account and release access. Retained schema-1

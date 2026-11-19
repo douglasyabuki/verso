@@ -74,6 +74,40 @@ function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 
+/** Delete one deleted account's local recovery database after the server confirmed deletion.
+ * Never touches the guest workspace or other accounts' databases.
+ * @param userId Deleted account owner.
+ * @param waitMs How long to wait while another open tab blocks deletion.
+ * @returns {Promise<"deleted" | "blocked" | "failed">} `blocked` when another tab still holds the database open after `waitMs` (the browser finishes deletion once it closes); `failed` on an IndexedDB error.
+ * @example await deleteAccountStorage(user.id)
+ */
+export function deleteAccountStorage(
+  userId: string,
+  waitMs = 3_000,
+): Promise<"deleted" | "blocked" | "failed"> {
+  return new Promise((resolve) => {
+    let request: IDBOpenDBRequest;
+    try {
+      request = indexedDB.deleteDatabase(`verso-account-${userId}`);
+    } catch {
+      resolve("failed");
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    request.onsuccess = () => {
+      clearTimeout(timer);
+      resolve("deleted");
+    };
+    request.onerror = () => {
+      clearTimeout(timer);
+      resolve("failed");
+    };
+    request.onblocked = () => {
+      timer ??= setTimeout(() => resolve("blocked"), waitMs);
+    };
+  });
+}
+
 /** Open the target-only local database; never reads or converts legacy browser storage.
  * @param name Database name: `verso-local` for guests and device preferences, or an
  * account-isolated `verso-account-<userId>` database for account recovery.

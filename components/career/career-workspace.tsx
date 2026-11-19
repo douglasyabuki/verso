@@ -18,6 +18,7 @@ import {
   SignOutConfirmation,
 } from "@/components/account/account-panel";
 import { ReleasesPanel } from "@/components/account/releases-panel";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import {
   careerEntryLabel,
   CareerEntryList,
@@ -121,7 +122,9 @@ import {
 } from "@/lib/career/model";
 import {
   destinationExists,
+  destinationFromUrl,
   destinationScope,
+  destinationUrl,
   parseDestination,
   settingsPanel,
 } from "@/lib/career/navigation";
@@ -947,14 +950,14 @@ export function CareerWorkspace({
           editing.startsWith("entries/") ? "order" : "form",
         );
     };
-    const initial =
-      new URLSearchParams(window.location.search).get("scope") ?? "overview";
+    const initial = destinationFromUrl(window.location);
     route.current.index = Number.isSafeInteger(window.history.state?.versoIndex)
       ? window.history.state.versoIndex
       : 0;
-    const initialUrl = new URL(window.location.href);
-    if (initial !== "overview" || initialUrl.searchParams.has("scope"))
-      initialUrl.searchParams.set("scope", parseDestination(initial));
+    const initialUrl = destinationUrl(
+      new URL(window.location.href),
+      parseDestination(initial),
+    );
     window.history.replaceState(
       { ...window.history.state, versoIndex: route.current.index },
       "",
@@ -967,8 +970,7 @@ export function CareerWorkspace({
         return;
       }
       rememberWorkspace();
-      const next =
-        new URLSearchParams(window.location.search).get("scope") ?? "overview";
+      const next = destinationFromUrl(window.location);
       const index = Number.isSafeInteger(event.state?.versoIndex)
         ? event.state.versoIndex
         : 0;
@@ -1073,8 +1075,7 @@ export function CareerWorkspace({
             : null;
       if (current.destination !== next) {
         if (!replace) current.index++;
-        const url = new URL(window.location.href);
-        url.searchParams.set("scope", next);
+        const url = destinationUrl(new URL(window.location.href), next);
         window.history[replace ? "replaceState" : "pushState"](
           {
             ...window.history.state,
@@ -1265,9 +1266,8 @@ export function CareerWorkspace({
   };
   if (!state.ready || !documentValue)
     return (
-      <main className="p-6">
-        <h1>Verso</h1>
-        <p role="status">Opening saved workspace…</p>
+      <main>
+        <BrandLoading message="Opening saved workspace…" />
       </main>
     );
   const selectedSection = documentValue.sections.find(
@@ -1851,7 +1851,13 @@ export function CareerWorkspace({
         ) : ["languages", "defaults"].includes(panel ?? "") ? (
           settingsForm
         ) : panel === "account" ? (
-          <AccountPanel session={account?.session} actions={accountActions}>
+          <AccountPanel
+            session={account?.session}
+            store={account?.store}
+            actions={accountActions}
+            unconfirmed={unconfirmedAccountWork}
+            exportWorkspace={() => exportWorkspace()}
+          >
             {account?.session.kind === "authenticated" && (
               <GuestImport
                 disabled={state.saving || !state.head}

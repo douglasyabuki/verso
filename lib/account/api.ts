@@ -22,6 +22,8 @@ const STATUS: Record<AccountErrorCode, number> = {
   operation_mismatch: 409,
   not_found: 404,
   quota_exceeded: 409,
+  reauthenticate: 403,
+  deletion_cancelled: 409,
   unavailable: 503,
 };
 
@@ -56,13 +58,13 @@ export function accountJson(body: unknown): Response {
  * Verifies the database session (no cookie cache), binds the request to the client's
  * session ID, requires a same-origin Origin on mutations, and maps failures to typed responses.
  * @param request Incoming Route Handler request.
- * @param operation Work receiving the verified user ID; never trust a body-supplied owner.
+ * @param operation Work receiving the verified user ID and session ID; never trust a body-supplied owner.
  * @returns {Promise<Response>} Operation response or typed error.
  * @example return accountRequest(request, (userId) => accountJson(await load(userId)))
  */
 export async function accountRequest(
   request: Request,
-  operation: (userId: string) => Promise<Response>,
+  operation: (userId: string, sessionId: string) => Promise<Response>,
 ): Promise<Response> {
   if (!accountsEnabled())
     return accountError("unavailable", "Accounts are not enabled.");
@@ -83,7 +85,7 @@ export async function accountRequest(
         "session_mismatch",
         "This tab belongs to a different sign-in. Reload to continue.",
       );
-    return await operation(session.user.id);
+    return await operation(session.user.id, session.session.id);
   } catch (error) {
     if (error instanceof AccountStoreError)
       return accountError(error.code, error.message);

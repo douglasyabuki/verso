@@ -31,12 +31,12 @@ it("retries OAuth without carrying stale callback errors into the next return UR
   await store.start();
   await store.signIn(
     "google",
-    "/?scope=settings%2Faccount&error=account_not_linked&error_description=private",
+    "/app/settings/account?error=account_not_linked&error_description=private",
   );
   expect(client.signIn.social).toHaveBeenCalledWith({
     provider: "google",
-    callbackURL: "/?scope=settings%2Faccount",
-    errorCallbackURL: "/?scope=settings%2Faccount",
+    callbackURL: "/app/settings/account",
+    errorCallbackURL: "/app/settings/account",
   });
 });
 
@@ -48,9 +48,27 @@ it("keeps an untrusted OAuth return path inside the app", async () => {
   await store.signIn("google", "//external.example/path");
   expect(client.signIn.social).toHaveBeenCalledWith({
     provider: "google",
-    callbackURL: "/",
-    errorCallbackURL: "/",
+    callbackURL: "/app",
+    errorCallbackURL: "/app",
   });
+});
+
+it("requests sign-up explicitly and returns provider errors to the auth page", async () => {
+  const store = new AccountSessionStore(async () =>
+    Response.json({ google: true, github: true }),
+  );
+  await store.prepareSignIn();
+  await store.signIn("github", "/app/resumes/r1", {
+    signUp: true,
+    errorPath: "/sign-up?next=%2Fapp%2Fresumes%2Fr1&error=signup_disabled",
+  });
+  expect(client.signIn.social).toHaveBeenCalledWith({
+    provider: "github",
+    callbackURL: "/app/resumes/r1",
+    errorCallbackURL: "/sign-up?next=%2Fapp%2Fresumes%2Fr1",
+    requestSignUp: true,
+  });
+  expect(client.getSession).not.toHaveBeenCalled();
 });
 
 it("maps callback failures to safe recovery instructions", () => {
@@ -60,6 +78,9 @@ it("maps callback failures to safe recovery instructions", () => {
   );
   expect(authErrorMessage("email_not_verified")).toContain("Verify your email");
   expect(authErrorMessage("access_denied")).toContain("canceled or denied");
+  expect(authErrorMessage("signup_disabled")).toContain(
+    "No Verso account uses this sign-in yet",
+  );
   expect(authErrorMessage("private-provider-response")).toBe(
     "Sign-in was not completed. Please try again.",
   );

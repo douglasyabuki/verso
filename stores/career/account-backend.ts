@@ -42,6 +42,8 @@ const FAILURES: Record<AccountErrorCode, SaveFailureReason> = {
   operation_mismatch: "invalid",
   not_found: "invalid",
   quota_exceeded: "invalid",
+  reauthenticate: "session",
+  deletion_cancelled: "invalid",
   unavailable: "offline",
 };
 

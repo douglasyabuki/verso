@@ -32,6 +32,8 @@ Use a 4px spacing scale. Overview pages use 32�40px desktop padding, 24px on t
 
 Keep at least 8 units of clear space around the mark at its normal 32px size. The horizontal lockup uses a 10px gap between mark and wordmark. Do not stretch, rotate, add a dot, introduce pink, or alter the fold. Use the lockup in the navigation header and the standalone mark in the workspace header whenever navigation is hidden. Decorative mark instances are hidden from assistive technology; the lockup has one accessible name.
 
+Loading states use `BrandLoading` (`components/brand/brand-loading.tsx`): each page of the mark turns about the central fold, the right page half a period behind the left. The loop starts and ends at rest, so it has no visible seam. Concurrent and successive loaders share the document-timeline phase, so a loader replacing another does not restart. At rest, and with reduced motion, the mark matches `BrandMark` exactly. Use the page variant (mark, wordmark, message) for full-screen startup, the inline variant inside panels, and `AnimatedBrandMark` for the busy PDF placeholder. In-button progress keeps the small spinner icon.
+
 Exported assets live in `public/brand/`: horizontal and standalone versions for light, dark, and monochrome use. Horizontal SVGs embed Geist, so the wordmark does not depend on the recipient having the font installed. `node tools/brand/generate.mjs` rebuilds these assets, `app/icon.svg`, `app/favicon.ico` (16, 24, and 32px PNG entries), and the 180px Apple touch icon from the shared geometry. It uses existing toolchain dependencies, with no new runtime dependency. The SVG icon adapts to system appearance; the ICO uses dark teal on transparency, and the Apple icon uses white on teal.
 
 ## Workspace components

@@ -99,3 +99,39 @@ export function destinationExists(
     );
   return document.sections.some((section) => section.id === id);
 }
+
+/** Base path that serves the workspace for guests and account owners. */
+export const workspaceBasePath = "/app";
+
+/** Read the raw workspace destination from a workspace URL.
+ * @param url Current workspace URL, such as `window.location`.
+ * @returns {string} Untrusted destination text: the path after `/app/`, else the legacy `scope` query value, else `overview`. Callers validate it with `parseDestination`.
+ * @example destinationFromUrl(new URL("https://verso.test/app/settings/data")) // "settings/data"
+ */
+export function destinationFromUrl(url: {
+  pathname: string;
+  search: string;
+}): string {
+  const prefix = `${workspaceBasePath}/`;
+  const path = url.pathname.startsWith(prefix)
+    ? url.pathname.slice(prefix.length).replace(/\/+$/, "")
+    : "";
+  if (path) return path;
+  return new URLSearchParams(url.search).get("scope") ?? "overview";
+}
+
+/** Build the canonical workspace URL for a validated destination.
+ * @param current URL whose origin, other query parameters, and hash are kept.
+ * @param destination Canonical destination from `parseDestination`.
+ * @returns {URL} New URL at `/app` for `overview`, otherwise `/app/<destination>`, without the legacy `scope` parameter.
+ * @example destinationUrl(new URL("https://verso.test/app?scope=resumes"), "resumes").pathname // "/app/resumes"
+ */
+export function destinationUrl(current: URL, destination: string): URL {
+  const url = new URL(current);
+  url.pathname =
+    destination === "overview"
+      ? workspaceBasePath
+      : `${workspaceBasePath}/${destination}`;
+  url.searchParams.delete("scope");
+  return url;
+}

@@ -45,13 +45,14 @@ export function useAccountActions({
   resolveDrafts,
 }: AccountActionsOptions): AccountActions {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(() =>
-    typeof window === "undefined"
+  const [error, setError] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const params = new URLSearchParams(window.location.search);
+    // Connected accounts reports errors from its own connection attempts.
+    return params.has("connection")
       ? ""
-      : authErrorMessage(
-          new URLSearchParams(window.location.search).get("error"),
-        ),
-  );
+      : authErrorMessage(params.get("error"));
+  });
   const [pendingProvider, setPendingProvider] = useState<
     keyof AccountProviders | null
   >(null);

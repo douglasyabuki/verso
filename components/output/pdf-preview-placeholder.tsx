@@ -1,8 +1,9 @@
 "use client";
 
 import { cn } from "cn";
-import { LoaderCircle, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
+import { AnimatedBrandMark } from "@/components/brand/brand-loading";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -38,7 +39,7 @@ export function PdfPreviewPlaceholder({
       <Empty className="m-auto flex-none gap-5 rounded-none px-6 py-10">
         <EmptyMedia aria-hidden="true">
           {busy ? (
-            <LoaderCircle className="size-8 text-muted-foreground motion-safe:animate-spin" />
+            <AnimatedBrandMark className="size-10 text-muted-foreground" />
           ) : (
             <div className="relative isolate w-28">
               <div className="absolute inset-0 -z-1 translate-x-2 rotate-6 rounded-lg border bg-muted" />

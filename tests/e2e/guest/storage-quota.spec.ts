@@ -7,7 +7,7 @@ test("real quota failures abort Save and replacement without partial changes or 
   context,
 }) => {
   test.setTimeout(90_000);
-  await page.goto("/");
+  await page.goto("/app");
   await installHarness(page);
   const initial = await page.evaluate(async () => {
     const storage = await window.careerHarness.openCareerStorage();

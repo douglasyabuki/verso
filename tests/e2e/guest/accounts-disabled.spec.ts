@@ -12,7 +12,7 @@ test("a deployment without account configuration stays guest-only", async ({
   expect(workspace.status()).toBe(503);
   expect(await workspace.json()).toMatchObject({ code: "unavailable" });
 
-  await page.goto("/?scope=settings/account");
+  await page.goto("/app/settings/account");
   const settings = page.getByRole("dialog", { name: "Settings", exact: true });
   await expect(
     settings.getByText("Accounts are not enabled on this deployment."),
