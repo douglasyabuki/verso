@@ -17,7 +17,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from "@/components/ui/field";
 import type { Releases } from "@/hooks/releases/use-releases";
 import type { AccountSession } from "@/stores/account/session";
 import type { CareerResume } from "@/types-and-constants/career";
@@ -62,7 +67,7 @@ export function ReleasesPanel({
   if (!releases)
     return (
       <div className="flex flex-col gap-3">
-        <p>
+        <p className="text-sm">
           {!session || session.kind === "unavailable"
             ? "Public PDF releases need accounts, which are not enabled on this deployment."
             : session.kind === "expired"
@@ -78,7 +83,7 @@ export function ReleasesPanel({
   const act = (work: () => Promise<unknown>) => void work().catch(ignore);
   return (
     <div className="flex flex-col gap-5">
-      <p>
+      <p className="text-sm">
         Release a resume from <strong>Release…</strong> in the PDF preview. Each
         resume has one unlisted link: its latest URL follows the release you
         choose, and numbered URLs always show the same PDF.
@@ -98,18 +103,29 @@ export function ReleasesPanel({
               : "Public PDFs are not loaded."}
           </p>
           {!state.loading && (
-            <Button variant="outline" onClick={() => act(() => store.load())}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => act(() => store.load())}
+            >
               Retry
             </Button>
           )}
         </div>
       ) : (
         <>
-          <p className="text-sm" aria-label="Release storage usage">
+          <p
+            className="text-xs text-muted-foreground"
+            aria-label="Release storage usage"
+          >
             {list.usage.links} of {RELEASE_LIMITS.links} links ·{" "}
             {mib(list.usage.bytes)} of {mib(RELEASE_LIMITS.accountBytes)} used
           </p>
-          {list.links.length === 0 && <p>No public releases yet.</p>}
+          {list.links.length === 0 && (
+            <p className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
+              No public releases yet.
+            </p>
+          )}
           {list.links.map((link) => {
             const resume = resumes.find((item) => item.id === link.resumeId);
             const name = resume
@@ -121,7 +137,7 @@ export function ReleasesPanel({
               <section
                 key={link.id}
                 aria-label={`Public link for ${name}`}
-                className="flex flex-col gap-3 rounded-lg border p-4"
+                className="flex flex-col gap-3 rounded-xl border bg-card p-4"
               >
                 <h3 className="font-medium">{name}</h3>
                 {link.latestReleaseId ? (
@@ -144,30 +160,31 @@ export function ReleasesPanel({
                     No latest release; the latest link shows nothing.
                   </p>
                 )}
-                <Field>
-                  <FieldLabel htmlFor={`auto-release-${link.id}`}>
-                    <Checkbox
-                      id={`auto-release-${link.id}`}
-                      checked={link.autoRelease}
-                      disabled={busy}
-                      aria-describedby={`auto-release-${link.id}-description`}
-                      onCheckedChange={(checked) =>
-                        act(() =>
-                          store.updateLink(link.id, {
-                            action: "auto-release",
-                            enabled: Boolean(checked),
-                          }),
-                        )
-                      }
-                    />
-                    Release automatically after Save
-                  </FieldLabel>
-                  <FieldDescription id={`auto-release-${link.id}-description`}>
-                    Off by default. While this resume&apos;s preview is open in
-                    a signed-in tab, each confirmed Save that changes its PDF
-                    compiles and becomes the latest release. Typing and unsaved
-                    drafts never publish.
-                  </FieldDescription>
+                <Field orientation="horizontal">
+                  <Checkbox
+                    id={`auto-release-${link.id}`}
+                    checked={link.autoRelease}
+                    disabled={busy}
+                    onCheckedChange={(checked) =>
+                      act(() =>
+                        store.updateLink(link.id, {
+                          action: "auto-release",
+                          enabled: Boolean(checked),
+                        }),
+                      )
+                    }
+                  />
+                  <FieldContent>
+                    <FieldLabel htmlFor={`auto-release-${link.id}`}>
+                      Release automatically after Save
+                    </FieldLabel>
+                    <FieldDescription>
+                      Off by default. While this resume&apos;s preview is open
+                      in a signed-in tab, each confirmed Save that changes its
+                      PDF compiles and becomes the latest release. Typing and
+                      unsaved drafts never publish.
+                    </FieldDescription>
+                  </FieldContent>
                 </Field>
                 <ol className="flex flex-col divide-y" aria-label="Releases">
                   {link.releases.map((release) => {
@@ -268,6 +285,7 @@ export function ReleasesPanel({
                 </ol>
                 <div className="flex flex-wrap gap-2">
                   <Button
+                    size="sm"
                     variant="destructive"
                     disabled={busy}
                     onClick={() =>

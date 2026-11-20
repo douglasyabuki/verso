@@ -550,6 +550,8 @@ export const draftSchema = z.strictObject({
   values: z.unknown(),
   operationId: id.optional(),
   fingerprint: z.string().max(DRAFT_BYTES).optional(),
+  /** Time this version was last written to recovery; absent in older format-1 files. */
+  updatedAt: z.iso.datetime().optional(),
 });
 export const recoveryEnvelopeSchema = z.strictObject({
   format: z.literal("verso.recovery"),

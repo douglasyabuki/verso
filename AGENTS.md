@@ -80,7 +80,8 @@ limitations. Keep it current when shipped behavior changes.
   Prepare immutable requests and stable operation IDs before dispatch. Retry the
   same request; unknown outcomes require receipt checks or reconciliation, never
   blind replay. Cross-tab notifications do not replace authoritative transactions.
-- Preserve exact-version recovery cleanup and protected receipts. Never expire
+- Preserve resolved-version recovery cleanup (never removing a newer stored
+  version) and protected receipts. Never expire
   unresolved drafts, truncate recovery, or silently fall back to another storage
   mechanism. Tab-only commits require an explicit choice and visible disclosure.
 - Replacement/rollback must atomically adopt content and preserve one previous

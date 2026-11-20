@@ -122,7 +122,9 @@ test("signs out with unconfirmed work kept on this device for the same user", as
   await page.unroute("**/api/account/workspace/operations");
   await signIn(page.context(), userId);
   await page.goto("/app/settings/data");
-  await expect(page.getByLabel("Unresolved recovery")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Unsaved drafts" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Restore draft" }).first(),
   ).toBeVisible();

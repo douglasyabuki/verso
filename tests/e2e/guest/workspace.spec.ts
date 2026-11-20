@@ -2,12 +2,12 @@ import { expect, type Page, test } from "@playwright/test";
 
 import { createCareerDocument, createEntry } from "@/lib/career/model";
 
-/** Open Settings › Data & backups from the workspace sidebar (desktop or drawer). */
+/** Open Settings › Data from the workspace sidebar (desktop or drawer). */
 async function openDataSettings(page: Page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Settings", exact: true })
-    .getByRole("button", { name: "Data & backups", exact: true })
+    .getByRole("button", { name: "Data", exact: true })
     .click();
 }
 
@@ -146,7 +146,7 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   const { document } = fixture();
   await page.goto("/app");
   await openDataSettings(page);
-  await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
+  await page.getByLabel("Import workspace for review").setInputFiles({
     name: "unsupported.json",
     mimeType: "application/json",
     buffer: Buffer.from(
@@ -156,7 +156,7 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   await expect(
     page.getByRole("alert").filter({ hasText: "Action needs attention" }),
   ).toContainText("schemaVersion");
-  await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
+  await page.getByLabel("Import workspace for review").setInputFiles({
     name: "workspace.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(envelope(document))),
@@ -165,7 +165,7 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   await expect(
     page.getByRole("button", { name: "Refresh preview" }),
   ).toHaveCount(0);
-  await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
+  await page.getByLabel("Import workspace for review").setInputFiles({
     name: "workspace.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(envelope(document))),
@@ -182,7 +182,7 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   ).toBeHidden();
   const downloadEvent = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Export workspace · saved workspace only" })
+    .getByRole("button", { name: "Export workspace", exact: true })
     .click();
   const download = await downloadEvent;
   const stream = await download.createReadStream();

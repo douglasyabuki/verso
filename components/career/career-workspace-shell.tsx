@@ -721,7 +721,7 @@ export function CareerWorkspaceShell({
               <WorkspaceToolbarView
                 title={
                   destination === "backups"
-                    ? "Data & backups"
+                    ? "Data"
                     : destination === "languages"
                       ? "Content languages"
                       : resume

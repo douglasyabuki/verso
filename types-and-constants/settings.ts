@@ -1,7 +1,7 @@
 export const settingsPanels = [
   { id: "account", label: "Account" },
   { id: "appearance", label: "Appearance" },
-  { id: "data", label: "Data & backups" },
+  { id: "data", label: "Data" },
   { id: "defaults", label: "Resume defaults" },
   { id: "languages", label: "Content languages" },
   { id: "editing-preview", label: "Editing & preview" },

@@ -77,7 +77,24 @@ function getServerPreference(): ThemePreference {
   return "system";
 }
 
-export function ThemeSelector() {
+const options = [
+  { value: "system", label: "System", Icon: Monitor },
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+] as const;
+
+/** Choose the application theme, persisted per browser.
+ * @param props `labelled` renders full-width icon+text options (Settings); otherwise compact icon-only toggles (rail popover). `labelledBy` names the group from a visible label.
+ * @returns Theme toggle group with a retry notice when browser storage fails.
+ * @example <ThemeSelector labelled labelledBy="theme-label" />
+ */
+export function ThemeSelector({
+  labelled = false,
+  labelledBy,
+}: {
+  labelled?: boolean;
+  labelledBy?: string;
+} = {}) {
   const [storageFailed, setStorageFailed] = useState(false);
   const persist = (value: ThemePreference) => {
     try {
@@ -96,11 +113,13 @@ export function ThemeSelector() {
   return (
     <div className="flex flex-col gap-2">
       <ToggleGroup
-        aria-label="Color theme"
+        aria-label={labelledBy ? undefined : "Color theme"}
+        aria-labelledby={labelledBy}
         value={[preference]}
         variant="outline"
-        size="sm"
-        spacing={0}
+        {...(labelled
+          ? { className: "w-full flex-wrap" }
+          : { size: "sm" as const, spacing: 0 })}
         onValueChange={(values) => {
           const value = values[0];
           if (value !== "system" && value !== "light" && value !== "dark")
@@ -110,27 +129,23 @@ export function ThemeSelector() {
           window.dispatchEvent(new Event(changeEvent));
         }}
       >
-        <ToggleGroupItem
-          value="system"
-          aria-label="System theme"
-          title="System theme"
-        >
-          <Monitor />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="light"
-          aria-label="Light theme"
-          title="Light theme"
-        >
-          <Sun />
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="dark"
-          aria-label="Dark theme"
-          title="Dark theme"
-        >
-          <Moon />
-        </ToggleGroupItem>
+        {options.map(({ value, label, Icon }) =>
+          labelled ? (
+            <ToggleGroupItem key={value} value={value} className="flex-1">
+              <Icon aria-hidden="true" />
+              {label}
+            </ToggleGroupItem>
+          ) : (
+            <ToggleGroupItem
+              key={value}
+              value={value}
+              aria-label={`${label} theme`}
+              title={`${label} theme`}
+            >
+              <Icon />
+            </ToggleGroupItem>
+          ),
+        )}
       </ToggleGroup>
       {storageFailed && (
         <div role="status" className="text-xs text-muted-foreground">

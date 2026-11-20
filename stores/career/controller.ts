@@ -847,7 +847,10 @@ export class CareerController {
             throw new Error(
               "Browser storage unavailable. Newer edits have no durable recovery; export recovery and keep this tab open.",
             );
-          await this.storage.writeDraft(draft);
+          await this.storage.writeDraft({
+            ...draft,
+            updatedAt: new Date().toISOString(),
+          });
           const current = this.draftFor(target);
           if (
             current?.draftVersion === draft.draftVersion &&
@@ -993,7 +996,10 @@ export class CareerController {
             "Durable Save unavailable. Export recovery or explicitly choose Save in this tab only.",
           );
         await this.flushRecovery();
-        await this.storage.writeDraft(captured);
+        await this.storage.writeDraft({
+          ...captured,
+          updatedAt: new Date().toISOString(),
+        });
         await this.storage.prepare(request, !draft.operationId);
         next = await this.storage.commit(operationId);
         try {
@@ -1122,7 +1128,7 @@ export class CareerController {
       this.publishFor(target, {
         error:
           target === "order"
-            ? `Order Save not confirmed. Your pending order is retained. Export recovery from Data & backups, or cancel this order and start again. ${String(error)}`
+            ? `Order Save not confirmed. Your pending order is retained. Export recovery from Settings › Data, or cancel this order and start again. ${String(error)}`
             : String(error),
         saveStatus: { kind: "failed", reason },
       });
@@ -1298,12 +1304,46 @@ export class CareerController {
     if (this.draftFor(target)) return;
     this.publishFor(target, {
       draft: structuredClone(draft),
+      // Forms explain a restored draft with their own notice; entry order has none.
       error:
         target === "order"
           ? "Recovered entry order. Review the pending order before Save."
-          : "Recovered draft \u00b7 not saved. Compare current content before reconciliation.",
+          : "",
       recoveryStatus: "Recovered uncommitted draft",
     });
+  }
+
+  /** Explicitly discard one listed recovery record without opening it.
+   * @param draft Unresolved recovery entry chosen from the recovery list; open form/order drafts use Cancel/Discard instead.
+   * @returns {Promise<boolean>} True after its version (and older stored versions) were removed; false when refused or cleanup failed, retaining the record.
+   * @example await controller.discardRecovery(state.recovery[0])
+   */
+  async discardRecovery(draft: CareerDraft): Promise<boolean> {
+    if (
+      !this.storage ||
+      this.state.saving ||
+      this.state.draft?.draftId === draft.draftId ||
+      this.state.orderDraft?.draftId === draft.draftId
+    )
+      return false;
+    const cleanup = this.writeChain.then(async () => {
+      await this.storage!.discardDraft(
+        draft.draftId,
+        draft.draftVersion,
+        draft.operationId,
+      );
+      this.publish({ recovery: await this.readRecovery() });
+    });
+    this.writeChain = cleanup.catch(() => {});
+    try {
+      await cleanup;
+      return true;
+    } catch (error) {
+      this.publish({
+        error: `Discard cleanup failed; recovery retained. ${String(error)}`,
+      });
+      return false;
+    }
   }
 
   /** Explicitly accept current committed baseline while keeping recovered values for further editing.

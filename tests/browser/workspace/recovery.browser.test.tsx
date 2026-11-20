@@ -15,6 +15,7 @@ import {
   request,
   setupCareerTests,
   storage,
+  storedDraft,
   summaryDraft,
   trackController,
 } from "@/tests/support/browser/career";
@@ -185,7 +186,9 @@ describe("Save and recovery", () => {
       baselineRevision: 1,
     });
     expect(controller.getSnapshot().draft?.operationId).toBeUndefined();
-    expect(await owner.drafts()).toEqual([controller.getSnapshot().draft]);
+    expect(await owner.drafts()).toEqual([
+      storedDraft(controller.getSnapshot().draft),
+    ]);
     expect(controller.getSnapshot().undoCount).toBe(1);
     expect(await controller.save()).toBe(true);
     expect((await owner.load()).document.summary).toEqual(newer);
@@ -213,7 +216,7 @@ describe("Save and recovery", () => {
       fault.mockRestore();
     }
     expect(controller.getSnapshot().draft).toEqual(draft);
-    expect(await owner.drafts()).toEqual([draft]);
+    expect(await owner.drafts()).toEqual([storedDraft(draft)]);
     expect(await owner.load()).toEqual(head);
     expect(controller.getSnapshot().undoCount).toBe(0);
     await controller.cancel();
@@ -438,7 +441,7 @@ describe("career editing boundaries", () => {
         },
       ]);
       await expect
-        .element(screen.getByRole("region", { name: "Unresolved recovery" }))
+        .element(screen.getByRole("region", { name: "Unsaved drafts" }))
         .not.toBeInTheDocument();
       await screen
         .getByRole("button", { name: "Account menu", exact: true })
@@ -448,10 +451,10 @@ describe("career editing boundaries", () => {
         .click();
       await screen
         .getByRole("dialog", { name: "Settings", exact: true })
-        .getByRole("button", { name: "Data & backups", exact: true })
+        .getByRole("button", { name: "Data", exact: true })
         .click();
       await expect
-        .element(screen.getByRole("region", { name: "Unresolved recovery" }))
+        .element(screen.getByRole("region", { name: "Unsaved drafts" }))
         .toBeVisible();
       await screen
         .getByRole("button", { name: "Restore draft", exact: true })
@@ -521,5 +524,105 @@ describe("career editing boundaries", () => {
     expect((await owner.load()).document.summary.wording["en-US"]).toBe(
       "Recovered",
     );
+  });
+
+  it("leaves no orphaned recovery after a quick Discard or a reverted edit", async () => {
+    const controller = await controllerOwner();
+    const owner = await storage();
+    const summary = controller.getSnapshot().head!.document.summary;
+    controller.open("summary");
+    controller.change({ ...summary, wording: { "en-US": "Stored" } });
+    await controller.flushRecovery();
+    // Newer typing that has not been flushed yet when Discard runs.
+    controller.change({ ...summary, wording: { "en-US": "Unflushed" } });
+    await controller.cancel();
+    expect(await owner.drafts()).toEqual([]);
+
+    controller.open("summary");
+    controller.change({ ...summary, wording: { "en-US": "Stored" } });
+    await controller.flushRecovery();
+    controller.change(summary);
+    expect(controller.isDirty()).toBe(false);
+    await controller.cancel();
+    expect(await owner.drafts()).toEqual([]);
+  });
+
+  it("lists stored drafts with their age and discards one only after confirmation", async () => {
+    const owner = await storage();
+    const head = await owner.load(createCareerDocument());
+    const draft = {
+      ...summaryDraft(head, "Listed draft"),
+      updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    };
+    await owner.writeDraft(draft);
+    const controller = new CareerController();
+    trackController(controller);
+    await page.viewport(1280, 900);
+    const screen = await render(<CareerWorkspace controller={controller} />);
+    await expect.poll(() => controller.getSnapshot().ready).toBe(true);
+    await screen
+      .getByRole("button", { name: "Account menu", exact: true })
+      .click();
+    await screen
+      .getByRole("menuitem", { name: "Settings", exact: true })
+      .click();
+    const settings = screen.getByRole("dialog", {
+      name: "Settings",
+      exact: true,
+    });
+    await settings.getByRole("button", { name: "Data", exact: true }).click();
+    const drafts = screen.getByRole("region", { name: "Unsaved drafts" });
+    await expect.element(drafts.getByText("Summary")).toBeVisible();
+    await expect
+      .element(drafts.getByText("Edited 5 minutes ago"))
+      .toBeVisible();
+    await drafts.getByRole("button", { name: "Preview Summary" }).click();
+    await expect
+      .element(
+        drafts.getByRole("region", { name: "Compare saved content and draft" }),
+      )
+      .toBeVisible();
+    await drafts.getByRole("button", { name: "Discard Summary" }).click();
+    const confirm = screen.getByRole("alertdialog", {
+      name: "Discard this draft?",
+    });
+    await confirm.getByRole("button", { name: "Cancel", exact: true }).click();
+    expect(await owner.drafts()).toHaveLength(1);
+    await drafts.getByRole("button", { name: "Discard Summary" }).click();
+    await screen
+      .getByRole("alertdialog", { name: "Discard this draft?" })
+      .getByRole("button", { name: "Discard draft", exact: true })
+      .click();
+    await expect.element(drafts.getByText(/No unsaved drafts/)).toBeVisible();
+    expect(await owner.drafts()).toEqual([]);
+    expect(await owner.load()).toEqual(head);
+  });
+
+  it("offers a stored draft when its form opens and restores it only on request", async () => {
+    const owner = await storage();
+    const head = await owner.load(createCareerDocument());
+    const draft = {
+      ...summaryDraft(head, "From last session"),
+      updatedAt: new Date().toISOString(),
+    };
+    await owner.writeDraft(draft);
+    window.history.replaceState({ versoIndex: 0 }, "", "?scope=summary");
+    const controller = new CareerController();
+    trackController(controller);
+    await page.viewport(1280, 900);
+    const screen = await render(<CareerWorkspace controller={controller} />);
+    const notice = screen.getByRole("status", { name: "Stored draft" });
+    await expect.element(notice).toBeVisible();
+    expect(controller.getSnapshot().draft?.draftId).not.toBe(draft.draftId);
+    await notice
+      .getByRole("button", { name: "Restore stored draft", exact: true })
+      .click();
+    await expect
+      .poll(() => controller.getSnapshot().draft?.draftId)
+      .toBe(draft.draftId);
+    await expect
+      .element(screen.getByRole("status", { name: "Restored draft" }))
+      .toBeVisible();
+    expect(await owner.load()).toEqual(head);
   });
 });

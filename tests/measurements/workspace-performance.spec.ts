@@ -5,12 +5,12 @@ import { expect, type Page, test } from "@playwright/test";
 
 import { installHarness } from "@/tests/support/e2e/career-harness";
 
-/** Open Settings › Data & backups from the workspace sidebar (desktop or drawer). */
+/** Open Settings › Data from the workspace sidebar (desktop or drawer). */
 async function openDataSettings(page: Page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Settings", exact: true })
-    .getByRole("button", { name: "Data & backups", exact: true })
+    .getByRole("button", { name: "Data", exact: true })
     .click();
 }
 

@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowLeft, FileText, Palette, Plus } from "lucide-react";
+import { ArrowLeft, Download, FileText, Palette, Plus } from "lucide-react";
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -35,6 +36,10 @@ import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
 import { CommittedOutputView } from "@/components/career/committed-output";
 import { ConflictPanel } from "@/components/career/conflict-panel";
+import {
+  RestoredDraftBanner,
+  StoredDraftNotice,
+} from "@/components/career/draft-recovery-banners";
 import { LayoutFields } from "@/components/career/layout-editor";
 import { libraryDestinationKind } from "@/components/career/library-navigation";
 import {
@@ -42,6 +47,7 @@ import {
   careerDetailsQuickActions,
   sectionQuickActions,
 } from "@/components/career/quick-actions";
+import { RecoveryList } from "@/components/career/recovery-list";
 import { ReleaseControl } from "@/components/career/release-dialog";
 import {
   CareerResumeCollection,
@@ -54,11 +60,11 @@ import {
   ResumeViewTabs,
   ResumeWordingEditor,
 } from "@/components/career/resume-workspace";
-import { ScopeComparison } from "@/components/career/scope-comparison";
 import {
   DeviceSettings,
   SettingsDialog,
 } from "@/components/career/settings-dialog";
+import { SettingsSection } from "@/components/career/settings-section";
 import {
   LibraryOverview,
   PresetPicker,
@@ -87,8 +93,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { QuickActionsMenu } from "@/components/ui/quick-actions";
 import {
   Select,
@@ -129,6 +147,7 @@ import {
   settingsPanel,
 } from "@/lib/career/navigation";
 import { importPortable } from "@/lib/career/portable-import";
+import { recoveryForScope } from "@/lib/career/recovery";
 import { oversizedRecovery, recoveryFiles } from "@/lib/career/recovery-export";
 import { profileContactLabels, type ResumeContent } from "@/lib/career/resumes";
 import { captureStarter } from "@/lib/career/starters";
@@ -144,6 +163,7 @@ import {
 import type { CareerHead } from "@/stores/career/persistence";
 import type {
   CareerDocument,
+  CareerDraft,
   CareerEntry,
   CareerResume,
   CareerSection,
@@ -600,63 +620,98 @@ function LanguagesEditor({
 }) {
   const [tag, setTag] = useState("");
   const [error, setError] = useState("");
+  const inputId = useId();
+  const add = () => {
+    try {
+      const canonical = Intl.getCanonicalLocales(tag.trim())[0];
+      if (!canonical || values.some((item) => item.tag === canonical))
+        throw new Error("Enter a new valid language tag.");
+      onChange([...values, { tag: canonical, active: true }]);
+      setTag("");
+      setError("");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    }
+  };
   return (
-    <FieldGroup>
-      <p>
-        The interface is English. Activation controls creation choices, not
-        wording retention or verified PDF support.
-      </p>
-      {values.map((item) => (
-        <div className="flex flex-wrap items-center gap-2" key={item.tag}>
-          <span>{item.tag}</span>
-          <Badge variant="secondary">
-            {item.active ? "Active" : "Inactive"}
-          </Badge>
-          <span>
-            {(VERIFIED_OUTPUT_LANGUAGES as readonly string[]).includes(item.tag)
-              ? "PDF output available"
-              : "PDF unavailable · rendering unverified"}
-          </span>
-          <Button
-            variant="outline"
-            onClick={() =>
-              onChange(
-                values.map((language) =>
-                  language.tag === item.tag
-                    ? { ...language, active: !language.active }
-                    : language,
-                ),
-              )
-            }
-          >
-            {item.active ? "Deactivate" : "Reactivate"} {item.tag}
-          </Button>
-        </div>
-      ))}
-      <TextField
-        label="Add content language (canonical tag)"
-        value={tag}
-        onChange={setTag}
-      />
-      <Button
-        variant="outline"
-        onClick={() => {
-          try {
-            const canonical = Intl.getCanonicalLocales(tag)[0];
-            if (!canonical || values.some((item) => item.tag === canonical))
-              throw new Error("Enter a new valid language tag.");
-            onChange([...values, { tag: canonical, active: true }]);
-            setTag("");
-            setError("");
-          } catch (error) {
-            setError(String(error));
-          }
-        }}
-      >
-        Add language
-      </Button>
-      {error && <p role="alert">{error}</p>}
-    </FieldGroup>
+    <div className="flex flex-col gap-5">
+      <ul className="flex flex-col divide-y rounded-xl border bg-card">
+        {values.map((item) => {
+          const verified = (
+            VERIFIED_OUTPUT_LANGUAGES as readonly string[]
+          ).includes(item.tag);
+          return (
+            <li
+              key={item.tag}
+              className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                  {item.tag}
+                  <Badge variant={item.active ? "secondary" : "outline"}>
+                    {item.active ? "Active" : "Inactive"}
+                  </Badge>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {verified
+                    ? "PDF output available"
+                    : "PDF unavailable · rendering unverified"}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={`${item.active ? "Deactivate" : "Reactivate"} ${item.tag}`}
+                onClick={() =>
+                  onChange(
+                    values.map((language) =>
+                      language.tag === item.tag
+                        ? { ...language, active: !language.active }
+                        : language,
+                    ),
+                  )
+                }
+              >
+                {item.active ? "Deactivate" : "Reactivate"}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+      <Field data-invalid={Boolean(error)}>
+        <FieldLabel htmlFor={inputId}>Add content language</FieldLabel>
+        <InputGroup className="max-w-xs">
+          <InputGroupInput
+            id={inputId}
+            value={tag}
+            placeholder="pt-BR"
+            aria-invalid={Boolean(error)}
+            aria-describedby={`${inputId}-description`}
+            onChange={(event) => {
+              setTag(event.target.value);
+              if (error) setError("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                add();
+              }
+            }}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton disabled={!tag.trim()} onClick={add}>
+              <Plus aria-hidden="true" />
+              Add language
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
+        <FieldDescription id={`${inputId}-description`}>
+          Use a canonical language tag such as en-US or pt-BR. The interface
+          stays in English; activation controls creation choices only.
+        </FieldDescription>
+        {error && <FieldError>{error}</FieldError>}
+      </Field>
+    </div>
   );
 }
 
@@ -748,7 +803,6 @@ export function CareerWorkspace({
   } | null>(null);
   const [sessionExportChoice, setSessionExportChoice] = useState(false);
   const [sessionReviewError, setSessionReviewError] = useState("");
-  const [compare, setCompare] = useState(false);
   // Both versions of a conflicted form scope, derived from committed state and the draft baseline.
   const formConflict = useMemo(
     () =>
@@ -933,7 +987,6 @@ export function CareerWorkspace({
         destination: next,
         background: route.current.background,
       });
-      setCompare(false);
       const editing = destinationScope(next);
       const head = controller.getSnapshot().head;
       if (
@@ -1101,7 +1154,6 @@ export function CareerWorkspace({
             background === view.background,
         };
       setView({ index: current.index, destination: next, background });
-      setCompare(false);
       const editing = destinationScope(next);
       const head = controller.getSnapshot().head;
       if (
@@ -1483,206 +1535,235 @@ export function CareerWorkspace({
       );
     },
   };
+  const recoveryLabel = (draft: CareerDraft): string =>
+    draft.scope.startsWith("entries/")
+      ? `${documentValue.sections.find((section) => section.id === draft.scope.split("/")[1])?.name || "Section"} entry order`
+      : draft.scope.startsWith("entry/")
+        ? (() => {
+            const entry = documentValue.sections
+              .flatMap((section) => section.entries)
+              .find((entry) => entry.id === draft.scope.split("/")[1]);
+            return entry
+              ? careerEntryLabel(entry, contentLanguage)
+              : "Unavailable entry";
+          })()
+        : draft.scope.startsWith("resume") ||
+            draft.scope.startsWith("selection/")
+          ? `${documentValue.resumes.find((resume) => resume.id === draft.scope.split("/")[1])?.name || "Unavailable resume"} · ${draft.scope.startsWith("resume-wording/") ? "Wording" : draft.scope.startsWith("resume-details/") ? "Name & color" : draft.scope.startsWith("resume-layout/") ? "Layout" : "Content"}`
+          : draft.scope.startsWith("preset/") ||
+              draft.scope.startsWith("starter/")
+            ? `${draft.scope.startsWith("preset/") ? "Layout preset" : "Resume starter"} / ${draft.values && typeof draft.values === "object" && "name" in draft.values && typeof draft.values.name === "string" ? draft.values.name : "Unsaved setup"}`
+            : draft.scope.startsWith("starter-create/")
+              ? "Resume creation from starter"
+              : ({
+                  profile: "Profile",
+                  summary: "Summary",
+                  languages: "Content languages",
+                  defaults: "Resume defaults",
+                  sections: "Section order",
+                }[draft.scope] ?? "Unsaved form");
+  const restoreRecovery = (draft: CareerDraft) => {
+    const restore = () => {
+      controller.restore(draft);
+      const activeForm = controller.getSnapshot().draft;
+      navigate(
+        draft.scope.startsWith("entries/") && activeForm
+          ? activeForm.scope
+          : draft.scope,
+      );
+    };
+    const target: CareerDraftTarget = draft.scope.startsWith("entries/")
+      ? "order"
+      : "form";
+    const activeForm = controller.getSnapshot().draft;
+    const relatedSection = documentValue.sections.find((section) =>
+      section.entries.some(
+        (entry) => activeForm?.scope === `entry/${entry.id}`,
+      ),
+    );
+    const targets =
+      draft.scope === `entries/${relatedSection?.id}`
+        ? [target]
+        : [...new Set([...controller.navigationTargets(draft.scope), target])];
+    resolveTargets(targets, restore);
+  };
+  const restoredDraft = state.draft
+    ? state.recovery.find((draft) => draft.draftId === state.draft?.draftId)
+    : undefined;
+  const storedDraft =
+    state.draft && !restoredDraft
+      ? recoveryForScope(state.recovery, state.draft.scope, state.draft.draftId)
+      : null;
+  const uncertainSave =
+    state.saveStatus.kind === "failed" &&
+    state.saveStatus.reason === "uncertain";
+  const recoveryWriteFailed =
+    state.recoveryStatus.startsWith("Recovery failed");
+  const draftNotice =
+    !state.draft || formConflict ? null : restoredDraft ||
+      uncertainSave ||
+      recoveryWriteFailed ? (
+      <RestoredDraftBanner
+        updatedAt={restoredDraft?.updatedAt}
+        current={readScope(documentValue, state.draft.scope)}
+        draft={state.draft.values}
+        disabled={state.saving}
+        onReconcile={uncertainSave ? () => controller.reconcile() : undefined}
+        onExport={recoveryWriteFailed ? exportRecovery : undefined}
+      />
+    ) : storedDraft ? (
+      <StoredDraftNotice
+        updatedAt={storedDraft.updatedAt}
+        name={recoveryLabel(storedDraft)}
+        disabled={state.saving}
+        onRestore={() => restoreRecovery(storedDraft)}
+        onDiscard={() => void controller.discardRecovery(storedDraft)}
+        onExport={exportRecovery}
+      />
+    ) : null;
+  const listedRecovery = state.recovery.filter(
+    (draft) =>
+      draft.draftId !== state.draft?.draftId &&
+      draft.draftId !== state.orderDraft?.draftId,
+  );
   const backupPanel = (
-    <section className="flex flex-col gap-4">
-      <p>
-        Workspace exports contain saved workspace only. Recovery is separate and
-        never committed by import. Device preferences are excluded. Browser
-        clearing or eviction can remove local data.
-      </p>
-      {state.recovery.some(
-        (draft) =>
-          draft.draftId !== state.draft?.draftId &&
-          draft.draftId !== state.orderDraft?.draftId,
-      ) && (
-        <section
-          className="flex flex-col gap-3"
-          aria-label="Unresolved recovery"
-        >
-          <h2>Unsaved draft recovery</h2>
-          {state.recovery
-            .filter(
-              (draft) =>
-                draft.draftId !== state.draft?.draftId &&
-                draft.draftId !== state.orderDraft?.draftId,
-            )
-            .map((draft) => (
-              <div
-                key={draft.draftId}
-                className="flex flex-wrap items-center gap-2"
-              >
-                <span>
-                  {draft.scope.startsWith("entries/")
-                    ? `${documentValue.sections.find((section) => section.id === draft.scope.split("/")[1])?.name || "Section"} entry order`
-                    : draft.scope.startsWith("entry/")
-                      ? (() => {
-                          const entry = documentValue.sections
-                            .flatMap((section) => section.entries)
-                            .find(
-                              (entry) => entry.id === draft.scope.split("/")[1],
-                            );
-                          return entry
-                            ? careerEntryLabel(entry, contentLanguage)
-                            : "Unavailable entry";
-                        })()
-                      : draft.scope.startsWith("resume") ||
-                          draft.scope.startsWith("selection/")
-                        ? `${documentValue.resumes.find((resume) => resume.id === draft.scope.split("/")[1])?.name || "Unavailable resume"} · ${draft.scope.startsWith("resume-wording/") ? "Wording" : draft.scope.startsWith("resume-details/") ? "Name & color" : draft.scope.startsWith("resume-layout/") ? "Layout" : "Content"}`
-                        : draft.scope.startsWith("preset/") ||
-                            draft.scope.startsWith("starter/")
-                          ? `${draft.scope.startsWith("preset/") ? "Layout preset" : "Resume starter"} / ${draft.values && typeof draft.values === "object" && "name" in draft.values && typeof draft.values.name === "string" ? draft.values.name : "Unsaved setup"}`
-                          : draft.scope.startsWith("starter-create/")
-                            ? "Resume creation from starter"
-                            : ({
-                                profile: "Profile",
-                                summary: "Summary",
-                                languages: "Content languages",
-                                defaults: "Resume defaults",
-                                sections: "Section order",
-                              }[draft.scope] ?? "Unsaved form")}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const restore = () => {
-                      controller.restore(draft);
-                      const activeForm = controller.getSnapshot().draft;
-                      navigate(
-                        draft.scope.startsWith("entries/") && activeForm
-                          ? activeForm.scope
-                          : draft.scope,
-                      );
-                    };
-                    const target: CareerDraftTarget = draft.scope.startsWith(
-                      "entries/",
-                    )
-                      ? "order"
-                      : "form";
-                    const activeForm = controller.getSnapshot().draft;
-                    const relatedSection = documentValue.sections.find(
-                      (section) =>
-                        section.entries.some(
-                          (entry) => activeForm?.scope === `entry/${entry.id}`,
-                        ),
-                    );
-                    const targets =
-                      draft.scope === `entries/${relatedSection?.id}`
-                        ? [target]
-                        : [
-                            ...new Set([
-                              ...controller.navigationTargets(draft.scope),
-                              target,
-                            ]),
-                          ];
-                    resolveTargets(targets, restore);
-                  }}
-                >
-                  Restore draft
-                </Button>
-              </div>
-            ))}
-        </section>
-      )}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={() => {
-            try {
-              exportWorkspace();
-            } catch (error) {
-              setLocalError(String(error));
-            }
-          }}
-        >
-          Export workspace · saved workspace only
-        </Button>
-        <Button variant="outline" onClick={exportRecovery}>
-          Export recovery
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!state.durable}
-          onClick={() =>
-            resolveTargets(controller.navigationTargets(), () => {
-              void controller
-                .previous()
-                .then((previous) => {
-                  if (!previous)
-                    setLocalError("No previous workspace is retained.");
-                  else {
-                    setReview({
-                      head: controller.getSnapshot().head!,
-                      previous,
-                    });
-                    setExportChoice(false);
-                  }
-                })
-                .catch((error) => setLocalError(String(error)));
-            })
-          }
-        >
-          Review one previous workspace
-        </Button>
-      </div>
-      <p>
-        Explore fictional career details and English/Portuguese resumes. Loading
-        the sample opens a replacement review before changing saved content.
-      </p>
-      <Button
-        variant="outline"
-        className="self-start"
-        disabled={loadingSample || state.saving || !state.durable}
-        onClick={() => void loadSample()}
+    <div className="flex flex-col gap-6">
+      <SettingsSection
+        title="Unsaved drafts"
+        description="Changes that were never saved, kept on this device after a reload, crash, or closed tab."
       >
-        {loadingSample ? "Loading sample…" : "Load sample workspace"}
-      </Button>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="workspace-import">
-            Import schema-2 workspace for review
-          </FieldLabel>
-          <Input
-            id="workspace-import"
-            type="file"
-            accept="application/json,.json"
-            onChange={(event) => {
-              void importFile(event.target.files?.[0], false);
-              event.target.value = "";
+        <RecoveryList
+          drafts={listedRecovery}
+          disabled={state.saving}
+          label={recoveryLabel}
+          saved={(draft) => readScope(documentValue, draft.scope)}
+          outdated={(draft) =>
+            Boolean(state.head && draftConflict(state.head, draft))
+          }
+          onRestore={restoreRecovery}
+          onDiscard={(draft) => void controller.discardRecovery(draft)}
+          onExport={exportRecovery}
+        />
+      </SettingsSection>
+      <SettingsSection
+        title="Back up"
+        description="Workspace exports contain saved content only. Recovery exports contain unsaved drafts, to continue them in another browser."
+      >
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            onClick={() => {
+              try {
+                exportWorkspace();
+              } catch (error) {
+                setLocalError(String(error));
+              }
             }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="recovery-import">
-            Import recovery as uncommitted drafts
-          </FieldLabel>
-          <Input
-            id="recovery-import"
-            type="file"
-            accept="application/json,.json"
-            onChange={(event) => {
-              void importFile(event.target.files?.[0], true);
-              event.target.value = "";
-            }}
-          />
-        </Field>
-      </FieldGroup>
-    </section>
+          >
+            <Download data-icon="inline-start" aria-hidden="true" />
+            Export workspace
+          </Button>
+          <Button size="sm" variant="outline" onClick={exportRecovery}>
+            <Download data-icon="inline-start" aria-hidden="true" />
+            Export recovery
+          </Button>
+        </div>
+      </SettingsSection>
+      <SettingsSection
+        title="Restore"
+        description="Imported workspaces open a review before replacing saved content. Imported recovery becomes unsaved drafts and never commits on its own."
+      >
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="workspace-import">
+              Import workspace for review
+            </FieldLabel>
+            <Input
+              id="workspace-import"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => {
+                void importFile(event.target.files?.[0], false);
+                event.target.value = "";
+              }}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="recovery-import">
+              Import recovery drafts
+            </FieldLabel>
+            <Input
+              id="recovery-import"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => {
+                void importFile(event.target.files?.[0], true);
+                event.target.value = "";
+              }}
+            />
+          </Field>
+        </FieldGroup>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Previous workspace</p>
+            <p className="text-xs text-muted-foreground">
+              The one workspace kept before the last import or replacement.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!state.durable}
+            onClick={() =>
+              resolveTargets(controller.navigationTargets(), () => {
+                void controller
+                  .previous()
+                  .then((previous) => {
+                    if (!previous)
+                      setLocalError("No previous workspace is retained.");
+                    else {
+                      setReview({
+                        head: controller.getSnapshot().head!,
+                        previous,
+                      });
+                      setExportChoice(false);
+                    }
+                  })
+                  .catch((error) => setLocalError(String(error)));
+              })
+            }
+          >
+            Review previous workspace
+          </Button>
+        </div>
+      </SettingsSection>
+      <SettingsSection
+        title="Sample workspace"
+        description="Explore fictional career details and English/Portuguese resumes. Loading the sample opens a replacement review before changing saved content."
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start"
+          disabled={loadingSample || state.saving || !state.durable}
+          onClick={() => void loadSample()}
+        >
+          {loadingSample ? "Loading sample…" : "Load sample workspace"}
+        </Button>
+      </SettingsSection>
+    </div>
   );
   const settingsForm =
     state.draft && settingsDraft ? (
       <div className="flex flex-col gap-4">
+        {draftNotice}
         <fieldset disabled={state.saving} className="flex flex-col gap-4">
           {state.draft.scope === "defaults" ? (
-            <>
-              <p>
-                New blank resumes copy these appearance settings. Existing
-                resumes, presets, and starters keep independent copies.
-              </p>
-              <LayoutFields
-                values={state.draft.values}
-                defaults={appLayoutDefaults}
-                onChange={(values) => controller.change(values)}
-              />
-            </>
+            <LayoutFields
+              values={state.draft.values}
+              defaults={appLayoutDefaults}
+              onChange={(values) => controller.change(values)}
+            />
           ) : (
             <DraftEditor
               document={documentValue}
@@ -1693,10 +1774,11 @@ export function CareerWorkspace({
             />
           )}
         </fieldset>
-        <p role="status">
-          {controller.isDirty() ? state.recoveryStatus : "No unsaved changes"}
-        </p>
-        {state.error && <p role="alert">{state.error}</p>}
+        {state.error && (
+          <p role="alert" className="text-sm text-destructive">
+            {state.error}
+          </p>
+        )}
         {formConflict ? (
           <ConflictPanel
             conflict={formConflict}
@@ -1711,38 +1793,14 @@ export function CareerWorkspace({
             }}
             onExport={exportRecovery}
           />
-        ) : (
-          compare && (
-            <ScopeComparison
-              current={readScope(documentValue, state.draft.scope)}
-              draft={state.draft.values}
-            />
-          )
-        )}
-        <div className="flex flex-wrap justify-end gap-2">
-          {!formConflict && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => setCompare((value) => !value)}
-              >
-                Compare
-              </Button>
-              <Button
-                variant="outline"
-                disabled={state.saving}
-                onClick={() => controller.reconcile()}
-              >
-                Reconcile
-              </Button>
-              <Button variant="outline" onClick={exportRecovery}>
-                Export recovery
-              </Button>
-            </>
-          )}
+        ) : null}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span role="status" className="me-auto text-xs text-muted-foreground">
+            {controller.isDirty() ? state.recoveryStatus : "No unsaved changes"}
+          </span>
           <Button
             variant="outline"
-            disabled={!controller.isDirty() || state.saving}
+            disabled={(!controller.isDirty() && !restoredDraft) || state.saving}
             onClick={() => {
               const savedScope = state.draft!.scope;
               void controller
@@ -1797,9 +1855,6 @@ export function CareerWorkspace({
         navigate={navigate}
         close={closeSettings}
         returnFocus={settingsReturnFocus}
-        workspaceSettings={["languages", "defaults", "data"].includes(
-          panel ?? "",
-        )}
         preferenceStatus={state.preferenceStatus}
         retryPreferences={() => void controller.changePreferences()}
         accountMode={state.storageMode === "account"}
@@ -2178,7 +2233,7 @@ export function CareerWorkspace({
                   {state.storageMode === "unavailable" ? (
                     <span>
                       Browser storage could not be opened. Export this
-                      tab&apos;s saved workspace from Data &amp; backups before
+                      tab&apos;s saved workspace from Settings › Data before
                       closing.
                     </span>
                   ) : (
@@ -2476,7 +2531,7 @@ export function CareerWorkspace({
                     <CardTitle>Record unavailable</CardTitle>
                     <CardDescription>
                       This record is missing or was never saved. Any recoverable
-                      draft remains in Data & backups.
+                      draft remains in Settings › Data.
                     </CardDescription>
                   </CardHeader>
                   <CardFooter className="justify-end gap-2">
@@ -2487,7 +2542,7 @@ export function CareerWorkspace({
                       Career details
                     </Button>
                     <Button onClick={() => navigate("backups")}>
-                      Data & backups
+                      Open Data
                     </Button>
                   </CardFooter>
                 </Card>
@@ -2585,6 +2640,7 @@ export function CareerWorkspace({
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-5">
+                      {draftNotice}
                       <fieldset
                         disabled={state.saving}
                         className="flex flex-col gap-4"
@@ -2676,33 +2732,6 @@ export function CareerWorkspace({
                           />
                         )}
                         <div className="flex flex-wrap justify-end gap-2">
-                          {!formConflict &&
-                            (state.error ||
-                              state.recovery.some(
-                                (draft) =>
-                                  draft.draftId === state.draft?.draftId,
-                              )) && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => setCompare(!compare)}
-                                >
-                                  Compare
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => controller.reconcile()}
-                                >
-                                  Reconcile with current
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  onClick={exportRecovery}
-                                >
-                                  Export recovery
-                                </Button>
-                              </>
-                            )}
                           <span
                             role="status"
                             className="self-center text-xs text-muted-foreground"
@@ -2740,12 +2769,6 @@ export function CareerWorkspace({
                             onExport={exportRecovery}
                           />
                         )}
-                      {compare && !formConflict && (
-                        <ScopeComparison
-                          current={readScope(documentValue, state.draft.scope)}
-                          draft={state.draft.values}
-                        />
-                      )}
                       {state.draft.scope.startsWith("resume") &&
                         readScope(documentValue, state.draft.scope) ===
                           undefined && (
@@ -2815,7 +2838,10 @@ export function CareerWorkspace({
                     </CardContent>
                     <CardFooter className="justify-end gap-2">
                       <Button
-                        disabled={!controller.isDirty() || state.saving}
+                        disabled={
+                          (!controller.isDirty() && !restoredDraft) ||
+                          state.saving
+                        }
                         variant="outline"
                         onClick={() =>
                           void controller

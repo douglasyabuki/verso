@@ -327,9 +327,9 @@ export class CareerStorage implements CareerBackend {
     );
   }
 
-  /** Discard only the explicitly resolved recovery version, preserving newer typing.
+  /** Discard the explicitly resolved recovery version and older stored versions of it, preserving newer typing.
    * @param id Draft identity.
-   * @param version Exact resolved version.
+   * @param version Resolved version; a stored version above it is retained.
    * @param operationId Interrupted request explicitly resolved with this draft.
    * @returns {Promise<void>} Completed conditional cleanup.
    * @example await storage.discardDraft(draft.draftId, draft.draftVersion)
@@ -378,7 +378,7 @@ export class CareerStorage implements CareerBackend {
     for (const { key, value } of intents) await this.cleanupDraft(key, value);
   }
 
-  /** Remove an exact resolved version and its durable intent in one transaction.
+  /** Remove a resolved version (and older stored versions of it) with its durable intent in one transaction.
    * @param key Internal cleanup intent identity.
    * @param intent Explicitly resolved draft identity/version.
    * @returns Completed atomic cleanup, preserving any newer recovery.
@@ -396,7 +396,11 @@ export class CareerStorage implements CareerBackend {
         const draft = await requestResult<CareerDraft | undefined>(
           store.get(intent.id),
         );
-        if (draft?.draftVersion === intent.version) store.delete(intent.id);
+        // The resolved in-memory version is the newest; older stored versions of
+        // the same draft were never newer edits, so they resolve with it.
+        const resolved =
+          draft !== undefined && draft.draftVersion <= intent.version;
+        if (resolved) store.delete(intent.id);
         const operationId =
           intent.operationId ??
           (draft?.draftVersion === intent.version
@@ -524,7 +528,11 @@ export class CareerStorage implements CareerBackend {
           const draft = await requestResult<CareerDraft | undefined>(
             drafts.get(request.draftId),
           );
-          if (draft?.draftVersion === request.draftVersion)
+          if (
+            draft !== undefined &&
+            request.draftVersion !== undefined &&
+            draft.draftVersion <= request.draftVersion
+          )
             drafts.delete(request.draftId);
         }
         return next;

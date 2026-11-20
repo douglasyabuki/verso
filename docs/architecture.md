@@ -84,8 +84,8 @@ Cancel and failed Save retain the draft. Disable form actions while unchanged or
 saving. Preserve narrow-screen Editor/PDF switching without closing drafts.
 
 Settings is a durable dialog over the mounted workspace, defaulting to Account,
-with Appearance, Content languages, Editing & preview, Data & backups, Resume
-defaults, and Public PDFs panels at `settings/<panel>`. Old `languages`/`backups`
+with Appearance, Data, Resume defaults, Content languages, Editing & preview, and
+Public PDFs panels at `settings/<panel>`. Old `languages`/`backups`
 links remain usable. Preserve the underlying destination, history metadata,
 focus/scroll, and drafts. The account menu and Appearance shortcut live in the
 utility rail; OAuth sign-in/sign-up stays in Settings, with shared guarded sign-out.
