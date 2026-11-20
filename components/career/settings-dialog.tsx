@@ -64,15 +64,15 @@ import {
   settingsPanels,
 } from "@/types-and-constants/settings";
 
-const icons = [
-  UserRound,
-  Palette,
-  Languages,
-  SlidersHorizontal,
-  Database,
-  Settings2,
-  Globe,
-];
+const icons = {
+  account: UserRound,
+  appearance: Palette,
+  data: Database,
+  defaults: Settings2,
+  languages: Languages,
+  "editing-preview": SlidersHorizontal,
+  releases: Globe,
+} satisfies Record<SettingsPanel, unknown>;
 
 /** Render immediate numeric preferences, retaining malformed input until corrected.
  * @param props Effective preferences and the owning persistence command.
@@ -333,8 +333,8 @@ export function SettingsDialog({
                   <nav aria-label="Settings panels">
                     <SidebarSelection>
                       <SidebarMenu className="grid grid-cols-2 gap-1 sm:grid-cols-3 md:flex md:flex-col">
-                        {settingsPanels.map((item, index) => {
-                          const Icon = icons[index];
+                        {settingsPanels.map((item) => {
+                          const Icon = icons[item.id];
                           return (
                             <SidebarMenuItem key={item.id}>
                               <SidebarMenuButton

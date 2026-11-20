@@ -1,10 +1,10 @@
 export const settingsPanels = [
   { id: "account", label: "Account" },
   { id: "appearance", label: "Appearance" },
-  { id: "languages", label: "Content languages" },
-  { id: "editing-preview", label: "Editing & preview" },
   { id: "data", label: "Data & backups" },
   { id: "defaults", label: "Resume defaults" },
+  { id: "languages", label: "Content languages" },
+  { id: "editing-preview", label: "Editing & preview" },
   { id: "releases", label: "Public PDFs" },
 ] as const;
 
