@@ -4,14 +4,12 @@ import { cn } from "cn";
 import {
   ArrowLeft,
   ArrowRight,
-  Columns2,
   FileText,
   Languages,
   LayoutDashboard,
   ListOrdered,
   Palette,
   Pencil,
-  Plus,
   RotateCcw,
 } from "lucide-react";
 import {
@@ -137,6 +135,7 @@ export function ResumeIdentityFields({
 
 export function ResumeManager({
   document,
+  saving,
   navigate,
   commit,
   createRequested,
@@ -155,6 +154,7 @@ export function ResumeManager({
   guard: (action: () => void) => void;
   children: (actions: ResumeActions) => ReactNode;
   document: CareerDocument;
+  saving: boolean;
   navigate: (destination: string) => void;
   commit: (
     scope: string,
@@ -239,8 +239,13 @@ export function ResumeManager({
     }
   };
   const actions: ResumeActions = {
+    saving,
     saveStarter,
     edit: (resume) => navigate(`resume-details/${resume.id}`),
+    compare: (resume) => {
+      if (getDocument().resumes.length < 2 || !getResume(resume.id)) return;
+      navigate(`resume-compare/${resume.id}`);
+    },
     create: (requestedStarterId?: string) =>
       guard(() => {
         const latest = getDocument();
@@ -626,28 +631,6 @@ export function CareerResumeCollection({
       aria-label="Resume collection"
       className="flex flex-col gap-5"
     >
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          variant="outline"
-          disabled={document.resumes.length < 2}
-          onClick={() => navigate("resume-compare")}
-        >
-          <Columns2 data-icon="inline-start" />
-          Compare resumes
-        </Button>
-        <Button
-          disabled={
-            document.resumes.length >= 120 ||
-            !document.languages.some((item) => item.active)
-          }
-          onClick={() => {
-            actions.create();
-          }}
-        >
-          <Plus data-icon="inline-start" />
-          Create resume
-        </Button>
-      </div>
       {!document.resumes.length && (
         <Empty>
           <EmptyHeader>
@@ -721,8 +704,10 @@ export function CareerResumeCollection({
 }
 
 export type ResumeActions = {
+  saving: boolean;
   create: (starterId?: string) => void;
   edit: (resume: CareerResume) => void;
+  compare: (resume: CareerResume) => void;
   duplicate: (resume: CareerResume) => void;
   copy: (resume: CareerResume) => void;
   delete: (resume: CareerResume) => void;
@@ -811,29 +796,19 @@ export function ResumeViewTabs({
       }}
       className="min-w-0 gap-6"
     >
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <div className="max-w-full overflow-x-auto px-1 pt-1 pb-2">
-          <TabsList variant="line" aria-label="Resume views">
-            {views.map(([prefix, label, Icon]) => (
-              <TabsTrigger
-                key={prefix}
-                value={`${prefix}/${resume.id}`}
-                disabled={saving}
-              >
-                <Icon aria-hidden="true" data-icon="inline-start" />
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
-        <Button
-          variant="outline"
-          disabled={saving}
-          onClick={() => navigate("resume-compare")}
-        >
-          <Columns2 aria-hidden="true" data-icon="inline-start" />
-          Compare resumes
-        </Button>
+      <div className="max-w-full overflow-x-auto px-1 pt-1 pb-2">
+        <TabsList variant="line" aria-label="Resume views">
+          {views.map(([prefix, label, Icon]) => (
+            <TabsTrigger
+              key={prefix}
+              value={`${prefix}/${resume.id}`}
+              disabled={saving}
+            >
+              <Icon aria-hidden="true" data-icon="inline-start" />
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
       </div>
       {active ? (
         <TabsContent value={active} className="min-w-0">
@@ -1818,9 +1793,19 @@ export function ResumeWordingEditor({
   );
 }
 
-export function ResumeComparison({ document }: { document: CareerDocument }) {
-  const [leftId, setLeftId] = useState(document.resumes[0]?.id ?? "");
-  const [rightId, setRightId] = useState(document.resumes[1]?.id ?? "");
+export function ResumeComparison({
+  document,
+  initialLeftId,
+}: {
+  document: CareerDocument;
+  initialLeftId?: string;
+}) {
+  const [leftId, setLeftId] = useState(
+    initialLeftId ?? document.resumes[0]?.id ?? "",
+  );
+  const [rightId, setRightId] = useState(
+    () => document.resumes.find((item) => item.id !== leftId)?.id ?? "",
+  );
   const [differences, setDifferences] = useState(false);
   const left =
     document.resumes.find((item) => item.id === leftId) ?? document.resumes[0];

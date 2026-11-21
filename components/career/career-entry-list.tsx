@@ -1,9 +1,10 @@
 "use client";
 
-import { Archive, ArchiveRestore, Copy, Pencil, Plus } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, Pencil } from "lucide-react";
 import { useState } from "react";
 
 import { CareerTextField } from "@/components/career/career-fields";
+import { createEntryQuickAction } from "@/components/career/quick-actions";
 import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
 import { SortableList, SortableRow } from "@/components/editor/sortable-list";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +85,8 @@ export function CareerEntryList({
     setRetainedSelectedId(selectedId);
   }
   const currentId = selectedId ?? retainedSelectedId;
+  const create = createEntryQuickAction(section, saving, onCreate);
+  const CreateIcon = create.icon;
   const visible = ids
     .flatMap((id) => {
       const entry = section.entries.find((candidate) => candidate.id === id);
@@ -127,12 +130,9 @@ export function CareerEntryList({
           entries
         </CardDescription>
         <CardAction>
-          <Button
-            onClick={onCreate}
-            disabled={saving || section.entries.length >= 300}
-          >
-            <Plus data-icon="inline-start" />
-            Create entry
+          <Button onClick={create.onSelect} disabled={create.disabled}>
+            <CreateIcon data-icon="inline-start" />
+            {create.label}
           </Button>
         </CardAction>
       </CardHeader>

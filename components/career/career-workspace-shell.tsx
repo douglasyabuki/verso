@@ -19,10 +19,11 @@ import { libraryDestinationKind } from "@/components/career/library-navigation";
 import {
   type CareerActions,
   careerDetailsQuickActions,
+  type CareerNavigationAction,
   libraryQuickActions,
   openAction,
+  resumeCollectionActions,
   resumeQuickActions,
-  resumesQuickActions,
   sectionQuickActions,
 } from "@/components/career/quick-actions";
 import {
@@ -86,12 +87,13 @@ import { WorkspaceToolbarView } from "@/components/workspace/workspace-toolbar-v
 import { useListEntrance } from "@/hooks/use-list-entrance";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useWorkspaceLayout } from "@/hooks/workspace/use-workspace-layout";
+import { isResumeComparison } from "@/lib/career/navigation";
 import type { CareerDocument } from "@/types-and-constants/career";
 
 type CareerNavigation = {
   document: CareerDocument;
   destination: string;
-  navigate: (destination: string) => void;
+  navigate: CareerNavigationAction;
   /** Avatar menu for the rail or mobile sidebar footer. */
   accountMenu: (side: "right" | "top") => ReactNode;
   /** Close Settings through its guarded route handling. */
@@ -149,49 +151,57 @@ function ResumeSidebarCollection({
     id: string | null;
   }>({ destination: "", id: null });
   const libraryDestination = libraryDestinationKind(destination) !== null;
+  const comparingResumes = isResumeComparison(destination);
+  const resumeDestination =
+    destination.startsWith("resume-") && !comparingResumes;
+  const activeResumeId = resumeDestination ? destination.split("/")[1] : null;
   if (libraryDestination && expansion.destination !== destination) {
     setExpansion({ destination, id: null });
   }
   const expandedId =
-    expansion.destination === destination
-      ? expansion.id
-      : destination.startsWith("resume-")
-        ? destination.split("/")[1]
-        : null;
+    expansion.destination === destination ? expansion.id : activeResumeId;
+  const { create, compare } = resumeCollectionActions(
+    document,
+    resumeActions.saving,
+  );
+  const createAndClose = () => {
+    setOpenMobile(false);
+    addResume();
+  };
+  const sidebarResumeActions: ResumeActions = {
+    ...resumeActions,
+    compare: (resume) => {
+      setOpenMobile(false);
+      resumeActions.compare(resume);
+    },
+  };
   return (
     <SidebarCollection
       label="Resumes"
-      active={destination === "resumes" || destination === "resume-compare"}
+      active={destination === "resumes" || comparingResumes}
       onOpen={() => go("resumes")}
-      contextActions={resumesQuickActions(
-        document,
-        () => {
-          setOpenMobile(false);
-          addResume();
-        },
-        go,
-      )}
-      onCreate={() => {
-        setOpenMobile(false);
-        addResume();
-      }}
-      createLabel="Create resume"
-      createDisabled={
-        document.resumes.length >= 120 ||
-        !document.languages.some((item) => item.active)
-      }
+      contextActions={[
+        openAction(() => go("resumes")),
+        { ...create, onSelect: createAndClose },
+        { ...compare, onSelect: () => go("resume-compare") },
+      ]}
+      onCreate={createAndClose}
+      createLabel={create.label}
+      createDisabled={create.disabled}
     >
       <SidebarMenu>
         {document.resumes.map((resume) => {
           const name = resume.name || "Untitled resume";
-          const active =
-            destination.startsWith("resume-") &&
-            destination.split("/")[1] === resume.id;
+          const active = activeResumeId === resume.id;
           const expanded = expandedId === resume.id;
           return (
             <SidebarMenuItem key={resume.id}>
               <QuickActionsContextMenu
-                actions={resumeQuickActions(document, resume, resumeActions)}
+                actions={resumeQuickActions(
+                  document,
+                  resume,
+                  sidebarResumeActions,
+                )}
               >
                 <div className="relative">
                   <SidebarMenuButton
@@ -239,7 +249,7 @@ function ResumeSidebarCollection({
                   <ResumeActionsMenu
                     document={document}
                     resume={resume}
-                    actions={resumeActions}
+                    actions={sidebarResumeActions}
                     trigger={
                       <SidebarMenuAction
                         showOnHover
@@ -362,9 +372,9 @@ function CareerSidebar({
     disabled: !(isMobile ? openMobile : sidebarOpen),
     mode: "all",
   });
-  const go = (next: string) => {
+  const go: CareerNavigationAction = (next, entry) => {
     setOpenMobile(false);
-    navigate(next);
+    navigate(next, entry);
   };
   const item = (
     value: string,
@@ -484,6 +494,7 @@ function CareerSidebar({
                       section,
                       sidebarCareerActions,
                       go,
+                      { includeCreateEntry: true },
                     ),
                   },
                 ),
@@ -630,15 +641,15 @@ export function CareerWorkspaceShell({
         (item) => item.id === destination.split("/")[1],
       )
     : undefined;
+  const comparingResumes = isResumeComparison(destination);
   const fullWidth =
     Boolean(libraryDestination) ||
-    ["overview", "backups", "languages", "resumes", "resume-compare"].includes(
-      destination,
-    );
-  const resume = document.resumes.find(
-    (item) =>
-      item.id === destination.split("/")[1] && destination.startsWith("resume"),
-  );
+    comparingResumes ||
+    ["overview", "backups", "languages", "resumes"].includes(destination);
+  const resume =
+    !comparingResumes && destination.startsWith("resume")
+      ? document.resumes.find((item) => item.id === destination.split("/")[1])
+      : undefined;
   const previewAvailable = document.resumes.length > 0 && !fullWidth;
   const languageItems = document.languages.map((item) => ({
     value: item.tag,
@@ -667,13 +678,13 @@ export function CareerWorkspaceShell({
       {output(visible)}
     </div>
   );
-  const open = (next: string) => {
+  const open: CareerNavigationAction = (next, entry) => {
     if (
       !next.startsWith("settings/") &&
       !["settings", "backups", "languages", "defaults"].includes(next)
     )
       setMobilePanel("editor");
-    navigate(next);
+    navigate(next, entry);
   };
   return (
     <TooltipProvider>
@@ -726,8 +737,7 @@ export function CareerWorkspaceShell({
                       ? "Content languages"
                       : resume
                         ? resume.name || "Untitled resume"
-                        : destination === "resumes" ||
-                            destination === "resume-compare"
+                        : destination === "resumes" || comparingResumes
                           ? "Resumes"
                           : "Career details"
                 }
@@ -823,13 +833,13 @@ export function CareerWorkspaceShell({
               )}
               {!resume &&
                 !libraryDestination &&
+                !comparingResumes &&
                 ![
                   "overview",
                   "backups",
                   "languages",
                   "sections",
                   "resumes",
-                  "resume-compare",
                 ].includes(destination) && (
                   <div className="flex min-w-0 flex-wrap items-center gap-3 border-t px-4 py-3 md:px-6">
                     <Label htmlFor="wording-language">

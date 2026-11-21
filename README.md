@@ -9,7 +9,8 @@ resumes, customize each resume, and generate PDFs in the browser.
 - Career profile, summaries, built-in and custom sections, entries, achievements,
   and links, with archive/restore for shared content.
 - Independent resumes with their own content selection, order, wording overrides,
-  and layout. Appearance presets, empty-structure starters, duplication, and a
+  and layout. Compare saved resumes from the Resumes collection or any resume's
+  action menu. Appearance presets, empty-structure starters, duplication, and a
   fictional sample workspace help reuse existing setups.
 - Extensible content languages, one language per resume, and verified PDF output
   capabilities for English and Brazilian Portuguese. The interface is English.

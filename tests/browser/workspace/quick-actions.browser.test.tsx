@@ -1,6 +1,6 @@
 import { Copy, Pencil, Trash2 } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 
 import { CareerWorkspace } from "@/components/career/career-workspace";
@@ -9,6 +9,7 @@ import {
   QuickActionsContextMenu,
   QuickActionsMenu,
 } from "@/components/ui/quick-actions";
+import { createResume } from "@/lib/career/resumes";
 import { CareerController } from "@/stores/career/controller";
 
 const controllers: CareerController[] = [];
@@ -173,5 +174,138 @@ describe("Quick actions", () => {
             ?.archived,
       )
       .toBe(false);
+  });
+
+  it("requires two saved resumes for collection and individual Compare actions", async () => {
+    const controller = new CareerController();
+    controllers.push(controller);
+    await controller.initialize();
+    const document = controller.getSnapshot().head!.document;
+    const first = { ...createResume(document, "en-US"), name: "First resume" };
+    const second = {
+      ...createResume(document, "en-US"),
+      name: "Second resume",
+    };
+    expect(await controller.command(`resume/${first.id}`, first)).toBe(true);
+    await page.viewport(1280, 900);
+    window.history.replaceState({ versoIndex: 0 }, "", "?scope=resumes");
+    await render(<CareerWorkspace controller={controller} />);
+
+    const navigation = page.getByRole("navigation", {
+      name: "Workspace navigation",
+    });
+    const main = page.getByRole("main");
+    const resumes = navigation.getByRole("button", {
+      name: "Resumes",
+      exact: true,
+    });
+    const resume = navigation.getByRole("button", { name: /^First resume/ });
+    const compareButton = main.getByRole("button", {
+      name: "Compare resumes",
+      exact: true,
+    });
+    const compareItem = page.getByRole("menuitem", { name: /Compare resumes/ });
+    await expect.element(compareButton).toBeDisabled();
+    await resumes.click({ button: "right" });
+    await expect.element(compareItem).toBeDisabled();
+    await expect
+      .element(compareItem)
+      .toHaveTextContent(/Create at least two resumes to compare\./);
+    await userEvent.keyboard("{Escape}");
+    await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+
+    const contextualCompare = page.getByRole("menuitem", { name: /^Compare/ });
+    const assertUnavailable = async () => {
+      await expect.element(contextualCompare).toBeDisabled();
+      await expect
+        .element(contextualCompare)
+        .toHaveTextContent(/Create at least two resumes to compare\./);
+      await userEvent.keyboard("{Escape}");
+      await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+    };
+    const actions = { name: "Actions for First resume", exact: true };
+    await navigation.getByRole("button", actions).click();
+    await assertUnavailable();
+    await resume.click({ button: "right" });
+    await assertUnavailable();
+    await main.getByRole("button", actions).click();
+    await assertUnavailable();
+    await resume.click();
+    await main.getByRole("button", actions).click();
+    await assertUnavailable();
+
+    expect(await controller.command(`resume/${second.id}`, second)).toBe(true);
+    await resumes.click();
+    await expect.element(compareButton).toBeEnabled();
+    await resumes.click({ button: "right" });
+    await compareItem.click();
+    await expect
+      .element(page.getByRole("heading", { name: "Compare resumes", level: 1 }))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole("combobox", { name: "Left resume" }))
+      .toHaveTextContent("First resume (en-US)");
+    await expect
+      .element(page.getByRole("combobox", { name: "Right resume" }))
+      .toHaveTextContent("Second resume (en-US)");
+  });
+
+  it("opens a guarded entry draft from both section menus and returns to Editor on mobile", async () => {
+    const controller = new CareerController();
+    controllers.push(controller);
+    await controller.initialize();
+    const document = controller.getSnapshot().head!.document;
+    const section = document.sections[0];
+    const resume = createResume(document, "en-US");
+    expect(await controller.command(`resume/${resume.id}`, resume)).toBe(true);
+    await page.viewport(1280, 900);
+    window.history.replaceState({ versoIndex: 0 }, "", "?scope=summary");
+    await render(<CareerWorkspace controller={controller} />);
+
+    const summary = page.getByRole("textbox", { name: "Summary" });
+    await summary.fill("Unsaved summary");
+    const name = section.name || section.kind;
+    const createEntry = page.getByRole("menuitem", { name: "Create entry" });
+    const guard = page.getByRole("dialog", { name: "Unsaved form" });
+    await page
+      .getByRole("navigation", { name: "Workspace navigation" })
+      .getByRole("button", { name: `Actions for ${name}` })
+      .click();
+    await createEntry.click();
+    await guard.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect.element(summary).toHaveTextContent("Unsaved summary");
+    expect(controller.getSnapshot().draft?.scope).toBe("summary");
+
+    await page.viewport(390, 844);
+    await page.getByRole("tab", { name: "PDF preview", exact: true }).click();
+    await page.getByRole("button", { name: "Expand sidebar" }).click();
+    const sidebar = page.getByRole("dialog", { name: "Verso workspace" });
+    await sidebar.getByRole("button", { name, exact: true }).click({
+      button: "right",
+    });
+    await createEntry.click();
+    await guard.getByRole("button", { name: "Discard", exact: true }).click();
+    await expect.element(sidebar).not.toBeInTheDocument();
+    await expect
+      .element(page.getByRole("tab", { name: "Editor", exact: true }))
+      .toHaveAttribute("aria-selected", "true");
+    const editor = page.getByRole("region", { name: "Editing form" });
+    await editor
+      .getByRole("textbox", { name: "Internal name" })
+      .fill("New role");
+    expect(controller.getSnapshot().draft?.scope).toMatch(
+      new RegExp(`^new-entry/${section.id}/`),
+    );
+    expect(controller.getSnapshot().head!.document.sections[0].entries).toEqual(
+      [],
+    );
+    await editor.getByRole("button", { name: "Save", exact: true }).click();
+    await expect
+      .poll(() =>
+        controller
+          .getSnapshot()
+          .head!.document.sections[0].entries.map((entry) => entry.name),
+      )
+      .toEqual(["New role"]);
   });
 });

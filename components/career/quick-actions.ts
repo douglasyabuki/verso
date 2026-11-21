@@ -1,6 +1,7 @@
 import {
   Archive,
   ArchiveRestore,
+  Columns2,
   Copy,
   FilePlus2,
   Languages,
@@ -15,13 +16,20 @@ import type { ResumeActions } from "@/components/career/resume-workspace";
 import type { QuickAction } from "@/components/ui/quick-actions";
 import type {
   CareerDocument,
+  CareerEntry,
   CareerResume,
   CareerSection,
 } from "@/types-and-constants/career";
 
+export type CareerNavigationAction = (
+  destination: string,
+  entry?: CareerEntry,
+) => void;
+
 /** Workspace commands the sidebar and page headers expose as quick actions. */
 export type CareerActions = {
   addSection: () => void;
+  createEntry: (sectionId: string, open: CareerNavigationAction) => void;
   toggleSectionArchived: (sectionId: string) => void;
   createLibraryItem: (kind: "preset" | "starter") => void;
   /** A Save is running; commands are unavailable until it settles. */
@@ -33,6 +41,21 @@ const busyHint = "Wait for the current Save to finish.";
 /** Navigation-only action for a destination row. */
 export function openAction(open: () => void): QuickAction {
   return { key: "open", label: "Open/Edit", icon: Pencil, onSelect: open };
+}
+
+export function createEntryQuickAction(
+  section: CareerSection,
+  busy: boolean,
+  onSelect: () => void,
+): QuickAction {
+  return {
+    key: "create-entry",
+    label: "Create entry",
+    icon: Plus,
+    disabled: busy || section.entries.length >= 300,
+    hint: busy ? busyHint : "Limit of 300 entries reached.",
+    onSelect,
+  };
 }
 
 /** Resume menu: edits and copies first, Delete last after a divider. */
@@ -51,6 +74,11 @@ export function resumeQuickActions(
       label: "Edit name & color",
       icon: Pencil,
       onSelect: () => actions.edit(resume),
+    },
+    {
+      ...compareAction(document, actions.saving),
+      label: "Compare",
+      onSelect: () => actions.compare(resume),
     },
     {
       key: "duplicate",
@@ -96,10 +124,18 @@ export function resumeQuickActions(
 export function sectionQuickActions(
   section: CareerSection,
   actions: CareerActions,
-  open: (destination: string) => void,
+  open: CareerNavigationAction,
+  { includeCreateEntry = false } = {},
 ): QuickAction[] {
   return [
     openAction(() => open(`list/${section.id}`)),
+    ...(includeCreateEntry
+      ? [
+          createEntryQuickAction(section, actions.busy, () =>
+            actions.createEntry(section.id, open),
+          ),
+        ]
+      : []),
     {
       key: "properties",
       label: "Section properties",
@@ -163,24 +199,40 @@ export function libraryQuickActions(
   ];
 }
 
-/** Resumes collection header (right-click). */
-export function resumesQuickActions(
+function compareAction(
   document: CareerDocument,
-  addResume: () => void,
-  open: (destination: string) => void,
-): QuickAction[] {
+  busy: boolean,
+): Omit<QuickAction, "onSelect"> {
+  return {
+    key: "compare",
+    label: "Compare resumes",
+    icon: Columns2,
+    disabled: busy || document.resumes.length < 2,
+    hint: busy ? busyHint : "Create at least two resumes to compare.",
+  };
+}
+
+/** Collection commands shared by the Resumes page and sidebar heading. */
+export function resumeCollectionActions(
+  document: CareerDocument,
+  busy: boolean,
+): {
+  create: Omit<QuickAction, "onSelect">;
+  compare: Omit<QuickAction, "onSelect">;
+} {
   const full = document.resumes.length >= 120;
-  return [
-    openAction(() => open("resumes")),
-    {
+  return {
+    create: {
       key: "create",
       label: "Create resume",
       icon: Plus,
-      disabled: full || !document.languages.some((item) => item.active),
-      hint: full
-        ? "Limit of 120 resumes reached."
-        : "Activate a content language first.",
-      onSelect: addResume,
+      disabled: busy || full || !document.languages.some((item) => item.active),
+      hint: busy
+        ? busyHint
+        : full
+          ? "Limit of 120 resumes reached."
+          : "Activate a content language first.",
     },
-  ];
+    compare: compareAction(document, busy),
+  };
 }
