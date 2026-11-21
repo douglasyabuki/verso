@@ -1,9 +1,25 @@
 "use client";
 
+import type { Menu } from "@base-ui/react/menu";
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import {
+  type ReactElement,
+  type ReactNode,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 type ThemePreference = "system" | "light" | "dark";
@@ -83,6 +99,93 @@ const options = [
   { value: "dark", label: "Dark", Icon: Moon },
 ] as const;
 
+function useThemeChoice() {
+  const [storageFailed, setStorageFailed] = useState(false);
+  const preference = useSyncExternalStore(
+    subscribe,
+    getPreference,
+    getServerPreference,
+  );
+
+  function persist(value: ThemePreference) {
+    try {
+      localStorage.setItem(storageKey, value);
+      setStorageFailed(false);
+      return true;
+    } catch {
+      setStorageFailed(true);
+      return false;
+    }
+  }
+
+  function choose(value: unknown) {
+    if (value !== "system" && value !== "light" && value !== "dark")
+      return false;
+    applyTheme(value);
+    const saved = persist(value);
+    window.dispatchEvent(new Event(changeEvent));
+    return saved;
+  }
+
+  return { preference, storageFailed, persist, choose };
+}
+
+export function ThemeMenu({
+  trigger,
+  children,
+}: {
+  trigger: ReactElement;
+  children: ReactNode;
+}) {
+  const { preference, storageFailed, persist, choose } = useThemeChoice();
+  const menu = useRef<Menu.Root.Actions>(null);
+
+  return (
+    <DropdownMenu actionsRef={menu}>
+      <DropdownMenuTrigger render={trigger}>{children}</DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="center"
+        sideOffset={8}
+        className="quick-actions-dropdown motion-reduce:animate-none"
+      >
+        <DropdownMenuRadioGroup
+          aria-label="Color theme"
+          value={preference}
+          onValueChange={(value) => {
+            if (choose(value)) menu.current?.close();
+          }}
+        >
+          {options.map(({ value, label, Icon }) => (
+            <DropdownMenuRadioItem key={value} value={value}>
+              <Icon aria-hidden="true" />
+              {label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+        {storageFailed && (
+          <DropdownMenuGroup>
+            <p
+              role="status"
+              className="px-1.5 py-1 text-xs text-muted-foreground"
+            >
+              Theme applies in this tab only. Browser preferences could not be
+              saved.
+            </p>
+            <DropdownMenuItem
+              closeOnClick={false}
+              onClick={() => {
+                if (persist(preference)) menu.current?.close();
+              }}
+            >
+              Retry saving theme
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /** Choose the application theme, persisted per browser.
  * @param props `labelled` renders full-width icon+text options (Settings); otherwise compact icon-only toggles (rail popover). `labelledBy` names the group from a visible label.
  * @returns Theme toggle group with a retry notice when browser storage fails.
@@ -95,20 +198,7 @@ export function ThemeSelector({
   labelled?: boolean;
   labelledBy?: string;
 } = {}) {
-  const [storageFailed, setStorageFailed] = useState(false);
-  const persist = (value: ThemePreference) => {
-    try {
-      localStorage.setItem(storageKey, value);
-      setStorageFailed(false);
-    } catch {
-      setStorageFailed(true);
-    }
-  };
-  const preference = useSyncExternalStore(
-    subscribe,
-    getPreference,
-    getServerPreference,
-  );
+  const { preference, storageFailed, persist, choose } = useThemeChoice();
 
   return (
     <div className="flex flex-col gap-2">
@@ -120,14 +210,7 @@ export function ThemeSelector({
         {...(labelled
           ? { className: "w-full flex-wrap" }
           : { size: "sm" as const, spacing: 0 })}
-        onValueChange={(values) => {
-          const value = values[0];
-          if (value !== "system" && value !== "light" && value !== "dark")
-            return;
-          applyTheme(value);
-          persist(value);
-          window.dispatchEvent(new Event(changeEvent));
-        }}
+        onValueChange={([value]) => choose(value)}
       >
         {options.map(({ value, label, Icon }) =>
           labelled ? (

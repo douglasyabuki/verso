@@ -28,15 +28,19 @@ html[data-theme-switching] *::after {
     ) !important;
   }
 
-  .quick-actions-dropdown [data-slot="dropdown-menu-item"] {
+  .quick-actions-dropdown
+    :is(
+      [data-slot="dropdown-menu-item"],
+      [data-slot="dropdown-menu-radio-item"]
+    ) {
     min-height: 2rem !important;
     font-size: 13px !important;
     line-height: 1rem !important;
-  }
 
-  .quick-actions-dropdown [data-slot="dropdown-menu-item"] > svg {
-    width: 0.875rem !important;
-    height: 0.875rem !important;
+    & > svg {
+      width: 0.875rem !important;
+      height: 0.875rem !important;
+    }
   }
 }
 
@@ -550,6 +554,130 @@ html[data-theme-switching] *::after {
   @media (prefers-reduced-motion: reduce) {
     .brand-loading-page {
       animation: none;
+    }
+  }
+}
+
+/* Landing-page illustrations use fixed paper colors in both themes. */
+@custom-variant welcome-compact {
+  @media (width <= 620px) {
+    @slot;
+  }
+}
+
+@utility welcome-page {
+  --welcome-gutter: clamp(20px, 5.55vw, 80px);
+  --welcome-editorial: color-mix(in oklab, var(--card), var(--background) 35%);
+  --welcome-desk: color-mix(in oklab, var(--background), var(--accent) 55%);
+  --welcome-desk-rule: color-mix(in oklab, var(--border), transparent 46%);
+  --welcome-shadow: 0 2px 4px #1018170e, 0 12px 24px #10181712;
+  --paper: #fff;
+  --paper-ink: #202827;
+  --paper-muted: #586762;
+  --paper-rule: #d4deda;
+  --paper-teal: #1f6258;
+
+  @media (width <= 400px) {
+    --welcome-gutter: 16px;
+  }
+}
+
+@utility welcome-frame {
+  width: min(calc(100% - 2 * var(--welcome-gutter)), 1280px);
+  margin-inline: auto;
+}
+
+@utility welcome-kicker {
+  @apply font-mono text-[0.6875rem]/[1.4] font-medium tracking-[0.11em] uppercase;
+}
+
+@utility welcome-motion {
+  --welcome-easing: cubic-bezier(0.22, 0.68, 0.26, 1);
+  --welcome-flow-start: 80ms;
+  --welcome-source-duration: 420ms;
+  --welcome-branch-start: calc(
+    var(--welcome-flow-start) + var(--welcome-source-duration)
+  );
+  --welcome-branch-duration: 340ms;
+  /* Keep the incoming paper's delay tied to the end of the visible route. */
+  --welcome-paper-delay: var(--welcome-branch-start);
+
+  @media (width > 620px) {
+    --welcome-paper-delay: calc(
+      var(--welcome-branch-start) + var(--welcome-branch-duration)
+    );
+  }
+}
+
+@utility welcome-selected-paper {
+  --document-delay: var(--welcome-paper-delay);
+  --document-edge: var(--primary);
+  --document-shift: -3px;
+  --document-surface: var(--paper);
+  --document-indicator: var(--paper-teal);
+}
+
+@utility welcome-selected-source {
+  background-color: var(--accent);
+  --source-check: 1;
+}
+
+@theme inline {
+  --ease-welcome: var(--welcome-easing);
+  --animate-welcome-record: welcome-set-record-row 380ms var(--welcome-easing)
+    calc(45ms * var(--entry-index)) both;
+  --animate-welcome-trace: welcome-trace-selection var(--flow-duration)
+    var(--welcome-easing) var(--flow-delay) backwards;
+  --animate-welcome-paper: welcome-set-paper 670ms var(--welcome-easing)
+    var(--paper-intro, 360ms) backwards;
+  --animate-welcome-type: welcome-set-type 435ms var(--welcome-easing)
+    calc(var(--type-intro, 550ms) + 95ms * var(--section-index)) backwards;
+
+  @keyframes welcome-set-record-row {
+    from {
+      opacity: 0.35;
+      transform: translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes welcome-trace-selection {
+    from {
+      stroke-dasharray: 1 1;
+      stroke-dashoffset: 1;
+    }
+
+    to {
+      stroke-dasharray: 1 1;
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes welcome-set-paper {
+    from {
+      opacity: 0.72;
+      transform: translateY(10px) scaleY(0.97);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes welcome-set-type {
+    from {
+      opacity: 0.32;
+      transform: translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
 }
