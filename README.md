@@ -17,9 +17,13 @@ resumes, customize each resume, and generate PDFs in the browser.
   JSON backups, and reviewed replacement retaining one previous workspace.
 - Browser-based LaTeX compilation and PDF preview/download. Refresh is manual by
   default; automatic refresh after saved output changes is optional.
-- A product presentation at `/` with Sign in, Sign up, and Continue as guest. The
-  workspace lives at `/app` for guests and account owners; `/app/<view>` deep links
-  (for example `/app/settings/account`) survive reload and sign-in.
+- A product presentation at `/` with Sign in, Sign up, Continue as guest, and
+  a navbar Appearance control.
+  An interactive fictional example shows which parts of one career record two
+  independently tailored resumes use, with a static view for reduced motion and
+  separately authored English and Brazilian Portuguese examples. The workspace
+  lives at `/app` for guests and account owners. Deep links such as
+  `/app/settings/account` survive reload and sign-in.
 - Guest workspaces stored in this browser. Optional GitHub/Google sign-in adds
   account storage and cross-device freshness checks. Sign-up is explicit; Settings ›
   Account shows which providers are connected, connects or disconnects them (keeping
