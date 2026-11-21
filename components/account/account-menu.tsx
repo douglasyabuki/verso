@@ -8,6 +8,7 @@ import {
   UserRoundPlus,
 } from "lucide-react";
 
+import { openAuthPage } from "@/components/account/account-panel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,8 +39,8 @@ function initial(name: string) {
 }
 
 /** Avatar menu for the utility rail: Settings plus sign-in or sign-out.
- * Sign in and Sign up both open Settings › Account, where provider buttons
- * start OAuth (the first sign-in creates the account).
+ * Sign in and Sign up open their pages and return to the current workspace URL;
+ * Sign in again stays in Settings › Account so the expired owner remains mounted.
  * @param props Session, shared account actions, and guarded navigation.
  * @returns The avatar trigger and its account menu.
  * @example <AccountMenu session={session} actions={actions} navigate={navigate} />
@@ -124,11 +125,11 @@ export function AccountMenu({
         {(guest || user) && <DropdownMenuSeparator />}
         {guest && (
           <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => navigate("settings/account")}>
+            <DropdownMenuItem onClick={() => openAuthPage("sign-in")}>
               <LogIn aria-hidden="true" />
               Sign in
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("settings/account")}>
+            <DropdownMenuItem onClick={() => openAuthPage("sign-up")}>
               <UserRoundPlus aria-hidden="true" />
               Sign up
             </DropdownMenuItem>

@@ -5,12 +5,12 @@ import { expect, type Page, test } from "@playwright/test";
 
 import { installHarness } from "@/tests/support/e2e/career-harness";
 
-/** Open Settings › Data & backups from the workspace sidebar (desktop or drawer). */
+/** Open Settings › Data from the workspace sidebar (desktop or drawer). */
 async function openDataSettings(page: Page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Settings", exact: true })
-    .getByRole("button", { name: "Data & backups", exact: true })
+    .getByRole("button", { name: "Data", exact: true })
     .click();
 }
 
@@ -41,7 +41,7 @@ for (const cpuRate of [1, 4])
         ] as const) {
           if (label !== fixture) continue;
           console.log(`Measuring ${label} at ${rate}x CPU`);
-          await page.goto("/");
+          await page.goto("/app");
           await installHarness(page);
           const measurement = await page.evaluate(
             async ({ label, entries, resumes }) => {
@@ -194,7 +194,7 @@ for (const cpuRate of [1, 4])
           const applicationOpens: number[] = [];
           for (let i = 0; i < 30; i++) {
             const began = performance.now();
-            await page.goto("/?scope=profile");
+            await page.goto("/app/profile");
             await expect(
               page.getByRole("textbox", { name: "Full name", exact: true }),
             ).toBeVisible();
@@ -415,7 +415,7 @@ for (const cpuRate of [1, 4])
           );
         }
         if (fixture !== "compiler") continue;
-        await page.goto("/");
+        await page.goto("/app");
         await installHarness(page);
         const compilation = await page.evaluate(async () => {
           const api = window.careerHarness;

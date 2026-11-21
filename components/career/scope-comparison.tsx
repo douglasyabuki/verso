@@ -111,8 +111,8 @@ export function ScopeComparison({
       className="flex flex-col gap-3"
     >
       <FieldDescription>
-        Compare both versions, edit the draft, then reconcile with current
-        content before saving. Neither version is removed by comparison.
+        Saved content beside the draft. Comparing never changes or removes
+        either version.
       </FieldDescription>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">

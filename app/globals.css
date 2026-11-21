@@ -20,12 +20,16 @@ html[data-theme-switching] *::after {
 
 @layer components {
   .quick-actions-dropdown {
-    width: 14rem !important;
-    max-width: var(--available-width) !important;
+    /* Fit the options; only cap at the owning item's width (set on open). */
+    width: max-content !important;
+    max-width: min(
+      var(--available-width),
+      var(--quick-actions-row-width, 100vw)
+    ) !important;
   }
 
   .quick-actions-dropdown [data-slot="dropdown-menu-item"] {
-    height: 2rem !important;
+    min-height: 2rem !important;
     font-size: 13px !important;
     line-height: 1rem !important;
   }
@@ -495,6 +499,57 @@ html[data-theme-switching] *::after {
   @media (prefers-reduced-motion: reduce) {
     .form-control {
       transition: none;
+    }
+  }
+}
+
+/* Branded loader: each page of the mark turns about the central fold. The
+   keyframes start and end in the same resting state with eased segments, so
+   the loop has no visible seam; the right page runs half a period behind. */
+@keyframes verso-page-turn {
+  0%,
+  50%,
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scaleX(0.2);
+    opacity: 0.45;
+  }
+}
+
+@keyframes verso-loader-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer components {
+  .brand-loading {
+    animation: verso-loader-in 200ms ease-out 150ms both;
+  }
+
+  .brand-loading-page {
+    transform-box: fill-box;
+    animation: verso-page-turn 2.4s ease-in-out infinite;
+  }
+
+  .brand-loading-page:first-child {
+    transform-origin: right center;
+  }
+
+  .brand-loading-page:last-child {
+    transform-origin: left center;
+    animation-delay: -1.2s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .brand-loading-page {
+      animation: none;
     }
   }
 }

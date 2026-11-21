@@ -11,6 +11,7 @@ import {
   request,
   setupCareerTests,
   storage,
+  storedDraft,
   trackController,
 } from "@/tests/support/browser/career";
 
@@ -271,7 +272,7 @@ describe("independent entry and order drafts", () => {
         (entry) => entry.name,
       ),
     ).toEqual(["Beta", "Alpha"]);
-    expect(await owner.drafts()).toEqual([entryDraft]);
+    expect(await owner.drafts()).toEqual([storedDraft(entryDraft)]);
     expect(await controller.save()).toBe(true);
     expect(
       (await owner.load()).document.sections[0].entries.map(
@@ -323,7 +324,10 @@ describe("independent entry and order drafts", () => {
     expect(controller.getSnapshot().draft).toEqual(entryDraft);
     expect(controller.getSnapshot().orderDraft).toEqual(orderDraft);
     expect(await owner.drafts()).toEqual(
-      expect.arrayContaining([entryDraft, orderDraft]),
+      expect.arrayContaining([
+        storedDraft(entryDraft),
+        storedDraft(orderDraft),
+      ]),
     );
     controller.dispose();
     const reloaded = await controllerOwner();
@@ -336,7 +340,7 @@ describe("independent entry and order drafts", () => {
     expect(reloaded.getSnapshot().orderDraft).toEqual(orderDraft);
     await reloaded.cancel("order");
     expect(reloaded.getSnapshot().draft).toEqual(entryDraft);
-    expect(await owner.drafts()).toEqual([entryDraft]);
+    expect(await owner.drafts()).toEqual([storedDraft(entryDraft)]);
     await reloaded.cancel();
   });
 });

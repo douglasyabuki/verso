@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import {
   Database,
   Globe,
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/disclosure";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldError,
   FieldGroup,
@@ -64,15 +66,29 @@ import {
   settingsPanels,
 } from "@/types-and-constants/settings";
 
-const icons = [
-  UserRound,
-  Palette,
-  Languages,
-  SlidersHorizontal,
-  Database,
-  Settings2,
-  Globe,
-];
+const icons = {
+  account: UserRound,
+  appearance: Palette,
+  data: Database,
+  defaults: Settings2,
+  languages: Languages,
+  "editing-preview": SlidersHorizontal,
+  releases: Globe,
+} satisfies Record<SettingsPanel, unknown>;
+
+const panelDescriptions: Record<SettingsPanel, string> = {
+  account:
+    "Sign-in for this browser. Signing in never moves or merges workspaces.",
+  appearance: "How Verso looks in this browser. Applies immediately.",
+  data: "Unsaved drafts, backups, and imports for this workspace.",
+  defaults:
+    "Appearance copied into new blank resumes. Existing resumes, presets, and starters keep their own. Changes require Save.",
+  languages:
+    "Languages your career content is written in. Changes require Save.",
+  "editing-preview":
+    "Preview and compiler behavior in this browser. Applies immediately and is excluded from backups.",
+  releases: "Unlisted public links to released PDFs, stored in your account.",
+};
 
 /** Render immediate numeric preferences, retaining malformed input until corrected.
  * @param props Effective preferences and the owning persistence command.
@@ -88,33 +104,30 @@ export function DeviceSettings({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      <p>
-        Save explicitly commits workspace changes. Draft recovery is separate.
-        The PDF preview uses saved content only and refreshes manually by
-        default.
-      </p>
-      <Field>
-        <FieldLabel htmlFor="automatic-refresh">
-          <Checkbox
-            id="automatic-refresh"
-            checked={Boolean(values.automaticRefresh)}
-            aria-describedby="automatic-refresh-description"
-            onCheckedChange={(checked) =>
-              change({ automaticRefresh: Boolean(checked) })
-            }
-          />
-          Refresh preview automatically after Save
-        </FieldLabel>
-        <FieldDescription id="automatic-refresh-description">
-          Applies to this device only. The visible preview refreshes shortly
-          after a Save changes the selected resume&apos;s PDF. Unsaved edits,
-          preset loads, and resets never refresh it.
-        </FieldDescription>
+      <Field orientation="horizontal">
+        <Checkbox
+          id="automatic-refresh"
+          checked={Boolean(values.automaticRefresh)}
+          onCheckedChange={(checked) =>
+            change({ automaticRefresh: Boolean(checked) })
+          }
+        />
+        <FieldContent>
+          <FieldLabel htmlFor="automatic-refresh">
+            Refresh preview automatically after Save
+          </FieldLabel>
+          <FieldDescription>
+            The PDF preview shows saved content only and refreshes manually by
+            default. When on, it refreshes shortly after a Save changes the
+            selected resume&apos;s PDF. Unsaved edits, preset loads, and resets
+            never refresh it.
+          </FieldDescription>
+        </FieldContent>
       </Field>
       <Collapsible>
         <CollapsibleTrigger
-          render={<Button variant="outline" />}
-          className={disclosureTriggerClassName}
+          render={<Button variant="ghost" />}
+          className={cn(disclosureTriggerClassName, "min-h-8")}
         >
           <DisclosureChevron />
           <DisclosureLabel>Advanced settings</DisclosureLabel>
@@ -244,7 +257,6 @@ export function SettingsDialog({
   close,
   returnFocus,
   children,
-  workspaceSettings,
   preferenceStatus,
   retryPreferences,
   historyKey,
@@ -255,7 +267,6 @@ export function SettingsDialog({
   close: () => void;
   returnFocus: RefObject<HTMLElement | null>;
   children: ReactNode;
-  workspaceSettings: boolean;
   preferenceStatus: string;
   retryPreferences: () => void;
   historyKey: number;
@@ -333,8 +344,8 @@ export function SettingsDialog({
                   <nav aria-label="Settings panels">
                     <SidebarSelection>
                       <SidebarMenu className="grid grid-cols-2 gap-1 sm:grid-cols-3 md:flex md:flex-col">
-                        {settingsPanels.map((item, index) => {
-                          const Icon = icons[index];
+                        {settingsPanels.map((item) => {
+                          const Icon = icons[item.id];
                           return (
                             <SidebarMenuItem key={item.id}>
                               <SidebarMenuButton
@@ -373,15 +384,7 @@ export function SettingsDialog({
                 {settingsPanels.find((item) => item.id === panel)?.label}
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                {panel === "data"
-                  ? "Workspace backups contain saved content; recovery is separate."
-                  : panel === "account"
-                    ? "Sign-in for this browser. Signing in never moves or merges workspaces."
-                    : panel === "releases"
-                      ? "Unlisted public links to released PDFs, stored in your account."
-                      : workspaceSettings
-                        ? "Included in workspace backups. Changes require Save."
-                        : "This browser. Device preferences apply immediately and are excluded from backups."}
+                {panel ? panelDescriptions[panel] : null}
               </p>
             </header>
             <div
@@ -408,35 +411,41 @@ export function SettingsDialog({
               className="app-scrollbar flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-5 text-sm"
             >
               {panel === "appearance" ? (
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel>Application theme</FieldLabel>
-                    <FieldDescription>
-                      System follows your device. This changes the application
-                      appearance; resume layout is separate.
-                    </FieldDescription>
-                    <ThemeSelector />
-                  </Field>
-                </FieldGroup>
+                <Field>
+                  <FieldLabel id="settings-theme-label">Theme</FieldLabel>
+                  <FieldDescription>
+                    System follows your device. Resume layout is set separately.
+                  </FieldDescription>
+                  <ThemeSelector labelled labelledBy="settings-theme-label" />
+                </Field>
               ) : (
                 children
               )}
               {preferenceStatus && panel === "editing-preview" && (
-                <div role="status">
+                <div
+                  role="status"
+                  className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                >
                   <p>{preferenceStatus}</p>
                   {(preferenceStatus.includes("tab only") ||
                     preferenceStatus.includes("could not be loaded")) && (
-                    <Button variant="outline" onClick={retryPreferences}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={retryPreferences}
+                    >
                       Retry saving preferences
                     </Button>
                   )}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">
-                {accountMode
-                  ? "Saved content is stored in your account. Drafts and unconfirmed Saves stay in this browser until confirmed; clearing or eviction can remove them."
-                  : "Stored locally in this browser. Clearing or eviction can remove local data."}
-              </p>
+              {panel === "data" && (
+                <p className="text-xs text-muted-foreground">
+                  {accountMode
+                    ? "Saved content is stored in your account. Drafts and unconfirmed Saves stay in this browser until confirmed; clearing or eviction can remove them."
+                    : "Stored locally in this browser. Clearing or eviction can remove local data."}
+                </p>
+              )}
             </div>
           </section>
         </SidebarProvider>

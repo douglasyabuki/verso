@@ -8,8 +8,14 @@ live in [Accounts and public PDFs](accounts-and-public-pdfs.md).
 
 ## Ownership and composition
 
-`app/page.tsx` mounts `components/account/account-root.tsx`, which resolves the
-session and mounts `CareerWorkspace` for the guest or account owner. The canonical
+`app/page.tsx` renders the static product presentation (`components/welcome/`);
+`/sign-in` and `/sign-up` render `components/account/auth-screen.tsx`. The
+workspace lives at `/app` and `/app/*`: `app/app/[[...scope]]/page.tsx` mounts
+`components/account/account-root.tsx`, which resolves the session and mounts
+`CareerWorkspace` for the guest or account owner. The page never reads `params`,
+so every workspace path shares one static shell. `proxy.ts` routes only `/`,
+`/sign-in`, and `/sign-up` (see
+[entry routing](accounts-and-public-pdfs.md#entry-routing-and-sign-in)). The canonical
 workspace model and scope rules live in `lib/career/`; shared derived contracts
 live in `types-and-constants/career.ts`. The career controller owns committed
 content, one form draft, an independent section entry-order draft, recovery
@@ -66,15 +72,20 @@ canceling later navigation does not undo an earlier explicit resolution. Dirty-f
 keyboard undo/redo stays in the draft. Workspace Undo/Redo requires resolving the
 draft, then a separate history invocation; Undo after Save undoes that Save.
 
-Durable scope URLs support reload and Back/Forward. Validate destinations and
+Durable scope URLs support reload and Back/Forward. The destination is the path
+after `/app/` (`/app/resumes`, `/app/settings/account`; `/app` is Overview), read
+and written by `destinationFromUrl` and `destinationUrl` in `lib/career/navigation.ts`.
+Navigation stays client-side (`history.pushState`) and makes no server request.
+Legacy `?scope=` values are still read and rewritten to the path form; `/?scope=`
+links redirect permanently to `/app/<destination>`. Validate destinations and
 resource identities before opening them; missing records never create content.
 Dirty departures offer Cancel / Discard / Save, with the primary action rightmost.
 Cancel and failed Save retain the draft. Disable form actions while unchanged or
 saving. Preserve narrow-screen Editor/PDF switching without closing drafts.
 
 Settings is a durable dialog over the mounted workspace, defaulting to Account,
-with Appearance, Content languages, Editing & preview, Data & backups, Resume
-defaults, and Public PDFs panels at `settings/<panel>`. Old `languages`/`backups`
+with Appearance, Data, Resume defaults, Content languages, Editing & preview, and
+Public PDFs panels at `settings/<panel>`. Old `languages`/`backups`
 links remain usable. Preserve the underlying destination, history metadata,
 focus/scroll, and drafts. The account menu and Appearance shortcut live in the
 utility rail; OAuth sign-in/sign-up stays in Settings, with shared guarded sign-out.
@@ -113,13 +124,20 @@ city/country uses their selected sequence and sits at the first selected locatio
 position. Empty values produce no empty rows.
 
 Library is a permanent sidebar group between Career details and Resumes. Its
-`?scope=library` overview and collections have guarded parent links. Views use full
+`/app/library` overview and collections have guarded parent links. Views use full
 editor width without unrelated PDF or career-language controls. Keep resume rows
 mounted through library navigation so expansion, scroll, and entrance state are
 preserved; visiting Library must not expand or select a resume. Keep Library
 accessible beside independently scrolling collections. Collection creation aligns
 with the title-row end; omit preset/starter search in collections and pickers.
 Library destructive actions are last in DOM, keyboard, and visual order.
+
+Sidebar rows with actions (Profile, Summary, sections, Layout presets, Resume
+starters, and resumes) open the same quick-action list from their "…" button and on
+right-click. Collection headings and resume sub-pages offer right-click actions
+only. Navigation actions use guarded navigation; commands such as Archive section
+resolve open drafts first and commit through the controller. Negative actions sit
+last, after a divider.
 
 Resume Layout is directly editable. Its initially collapsed optional preset
 disclosure offers an explanatory empty state or explicit selection/load/capture/

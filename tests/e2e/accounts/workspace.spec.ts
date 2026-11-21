@@ -16,7 +16,7 @@ test("saves to the account, survives reload, and isolates another user", async (
   browser,
 }) => {
   const { userId } = await signIn(page.context());
-  await page.goto("/");
+  await page.goto("/app");
   await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
   await editFullName(page, "Ana Account");
   await saveButton(page).click();
@@ -32,7 +32,7 @@ test("saves to the account, survives reload, and isolates another user", async (
   const other = await browser.newContext();
   const otherPage = await other.newPage();
   await signIn(other);
-  await otherPage.goto("/");
+  await otherPage.goto("/app");
   await expect(
     status(otherPage, /^Saved to account · revision 0$/),
   ).toBeVisible();
@@ -49,7 +49,7 @@ test("retries an interrupted Save with the same operation and commits once", asy
   page,
 }) => {
   const { userId } = await signIn(page.context());
-  await page.goto("/");
+  await page.goto("/app");
   await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
   let dropped = false;
   await page.route("**/api/account/workspace/operations", async (route) => {
@@ -75,7 +75,7 @@ test("keeps the draft when the session expires before Save", async ({
   page,
 }) => {
   const { userId, sessionId } = await signIn(page.context());
-  await page.goto("/");
+  await page.goto("/app");
   await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
   await database.query(
     `UPDATE session SET "expiresAt" = now() - interval '1 minute' WHERE id = $1`,
@@ -97,7 +97,7 @@ test("signs out with unconfirmed work kept on this device for the same user", as
   page,
 }) => {
   const { userId } = await signIn(page.context());
-  await page.goto("/");
+  await page.goto("/app");
   await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
   await page.route("**/api/account/workspace/operations", (route) =>
     route.abort("internetdisconnected"),
@@ -108,21 +108,23 @@ test("signs out with unconfirmed work kept on this device for the same user", as
     status(page, "Not yet saved to your account · kept on this device"),
   ).toBeVisible();
 
-  await page.goto("/?scope=settings/account");
+  await page.goto("/app/settings/account");
   const settings = page.getByRole("dialog", { name: "Settings", exact: true });
   await settings.getByRole("button", { name: "Sign out", exact: true }).click();
   const confirm = page.getByRole("alertdialog");
   await expect(confirm).toContainText("not been confirmed by your account");
   await confirm.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
-    settings.getByRole("button", { name: "Continue with GitHub" }),
+    settings.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   expect(await revision(userId)).toBe(0);
 
   await page.unroute("**/api/account/workspace/operations");
   await signIn(page.context(), userId);
-  await page.goto("/?scope=settings/data");
-  await expect(page.getByLabel("Unresolved recovery")).toBeVisible();
+  await page.goto("/app/settings/data");
+  await expect(
+    page.getByRole("region", { name: "Unsaved drafts" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Restore draft" }).first(),
   ).toBeVisible();
@@ -131,14 +133,14 @@ test("signs out with unconfirmed work kept on this device for the same user", as
 test("imports the guest workspace only after review and leaves it unchanged", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await expect(status(page, /^Saved locally · revision 0$/)).toBeVisible();
   await editFullName(page, "Guest Author");
   await saveButton(page).click();
   await expect(status(page, /^Saved locally · revision 1$/)).toBeVisible();
 
   const { userId } = await signIn(page.context());
-  await page.goto("/?scope=settings/account");
+  await page.goto("/app/settings/account");
   // The modal Settings dialog hides the toolbar status; wait on panel content.
   const settings = page.getByRole("dialog", { name: "Settings", exact: true });
   await expect(settings.getByText("Signed in as")).toBeVisible();
@@ -158,7 +160,7 @@ test("imports the guest workspace only after review and leaves it unchanged", as
   await settings.getByRole("button", { name: "Close settings" }).click();
   await expect(status(page, /^Saved to account · revision 1$/)).toBeVisible();
 
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("button", { name: "Profile", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Full name" })).toHaveValue(
     "Guest Author",
@@ -196,7 +198,7 @@ test.describe("account sync", () => {
   }) => {
     const ownerA = await signIn(page.context());
     await page.clock.install();
-    await page.goto("/");
+    await page.goto("/app");
     await expect(status(page, /^Saved to account · revision 0$/)).toBeVisible();
     await editFullName(page, "Private to A");
     await saveButton(page).click();
@@ -208,7 +210,7 @@ test.describe("account sync", () => {
     try {
       await signIn(remote, ownerA.userId);
       const other = await remote.newPage();
-      await other.goto("/");
+      await other.goto("/app");
       await editFullName(other, "Private remote A");
       await saveButton(other).click();
       await expect(

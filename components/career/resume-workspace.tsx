@@ -5,17 +5,14 @@ import {
   ArrowLeft,
   ArrowRight,
   Columns2,
-  Copy,
   FileText,
   Languages,
   LayoutDashboard,
   ListOrdered,
-  MoreHorizontal,
   Palette,
   Pencil,
   Plus,
   RotateCcw,
-  Trash2,
 } from "lucide-react";
 import {
   type ReactElement,
@@ -31,6 +28,7 @@ import {
   contentLanguageName,
 } from "@/components/career/career-fields";
 import { StyleSample } from "@/components/career/layout-editor";
+import { resumeQuickActions } from "@/components/career/quick-actions";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { EntrySearch } from "@/components/content/entry-search";
 import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
@@ -69,19 +67,13 @@ import {
   disclosureTriggerClassName,
 } from "@/components/ui/disclosure";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { QuickActionsMenu } from "@/components/ui/quick-actions";
 import {
   Select,
   SelectContent,
@@ -673,6 +665,7 @@ export function CareerResumeCollection({
           <Card
             key={resume.id}
             data-list-id={resume.id}
+            data-quick-actions-row
             size="sm"
             onPointerEnter={finishEntrance}
             onFocusCapture={finishEntrance}
@@ -736,6 +729,11 @@ export type ResumeActions = {
   saveStarter?: (resume: CareerResume) => void;
 };
 
+/** Resume "…" menu; Delete is grouped last after a divider.
+ * @param props Document, resume, actions, and an optional trigger element.
+ * @returns The resume actions menu.
+ * @example <ResumeActionsMenu document={document} resume={resume} actions={actions} />
+ */
 export function ResumeActionsMenu({
   document,
   resume,
@@ -748,64 +746,18 @@ export function ResumeActionsMenu({
   trigger?: ReactElement;
 }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          trigger ?? (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Actions for ${resume.name || "Untitled resume"}`}
-            />
-          )
-        }
-      >
-        <MoreHorizontal />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => actions.edit(resume)}>
-            <Pencil />
-            Edit name &amp; color
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={document.resumes.length >= 120}
-            onClick={() => actions.duplicate(resume)}
-          >
-            <Copy />
-            Duplicate
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={
-              document.resumes.length >= 120 ||
-              !document.languages.some(
-                (item) => item.active && item.tag !== resume.language,
-              )
-            }
-            onClick={() => actions.copy(resume)}
-          >
-            <Languages />
-            Create copy in another language
-          </DropdownMenuItem>
-          {actions.saveStarter && (
-            <DropdownMenuItem
-              disabled={document.starters.length >= 100}
-              onClick={() => actions.saveStarter?.(resume)}
-            >
-              <Copy />
-              Save as starter
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => actions.delete(resume)}
-          >
-            <Trash2 />
-            Delete resume
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <QuickActionsMenu
+      actions={resumeQuickActions(document, resume, actions)}
+      trigger={
+        trigger ?? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for ${resume.name || "Untitled resume"}`}
+          />
+        )
+      }
+    />
   );
 }
 
@@ -1574,7 +1526,7 @@ function WordingRow({
       onFocusCapture={finishEntrance}
     >
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="min-w-0 text-sm font-medium wrap-anywhere">
+        <span className="min-w-0 text-xs font-medium wrap-anywhere text-muted-foreground">
           {row.shortLabel}
         </span>
         {row.archived && <Badge variant="secondary">Archived</Badge>}

@@ -1,8 +1,11 @@
 "use client";
 
-import { LoaderCircle, LogOut } from "lucide-react";
+import { LoaderCircle, LogIn, LogOut, UserRoundPlus } from "lucide-react";
 
+import { ConnectedAccounts } from "@/components/account/connected-accounts";
+import { DeleteAccount } from "@/components/account/delete-account";
 import { ProviderIcon } from "@/components/account/provider-icon";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -15,33 +18,53 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import type { AccountActions } from "@/hooks/account/use-account-actions";
+import { authPagePath } from "@/lib/account/return-path";
 import type {
   AccountProviders,
   AccountSession,
+  AccountSessionStore,
 } from "@/stores/account/session";
 import {
   type CareerHead,
   openCareerStorage,
 } from "@/stores/career/persistence";
+import {
+  ACCOUNT_PROVIDER_NAMES as PROVIDER_NAMES,
+  ACCOUNT_PROVIDERS,
+} from "@/types-and-constants/account";
 
-const PROVIDER_NAMES: Record<keyof AccountProviders, string> = {
-  github: "GitHub",
-  google: "Google",
-};
+/** Open the sign-in or sign-up page, returning to the current workspace URL.
+ * @param mode Auth page to open.
+ * @returns {void} Navigates away; drafts remain in this owner's recovery.
+ * @example openAuthPage("sign-up")
+ */
+export function openAuthPage(mode: "sign-in" | "sign-up"): void {
+  window.location.assign(
+    authPagePath(mode, window.location.pathname + window.location.search),
+  );
+}
 
-/** Settings › Account: sign-in, identity, and guarded sign-out.
- * @param props Session state, shared account actions, and optional guest-import content.
+/** Settings › Account: sign-in entry points, identity, connected sign-in methods,
+ * guarded sign-out, and account deletion.
+ * @param props Session state and store, shared account actions, unconfirmed work count, workspace backup export, and optional guest-import content.
  * @returns Account panel content; never moves or merges workspaces by itself.
- * @example <AccountPanel session={session} actions={actions} />
+ * @example <AccountPanel session={session} store={store} actions={actions} unconfirmed={0} exportWorkspace={exportWorkspace} />
  */
 export function AccountPanel({
   session,
+  store,
   actions,
+  unconfirmed,
+  exportWorkspace,
   children,
 }: {
   session?: AccountSession;
+  store?: AccountSessionStore;
   actions: AccountActions;
+  unconfirmed: number;
+  exportWorkspace: () => void;
   children?: React.ReactNode;
 }) {
   if (!session || session.kind === "unavailable")
@@ -51,14 +74,14 @@ export function AccountPanel({
         this browser.
       </p>
     );
-  if (session.kind === "loading") return <p role="status">Checking sign-in…</p>;
+  if (session.kind === "loading")
+    return <BrandLoading variant="inline" message="Checking sign-in…" />;
   if (session.kind === "error") return <p role="alert">{session.message}</p>;
 
   const providerButtons = (
     <div className="flex flex-wrap gap-2">
-      {(Object.keys(PROVIDER_NAMES) as (keyof AccountProviders)[])
-        .filter((provider) => session.providers[provider])
-        .map((provider) => {
+      {ACCOUNT_PROVIDERS.filter((provider) => session.providers[provider]).map(
+        (provider: keyof AccountProviders) => {
           const pending = actions.pendingProvider === provider;
           return (
             <Button
@@ -79,10 +102,11 @@ export function AccountPanel({
               )}
               {pending
                 ? `Connecting to ${PROVIDER_NAMES[provider]}…`
-                : `Continue with ${PROVIDER_NAMES[provider]}`}
+                : `Sign in again with ${PROVIDER_NAMES[provider]}`}
             </Button>
           );
-        })}
+        },
+      )}
     </div>
   );
 
@@ -97,12 +121,24 @@ export function AccountPanel({
       {session.kind === "guest" ? (
         <>
           <p>
-            Sign in or create an account to save your workspace to it.
-            Continuing with a provider creates your account the first time.
+            You are using Verso as a guest. Your workspace is saved in this
+            browser only. Sign in or create an account with Google or GitHub to
+            save to an account you can open on other devices.
+          </p>
+          <p className="text-sm text-muted-foreground">
             Signing in does not move, merge, or replace the workspace saved in
             this browser; you can review and import it afterwards.
           </p>
-          {providerButtons}
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => openAuthPage("sign-in")}>
+              <LogIn data-icon="inline-start" aria-hidden="true" />
+              Sign in
+            </Button>
+            <Button variant="outline" onClick={() => openAuthPage("sign-up")}>
+              <UserRoundPlus data-icon="inline-start" aria-hidden="true" />
+              Create an account
+            </Button>
+          </div>
         </>
       ) : (
         <>
@@ -127,6 +163,13 @@ export function AccountPanel({
             </Alert>
           )}
           {session.kind === "expired" && providerButtons}
+          {session.kind === "authenticated" && store && (
+            <ConnectedAccounts
+              store={store}
+              providers={session.providers}
+              email={session.user.email}
+            />
+          )}
           {children}
           <div className="flex flex-wrap gap-2">
             <Button
@@ -138,6 +181,18 @@ export function AccountPanel({
               Sign out
             </Button>
           </div>
+          {session.kind === "authenticated" && store && (
+            <>
+              <Separator />
+              <DeleteAccount
+                store={store}
+                user={session.user}
+                providers={session.providers}
+                unconfirmed={unconfirmed}
+                exportWorkspace={exportWorkspace}
+              />
+            </>
+          )}
         </>
       )}
     </div>

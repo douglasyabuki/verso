@@ -122,7 +122,7 @@ describe("Settings drafts and device preference persistence", () => {
     });
     await expect.element(guard).toBeVisible();
     await guard.getByRole("button", { name: "Cancel", exact: true }).click();
-    expect(window.location.search).toContain("editing-preview");
+    expect(window.location.pathname).toContain("editing-preview");
     expect(controller.getSnapshot().draft?.scope).toBe("summary");
   });
 

@@ -2,12 +2,12 @@ import { expect, type Page, test } from "@playwright/test";
 
 import { createCareerDocument, createEntry } from "@/lib/career/model";
 
-/** Open Settings › Data & backups from the workspace sidebar (desktop or drawer). */
+/** Open Settings › Data from the workspace sidebar (desktop or drawer). */
 async function openDataSettings(page: Page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Settings", exact: true })
-    .getByRole("button", { name: "Data & backups", exact: true })
+    .getByRole("button", { name: "Data", exact: true })
     .click();
 }
 
@@ -83,7 +83,7 @@ test("workspace loads, saves one-language career wording, and survives reload", 
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  expect((await page.goto("/"))?.status()).toBe(200);
+  expect((await page.goto("/app"))?.status()).toBe(200);
   await expect(
     page.getByRole("heading", { name: /Career details.*Overview/ }),
   ).toBeVisible();
@@ -109,7 +109,7 @@ test("workspace loads, saves one-language career wording, and survives reload", 
 test("Back and Forward guard dirty forms with Cancel/Discard and preserve native draft undo", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("button", { name: "Summary", exact: true }).click();
   const field = page.getByRole("textbox", {
     name: "Summary",
@@ -144,9 +144,9 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   page,
 }) => {
   const { document } = fixture();
-  await page.goto("/");
+  await page.goto("/app");
   await openDataSettings(page);
-  await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
+  await page.getByLabel("Import workspace for review").setInputFiles({
     name: "unsupported.json",
     mimeType: "application/json",
     buffer: Buffer.from(
@@ -156,7 +156,7 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   await expect(
     page.getByRole("alert").filter({ hasText: "Action needs attention" }),
   ).toContainText("schemaVersion");
-  await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
+  await page.getByLabel("Import workspace for review").setInputFiles({
     name: "workspace.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(envelope(document))),
@@ -165,7 +165,7 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   await expect(
     page.getByRole("button", { name: "Refresh preview" }),
   ).toHaveCount(0);
-  await page.getByLabel("Import schema-2 workspace for review").setInputFiles({
+  await page.getByLabel("Import workspace for review").setInputFiles({
     name: "workspace.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(envelope(document))),
@@ -182,7 +182,7 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   ).toBeHidden();
   const downloadEvent = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Export workspace · saved workspace only" })
+    .getByRole("button", { name: "Export workspace", exact: true })
     .click();
   const download = await downloadEvent;
   const stream = await download.createReadStream();
@@ -205,9 +205,9 @@ test("two tabs preserve unrelated saves and retain same-scope drafts on conflict
   page,
   context,
 }) => {
-  await page.goto("/");
+  await page.goto("/app");
   const other = await context.newPage();
-  await other.goto("/");
+  await other.goto("/app");
   await page.getByRole("button", { name: "Summary", exact: true }).click();
   await other.getByRole("button", { name: "Profile", exact: true }).click();
   await page

@@ -65,7 +65,7 @@ test.describe("public PDF releases", () => {
     test.setTimeout(420_000);
     const { userId } = await signIn(page.context());
     const resumeId = await seedReadyWorkspace(userId);
-    await page.goto(`/?scope=resume-overview/${resumeId}`);
+    await page.goto(`/app/resume-overview/${resumeId}`);
     // First open on a freshly started server can exceed the default timeout.
     await expect(status(page, /^Saved to account · revision 1$/)).toBeVisible({
       timeout: 15_000,
@@ -101,7 +101,7 @@ test.describe("public PDF releases", () => {
     await editFullName(page, "Ana Released");
     await saveButton(page).click();
     await expect(status(page, /^Saved to account · revision 2$/)).toBeVisible();
-    await page.goto(`/?scope=resume-overview/${resumeId}`);
+    await page.goto(`/app/resume-overview/${resumeId}`);
     await compile(page);
     await pdf.getByRole("button", { name: "Release…" }).click();
     await page
@@ -122,7 +122,7 @@ test.describe("public PDF releases", () => {
     );
 
     // Roll back from Settings › Public PDFs; latest serves release 1 again.
-    await page.goto("/?scope=settings/releases");
+    await page.goto("/app/settings/releases");
     const panel = page.getByRole("region", {
       name: "Public link for Public application",
     });
@@ -145,7 +145,7 @@ test.describe("public PDF releases", () => {
       panel.getByRole("checkbox", { name: "Release automatically after Save" }),
     ).toBeChecked();
     // Customize the full name in this resume's Wording view so its preview stays visible.
-    await page.goto(`/?scope=resume-wording/${resumeId}`);
+    await page.goto(`/app/resume-wording/${resumeId}`);
     const nameCard = page.getByRole("group", {
       name: "Profile · Full name",
       exact: true,
@@ -168,7 +168,7 @@ test.describe("public PDF releases", () => {
       .toContain("ana-automatic-en-us-v3.pdf");
 
     // Revoking the link stops every URL immediately.
-    await page.goto("/?scope=settings/releases");
+    await page.goto("/app/settings/releases");
     await panel.getByRole("button", { name: "Revoke link" }).click();
     await page
       .getByRole("alertdialog")

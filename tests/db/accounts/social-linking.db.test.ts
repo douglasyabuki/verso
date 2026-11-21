@@ -116,13 +116,14 @@ async function post(path: string, body: object, cookie = "") {
   );
 }
 
-async function begin(provider: AuthProvider, cookie = "") {
+async function begin(provider: AuthProvider, cookie = "", signUp = true) {
   const response = await post(
     cookie ? "link-social" : "sign-in/social",
     {
       provider,
-      callbackURL: "/?scope=overview",
-      errorCallbackURL: "/?scope=settings%2Faccount",
+      callbackURL: "/app",
+      errorCallbackURL: "/sign-in",
+      ...(signUp && !cookie ? { requestSignUp: true } : {}),
     },
     cookie,
   );
@@ -156,9 +157,9 @@ async function finish(
   );
 }
 
-async function signIn(provider: AuthProvider) {
-  const response = await finish(provider, await begin(provider));
-  expect(response.headers.get("Location")).toBe("/?scope=overview");
+async function signIn(provider: AuthProvider, signUp = true) {
+  const response = await finish(provider, await begin(provider, "", signUp));
+  expect(response.headers.get("Location")).toBe("/app");
   const cookie = cookies(response);
   expect(cookie).toContain("better-auth.session_token=");
   const session = await GET(
@@ -190,7 +191,8 @@ for (const [first, second] of [
       },
     });
     expect((await post("sign-out", {}, original.cookie)).status).toBe(200);
-    const linked = await signIn(second);
+    // Sign-in (not sign-up) with the other provider links to the existing account.
+    const linked = await signIn(second, false);
     expect(linked.user.id).toBe(original.user.id);
     expect(linked.user.name).toBe(original.user.name);
     expect(await prisma.account.count()).toBe(2);
@@ -201,7 +203,7 @@ for (const [first, second] of [
         })
       )?.document,
     ).toEqual(document);
-    expect((await signIn(second)).user.id).toBe(original.user.id);
+    expect((await signIn(second, false)).user.id).toBe(original.user.id);
   });
 
   test(`${first} → ${second} does not match a secondary GitHub email`, async () => {
@@ -261,4 +263,14 @@ test("automatic linking rejects an existing unverified local email and neither p
   expect(response.headers.get("Location")).toContain("error=");
   expect(await prisma.account.count()).toBe(1);
   expect((await getAuth().$context).trustedProviders).toEqual([]);
+});
+
+test("sign-in without a matching account is refused instead of creating one", async () => {
+  const response = await finish("google", await begin("google", "", false));
+  expect(new URL(response.headers.get("Location")!, origin).pathname).toBe(
+    "/sign-in",
+  );
+  expect(response.headers.get("Location")).toContain("error=signup_disabled");
+  expect(await prisma.user.count()).toBe(0);
+  expect(cookies(response)).not.toContain("better-auth.session_token=");
 });

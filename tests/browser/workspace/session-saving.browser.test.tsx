@@ -116,7 +116,7 @@ describe("session-only saving", () => {
     await expect
       .element(
         page.getByText(
-          /Export this tab's saved workspace from Data & backups before closing/,
+          /Export this tab's saved workspace from Settings › Data before closing/,
         ),
       )
       .toBeVisible();

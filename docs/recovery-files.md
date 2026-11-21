@@ -22,17 +22,25 @@ Imported receipts do not prove local commits. Unrelated scope edits alone do not
 cause conflicts. Retain the committed version and draft until resolution succeeds.
 
 Recovery records scope identities, baseline values, starting revision/generation,
-draft version/values, and prepared request context. It schedules after 500 ms of
-inactivity with a 2-second maximum wait. Close-time flushing is best effort.
-Restoration opens an uncommitted draft, not a Save/history step. Offer compare,
-reconcile, discard, and export. Missing source records require explicit
+draft version/values, prepared request context, and the time each version was
+written (`updatedAt`). It schedules after 500 ms of inactivity with a 2-second
+maximum wait. Close-time flushing is best effort. Leaving a dirty form offers
+Cancel / Discard / Save; recovery exists for reloads, crashes, and closed tabs.
+Restoration opens an uncommitted draft, not a Save/history step, and is never
+automatic: opening a form with a stored draft for the same scope only offers
+Restore or Discard. Offer compare (Show changes or Preview), reconcile (Update to
+current, only when a Save outcome is unknown), discard (from the form or directly
+from Settings › Data, after confirmation), and export (Settings › Data, or inline
+when recovery could not be stored). Missing source records require explicit
 restore-as-new with valid references, or reconciliation/export, never attachment
 to an unrelated record. Retain original recovery separately until resolution.
 
-Unresolved drafts never expire automatically; export does not remove them. Remove
-only the exact resolved draft version after confirmed Save or explicit Discard.
-Durable exact-version cleanup intents use the IndexedDB preferences store; retry
-failures on next load without deleting newer edits. Protect pending, uncertain,
+Unresolved drafts never expire automatically; export does not remove them. After
+confirmed Save or explicit Discard, remove the resolved draft version and any older
+stored version of the same draft ID (the resolved in-memory version is always the
+newest); never remove a newer stored version. Durable cleanup intents use the
+IndexedDB preferences store; retry failures on next load without deleting newer
+edits. Protect pending, uncertain,
 unacknowledged, and recovery-referenced receipts regardless of retention limits.
 Eligible completed receipts default to 30 days or 1,000 per workspace, whichever
 limit is reached first, configurable. Zero retains no eligible receipts. Read
@@ -105,7 +113,7 @@ discards a draft. Keep the downloaded files until restoration and an explicit
 Save have succeeded.
 
 Normal `verso.recovery` format-1 files are independently importable through
-Data & backups. Files are limited to 32 MiB, with each draft limited to 8 MiB
+Settings › Data. Files are limited to 32 MiB, with each draft limited to 8 MiB
 including its baseline and metadata. Larger collections are split into normal
 files. Versioned manifest pages list filenames and draft IDs/versions; a filename
 can appear on multiple manifest pages with disjoint draft lists. Manifests are
@@ -222,10 +230,11 @@ apply only to newly selected entries. Created-section provenance on a resume
 supports atomic creation history; duplicates clear it.
 
 Recovery envelopes remain `verso.recovery`, schemaVersion 1, with `exportedAt`,
-`sourceWorkspaceId`, and `drafts`. Exact editing scopes include
+`sourceWorkspaceId`, and `drafts`. Each draft's `updatedAt` is optional so files
+written before it existed still import; such drafts display "time unknown". Exact editing scopes include
 `resume-layout/<id>`, `preset/<id>`, and `starter/<id>`. Values and baselines remain
 separate; malformed field values are preserved for editing. Layout/library drafts
-use the existing scheduling, immutable operation IDs, exact-version cleanup,
+use the existing scheduling, immutable operation IDs, resolved-version cleanup,
 comparison/reconciliation, and non-expiring unresolved retention contracts.
 
 `starter-create/<resumeId>` holds one prepared composite request: the new resume,

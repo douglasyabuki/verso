@@ -43,7 +43,7 @@ async function seed(
   document: CareerDocument,
   destination = "resumes",
 ) {
-  await page.goto("/");
+  await page.goto("/app");
   await expect(
     page.getByRole("heading", {
       name: "Career details · Overview",
@@ -59,7 +59,7 @@ async function seed(
       storage.close();
     }
   }, document);
-  await page.goto(`/?scope=${destination}`);
+  await page.goto(`/app/${destination}`);
 }
 
 for (const language of ["en-US", "pt-BR"]) {

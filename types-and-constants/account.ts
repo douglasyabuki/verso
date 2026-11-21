@@ -12,6 +12,8 @@ export type AccountErrorCode =
   | "operation_mismatch"
   | "not_found"
   | "quota_exceeded"
+  | "reauthenticate"
+  | "deletion_cancelled"
   | "unavailable";
 
 /** Kinds of committed account operations recorded as receipts. */
@@ -72,6 +74,20 @@ export const ACCOUNT_ROUTES = {
   operations: "/api/account/workspace/operations",
   replace: "/api/account/workspace/replace",
   previous: "/api/account/workspace/previous",
+  account: "/api/account",
+} as const;
+
+/** Header carrying the signed, session-bound account deletion capability. */
+export const ACCOUNT_DELETION_HEADER = "X-Verso-Deletion";
+
+/** Account deletion bounds. */
+export const ACCOUNT_DELETION = {
+  /** Deletion requires a session created at most this long ago; older sessions sign in again first. */
+  freshMs: 15 * 60_000,
+  /** A prepared deletion confirmation expires after this long. */
+  capabilityMs: 30 * 60_000,
+  /** Text the user types to confirm permanent deletion. */
+  confirmation: "DELETE",
 } as const;
 
 /** Sync freshness bounds for signed-in workspaces. Checks are conditional loads
@@ -87,3 +103,12 @@ export const ACCOUNT_SYNC = {
   /** Server receipt pruning runs at most once per this interval, inside a Save transaction. */
   pruneEveryMs: 86_400_000,
 } as const;
+
+/** Sign-in providers in display order. */
+export const ACCOUNT_PROVIDERS = ["google", "github"] as const;
+
+/** Display names for sign-in providers. */
+export const ACCOUNT_PROVIDER_NAMES: Record<
+  (typeof ACCOUNT_PROVIDERS)[number],
+  string
+> = { github: "GitHub", google: "Google" };

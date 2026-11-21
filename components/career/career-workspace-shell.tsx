@@ -17,6 +17,15 @@ import { BrandLockup } from "@/components/brand/brand";
 import { contentLanguageName } from "@/components/career/career-fields";
 import { libraryDestinationKind } from "@/components/career/library-navigation";
 import {
+  type CareerActions,
+  careerDetailsQuickActions,
+  libraryQuickActions,
+  openAction,
+  resumeQuickActions,
+  resumesQuickActions,
+  sectionQuickActions,
+} from "@/components/career/quick-actions";
+import {
   type ResumeActions,
   ResumeActionsMenu,
 } from "@/components/career/resume-workspace";
@@ -28,6 +37,11 @@ import {
   disclosureChevronTriggerClassName,
 } from "@/components/ui/disclosure";
 import { Label } from "@/components/ui/label";
+import {
+  type QuickAction,
+  QuickActionsContextMenu,
+  QuickActionsMenu,
+} from "@/components/ui/quick-actions";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -85,7 +99,38 @@ type CareerNavigation = {
   addSection: () => void;
   addResume: () => void;
   resumeActions: ResumeActions;
+  careerActions: CareerActions;
 };
+
+/**
+ * Expanded resume pages own their entrance: expansion is local state, so the
+ * sidebar-wide entrance would not rerender to see rows mounted by each expand.
+ */
+function ResumePagesSub({ id, children }: { id: string; children: ReactNode }) {
+  const { isMobile, openMobile, open } = useSidebar();
+  const visible = isMobile ? openMobile : open;
+  const list = useRef<HTMLUListElement>(null);
+  useListEntrance({
+    getElements: () => [
+      ...(list.current?.querySelectorAll<HTMLElement>(
+        '[data-sidebar="menu-sub-button"]',
+      ) ?? []),
+    ],
+    contextKey: `${id}:${isMobile}:${visible}`,
+    disabled: !visible,
+    mode: "all",
+  });
+  return (
+    <SidebarMenuSub
+      ref={list}
+      id={id}
+      data-resume-pages=""
+      className="ms-3.5 me-3.5 border-border ps-4 pe-0"
+    >
+      {children}
+    </SidebarMenuSub>
+  );
+}
 
 /** Keep resume expansion local without remounting rows or replaying their entrances during Library navigation. */
 function ResumeSidebarCollection({
@@ -118,6 +163,14 @@ function ResumeSidebarCollection({
       label="Resumes"
       active={destination === "resumes" || destination === "resume-compare"}
       onOpen={() => go("resumes")}
+      contextActions={resumesQuickActions(
+        document,
+        () => {
+          setOpenMobile(false);
+          addResume();
+        },
+        go,
+      )}
       onCreate={() => {
         setOpenMobile(false);
         addResume();
@@ -137,67 +190,68 @@ function ResumeSidebarCollection({
           const expanded = expandedId === resume.id;
           return (
             <SidebarMenuItem key={resume.id}>
-              <div className="relative">
-                <SidebarMenuButton
-                  className="ps-7 pe-10"
-                  isActive={active}
-                  aria-current={
-                    destination === `resume-overview/${resume.id}`
-                      ? "page"
-                      : undefined
-                  }
-                  title={`${name} (${resume.language})`}
-                  onClick={() => {
-                    setExpansion({
-                      destination: `resume-overview/${resume.id}`,
-                      id: resume.id,
-                    });
-                    go(`resume-overview/${resume.id}`);
-                  }}
-                >
-                  <FileText
-                    aria-hidden="true"
-                    className="resume-color text-(--resume-color)"
-                    data-resume-color={resume.color ?? "indigo"}
-                  />
-                  <span className="truncate">{name}</span>
-                  <span className="sr-only">({resume.language})</span>
-                </SidebarMenuButton>
-                <SidebarMenuAction
-                  className={cn(
-                    disclosureChevronTriggerClassName,
-                    "inset-s-1 inset-e-auto",
-                  )}
-                  aria-label={`${expanded ? "Collapse" : "Expand"} ${name} pages`}
-                  aria-expanded={expanded}
-                  aria-controls={`resume-pages-${resume.id}`}
-                  onClick={() =>
-                    setExpansion({
-                      destination,
-                      id: expanded ? null : resume.id,
-                    })
-                  }
-                >
-                  <DisclosureChevron />
-                </SidebarMenuAction>
-                <ResumeActionsMenu
-                  document={document}
-                  resume={resume}
-                  actions={resumeActions}
-                  trigger={
-                    <SidebarMenuAction
-                      showOnHover
-                      className="[@media(hover:none)]:opacity-100"
-                      aria-label={`Actions for ${name}`}
+              <QuickActionsContextMenu
+                actions={resumeQuickActions(document, resume, resumeActions)}
+              >
+                <div className="relative">
+                  <SidebarMenuButton
+                    className="ps-7 pe-10"
+                    isActive={active}
+                    aria-current={
+                      destination === `resume-overview/${resume.id}`
+                        ? "page"
+                        : undefined
+                    }
+                    title={`${name} (${resume.language})`}
+                    onClick={() => {
+                      setExpansion({
+                        destination: `resume-overview/${resume.id}`,
+                        id: resume.id,
+                      });
+                      go(`resume-overview/${resume.id}`);
+                    }}
+                  >
+                    <FileText
+                      aria-hidden="true"
+                      className="resume-color text-(--resume-color)"
+                      data-resume-color={resume.color ?? "indigo"}
                     />
-                  }
-                />
-              </div>
+                    <span className="truncate">{name}</span>
+                    <span className="sr-only">({resume.language})</span>
+                  </SidebarMenuButton>
+                  <SidebarMenuAction
+                    className={cn(
+                      disclosureChevronTriggerClassName,
+                      "inset-s-1 inset-e-auto",
+                    )}
+                    aria-label={`${expanded ? "Collapse" : "Expand"} ${name} pages`}
+                    aria-expanded={expanded}
+                    aria-controls={`resume-pages-${resume.id}`}
+                    onClick={() =>
+                      setExpansion({
+                        destination,
+                        id: expanded ? null : resume.id,
+                      })
+                    }
+                  >
+                    <DisclosureChevron />
+                  </SidebarMenuAction>
+                  <ResumeActionsMenu
+                    document={document}
+                    resume={resume}
+                    actions={resumeActions}
+                    trigger={
+                      <SidebarMenuAction
+                        showOnHover
+                        className="[@media(hover:none)]:opacity-100"
+                        aria-label={`Actions for ${name}`}
+                      />
+                    }
+                  />
+                </div>
+              </QuickActionsContextMenu>
               {expanded && (
-                <SidebarMenuSub
-                  id={`resume-pages-${resume.id}`}
-                  className="ms-3.5 me-3.5 border-border ps-4 pe-0"
-                >
+                <ResumePagesSub id={`resume-pages-${resume.id}`}>
                   {(
                     [
                       ["resume-overview", "Overview", LayoutDashboard],
@@ -206,23 +260,28 @@ function ResumeSidebarCollection({
                       ["resume-layout", "Layout", Palette],
                     ] as const
                   ).map(([prefix, label, Icon]) => (
-                    <SidebarMenuSubItem key={prefix}>
-                      <SidebarMenuSubButton
-                        render={<button type="button" />}
-                        isActive={destination === `${prefix}/${resume.id}`}
-                        aria-current={
-                          destination === `${prefix}/${resume.id}`
-                            ? "page"
-                            : undefined
-                        }
-                        onClick={() => go(`${prefix}/${resume.id}`)}
-                      >
-                        <Icon aria-hidden="true" />
-                        <span className="truncate">{label}</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
+                    <QuickActionsContextMenu
+                      key={prefix}
+                      actions={[openAction(() => go(`${prefix}/${resume.id}`))]}
+                    >
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton
+                          render={<button type="button" />}
+                          isActive={destination === `${prefix}/${resume.id}`}
+                          aria-current={
+                            destination === `${prefix}/${resume.id}`
+                              ? "page"
+                              : undefined
+                          }
+                          onClick={() => go(`${prefix}/${resume.id}`)}
+                        >
+                          <Icon aria-hidden="true" />
+                          <span className="truncate">{label}</span>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    </QuickActionsContextMenu>
                   ))}
-                </SidebarMenuSub>
+                </ResumePagesSub>
               )}
             </SidebarMenuItem>
           );
@@ -274,6 +333,7 @@ function CareerSidebar({
   addSection,
   addResume,
   resumeActions,
+  careerActions,
 }: CareerNavigation) {
   const {
     isMobile,
@@ -294,8 +354,9 @@ function CareerSidebar({
         ])
         .filter(
           (element) =>
-            !libraryDestination ||
-            !element.closest('[data-sidebar-collection="Resumes"]'),
+            !element.closest("[data-resume-pages]") &&
+            (!libraryDestination ||
+              !element.closest('[data-sidebar-collection="Resumes"]')),
         ),
     contextKey: `sidebar:${isMobile}:${isMobile ? openMobile : sidebarOpen}`,
     disabled: !(isMobile ? openMobile : sidebarOpen),
@@ -309,25 +370,55 @@ function CareerSidebar({
     value: string,
     label: string,
     icon: ReactNode,
-    archived = false,
+    {
+      archived = false,
+      actions,
+    }: { archived?: boolean; actions?: QuickAction[] } = {},
   ) => (
-    <SidebarMenuItem key={value}>
-      <SidebarMenuButton
-        isActive={
-          destination === value ||
-          (value === "presets" && destination.startsWith("preset/")) ||
-          (value === "starters" && destination.startsWith("starter/"))
-        }
-        aria-current={destination === value ? "page" : undefined}
-        onClick={() => go(value)}
-        title={label}
-      >
-        {icon}
-        <span className="truncate">{label}</span>
-        {archived && <Badge variant="secondary">Archived</Badge>}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <QuickActionsContextMenu key={value} actions={actions ?? []}>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          className={cn(actions && "pe-9")}
+          isActive={
+            destination === value ||
+            (value === "presets" && destination.startsWith("preset/")) ||
+            (value === "starters" && destination.startsWith("starter/"))
+          }
+          aria-current={destination === value ? "page" : undefined}
+          onClick={() => go(value)}
+          title={label}
+        >
+          {icon}
+          <span className="truncate">{label}</span>
+          {archived && <Badge variant="secondary">Archived</Badge>}
+        </SidebarMenuButton>
+        {actions && (
+          <QuickActionsMenu
+            actions={actions}
+            trigger={
+              <SidebarMenuAction
+                showOnHover
+                className="[@media(hover:none)]:opacity-100"
+                aria-label={`Actions for ${label}`}
+              />
+            }
+          />
+        )}
+      </SidebarMenuItem>
+    </QuickActionsContextMenu>
   );
+  const addSectionAndClose = () => {
+    setOpenMobile(false);
+    addSection();
+  };
+  const sidebarCareerActions = {
+    ...careerActions,
+    addSection: addSectionAndClose,
+    createLibraryItem: (kind: "preset" | "starter") => {
+      setOpenMobile(false);
+      careerActions.createLibraryItem(kind);
+    },
+  };
   return (
     <Sidebar
       collapsible="offcanvas"
@@ -356,37 +447,64 @@ function CareerSidebar({
             label="Career details"
             active={destination === "overview"}
             onOpen={() => go("overview")}
-            onCreate={() => {
-              setOpenMobile(false);
-              addSection();
-            }}
+            onCreate={addSectionAndClose}
+            contextActions={careerDetailsQuickActions(
+              document,
+              sidebarCareerActions,
+              go,
+            )}
             createLabel="Add section"
             createDisabled={document.sections.length >= 100}
           >
             <SidebarMenu>
-              {item("profile", "Profile", <CareerSectionIcon kind="profile" />)}
-              {item("summary", "Summary", <CareerSectionIcon kind="summary" />)}
+              {item(
+                "profile",
+                "Profile",
+                <CareerSectionIcon kind="profile" />,
+                {
+                  actions: [openAction(() => go("profile"))],
+                },
+              )}
+              {item(
+                "summary",
+                "Summary",
+                <CareerSectionIcon kind="summary" />,
+                {
+                  actions: [openAction(() => go("summary"))],
+                },
+              )}
               {document.sections.map((section) =>
                 item(
                   `list/${section.id}`,
                   section.name || section.kind,
                   <CareerSectionIcon kind={section.kind} icon={section.icon} />,
-                  section.archived,
+                  {
+                    archived: section.archived,
+                    actions: sectionQuickActions(
+                      section,
+                      sidebarCareerActions,
+                      go,
+                    ),
+                  },
                 ),
               )}
             </SidebarMenu>
           </SidebarCollection>
           <SidebarGroup data-sidebar-fixed-group className="shrink-0 px-3 py-0">
             <SidebarSelection className="shrink-0">
-              <SidebarGroupLabel
-                render={<button type="button" />}
-                aria-current={destination === "library" ? "page" : undefined}
-                data-active={destination === "library" || undefined}
-                className="h-9 w-full hover:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
-                onClick={() => go("library")}
+              <QuickActionsContextMenu
+                actions={[openAction(() => go("library"))]}
               >
-                Library
-              </SidebarGroupLabel>
+                <SidebarGroupLabel
+                  render={<button type="button" />}
+                  aria-current={destination === "library" ? "page" : undefined}
+                  data-active={destination === "library" || undefined}
+                  className="h-9 w-full hover:bg-sidebar-accent data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                  onClick={() => go("library")}
+                >
+                  Library
+                </SidebarGroupLabel>
+              </QuickActionsContextMenu>
             </SidebarSelection>
             <SidebarSelection>
               <SidebarMenu>
@@ -394,11 +512,27 @@ function CareerSidebar({
                   "presets",
                   "Layout presets",
                   <Palette aria-hidden="true" />,
+                  {
+                    actions: libraryQuickActions(
+                      document,
+                      "preset",
+                      sidebarCareerActions,
+                      go,
+                    ),
+                  },
                 )}
                 {item(
                   "starters",
                   "Resume starters",
                   <FileText aria-hidden="true" />,
+                  {
+                    actions: libraryQuickActions(
+                      document,
+                      "starter",
+                      sidebarCareerActions,
+                      go,
+                    ),
+                  },
                 )}
               </SidebarMenu>
             </SidebarSelection>
@@ -416,7 +550,7 @@ function CareerSidebar({
       <SidebarFooter ref={footerRef} className="shrink-0 px-3 py-2">
         <SidebarMenu>
           {item(
-            "settings/account",
+            "settings/editing-preview",
             "Settings",
             <Settings aria-hidden="true" />,
           )}
@@ -447,6 +581,7 @@ export function CareerWorkspaceShell({
   addSection,
   addResume,
   resumeActions,
+  careerActions,
   language,
   setLanguage,
   status,
@@ -575,17 +710,18 @@ export function CareerWorkspaceShell({
               addSection={addSection}
               addResume={addResume}
               resumeActions={resumeActions}
+              careerActions={careerActions}
             />
           }
           toolbar={
             <header
-              className="shrink-0 border-b bg-card"
+              className="flex min-h-16 shrink-0 flex-col border-b bg-card"
               aria-label="Workspace controls"
             >
               <WorkspaceToolbarView
                 title={
                   destination === "backups"
-                    ? "Data & backups"
+                    ? "Data"
                     : destination === "languages"
                       ? "Content languages"
                       : resume

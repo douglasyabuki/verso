@@ -42,6 +42,11 @@ function summaryDraft(head: CareerHead, wording = "Recovered"): CareerDraft {
   };
 }
 
+/** Expect a draft as the controller stores it: identical values plus its write time. */
+function storedDraft(draft: CareerDraft | null) {
+  return { ...draft, updatedAt: expect.any(String) };
+}
+
 async function storage() {
   const value = await openCareerStorage();
   owners.push(value);
@@ -102,4 +107,4 @@ export function setupCareerTests() {
   });
 }
 
-export { controllerOwner, request, storage, summaryDraft };
+export { controllerOwner, request, storage, storedDraft, summaryDraft };

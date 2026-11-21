@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { CareerWorkspace } from "@/components/career/career-workspace";
 import { toast } from "@/components/ui/toast";
 import { AccountSessionStore, ownerKey } from "@/stores/account/session";
@@ -57,8 +58,8 @@ export function AccountRoot() {
     );
   if (!key)
     return (
-      <main className="grid min-h-dvh place-items-center p-6 text-sm text-muted-foreground">
-        <p role="status">Opening workspace…</p>
+      <main>
+        <BrandLoading message="Opening workspace…" />
       </main>
     );
   return <CareerWorkspace key={key} account={{ store, session }} />;
