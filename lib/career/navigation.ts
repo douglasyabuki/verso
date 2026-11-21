@@ -8,13 +8,13 @@ const opaqueId = "[A-Za-z0-9_-]{1,120}";
 const resourceRoute = new RegExp(
   `^(list|entry|section|entries|selection|new-section|resume|resume-overview|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)/${opaqueId}$|^new-entry/${opaqueId}/${opaqueId}$`,
 );
+const comparisonRoute = new RegExp(`^resume-compare(?:/${opaqueId})?$`);
 const views = new Set([
   "overview",
   "profile",
   "summary",
   "sections",
   "resumes",
-  "resume-compare",
   "library",
   "presets",
   "starters",
@@ -32,9 +32,23 @@ export function parseDestination(input: unknown): string {
   if (input === "languages") return "settings/languages";
   if (input === "defaults") return "settings/defaults";
   if (input === "backups") return "settings/data";
-  if (settingsPanel(input) || views.has(input) || resourceRoute.test(input))
+  if (
+    settingsPanel(input) ||
+    views.has(input) ||
+    resourceRoute.test(input) ||
+    isResumeComparison(input)
+  )
     return input.replace(/^selection\//, "resume-content/");
   return "unavailable";
+}
+
+/** Identify comparison routes with an optional starting resume.
+ * @param destination Workspace destination.
+ * @returns {boolean} True for the default comparison or one with a valid resume ID segment.
+ * @example isResumeComparison("resume-compare/application") // true
+ */
+export function isResumeComparison(destination: string): boolean {
+  return comparisonRoute.test(destination);
 }
 
 /** Identify a validated Settings destination.
@@ -78,7 +92,12 @@ export function destinationExists(
   draftScope?: string,
 ): boolean {
   if (destination === "unavailable") return false;
-  if (views.has(destination) || settingsPanel(destination)) return true;
+  if (
+    views.has(destination) ||
+    settingsPanel(destination) ||
+    isResumeComparison(destination)
+  )
+    return true;
   if (
     draftScope === destination ||
     (destination.startsWith("resume-content/") &&

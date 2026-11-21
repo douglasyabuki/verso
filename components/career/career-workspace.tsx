@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeft, Download, FileText, Palette, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  Columns2,
+  Download,
+  FileText,
+  Palette,
+  Plus,
+} from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -45,6 +52,7 @@ import { libraryDestinationKind } from "@/components/career/library-navigation";
 import {
   type CareerActions,
   careerDetailsQuickActions,
+  resumeCollectionActions,
   sectionQuickActions,
 } from "@/components/career/quick-actions";
 import { RecoveryList } from "@/components/career/recovery-list";
@@ -143,6 +151,7 @@ import {
   destinationFromUrl,
   destinationScope,
   destinationUrl,
+  isResumeComparison,
   parseDestination,
   settingsPanel,
 } from "@/lib/career/navigation";
@@ -818,6 +827,7 @@ export function CareerWorkspace({
   );
   const [addingSection, setAddingSection] = useState(false);
   const [addingResume, setAddingResume] = useState(false);
+  const [comparisonVisit, setComparisonVisit] = useState(0);
   const [libraryEditorRequest, setLibraryEditorRequest] = useState<
     object | null
   >(null);
@@ -1143,6 +1153,8 @@ export function CareerWorkspace({
           "",
           url,
         );
+      } else if (isResumeComparison(next)) {
+        setComparisonVisit((visit) => visit + 1);
       }
       current.destination = next;
       current.background = background;
@@ -1328,9 +1340,10 @@ export function CareerWorkspace({
 
   const scope =
     destination === "backups" ? "backups" : (state.draft?.scope ?? destination);
+  const comparingResumes = isResumeComparison(destination);
   const libraryKind = libraryDestinationKind(destination);
   const libraryDestination = libraryKind !== null;
-  const scopeId = scope.split("/")[1];
+  const scopeId = comparingResumes ? "" : scope.split("/")[1];
   const entrySection = libraryDestination
     ? undefined
     : documentValue.sections.find((section) =>
@@ -1371,7 +1384,7 @@ export function CareerWorkspace({
               ? "Resume starter"
               : destination === "resumes"
                 ? "Resumes"
-                : destination === "resume-compare"
+                : comparingResumes
                   ? "Compare resumes"
                   : activeResume
                     ? activeResume.name || "Untitled resume"
@@ -1500,6 +1513,15 @@ export function CareerWorkspace({
         navigate("overview");
         setAddingSection(true);
       }),
+    createEntry: (sectionId, open) => {
+      const { head, saving } = controller.getSnapshot();
+      const section = head?.document.sections.find(
+        ({ id }) => id === sectionId,
+      );
+      if (!section || saving || section.entries.length >= 300) return;
+      const entry = createEntry(section.kind);
+      open(`new-entry/${sectionId}/${entry.id}`, entry);
+    },
     toggleSectionArchived: (sectionId) =>
       resolveTargets(controller.navigationTargets(), () => {
         const current = controller
@@ -1535,6 +1557,13 @@ export function CareerWorkspace({
       );
     },
   };
+  const addResume = () =>
+    resolveTargets(controller.navigationTargets(), () => {
+      navigate("resumes");
+      setAddingResume(true);
+    });
+  const { create: createResume, compare: compareResumes } =
+    resumeCollectionActions(documentValue, state.saving);
   const recoveryLabel = (draft: CareerDraft): string =>
     draft.scope.startsWith("entries/")
       ? `${documentValue.sections.find((section) => section.id === draft.scope.split("/")[1])?.name || "Section"} entry order`
@@ -1958,6 +1987,7 @@ export function CareerWorkspace({
 
       <ResumeManager
         document={documentValue}
+        saving={state.saving}
         saveStarter={(resume) =>
           resolveTargets(controller.navigationTargets(), () => {
             const current = controller
@@ -2039,12 +2069,7 @@ export function CareerWorkspace({
             }
             navigate={navigate}
             addSection={careerActions.addSection}
-            addResume={() =>
-              resolveTargets(controller.navigationTargets(), () => {
-                navigate("resumes");
-                setAddingResume(true);
-              })
-            }
+            addResume={addResume}
             language={contentLanguage}
             setLanguage={setLanguage}
             status={state.status}
@@ -2104,8 +2129,7 @@ export function CareerWorkspace({
                 <p className="mt-1 text-xs text-muted-foreground">
                   {activeResume
                     ? `This resume · ${contentLanguage}`
-                    : destination === "resumes" ||
-                        destination === "resume-compare"
+                    : destination === "resumes" || comparingResumes
                       ? "Resumes · Independent content and wording"
                       : libraryDestination
                         ? "Library - Reusable configurations"
@@ -2114,6 +2138,22 @@ export function CareerWorkspace({
                           : "Career details · Shared content"}
                 </p>
               </div>
+              {destination === "resumes" && (
+                <div className="ms-auto flex max-w-full flex-wrap justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={compareResumes.disabled}
+                    onClick={() => navigate("resume-compare")}
+                  >
+                    <Columns2 data-icon="inline-start" />
+                    {compareResumes.label}
+                  </Button>
+                  <Button disabled={createResume.disabled} onClick={addResume}>
+                    <Plus data-icon="inline-start" />
+                    {createResume.label}
+                  </Button>
+                </div>
+              )}
               {activeResume && (
                 <ResumeActionsMenu
                   document={documentValue}
@@ -2466,10 +2506,9 @@ export function CareerWorkspace({
                 onSave={() => void controller.save(false, "order")}
                 onCancel={() => void controller.cancel("order").catch(() => {})}
                 onOpen={(entry) => navigate(`entry/${entry.id}`)}
-                onCreate={() => {
-                  const entry = createEntry(listSection.kind);
-                  navigate(`new-entry/${listSection.id}/${entry.id}`, entry);
-                }}
+                onCreate={() =>
+                  careerActions.createEntry(listSection.id, navigate)
+                }
                 onDuplicate={(entry) => {
                   const copy = duplicateEntry(entry);
                   navigate(`new-entry/${listSection.id}/${copy.id}`, copy);
@@ -2511,20 +2550,22 @@ export function CareerWorkspace({
                   onUsePreset={loadLibraryPreset}
                 />
               ) : destination === "resumes" ? (
-                <>
-                  <CareerResumeCollection
-                    document={documentValue}
-                    navigate={navigate}
-                    actions={resumeActions}
-                  />
-                </>
+                <CareerResumeCollection
+                  document={documentValue}
+                  navigate={navigate}
+                  actions={resumeActions}
+                />
               ) : destination.startsWith("resume-overview/") && activeResume ? (
                 <ResumeOverview
                   document={documentValue}
                   resume={activeResume}
                 />
-              ) : destination === "resume-compare" ? (
-                <ResumeComparison document={documentValue} />
+              ) : comparingResumes ? (
+                <ResumeComparison
+                  key={`${destination}:${comparisonVisit}`}
+                  document={documentValue}
+                  initialLeftId={destination.split("/")[1]}
+                />
               ) : missingDestination ? (
                 <Card>
                   <CardHeader>

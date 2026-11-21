@@ -134,10 +134,15 @@ Library destructive actions are last in DOM, keyboard, and visual order.
 
 Sidebar rows with actions (Profile, Summary, sections, Layout presets, Resume
 starters, and resumes) open the same quick-action list from their "…" button and on
-right-click. Collection headings and resume sub-pages offer right-click actions
-only. Navigation actions use guarded navigation; commands such as Archive section
-resolve open drafts first and commit through the controller. Negative actions sit
-last, after a divider.
+right-click. Both section menus can open a new entry draft. Collection headings
+and resume sub-pages offer right-click actions only. Create resume and Compare
+resumes appear beside the Resumes title and in the sidebar heading's context
+menu. Comparison opens the existing committed-content view once two resumes
+exist. Compare in a resume's menu opens `/app/resume-compare/<id>` with that
+resume on the left and the first other saved resume on the right. The collection
+action opens `/app/resume-compare` with the default pair. Navigation actions use
+guarded navigation. Commands such as Archive section resolve open drafts first
+and commit through the controller. Negative actions sit last, after a divider.
 
 Resume Layout is directly editable. Its initially collapsed optional preset
 disclosure offers an explanatory empty state or explicit selection/load/capture/

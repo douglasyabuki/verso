@@ -118,6 +118,22 @@ test("follows a readiness issue from narrow PDF view, saves its repair and resto
   await expect(
     page.getByRole("main").getByRole("tab", { name: "Wording", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
+
+  const main = page.getByRole("main");
+  const compare = main.getByRole("button", {
+    name: "Compare resumes",
+    exact: true,
+  });
+  await expect(compare).toHaveCount(0);
+  await page
+    .getByRole("navigation", { name: "Location" })
+    .getByRole("button", { name: "Resumes", exact: true })
+    .click();
+  await expect(compare).toBeInViewport({ ratio: 1 });
+  await expect(compare).toBeDisabled();
+  await expect(
+    main.getByRole("button", { name: "Create resume", exact: true }),
+  ).toBeInViewport({ ratio: 1 });
 });
 
 test("creates, tailors, duplicates, copies languages, compares and deletes independent resumes", async ({
@@ -127,8 +143,9 @@ test("creates, tailors, duplicates, copies languages, compares and deletes indep
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await seed(page, document);
+  const main = page.getByRole("main");
   const collection = page.getByRole("region", { name: "Resume collection" });
-  await collection
+  await main
     .getByRole("button", { name: "Create resume", exact: true })
     .click();
   const create = page.getByRole("dialog", {
@@ -312,7 +329,7 @@ test("creates, tailors, duplicates, copies languages, compares and deletes indep
     animations: "disabled",
     fullPage: true,
   });
-  await collection
+  await main
     .getByRole("button", { name: "Compare resumes", exact: true })
     .click();
   await expect(
@@ -389,4 +406,77 @@ test("creates, tailors, duplicates, copies languages, compares and deletes indep
     }),
   ).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test("compares the selected resume from its menus and restores the comparison on navigation", async ({
+  page,
+}) => {
+  const { document } = fixture();
+  const first = { ...createResume(document, "en-US"), name: "Platform" };
+  const second = { ...createResume(document, "pt-BR"), name: "Product" };
+  document.resumes = [first, second];
+  await seed(page, document, `resume-content/${second.id}`);
+
+  const main = page.getByRole("main");
+  const includeSummary = main.getByRole("checkbox", {
+    name: "Include summary",
+    exact: true,
+  });
+  await expect(includeSummary).toBeVisible();
+  const savedSummary = await includeSummary.isChecked();
+  await includeSummary.click();
+
+  const compare = page.getByRole("menuitem", { name: "Compare", exact: true });
+  const workspaceActions = main.getByRole("button", {
+    name: "Actions for Product",
+    exact: true,
+  });
+  const guard = page.getByRole("dialog", { name: "Unsaved form" });
+  await workspaceActions.click();
+  await compare.click();
+  await guard.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(includeSummary).toBeChecked({ checked: !savedSummary });
+  await workspaceActions.click();
+  await compare.click();
+  await guard.getByRole("button", { name: "Discard", exact: true }).click();
+
+  const left = main.getByRole("combobox", { name: "Left resume", exact: true });
+  const right = main.getByRole("combobox", {
+    name: "Right resume",
+    exact: true,
+  });
+  const leftValue = left.locator('[data-slot="select-value"]');
+  const rightValue = right.locator('[data-slot="select-value"]');
+  await expect(page).toHaveURL(`/app/resume-compare/${second.id}`);
+  await expect(leftValue).toHaveText("Product (pt-BR)");
+  await expect(rightValue).toHaveText("Platform (en-US)");
+  await page.goBack();
+  await expect(includeSummary).toBeChecked({ checked: savedSummary });
+  await page.goForward();
+  await expect(leftValue).toHaveText("Product (pt-BR)");
+  await page.reload();
+  await expect(leftValue).toHaveText("Product (pt-BR)");
+
+  await left.click();
+  await page
+    .getByRole("option", { name: "Platform (en-US)", exact: true })
+    .click();
+  await expect(leftValue).toHaveText("Platform (en-US)");
+  await expect(rightValue).toHaveText("Product (pt-BR)");
+
+  const navigation = page.getByRole("navigation", {
+    name: "Workspace navigation",
+  });
+  await navigation
+    .getByRole("button", { name: /^Product \(pt-BR\)$/ })
+    .click({ button: "right" });
+  await compare.click();
+  await expect(leftValue).toHaveText("Product (pt-BR)");
+  await expect(rightValue).toHaveText("Platform (en-US)");
+  await navigation
+    .getByRole("button", { name: "Actions for Platform", exact: true })
+    .click();
+  await compare.click();
+  await expect(leftValue).toHaveText("Platform (en-US)");
+  await expect(rightValue).toHaveText("Product (pt-BR)");
 });
