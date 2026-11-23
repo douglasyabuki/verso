@@ -90,7 +90,6 @@ import {
   createResume,
   effectiveResume,
   resolveResumeWording,
-  resumeComparisonRows,
   type ResumeContent,
   type ResumeFieldOwner,
   resumeWordingGroups,
@@ -1785,131 +1784,6 @@ export function ResumeWordingEditor({
                   );
                 })}
               </WordingList>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
-export function ResumeComparison({
-  document,
-  initialLeftId,
-}: {
-  document: CareerDocument;
-  initialLeftId?: string;
-}) {
-  const [leftId, setLeftId] = useState(
-    initialLeftId ?? document.resumes[0]?.id ?? "",
-  );
-  const [rightId, setRightId] = useState(
-    () => document.resumes.find((item) => item.id !== leftId)?.id ?? "",
-  );
-  const [differences, setDifferences] = useState(false);
-  const left =
-    document.resumes.find((item) => item.id === leftId) ?? document.resumes[0];
-  const right =
-    document.resumes.find(
-      (item) => item.id === rightId && item.id !== left?.id,
-    ) ?? document.resumes.find((item) => item.id !== left?.id);
-  if (!left || !right)
-    return (
-      <p>Create or duplicate a second resume to compare committed content.</p>
-    );
-  const columns = [left, right];
-  const rows = columns.map((resume) => resumeComparisonRows(document, resume));
-  return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm">
-        Effective committed content only. Unsaved forms are excluded.
-      </p>
-      <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2">
-        {columns.map((resume, index) => (
-          <Field key={index}>
-            <FieldLabel htmlFor={`compare-${index}`}>
-              {index ? "Right resume" : "Left resume"}
-            </FieldLabel>
-            <Select
-              value={resume.id}
-              items={document.resumes.map((item) => ({
-                value: item.id,
-                label: `${item.name || "Untitled resume"} (${item.language})`,
-              }))}
-              onValueChange={(value) => {
-                if (value) (index ? setRightId : setLeftId)(value);
-              }}
-            >
-              <SelectTrigger id={`compare-${index}`}>
-                <SelectValue>
-                  <FileText
-                    aria-hidden="true"
-                    className="resume-color text-(--resume-color)"
-                    data-resume-color={resume.color ?? "indigo"}
-                  />
-                  {resume.name || "Untitled resume"} ({resume.language})
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {document.resumes.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      <FileText
-                        aria-hidden="true"
-                        className="resume-color text-(--resume-color)!"
-                        data-resume-color={item.color ?? "indigo"}
-                      />
-                      {item.name || "Untitled resume"} ({item.language})
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-        ))}
-      </div>
-      <label className="flex items-center gap-2 text-sm">
-        <Checkbox
-          checked={differences}
-          onCheckedChange={(value) => setDifferences(Boolean(value))}
-        />
-        Differences only
-      </label>
-      {rows[0].map((row) => {
-        const cells = [row, rows[1].find((item) => item.id === row.id)!];
-        if (
-          differences &&
-          JSON.stringify([cells[0].value, cells[0].status, cells[0].source]) ===
-            JSON.stringify([cells[1].value, cells[1].status, cells[1].source])
-        )
-          return null;
-        return (
-          <Card key={row.id} size="sm">
-            <CardHeader>
-              <CardTitle className="flex items-start gap-2">
-                <ResumeFieldIcon owner={row.owner} icon={row.icon} />
-                <span className="min-w-0 wrap-anywhere">{row.label}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 @lg:grid-cols-2">
-              {cells.map((cell, index) => (
-                <div
-                  key={index}
-                  lang={columns[index].language}
-                  className="flex min-w-0 flex-col gap-2"
-                >
-                  <p className="text-sm font-medium wrap-anywhere">
-                    {columns[index].name || "Untitled resume"} (
-                    {columns[index].language})
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {[cell.status, cell.source].filter(Boolean).join(" · ")}
-                  </p>
-                  <p className="text-sm wrap-anywhere whitespace-pre-wrap">
-                    {cell.value || "Empty"}
-                  </p>
-                </div>
-              ))}
             </CardContent>
           </Card>
         );

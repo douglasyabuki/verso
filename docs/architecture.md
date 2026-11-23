@@ -130,17 +130,24 @@ mounted through library navigation so expansion, scroll, and entrance state are
 preserved; visiting Library must not expand or select a resume. Keep Library
 accessible beside independently scrolling collections. Collection creation aligns
 with the title-row end; omit preset/starter search in collections and pickers.
-Library destructive actions are last in DOM, keyboard, and visual order.
+Saved Library cards show Apply preset or Create resume beside a quick-actions
+menu for Edit, Duplicate, and Delete. Delete appears last after a divider.
 
 Sidebar rows with actions (Profile, Summary, sections, Layout presets, Resume
 starters, and resumes) open the same quick-action list from their "…" button and on
 right-click. Both section menus can open a new entry draft. Collection headings
 and resume sub-pages offer right-click actions only. Create resume and Compare
 resumes appear beside the Resumes title and in the sidebar heading's context
-menu. Comparison opens the existing committed-content view once two resumes
+menu. Comparison opens the committed-content view once two resumes
 exist. Compare in a resume's menu opens `/app/resume-compare/<id>` with that
 resume on the left and the first other saved resume on the right. The collection
-action opens `/app/resume-compare` with the default pair. Navigation actions use
+action opens `/app/resume-compare` with the default pair. The view starts with
+saved wording, inclusion, and order differences grouped by Career details
+section and entry. All rows includes unchanged and excluded values and
+wording-source-only differences. Section and change-type filters work together.
+Opening a group uses the shared list entrance. Order differences compare the
+relative sequence of shared IDs. Choosing the opposite resume swaps the pair.
+Filters and disclosure state are local to the visit. Navigation actions use
 guarded navigation. Commands such as Archive section resolve open drafts first
 and commit through the controller. Negative actions sit last, after a divider.
 

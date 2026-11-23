@@ -199,6 +199,42 @@ export function libraryQuickActions(
   ];
 }
 
+/** Management actions for a saved layout preset or resume starter. */
+export function libraryItemQuickActions(
+  kind: "preset" | "starter",
+  count: number,
+  busy: boolean,
+  actions: { edit: () => void; duplicate: () => void; delete: () => void },
+): QuickAction[] {
+  return [
+    {
+      key: "edit",
+      label: "Edit",
+      icon: Pencil,
+      disabled: busy,
+      hint: busyHint,
+      onSelect: actions.edit,
+    },
+    {
+      key: "duplicate",
+      label: "Duplicate",
+      icon: Copy,
+      disabled: busy || count >= 100,
+      hint: busy ? busyHint : `Limit of 100 ${kind}s reached.`,
+      onSelect: actions.duplicate,
+    },
+    {
+      key: "delete",
+      label: "Delete",
+      icon: Trash2,
+      disabled: busy,
+      hint: busyHint,
+      destructive: true,
+      onSelect: actions.delete,
+    },
+  ];
+}
+
 function compareAction(
   document: CareerDocument,
   busy: boolean,

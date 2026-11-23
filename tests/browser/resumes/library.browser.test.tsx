@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 
 import { CareerWorkspace } from "@/components/career/career-workspace";
@@ -112,6 +112,100 @@ async function libraryWorkspace(document: CareerDocument, scope: string) {
   await render(<CareerWorkspace controller={controller} />);
   return controller;
 }
+
+it.each([
+  [
+    "presets",
+    "Layout presets",
+    "Apply preset…",
+    "Preset name",
+    "Delete preset?",
+  ],
+  [
+    "starters",
+    "Resume starters",
+    "Create resume…",
+    "Starter name",
+    "Delete starter?",
+  ],
+] as const)(
+  "keeps a primary action and a keyboard-accessible menu in %s",
+  async (collection, collectionLabel, primaryLabel, nameLabel, deleteLabel) => {
+    const { document } = libraryFixture();
+    const item = document[collection][0];
+    const name = item.name.repeat(20).replaceAll(" ", "");
+    item.name = name;
+    const controller = await libraryWorkspace(document, collection);
+    await page.viewport(360, 800);
+
+    const primary = page.getByRole("button", {
+      name: primaryLabel,
+      exact: true,
+    });
+    const trigger = page.getByRole("button", { name: `Actions for ${name}` });
+    await expect.element(primary).toBeVisible();
+    await expect.element(trigger).toBeVisible();
+    const card = primary.element().closest('[data-slot="card"]')!;
+    expect([...card.querySelectorAll("button")]).toEqual([
+      primary.element(),
+      trigger.element(),
+    ]);
+    const cardBounds = card.getBoundingClientRect();
+    const primaryBounds = primary.element().getBoundingClientRect();
+    const triggerBounds = trigger.element().getBoundingClientRect();
+    expect(primaryBounds.left).toBeGreaterThanOrEqual(cardBounds.left);
+    expect(triggerBounds.right).toBeLessThanOrEqual(cardBounds.right);
+    expect(triggerBounds.top).toBeLessThan(primaryBounds.bottom);
+    expect(cardBounds.right).toBeLessThanOrEqual(360);
+
+    (primary.element() as HTMLElement).focus();
+    await userEvent.keyboard("{Tab}");
+    await expect.element(trigger).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    const menu = page.getByRole("menu");
+    await expect.element(menu).toBeVisible();
+    await expect.element(menu.getByRole("separator")).toBeVisible();
+    expect(
+      [...menu.element().querySelectorAll('[role="menuitem"]')].map(
+        (entry) => entry.textContent,
+      ),
+    ).toEqual(["Edit", "Duplicate", "Delete"]);
+    await userEvent.keyboard("{Escape}");
+    await expect.element(trigger).toHaveFocus();
+
+    const editor = page.getByRole("region", { name: "Editing form" });
+    const nameField = editor.getByRole("textbox", { name: nameLabel });
+    await trigger.click();
+    await menu.getByRole("menuitem", { name: "Edit", exact: true }).click();
+    await expect.element(nameField).toHaveValue(name);
+    await page.getByRole("button", { name: "Expand sidebar" }).click();
+    await page
+      .getByRole("dialog", { name: "Verso workspace" })
+      .getByRole("button", { name: collectionLabel, exact: true })
+      .click();
+
+    await trigger.click();
+    await menu
+      .getByRole("menuitem", { name: "Duplicate", exact: true })
+      .click();
+    await expect.element(nameField).toHaveValue(`${name} copy`);
+    expect(controller.getSnapshot().head?.document[collection]).toEqual([item]);
+    await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    await trigger.click();
+    await menu.getByRole("menuitem", { name: "Delete", exact: true }).click();
+    const confirmation = page.getByRole("dialog", { name: deleteLabel });
+    await expect.element(confirmation).toBeVisible();
+    expect(controller.getSnapshot().head?.document[collection]).toEqual([item]);
+    await confirmation
+      .getByRole("button", { name: "Delete", exact: true })
+      .click();
+    await expect
+      .poll(() => controller.getSnapshot().head?.document[collection])
+      .toEqual([]);
+    await expect.element(trigger).not.toBeInTheDocument();
+  },
+);
 
 it("loads a library preset only into a chosen resume draft and preserves committed content until Save", async () => {
   const { document, resume } = libraryFixture();

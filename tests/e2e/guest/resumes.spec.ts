@@ -343,10 +343,7 @@ test("creates, tailors, duplicates, copies languages, compares and deletes indep
       .locator("svg[data-resume-color]"),
   ).toHaveCount(1);
   await expect(
-    page.getByText(
-      "Effective committed content only. Unsaved forms are excluded.",
-      { exact: true },
-    ),
+    page.getByText("Comparing saved content.", { exact: true }),
   ).toBeVisible();
   await page.getByLabel("Right resume", { exact: true }).click();
   await expect(
@@ -363,10 +360,29 @@ test("creates, tailors, duplicates, copies languages, compares and deletes indep
       exact: true,
     })
     .click();
+  await main.getByRole("combobox", { name: "Section", exact: true }).click();
+  await page.getByRole("option", { name: "Experience", exact: true }).click();
+  const experience = main.getByRole("button", { name: /^Experience \(\d+\)$/ });
+  await expect(experience).toHaveAttribute("aria-expanded", "true");
   await expect(
     page.getByText("Senior Engineer", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Engenheira", { exact: true })).toBeVisible();
+  await experience.press("Space");
+  await expect(experience).toHaveAttribute("aria-expanded", "false");
+  await experience.press("Enter");
+  await expect(experience).toHaveAttribute("aria-expanded", "true");
+  await main
+    .getByRole("combobox", { name: "Change type", exact: true })
+    .click();
+  await page.getByRole("option", { name: "Order", exact: true }).click();
+  await expect(main.getByText("No rows match these filters")).toBeVisible();
+  await main
+    .getByRole("button", { name: "Clear filters", exact: true })
+    .click();
+  await expect(
+    main.getByRole("combobox", { name: "Section", exact: true }),
+  ).toContainText("All sections");
   await page.goto(contentUrl);
   await page
     .getByRole("navigation", { name: "Workspace navigation" })
@@ -414,7 +430,8 @@ test("compares the selected resume from its menus and restores the comparison on
   const { document } = fixture();
   const first = { ...createResume(document, "en-US"), name: "Platform" };
   const second = { ...createResume(document, "pt-BR"), name: "Product" };
-  document.resumes = [first, second];
+  const third = { ...createResume(document, "en-US"), name: "Portfolio" };
+  document.resumes = [first, second, third];
   await seed(page, document, `resume-content/${second.id}`);
 
   const main = page.getByRole("main");
@@ -426,18 +443,21 @@ test("compares the selected resume from its menus and restores the comparison on
   const savedSummary = await includeSummary.isChecked();
   await includeSummary.click();
 
-  const compare = page.getByRole("menuitem", { name: "Compare", exact: true });
+  const compareItem = { name: "Compare", exact: true };
+  const productCompare = page
+    .getByRole("menu", { name: "Actions for Product", exact: true })
+    .getByRole("menuitem", compareItem);
   const workspaceActions = main.getByRole("button", {
     name: "Actions for Product",
     exact: true,
   });
   const guard = page.getByRole("dialog", { name: "Unsaved form" });
   await workspaceActions.click();
-  await compare.click();
+  await productCompare.click();
   await guard.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(includeSummary).toBeChecked({ checked: !savedSummary });
   await workspaceActions.click();
-  await compare.click();
+  await productCompare.click();
   await guard.getByRole("button", { name: "Discard", exact: true }).click();
 
   const left = main.getByRole("combobox", { name: "Left resume", exact: true });
@@ -450,12 +470,32 @@ test("compares the selected resume from its menus and restores the comparison on
   await expect(page).toHaveURL(`/app/resume-compare/${second.id}`);
   await expect(leftValue).toHaveText("Product (pt-BR)");
   await expect(rightValue).toHaveText("Platform (en-US)");
+  await expect(
+    main.getByText("No content differences", { exact: true }),
+  ).toBeVisible();
+  await main
+    .getByRole("button", { name: "Show all rows", exact: true })
+    .click();
+  await expect(
+    main.getByRole("group", { name: "Full name", exact: true }),
+  ).toBeVisible();
   await page.goBack();
   await expect(includeSummary).toBeChecked({ checked: savedSummary });
   await page.goForward();
   await expect(leftValue).toHaveText("Product (pt-BR)");
   await page.reload();
   await expect(leftValue).toHaveText("Product (pt-BR)");
+
+  await right.click();
+  await page
+    .getByRole("option", { name: "Portfolio (en-US)", exact: true })
+    .click();
+  await left.click();
+  await page
+    .getByRole("option", { name: "Portfolio (en-US)", exact: true })
+    .click();
+  await expect(leftValue).toHaveText("Portfolio (en-US)");
+  await expect(rightValue).toHaveText("Product (pt-BR)");
 
   await left.click();
   await page
@@ -470,13 +510,19 @@ test("compares the selected resume from its menus and restores the comparison on
   await navigation
     .getByRole("button", { name: /^Product \(pt-BR\)$/ })
     .click({ button: "right" });
-  await compare.click();
+  await page
+    .locator('[data-slot="context-menu-content"][data-open]')
+    .getByRole("menuitem", compareItem)
+    .click();
   await expect(leftValue).toHaveText("Product (pt-BR)");
   await expect(rightValue).toHaveText("Platform (en-US)");
   await navigation
     .getByRole("button", { name: "Actions for Platform", exact: true })
     .click();
-  await compare.click();
+  await page
+    .getByRole("menu", { name: "Actions for Platform", exact: true })
+    .getByRole("menuitem", compareItem)
+    .click();
   await expect(leftValue).toHaveText("Platform (en-US)");
   await expect(rightValue).toHaveText("Product (pt-BR)");
 });
