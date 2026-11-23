@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  ArrowDown,
-  ArrowUp,
-  Copy,
-  FileText,
-  Palette,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, FileText, Palette, Pencil } from "lucide-react";
 import { useState } from "react";
 
 import { LayoutFields, StyleSample } from "@/components/career/layout-editor";
+import { libraryItemQuickActions } from "@/components/career/quick-actions";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { CareerSectionIconPicker } from "@/components/content/career-section-icon-picker";
 import { Button } from "@/components/ui/button";
@@ -51,6 +44,7 @@ import {
 } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { QuickActionsMenu } from "@/components/ui/quick-actions";
 import {
   Select,
   SelectContent,
@@ -180,67 +174,66 @@ export function SetupLibrary({
           </EmptyHeader>
         </Empty>
       )}
-      {records.map((item) => (
-        <Card size="sm" key={item.id}>
-          <CardHeader>
-            <CardTitle>{item.name || `Untitled ${kind}`}</CardTitle>
-            <CardDescription>
-              {kind === "starter" &&
-              "sections" in item &&
-              Array.isArray(item.sections)
-                ? `${item.sections.length} empty sections / `
-                : ""}
-              {item.layout.paper.toUpperCase()} / {item.layout.font}
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="justify-end">
-            <Button
-              variant="outline"
-              disabled={disabled}
-              onClick={() => navigate(`${kind}/${item.id}`)}
-            >
-              <Pencil data-icon="inline-start" />
-              Edit
-            </Button>
-            <Button
-              variant="outline"
-              disabled={disabled || records.length >= 100}
-              onClick={() => {
-                const copy = {
-                  ...structuredClone(item),
-                  id: crypto.randomUUID(),
-                  name: `${item.name || `Untitled ${kind}`} copy`.slice(0, 500),
-                };
-                navigate(`${kind}/${copy.id}`, copy);
-              }}
-            >
-              <Copy data-icon="inline-start" />
-              Duplicate
-            </Button>
-            <Button
-              disabled={disabled}
-              onClick={() => {
-                if (kind === "starter") createResume(item.id);
-                else {
-                  setUsingId(item.id);
-                  setResumeId("");
-                  setUseError("");
+      {records.map((item) => {
+        const name = item.name || `Untitled ${kind}`;
+        return (
+          <Card size="sm" key={item.id} data-quick-actions-row>
+            <CardHeader>
+              <CardTitle className="wrap-anywhere">{name}</CardTitle>
+              <CardDescription>
+                {kind === "starter" &&
+                "sections" in item &&
+                Array.isArray(item.sections)
+                  ? `${item.sections.length} empty sections / `
+                  : ""}
+                {item.layout.paper.toUpperCase()} / {item.layout.font}
+              </CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button
+                disabled={disabled}
+                onClick={() => {
+                  if (kind === "starter") createResume(item.id);
+                  else {
+                    setUsingId(item.id);
+                    setResumeId("");
+                    setUseError("");
+                  }
+                }}
+              >
+                {kind === "preset" ? "Apply preset…" : "Create resume…"}
+              </Button>
+              <QuickActionsMenu
+                actions={libraryItemQuickActions(
+                  kind,
+                  records.length,
+                  disabled,
+                  {
+                    edit: () => navigate(`${kind}/${item.id}`),
+                    duplicate: () => {
+                      const copy = {
+                        ...structuredClone(item),
+                        id: crypto.randomUUID(),
+                        name: `${name} copy`.slice(0, 500),
+                      };
+                      navigate(`${kind}/${copy.id}`, copy);
+                    },
+                    delete: () => setDeleting(structuredClone(item)),
+                  },
+                )}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Actions for ${name}`}
+                    disabled={disabled}
+                  />
                 }
-              }}
-            >
-              {kind === "preset" ? "Apply preset…" : "Create resume…"}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={disabled}
-              onClick={() => setDeleting(structuredClone(item))}
-            >
-              <Trash2 data-icon="inline-start" />
-              Delete
-            </Button>
-          </CardFooter>
-        </Card>
-      ))}
+              />
+            </CardFooter>
+          </Card>
+        );
+      })}
       <Dialog
         open={usingId !== null}
         onOpenChange={(open) => {
@@ -323,7 +316,7 @@ export function SetupLibrary({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete {kind}?</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="wrap-anywhere">
               Delete {deleting?.name || `Untitled ${kind}`}? Existing resumes
               keep their copied settings.
             </DialogDescription>

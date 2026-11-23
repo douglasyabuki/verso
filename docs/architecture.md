@@ -130,7 +130,8 @@ mounted through library navigation so expansion, scroll, and entrance state are
 preserved; visiting Library must not expand or select a resume. Keep Library
 accessible beside independently scrolling collections. Collection creation aligns
 with the title-row end; omit preset/starter search in collections and pickers.
-Library destructive actions are last in DOM, keyboard, and visual order.
+Saved Library cards show Apply preset or Create resume beside a quick-actions
+menu for Edit, Duplicate, and Delete. Delete appears last after a divider.
 
 Sidebar rows with actions (Profile, Summary, sections, Layout presets, Resume
 starters, and resumes) open the same quick-action list from their "…" button and on
