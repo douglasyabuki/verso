@@ -12,7 +12,6 @@ const baseURL = "http://127.0.0.1:3101";
 /** Test-only values for an isolated database; not credentials for any real service.
  * OAuth providers are never contacted: specs seed database sessions directly. */
 export const accountsTestEnv = {
-  DATABASE_URL: "postgresql://postgres@127.0.0.1:54329/postgres",
   BETTER_AUTH_URL: baseURL,
   BETTER_AUTH_SECRET: "isolated-account-e2e-secret-with-32-plus-characters",
   GITHUB_CLIENT_ID: "account-e2e-client",
@@ -39,7 +38,14 @@ export default defineConfig({
   webServer: [
     {
       command: "node tools/accounts-e2e-database.mjs",
-      url: "http://127.0.0.1:54330",
+      // The app inherits DATABASE_URL. Fixtures read the same URL from the
+      // suite-specific variable so they cannot fall back to a local .env URL.
+      wait: {
+        stdout: new RegExp(
+          String.raw`^Account test database ready: (?<DATABASE_URL>(?<ACCOUNTS_E2E_DATABASE_URL>postgresql://postgres@127\.0\.0\.1:\d+/postgres))$`,
+          "m",
+        ),
+      },
       reuseExistingServer: false,
       stdout: "pipe",
       stderr: "pipe",

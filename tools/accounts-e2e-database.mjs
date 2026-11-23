@@ -1,16 +1,12 @@
 // Isolated in-process Postgres for account end-to-end tests. Applies the
 // checked-in migrations to a fresh in-memory database, serves it over the
-// Postgres wire protocol, and answers a readiness check. Never point account
+// Postgres wire protocol, and prints its connection URL. Never point account
 // tests at shared or hosted data.
 import { readdir, readFile } from "node:fs/promises";
-import { createServer } from "node:http";
 import path from "node:path";
 
 import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
-
-const dbPort = Number(process.env.ACCOUNTS_E2E_DB_PORT ?? 54329);
-const healthPort = Number(process.env.ACCOUNTS_E2E_HEALTH_PORT ?? 54330);
 
 const db = await PGlite.create();
 const root = path.resolve("prisma/migrations");
@@ -23,18 +19,15 @@ for (const name of migrations)
 
 const server = new PGLiteSocketServer({
   db,
-  port: dbPort,
+  port: 0,
   host: "127.0.0.1",
   maxConnections: 20,
 });
 await server.start();
 
-createServer((_, response) => {
-  response.writeHead(200, { "content-type": "text/plain" });
-  response.end("ready");
-}).listen(healthPort, "127.0.0.1");
-
-console.log(`Account test database ready on 127.0.0.1:${dbPort}`);
+console.log(
+  `Account test database ready: postgresql://postgres@${server.getServerConn()}/postgres`,
+);
 
 const stop = async () => {
   await server.stop();
