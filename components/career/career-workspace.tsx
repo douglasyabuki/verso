@@ -138,6 +138,7 @@ import {
   layoutAppearance,
   layoutDefaults,
   layoutFromPreset,
+  sameAppearance,
   sameLayout,
 } from "@/lib/career/layout";
 import {
@@ -1663,6 +1664,31 @@ export function CareerWorkspace({
       navigate(`preset/${item.id}`, item);
     });
 
+  const reviewLayoutAsDefaults = (resumeId: string) => {
+    const next = "settings/defaults";
+    const generation = controller.getSnapshot().head?.generation;
+    resolveTargets(routeTargets(next), () => {
+      const head = controller.getSnapshot().head;
+      const resume = head?.document.resumes.find(
+        (item) => item.id === resumeId,
+      );
+      if (!head || head.generation !== generation || !resume) {
+        setLocalError(
+          "This resume is unavailable. Open a saved resume to use its layout.",
+        );
+        return;
+      }
+      setLocalError("");
+      const appearance = layoutAppearance(resume.layout);
+      navigate(
+        next,
+        sameAppearance(appearance, head.document.defaults)
+          ? undefined
+          : appearance,
+      );
+    });
+  };
+
   /** Resolve drafts and load copied appearance into an uncommitted Layout scope.
    * @param presetId Saved appearance to recheck after resolving drafts.
    * @param resumeId Explicitly selected target resume to recheck before navigation.
@@ -1751,7 +1777,7 @@ export function CareerWorkspace({
         id: crypto.randomUUID(),
         name: "",
         template: "yabuki-reference@1.0.3",
-        layout: structuredClone(document.defaults),
+        layout: structuredClone(appLayoutDefaults),
       };
       navigate(
         `${kind}/${base.id}`,
@@ -2214,19 +2240,6 @@ export function CareerWorkspace({
             }
           })
         }
-        createStarter={() => {
-          const document = controller.getSnapshot().head!.document;
-          if (document.starters.length >= 100) return;
-          const id = crypto.randomUUID();
-          navigate(`starter/${id}`, {
-            id,
-            name: "",
-            template: "yabuki-reference@1.0.3",
-            layout: structuredClone(document.defaults),
-            sections: [],
-            summaryIncluded: false,
-          });
-        }}
         getDocument={() => controller.getSnapshot().head!.document}
         getResume={(id) =>
           controller
@@ -2928,6 +2941,16 @@ export function CareerWorkspace({
                               savedValues={activeResume.layout}
                               onLoaded={() => setPresetNotice(scope)}
                             />
+                            <Button
+                              id="use-layout-for-blank-resumes"
+                              variant="outline"
+                              className="h-auto min-h-8 max-w-full self-start py-1 text-start whitespace-normal"
+                              onClick={() =>
+                                reviewLayoutAsDefaults(activeResume.id)
+                              }
+                            >
+                              Use this layout for new blank resumes…
+                            </Button>
                             <p className="text-xs text-muted-foreground">
                               Save layout to update PDF output. The PDF pane
                               continues to show saved content.

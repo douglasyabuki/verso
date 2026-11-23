@@ -113,6 +113,114 @@ async function libraryWorkspace(document: CareerDocument, scope: string) {
   return controller;
 }
 
+it("shows only the blank resume form when the Library has no starters", async () => {
+  const { document } = fixture();
+  const controller = await libraryWorkspace(document, "resumes");
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: "Create resume", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Create resume",
+    exact: true,
+  });
+  await expect
+    .element(dialog.getByText("From starter"))
+    .not.toBeInTheDocument();
+  await expect
+    .element(dialog.getByText("Blank resume"))
+    .not.toBeInTheDocument();
+  await expect
+    .element(dialog.getByText("Create starter…"))
+    .not.toBeInTheDocument();
+  await expect
+    .element(dialog.getByRole("combobox", { name: "Content language" }))
+    .toBeVisible();
+  await dialog
+    .getByRole("textbox", { name: "Resume name" })
+    .fill("New blank resume");
+  await dialog
+    .getByRole("button", { name: "Create resume", exact: true })
+    .click();
+  await expect
+    .poll(() => controller.getSnapshot().head?.document.resumes.at(-1)?.name)
+    .toBe("New blank resume");
+});
+
+it("offers saved starters while opening the regular creation dialog in blank mode", async () => {
+  const { document } = libraryFixture();
+  const controller = await libraryWorkspace(document, "resumes");
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: "Create resume", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Create resume",
+    exact: true,
+  });
+  const selectStarter = dialog.getByRole("combobox", {
+    name: "Starter",
+    exact: true,
+  });
+  await expect
+    .element(dialog.getByText("Blank resume", { exact: true }))
+    .toBeVisible();
+  await expect.element(selectStarter).not.toBeInTheDocument();
+  await dialog.getByText("From starter", { exact: true }).click();
+  await expect
+    .element(dialog.getByRole("button", { name: "Create resume", exact: true }))
+    .toBeDisabled();
+  await selectStarter.click();
+  await page.getByRole("option", { name: "Project focused" }).click();
+  await expect
+    .element(
+      dialog.getByText("Review the Career sections to reuse or create.", {
+        exact: false,
+      }),
+    )
+    .toBeVisible();
+  await dialog
+    .getByRole("textbox", { name: "Resume name" })
+    .fill("From saved starter");
+  await dialog
+    .getByRole("button", { name: "Create resume", exact: true })
+    .click();
+  await expect
+    .poll(() => controller.getSnapshot().head?.document.resumes.at(-1))
+    .toMatchObject({
+      name: "From saved starter",
+      layout: { paper: "letter", defaults: { paper: "letter" } },
+    });
+});
+
+it.each([
+  ["presets", "Create preset", "Preset name"],
+  ["starters", "Create starter", "Starter name"],
+] as const)(
+  "starts new %s with built-in appearance",
+  async (collection, createLabel, nameLabel) => {
+    const { document } = fixture();
+    document.defaults.marginLeft = 18;
+    const controller = await libraryWorkspace(document, collection);
+    await page.getByRole("button", { name: createLabel, exact: true }).click();
+    const editor = page.getByRole("region", { name: "Editing form" });
+    await expect
+      .element(editor.getByRole("textbox", { name: "Left margin (mm)" }))
+      .toHaveValue("25");
+    await editor
+      .getByRole("textbox", { name: nameLabel })
+      .fill("New library item");
+    await editor.getByRole("button", { name: "Save", exact: true }).click();
+    await expect
+      .poll(
+        () =>
+          controller.getSnapshot().head?.document[collection][0]?.layout
+            .marginLeft,
+      )
+      .toBe(25);
+  },
+);
+
 it.each([
   [
     "presets",
@@ -276,28 +384,157 @@ it("loads a library preset only into a chosen resume draft and preserves committ
   expect(controller.getSnapshot().undoCount).toBe(0);
 });
 
+it("reviews a saved layout before setting defaults for future blank resumes", async () => {
+  const { document, resume } = fixture();
+  resume.layout.marginLeft = 22;
+  const controller = await libraryWorkspace(
+    document,
+    `resume-layout/${resume.id}`,
+  );
+  const layout = page.getByRole("region", { name: "Editing form" });
+  const action = layout.getByRole("button", {
+    name: "Use this layout for new blank resumes…",
+    exact: true,
+  });
+  const margin = layout.getByRole("textbox", {
+    name: "Left margin (mm)",
+    exact: true,
+  });
+  const guard = page.getByRole("dialog", { name: "Unsaved form", exact: true });
+  const settings = page.getByRole("dialog", { name: "Settings", exact: true });
+  const defaultMargin = settings.getByRole("textbox", {
+    name: "Left margin (mm)",
+    exact: true,
+  });
+  const saveDefaults = settings.getByRole("button", {
+    name: "Save",
+    exact: true,
+  });
+  const closeSettings = settings.getByRole("button", {
+    name: "Close settings",
+  });
+
+  await page.viewport(320, 800);
+  await expect.element(action).toBeInViewport({ ratio: 0.99 });
+  await page.viewport(1440, 900);
+
+  await margin.fill("18");
+  await action.click();
+  await guard.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect.element(margin).toHaveValue("18");
+  await expect.element(settings).not.toBeInTheDocument();
+  await action.click();
+  await guard.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect
+    .element(
+      settings.getByRole("heading", { name: "Resume defaults", exact: true }),
+    )
+    .toBeVisible();
+  await expect.element(defaultMargin).toHaveValue("22");
+  expect(controller.getSnapshot().head?.document).toEqual(document);
+  expect(controller.getSnapshot().undoCount).toBe(0);
+  await settings.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect.element(saveDefaults).toBeDisabled();
+  await closeSettings.click();
+  await expect.element(margin).toHaveValue("22");
+
+  await margin.fill("16");
+  await action.click();
+  await guard.getByRole("button", { name: "Save", exact: true }).click();
+  await expect.element(defaultMargin).toHaveValue("16");
+  const savedLayout = { ...resume.layout, marginLeft: 16 };
+  expect(controller.getSnapshot().head?.document.resumes[0].layout).toEqual(
+    savedLayout,
+  );
+  expect(controller.getSnapshot().head?.document.defaults).toEqual(
+    document.defaults,
+  );
+  expect(controller.getSnapshot().undoCount).toBe(1);
+
+  await saveDefaults.click();
+  await expect
+    .poll(() => controller.getSnapshot().head?.document.defaults)
+    .toEqual({ ...document.defaults, marginLeft: 16 });
+  await expect.element(saveDefaults).toBeDisabled();
+  expect(controller.getSnapshot().head?.document.resumes[0].layout).toEqual(
+    savedLayout,
+  );
+  expect(controller.getSnapshot().undoCount).toBe(2);
+  await closeSettings.click();
+  await action.click();
+  await expect.element(saveDefaults).toBeDisabled();
+  await closeSettings.click();
+  await expect.element(margin).toHaveValue("16");
+
+  await page
+    .getByRole("navigation", { name: "Location" })
+    .getByRole("button", { name: "Resumes", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect
+    .poll(() => controller.getSnapshot().head?.document.defaults)
+    .toEqual(document.defaults);
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect
+    .poll(() => controller.getSnapshot().head?.document.defaults.marginLeft)
+    .toBe(16);
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: "Create resume", exact: true })
+    .click();
+  const create = page.getByRole("dialog", {
+    name: "Create resume",
+    exact: true,
+  });
+  await create
+    .getByRole("textbox", { name: "Resume name" })
+    .fill("Uses saved defaults");
+  await create
+    .getByRole("button", { name: "Create resume", exact: true })
+    .click();
+  await expect
+    .poll(() => controller.getSnapshot().head?.document.resumes.at(-1))
+    .toMatchObject({
+      name: "Uses saved defaults",
+      layout: { marginLeft: 16, defaults: { marginLeft: 16 } },
+    });
+});
+
 it("blocks starter creation when the chosen starter is deleted while reviewing", async () => {
   const { document, starter } = libraryFixture();
   const controller = await libraryWorkspace(document, "starters");
   await page
     .getByRole("button", { name: "Create resume…", exact: true })
     .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Create resume",
+    exact: true,
+  });
+  const create = dialog.getByRole("button", {
+    name: "Create resume",
+    exact: true,
+  });
+  await expect
+    .element(dialog.getByRole("combobox", { name: "Starter", exact: true }))
+    .toHaveTextContent("Project focused");
   expect(await controller.command(`starter/${starter.id}`, null, starter)).toBe(
     true,
   );
-  await expect
-    .element(
-      page
-        .getByRole("dialog")
-        .getByRole("button", { name: "Create resume", exact: true }),
-    )
-    .toBeDisabled();
+  await expect.element(create).toBeDisabled();
   await expect
     .element(
       page.getByRole("alert").filter({ hasText: "starter is unavailable" }),
     )
     .toBeVisible();
   expect(controller.getSnapshot().head?.document.resumes).toHaveLength(1);
+  await expect
+    .element(dialog.getByRole("combobox", { name: "Starter", exact: true }))
+    .not.toBeInTheDocument();
+  await dialog
+    .getByRole("button", { name: "Start blank", exact: true })
+    .click();
+  await expect.element(create).toBeEnabled();
+  await expect.element(dialog.getByRole("alert")).not.toBeInTheDocument();
 });
 it("rechecks reviewed mappings inside real IndexedDB without partially creating sections", async () => {
   const { document, resume } = fixture();

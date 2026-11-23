@@ -143,11 +143,9 @@ export function ResumeManager({
   guard,
   getResume,
   getDocument,
-  createStarter,
   saveStarter,
 }: {
   getDocument: () => CareerDocument;
-  createStarter: () => void;
   saveStarter: (resume: CareerResume) => void;
   getResume: (id: string) => CareerResume | undefined;
   guard: (action: () => void) => void;
@@ -171,8 +169,13 @@ export function ResumeManager({
   const [color, setColor] = useState<CareerResume["color"]>("indigo");
   const [language, setLanguage] = useState("");
   const [starterId, setStarterId] = useState("");
-  const [creationMode, setCreationMode] = useState("blank");
+  const [creationMode, setCreationMode] = useState<"blank" | "starter">(
+    "blank",
+  );
   const [mapping, setMapping] = useState<string[]>([]);
+  const hasStarters = document.starters.length > 0;
+  const fromStarter =
+    !source && creationMode === "starter" && (hasStarters || starterId !== "");
   const starter = document.starters.find((item) => item.id === starterId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -181,17 +184,20 @@ export function ResumeManager({
     (item) => item.active && item.tag !== source?.language,
   );
   const selectedLanguage = language || languages[0]?.tag || "";
-  const close = () => {
+  const startBlank = () => {
     setStarterId("");
     setCreationMode("blank");
     setMapping([]);
+    setError("");
+  };
+  const close = () => {
+    startBlank();
     setCreating(false);
     onCreateHandled();
     setSource(null);
     setLanguage("");
     setName("");
     setColor("indigo");
-    setError("");
   };
   const save = async () => {
     setBusy(true);
@@ -207,12 +213,12 @@ export function ResumeManager({
         !languages.some((item) => item.tag === selectedLanguage)
       )
         throw new Error("Choose an active destination language.");
-      if (!source && creationMode === "starter" && !currentStarter)
+      if (fromStarter && !currentStarter)
         throw new Error(
           "Choose an available starter before creating this resume.",
         );
       const prepared =
-        !source && currentStarter
+        fromStarter && currentStarter
           ? prepareStarterResume(
               currentDocument,
               currentStarter,
@@ -297,7 +303,9 @@ export function ResumeManager({
             <DialogDescription>
               {source
                 ? "The copy uses destination career wording. Missing wording remains missing; source customizations are not copied."
-                : "Start blank or copy a starter’s empty structure and layout. Select optional content after creation."}
+                : hasStarters
+                  ? "Start blank or copy a starter’s empty structure and layout. Select optional content after creation."
+                  : "Select optional content after creation."}
             </DialogDescription>
           </DialogHeader>
           <fieldset disabled={busy} className="flex flex-col gap-4">
@@ -339,7 +347,7 @@ export function ResumeManager({
                 </SelectContent>
               </Select>
             </Field>
-            {!source && (
+            {!source && hasStarters && (
               <FieldGroup>
                 <Field>
                   <FieldLabel>Start with</FieldLabel>
@@ -348,13 +356,8 @@ export function ResumeManager({
                     value={[creationMode]}
                     onValueChange={(values) => {
                       const mode = values[0];
-                      if (mode) {
-                        setCreationMode(mode);
-                        if (mode === "blank") {
-                          setStarterId("");
-                          setMapping([]);
-                        }
-                      }
+                      if (mode === "blank") startBlank();
+                      if (mode === "starter") setCreationMode(mode);
                     }}
                     aria-label="Resume starting point"
                   >
@@ -366,36 +369,17 @@ export function ResumeManager({
                     </ToggleGroupItem>
                   </ToggleGroup>
                 </Field>
-                {creationMode === "starter" && (
+                {fromStarter && (
                   <>
-                    {!document.starters.length && (
-                      <div className="flex flex-col items-start gap-2">
-                        <p className="text-sm text-muted-foreground">
-                          No resume starters yet. Create one with empty
-                          sections, field defaults, and layout.
-                        </p>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            close();
-                            createStarter();
-                          }}
-                        >
-                          Create starter…
-                        </Button>
-                      </div>
-                    )}
                     <Field>
                       <FieldLabel htmlFor="new-resume-starter">
                         Starter
                       </FieldLabel>
                       <Select
-                        items={[
-                          ...document.starters.map((item) => ({
-                            value: item.id,
-                            label: item.name || "Untitled starter",
-                          })),
-                        ]}
+                        items={document.starters.map((item) => ({
+                          value: item.id,
+                          label: item.name || "Untitled starter",
+                        }))}
                         value={starterId || null}
                         onValueChange={(value) => {
                           const chosen = document.starters.find(
@@ -512,15 +496,23 @@ export function ResumeManager({
                     >
                       Manage starters
                     </Button>
-                    {starterId && !starter && (
-                      <p role="alert">
-                        This starter is unavailable. Choose another starter or
-                        start blank.
-                      </p>
-                    )}
                   </>
                 )}
               </FieldGroup>
+            )}
+            {fromStarter && starterId && !starter && (
+              <div className="flex flex-col items-start gap-2">
+                <p role="alert">
+                  {hasStarters
+                    ? "This starter is unavailable. Choose another starter or start blank."
+                    : "This starter is unavailable. You can start blank."}
+                </p>
+                {!hasStarters && (
+                  <Button variant="outline" onClick={startBlank}>
+                    Start blank
+                  </Button>
+                )}
+              </div>
             )}
             {source && (
               <p className="text-xs text-muted-foreground">
@@ -541,8 +533,7 @@ export function ResumeManager({
                 busy ||
                 !selectedLanguage ||
                 document.resumes.length >= 120 ||
-                (!source && creationMode === "starter" && !starter) ||
-                (!!starter && mapping.some((value) => !value))
+                (fromStarter && (!starter || mapping.some((value) => !value)))
               }
               onClick={() => void save()}
             >

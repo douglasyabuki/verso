@@ -14,6 +14,10 @@ resumes, customize each resume, and generate PDFs in the browser.
   grouped by career section with section and change-type filters and an All rows
   view. Appearance presets, empty-structure starters, duplication, and a
   fictional sample workspace help reuse existing setups.
+- **Create resume** shows a blank form until you save a starter in Library ›
+  Resume starters. In a resume’s Layout, **Use this layout for new blank resumes…**
+  opens Settings › Resume defaults for review and Save. New Library presets and
+  starters created from scratch use the built-in appearance.
 - Extensible content languages, one language per resume, and verified PDF output
   capabilities for English and Brazilian Portuguese. The interface is English.
 - Explicit Save/Cancel, workspace Undo/Redo, separate unsaved-draft recovery,
