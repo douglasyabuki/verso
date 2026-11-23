@@ -7,6 +7,7 @@ import { draftConflict } from "@/lib/career/conflict";
 import {
   devicePreferencesSchema,
   readDevicePreferences,
+  writeDevicePreferences,
 } from "@/lib/career/device-preferences";
 import { layoutDefaults, sameLayout } from "@/lib/career/layout";
 import {
@@ -50,8 +51,6 @@ type WorkspaceReplacementResult =
   { ok: true } | { ok: false; reason: SaveFailureReason; message: string };
 
 export type CareerControllerOptions = {
-  completedOperationDays?: number;
-  completedOperationCount?: number;
   /** Open this owner's storage; defaults to the guest IndexedDB backend. */
   openBackend?: () => Promise<CareerBackend>;
   /** Owner kind of `openBackend`, used for status wording if it fails to open. */
@@ -168,19 +167,7 @@ export class CareerController {
     return this.options.owner ?? "guest";
   }
 
-  /** Configure completed receipt retention without limiting unresolved work.
-   * @param options Nonnegative retention days/count, defaulting to 30/1,000.
-   * @example new CareerController({ completedOperationCount: 500 })
-   */
-  constructor(private readonly options: CareerControllerOptions = {}) {
-    for (const value of [
-      options.completedOperationDays,
-      options.completedOperationCount,
-    ]) {
-      if (value !== undefined && (!Number.isFinite(value) || value < 0))
-        throw new Error("Receipt retention must be finite and nonnegative.");
-    }
-  }
+  constructor(private readonly options: CareerControllerOptions = {}) {}
 
   private preferenceVersion = 0;
   private preferencesLoaded = false;
@@ -189,7 +176,7 @@ export class CareerController {
   /** Apply immediate browser preferences, serializing durable writes without workspace history.
    * @param patch Valid preference changes, or no changes to retry persistence.
    * @returns Completion; failures retain current-tab values with retry feedback.
-   * @example await controller.changePreferences({ compilationTimeoutMs: 45000 })
+   * @example await controller.changePreferences({ automaticRefresh: true })
    */
   async changePreferences(
     patch: Partial<DevicePreferences> = {},
@@ -208,10 +195,9 @@ export class CareerController {
       .then(async () => {
         try {
           if (!this.storage) throw new Error("Browser storage is unavailable.");
-          await this.storage.writeDevicePreferences({
-            version: 1,
-            values: preferences,
-          });
+          await this.storage.writeDevicePreferences(
+            writeDevicePreferences(preferences),
+          );
           this.preferencesLoaded = true;
           if (!this.disposed && version === this.preferenceVersion)
             this.publish({ preferenceStatus: "Browser preferences saved." });
@@ -232,13 +218,7 @@ export class CareerController {
   private async maintain(): Promise<void> {
     try {
       await this.storage?.retryDraftCleanup();
-      if (this.preferencesLoaded)
-        await this.storage?.pruneCompleted(
-          this.options.completedOperationDays ??
-            this.state.preferences.completedOperationDays,
-          this.options.completedOperationCount ??
-            this.state.preferences.completedOperationCount,
-        );
+      if (this.preferencesLoaded) await this.storage?.pruneCompleted();
     } catch (error) {
       this.publish({
         error: `Storage maintenance needs retry. ${String(error)}`,

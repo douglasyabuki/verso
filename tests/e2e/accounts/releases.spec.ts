@@ -1,11 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  expect,
-  type Page,
-  request as playwrightRequest,
-  test,
-} from "@playwright/test";
+import { expect, type Page, type Route, test } from "@playwright/test";
 
 import { createCareerDocument } from "@/lib/career/model";
 import { createResume } from "@/lib/career/resumes";
@@ -59,10 +54,33 @@ test.describe("public PDF releases", () => {
     return Number(result.rows[0].count);
   }
 
-  test("releases reviewed PDFs, keeps pinned links, rolls back, revokes, and releases automatically", async ({
+  async function copyPublishedLink(page: Page, label: string, path: string) {
+    const published = page.getByRole("dialog", { name: "PDF published" });
+    await expect(published.getByRole("link")).toHaveAttribute("href", path);
+    await published.getByRole("button", { name: label, exact: true }).click();
+    await expect(
+      published.getByRole("button", { name: "Copied" }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(() => sessionStorage.getItem("copied-public-url")),
+    ).toBe(new URL(path, accountsTestEnv.BETTER_AUTH_URL).href);
+    await published.getByRole("button", { name: "Done" }).click();
+  }
+
+  test("publishes latest and pinned PDFs, retries, rolls back, automatically publishes, and revokes", async ({
     page,
+    request: anonymous,
   }) => {
     test.setTimeout(420_000);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (text: string) =>
+            sessionStorage.setItem("copied-public-url", text),
+        },
+      });
+    });
     const { userId } = await signIn(page.context());
     const resumeId = await seedReadyWorkspace(userId);
     await page.goto(`/app/resume-overview/${resumeId}`);
@@ -70,24 +88,32 @@ test.describe("public PDF releases", () => {
     await expect(status(page, /^Saved to account · revision 1$/)).toBeVisible({
       timeout: 15_000,
     });
-    const pdf = await compile(page);
-
-    await pdf.getByRole("button", { name: "Release…" }).click();
-    const dialog = page.getByRole("dialog", {
-      name: "Release this PDF publicly",
+    const publish = page
+      .getByRole("region", { name: "Committed resume output" })
+      .getByRole("button", { name: "Publish PDF", exact: true });
+    await expect(publish).toBeDisabled();
+    await compile(page);
+    const dialog = page.getByRole("dialog", { name: "Publish this PDF" });
+    const publishLatest = dialog.getByRole("button", {
+      name: "Publish PDF",
+      exact: true,
     });
+    const publishPinned = dialog.getByRole("button", {
+      name: "Publish pinned version",
+    });
+
+    await publish.click();
     await expect(dialog).toContainText("A new unlisted link is created");
-    await dialog.getByRole("button", { name: "Release", exact: true }).click();
+    expect(await releaseCount(userId)).toBe(0);
+    await publishPinned.click();
     await expect(
-      page.getByRole("dialog", { name: "PDF released" }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Done" }).click();
+      page.getByRole("dialog", { name: "PDF published" }),
+    ).toContainText("No latest version has been selected.");
     const latest = await latestUrl(userId);
-
-    const anonymous = await playwrightRequest.newContext({
-      baseURL: accountsTestEnv.BETTER_AUTH_URL,
-    });
-    const first = await anonymous.get(latest);
+    await copyPublishedLink(page, "Copy pinned link", `${latest}/1`);
+    await expect(publish).toBeFocused();
+    expect((await anonymous.get(latest)).status()).toBe(404);
+    const first = await anonymous.get(`${latest}/1`);
     expect(first.status()).toBe(200);
     expect(first.headers()["content-type"]).toBe("application/pdf");
     expect(first.headers()["cache-control"]).toBe("no-store");
@@ -97,18 +123,47 @@ test.describe("public PDF releases", () => {
     const firstBytes = await first.body();
     expect(firstBytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
 
-    // A committed change produces release 2; the pinned URL keeps release 1.
+    await publish.click();
+    await publishLatest.click();
+    await copyPublishedLink(page, "Copy latest link", latest);
+    expect(
+      (await anonymous.get(latest)).headers()["content-disposition"],
+    ).toContain("ana-public-en-us-v2.pdf");
+
+    // Drop the response after the server stores the pinned version.
     await editFullName(page, "Ana Released");
     await saveButton(page).click();
     await expect(status(page, /^Saved to account · revision 2$/)).toBeVisible();
     await page.goto(`/app/resume-overview/${resumeId}`);
     await compile(page);
-    await pdf.getByRole("button", { name: "Release…" }).click();
-    await page
-      .getByRole("dialog", { name: "Release this PDF publicly" })
-      .getByRole("button", { name: "Release", exact: true })
-      .click();
-    await page.getByRole("button", { name: "Done" }).click();
+    const releasesRoute = "**/api/account/releases";
+    const loseResponse = async (route: Route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      const response = await route.fetch();
+      expect(response.ok()).toBe(true);
+      await route.abort("failed");
+    };
+    await page.route(releasesRoute, loseResponse);
+    await publish.click();
+    await publishPinned.click();
+    await expect(dialog.getByText("Publication unconfirmed")).toBeVisible();
+    expect(await releaseCount(userId)).toBe(3);
+    await page.unroute(releasesRoute, loseResponse);
+    await dialog.getByRole("button", { name: "Close" }).click();
+    await publish.click();
+    await dialog.getByRole("button", { name: "Retry publish" }).click();
+    await copyPublishedLink(page, "Copy pinned link", `${latest}/3`);
+    expect(await releaseCount(userId)).toBe(3);
+    expect(
+      (await anonymous.get(latest)).headers()["content-disposition"],
+    ).toContain("ana-public-en-us-v2.pdf");
+    expect(
+      (await anonymous.get(`${latest}/3`)).headers()["content-disposition"],
+    ).toContain("ana-released-en-us-v3.pdf");
+
+    await publish.click();
+    await publishLatest.click();
+    await copyPublishedLink(page, "Copy latest link", latest);
     expect((await anonymous.get(`${latest}/1`)).status()).toBe(200);
     expect(
       Buffer.compare(
@@ -116,9 +171,9 @@ test.describe("public PDF releases", () => {
         firstBytes,
       ),
     ).toBe(0);
-    const second = await anonymous.get(latest);
-    expect(second.headers()["content-disposition"]).toContain(
-      "ana-released-en-us-v2.pdf",
+    const current = await anonymous.get(latest);
+    expect(current.headers()["content-disposition"]).toContain(
+      "ana-released-en-us-v4.pdf",
     );
 
     // Roll back from Settings › Public PDFs; latest serves release 1 again.
@@ -137,7 +192,7 @@ test.describe("public PDF releases", () => {
       Buffer.compare(await (await anonymous.get(latest)).body(), firstBytes),
     ).toBe(0);
 
-    // Automatic release: a confirmed Save that changes the PDF publishes release 3.
+    // Automatic publishing follows a confirmed Save that changes the PDF.
     await panel
       .getByRole("checkbox", { name: "Release automatically after Save" })
       .click();
@@ -159,13 +214,13 @@ test.describe("public PDF releases", () => {
     await saveButton(page).click();
     await expect(status(page, /^Saved to account · revision 3$/)).toBeVisible();
     // The open tab compiles the confirmed Save and publishes it; no reload.
-    await expect.poll(() => releaseCount(userId), { timeout: 150_000 }).toBe(3);
+    await expect.poll(() => releaseCount(userId), { timeout: 150_000 }).toBe(5);
     await expect
       .poll(
         async () =>
           (await anonymous.get(latest)).headers()["content-disposition"],
       )
-      .toContain("ana-automatic-en-us-v3.pdf");
+      .toContain("ana-automatic-en-us-v5.pdf");
 
     // Revoking the link stops every URL immediately.
     await page.goto("/app/settings/releases");
@@ -178,6 +233,5 @@ test.describe("public PDF releases", () => {
     expect((await anonymous.get(latest)).status()).toBe(404);
     expect((await anonymous.get(`${latest}/1`)).status()).toBe(404);
     expect(await releaseCount(userId)).toBe(0);
-    await anonymous.dispose();
   });
 });

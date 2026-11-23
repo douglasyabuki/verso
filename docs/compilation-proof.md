@@ -153,8 +153,8 @@ Firefox ran under the same self-only CSP and network-free package resolver.
 The WebAssembly proof passed in these installed browsers; mobile browsers and
 assistive technologies have not been evaluated.
 
-The configurable defaults are 120 seconds for initialization and 30 seconds
-for compilation. These deliberately exceed the measured local maxima to allow
+The editor uses 120 seconds for initialization and 30 seconds for compilation.
+These deliberately exceed the measured local maxima to allow
 slower hardware and first downloads. They are not validated universal limits.
 Timeout terminates both workers; retry creates fresh instances. At most one job
 runs per compiler instance, and source input is limited to 1 MB. WebAssembly

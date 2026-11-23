@@ -42,10 +42,10 @@ newest); never remove a newer stored version. Durable cleanup intents use the
 IndexedDB preferences store; retry failures on next load without deleting newer
 edits. Protect pending, uncertain,
 unacknowledged, and recovery-referenced receipts regardless of retention limits.
-Eligible completed receipts default to 30 days or 1,000 per workspace, whichever
-limit is reached first, configurable. Zero retains no eligible receipts. Read
-retention preferences before pruning; if the read fails, skip pruning until
-preferences can be saved. Never delete protected recovery to satisfy a limit.
+Eligible completed receipts are kept for up to 30 days or 1,000 per workspace,
+whichever limit is reached first. If the device preference read fails, skip
+pruning until preferences can be saved. Never delete protected recovery to
+satisfy a limit.
 
 Save, recovery, preview, backup, and release status are independent. The controller
 publishes typed `saveStatus`, `storageMode`, and `sessionCommits` from
@@ -154,8 +154,8 @@ resume baseline metadata. Their explicit Save participates in atomic scope check
 receipts, recovery cleanup, and workspace Undo/Redo. Malformed recovered values stay
 editable and block Save until corrected. Changing workspace defaults never modifies
 existing resumes or their frozen layout defaults. Workspace schema 2 and recovery
-format 1 remain unchanged. Device theme, compiler timeouts, and receipt-retention
-preferences are not workspace drafts and are excluded from both exports.
+format 1 remain unchanged. Device theme and automatic preview refresh are
+excluded from both exports.
 
 Resume drafts use `resume-details/<id>` for name/icon color,
 `resume-content/<id>` for visibility/order/contact/summary configuration, and

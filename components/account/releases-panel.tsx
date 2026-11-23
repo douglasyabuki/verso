@@ -84,9 +84,9 @@ export function ReleasesPanel({
   return (
     <div className="flex flex-col gap-5">
       <p className="text-sm">
-        Release a resume from <strong>Release…</strong> in the PDF preview. Each
-        resume has one unlisted link: its latest URL follows the release you
-        choose, and numbered URLs always show the same PDF.
+        Use <strong>Publish PDF</strong> in the preview. Each resume has one
+        unlisted latest link that follows the version you choose. Numbered links
+        always show the same PDF.
       </p>
       {policy}
       {state.error && (

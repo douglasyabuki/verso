@@ -96,12 +96,13 @@ Back/Forward. Data viewing/export remains accessible without resolution, includi
 detours from a dirty Settings form. These workspace forms use controller-owned
 Save/recovery/history; `defaults` affects future blank resumes only.
 
-Device theme, preview/compiler preferences, and receipt retention apply immediately
-outside workspace history and portable exports. Versioned preferences use a record
-in IndexedDB separate from cleanup intents. Serialize writes; report tab-only
-failures with retry. Read retention before pruning; skip pruning if that read fails
-until preferences can be saved. Compiler settings affect the next instance without
-interrupting active work.
+Device theme and automatic preview refresh apply immediately outside workspace
+history and portable exports. The preview preference uses a versioned IndexedDB
+record separate from cleanup intents. Writes are serialized and tab-only failures
+offer a retry. On load, legacy records preserve the automatic refresh choice.
+The editor uses a 120-second compiler initialization timeout and a 30-second
+compilation timeout. Receipt maintenance uses fixed defaults and skips pruning
+after a preference read fails until a preference write succeeds.
 
 ## Layout and library interactions
 
