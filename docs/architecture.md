@@ -137,10 +137,16 @@ starters, and resumes) open the same quick-action list from their "…" button a
 right-click. Both section menus can open a new entry draft. Collection headings
 and resume sub-pages offer right-click actions only. Create resume and Compare
 resumes appear beside the Resumes title and in the sidebar heading's context
-menu. Comparison opens the existing committed-content view once two resumes
+menu. Comparison opens the committed-content view once two resumes
 exist. Compare in a resume's menu opens `/app/resume-compare/<id>` with that
 resume on the left and the first other saved resume on the right. The collection
-action opens `/app/resume-compare` with the default pair. Navigation actions use
+action opens `/app/resume-compare` with the default pair. The view starts with
+saved wording, inclusion, and order differences grouped by Career details
+section and entry. All rows includes unchanged and excluded values and
+wording-source-only differences. Section and change-type filters work together.
+Opening a group uses the shared list entrance. Order differences compare the
+relative sequence of shared IDs. Choosing the opposite resume swaps the pair.
+Filters and disclosure state are local to the visit. Navigation actions use
 guarded navigation. Commands such as Archive section resolve open drafts first
 and commit through the controller. Negative actions sit last, after a divider.
 

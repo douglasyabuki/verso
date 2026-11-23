@@ -9,12 +9,24 @@ import {
 } from "@/lib/career/model";
 import { renderCareerResume } from "@/lib/career/output";
 import {
+  buildResumeComparison,
+  compareWording,
+  type ComparisonGroup,
+  filterResumeComparison,
+} from "@/lib/career/resume-comparison";
+import {
   copyResume,
   createResume,
   effectiveResume,
   resolveResumeWording,
-  resumeComparisonRows,
 } from "@/lib/career/resumes";
+
+function comparisonRows(groups: ComparisonGroup[]) {
+  return groups.flatMap((group) => [
+    ...group.rows,
+    ...group.entries.flatMap((entry) => entry.rows),
+  ]);
+}
 
 function fixture() {
   const document = createCareerDocument();
@@ -248,24 +260,115 @@ describe("independent resumes", () => {
   it("compares each resume in its own language and excludes hidden values from inclusion", () => {
     const { document, resume, entry } = fixture();
     const copy = copyResume(resume, "pt-BR");
-    document.resumes.push(copy);
-    const left = resumeComparisonRows(document, resume).find(
-      (row) => row.id === entry.fields[0].id,
-    )!;
-    const right = resumeComparisonRows(document, copy).find(
-      (row) => row.id === entry.fields[0].id,
-    )!;
-    expect(left).toMatchObject({
-      value: "Engineer",
-      status: "Included",
-      source: "Career wording",
-    });
-    expect(right).toMatchObject({ value: "Engenheira", status: "Included" });
-    copy.selection[0].hidden = true;
-    expect(
-      resumeComparisonRows(document, copy).find(
+    const title = () =>
+      comparisonRows(buildResumeComparison(document, [resume, copy])).find(
         (row) => row.id === entry.fields[0].id,
-      )?.status,
-    ).toBe("Excluded");
+      );
+    expect(title()).toMatchObject({
+      cells: [
+        { value: "Engineer", included: true, source: "career" },
+        { value: "Engenheira", included: true, source: "career" },
+      ],
+      changes: ["wording"],
+      contentDifference: true,
+    });
+    copy.selection[0].hiddenEntryIds = [entry.id];
+    expect(title()).toMatchObject({
+      cells: [{ included: true }, { included: false }],
+      changes: ["inclusion", "wording"],
+      contentDifference: true,
+    });
+    resume.selection[0].hidden = true;
+    expect(title()).toMatchObject({
+      cells: [{ included: false }, { included: false }],
+      changes: ["wording"],
+      contentDifference: false,
+    });
+  });
+
+  it("filters source-only, exclusion, and inclusion changes within their owning section", () => {
+    const { document, resume, entry } = fixture();
+    const copy = copyResume(resume);
+    copy.overrides[entry.fields[0].id] = "Engineer";
+    copy.overrides[entry.fields[1].id] = "Excluded employer";
+    copy.selection[0].achievementIds = [];
+    const groups = buildResumeComparison(document, [resume, copy]);
+    const section = `section:${document.sections[0].id}`;
+    const defaultView = filterResumeComparison(groups, {
+      show: "content",
+      section,
+      change: "all",
+    });
+    expect(
+      comparisonRows(defaultView.groups).map(({ id, changes }) => ({
+        id,
+        changes,
+      })),
+    ).toEqual([{ id: "achievement", changes: ["inclusion"] }]);
+    expect(defaultView).toMatchObject({ matching: 1, contentDifferences: 1 });
+    expect(defaultView.groups[0].entries[0].id).toBe(entry.id);
+    const sources = filterResumeComparison(groups, {
+      show: "all",
+      section,
+      change: "source",
+    });
+    expect(comparisonRows(sources.groups).map(({ id }) => id)).toEqual([
+      entry.fields[0].id,
+      entry.fields[1].id,
+    ]);
+    expect(
+      filterResumeComparison(groups, {
+        show: "all",
+        section: "profile",
+        change: "source",
+      }).matching,
+    ).toBe(0);
+  });
+
+  it("detects order by stable identities, even when shared labels are identical", () => {
+    const { document, resume, entry } = fixture();
+    const section = document.sections[0];
+    const second = createEntry("experience");
+    second.name = entry.name;
+    const third = createEntry("experience");
+    section.entries.push(second, third);
+    resume.selection[0].entryIds.push(second.id);
+    const copy = copyResume(resume);
+    copy.selection[0].entryIds.unshift(third.id);
+    copy.overrides[section.id] = "Renamed heading";
+    const order = () =>
+      comparisonRows(buildResumeComparison(document, [resume, copy]))
+        .filter((row) => row.changes.includes("order"))
+        .map((row) => row.id);
+    expect(order()).toEqual([]);
+    copy.selection[0].entryIds = [third.id, second.id, entry.id];
+    expect(order()).toEqual([`order:entries:${section.id}`]);
+  });
+
+  it("preserves original punctuation, accents, and spacing while marking changed words", () => {
+    const left = "A equipe  reduziu custos.\nE revisou alertas.";
+    const right = "A equipe reduziu incidentes.\nE priorizou alertas.";
+    const parts = compareWording([left, right], "pt-BR")!;
+    expect(parts.map((side) => side.map(({ text }) => text).join(""))).toEqual([
+      left,
+      right,
+    ]);
+    expect(
+      parts.map((side) =>
+        side
+          .filter(({ changed }) => changed)
+          .map(({ text }) => text.trim())
+          .filter(Boolean),
+      ),
+    ).toEqual([
+      ["custos", "revisou"],
+      ["incidentes", "priorizou"],
+    ]);
+    expect(
+      compareWording(["x".repeat(4097), "Short"], "en-US"),
+    ).toBeUndefined();
+    expect(
+      compareWording(["a ".repeat(150), "b ".repeat(150)], "en-US"),
+    ).toBeUndefined();
   });
 });

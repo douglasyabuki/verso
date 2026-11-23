@@ -57,10 +57,10 @@ import {
 } from "@/components/career/quick-actions";
 import { RecoveryList } from "@/components/career/recovery-list";
 import { ReleaseControl } from "@/components/career/release-dialog";
+import { ResumeComparison } from "@/components/career/resume-comparison";
 import {
   CareerResumeCollection,
   ResumeActionsMenu,
-  ResumeComparison,
   ResumeContentEditor,
   ResumeIdentityFields,
   ResumeManager,
