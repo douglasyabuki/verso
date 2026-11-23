@@ -35,6 +35,7 @@ import {
 import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
 import {
   describeSaveStatus,
+  type SaveFailureReason,
   type SaveStatus,
   type StorageMode,
 } from "@/types-and-constants/career-status";
@@ -44,6 +45,9 @@ import {
 } from "@/types-and-constants/settings";
 
 export type CareerDraftTarget = "form" | "order";
+
+type WorkspaceReplacementResult =
+  { ok: true } | { ok: false; reason: SaveFailureReason; message: string };
 
 export type CareerControllerOptions = {
   completedOperationDays?: number;
@@ -1511,14 +1515,15 @@ export class CareerController {
   /** Replace/rollback using an already-reviewed revision, preserving recovery and resetting committed history.
    * @param reviewed Destination head reviewed by the user.
    * @param incoming Validated incoming content, or undefined for rollback.
-   * @returns {Promise<boolean>} True after atomic durable adoption, false without mutation on failure.
+   * @param kind Whether incoming content is from a file or the browser's guest workspace.
+   * @returns Acknowledged adoption or a failure for this review to display.
    * @example await controller.replace(reviewed, incoming)
    */
   async replace(
     reviewed: CareerHead,
     incoming?: CareerDocument,
     kind: "replace" | "import" = "replace",
-  ): Promise<boolean> {
+  ): Promise<WorkspaceReplacementResult> {
     if (
       !this.storage ||
       this.session ||
@@ -1526,27 +1531,38 @@ export class CareerController {
       this.state.draft ||
       this.state.orderDraft
     )
-      return false;
+      return {
+        ok: false,
+        reason: "invalid",
+        message:
+          "Finish any open edits and make sure durable saving is available before continuing.",
+      };
     this.publish({ saving: true });
     try {
       if (incoming) validateDocument(incoming);
       const head = await this.storage.replace(reviewed, incoming, kind);
+      const recovery = await this.readRecovery().catch(() => undefined);
       this.undo = [];
       this.redo = [];
       this.pendingHistory = null;
       this.committedIds.clear();
       this.publish({
         head,
-        error: "",
+        error: recovery
+          ? ""
+          : "Workspace saved. Unsaved drafts could not be refreshed. Reload to check them.",
         historyBoundary: false,
         saveStatus: { kind: "saved", revision: head.revision },
-        recovery: await this.readRecovery(),
+        ...(recovery ? { recovery } : {}),
       });
       this.announce("replaced");
-      return true;
+      return { ok: true };
     } catch (error) {
-      this.publish({ error: String(error) });
-      return false;
+      return {
+        ok: false,
+        reason: saveFailureReason(error),
+        message: error instanceof Error ? error.message : String(error),
+      };
     } finally {
       this.publish({ saving: false });
       if (this.refreshPending) void this.refresh();

@@ -140,12 +140,15 @@ test("Back and Forward guard dirty forms with Cancel/Discard and preserve native
   await expect(field).toHaveText("");
 });
 
-test("valid replacement round-trips; invalid import and canceled adoption do not change saved content", async ({
+test("reviews replacement, downloads a backup, and restores either workspace", async ({
   page,
 }) => {
   const { document } = fixture();
   await page.goto("/app");
   await openDataSettings(page);
+  await expect(
+    page.getByRole("button", { name: "Restore previous workspace" }),
+  ).toHaveCount(0);
   await page.getByLabel("Import workspace for review").setInputFiles({
     name: "unsupported.json",
     mimeType: "application/json",
@@ -161,7 +164,12 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(envelope(document))),
   });
-  await page.getByRole("button", { name: "Cancel replacement" }).click();
+  const replacement = page.getByRole("dialog", {
+    name: "Review workspace replacement",
+  });
+  await replacement
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Refresh preview" }),
   ).toHaveCount(0);
@@ -170,19 +178,22 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(envelope(document))),
   });
-  await page
-    .getByRole("button", { name: "Continue without exporting snapshot" })
-    .click();
-  await page.getByRole("button", { name: "Confirm adoption" }).click();
   await expect(
-    page.getByRole("dialog", {
-      name: "Review workspace replacement",
-      exact: true,
-    }),
-  ).toBeHidden();
+    replacement.getByText("Application", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    replacement.getByRole("button", { name: "Continue without downloading" }),
+  ).toHaveCount(0);
+  await replacement
+    .getByRole("button", { name: "Replace workspace", exact: true })
+    .click();
+  await expect(replacement).toBeHidden();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Workspace replaced" }),
+  ).toBeVisible();
   const downloadEvent = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Export workspace", exact: true })
+    .getByRole("button", { name: "Download workspace backup", exact: true })
     .click();
   const download = await downloadEvent;
   const stream = await download.createReadStream();
@@ -191,6 +202,45 @@ test("valid replacement round-trips; invalid import and canceled adoption do not
   const backup = JSON.parse(Buffer.concat(chunks).toString("utf8"));
   expect(backup.document).toEqual(document);
   expect(backup.schemaVersion).toBe(2);
+
+  await page
+    .getByRole("button", { name: "Undo workspace replacement" })
+    .click();
+  const restore = page.getByRole("dialog", {
+    name: "Review workspace restore",
+  });
+  await expect(restore.getByText("Application", { exact: true })).toBeVisible();
+  await expect(
+    restore.getByRole("button", { name: "Download previous workspace" }),
+  ).toHaveCount(0);
+  await expect(
+    restore.getByRole("button", { name: "Continue without downloading" }),
+  ).toHaveCount(0);
+  await restore
+    .getByRole("button", { name: "Restore workspace", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Workspace restored" }),
+  ).toContainText("workspace you just left");
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Restore previous workspace" })
+    .click();
+  await expect(restore.getByText("Application", { exact: true })).toBeVisible();
+  await restore
+    .getByRole("button", { name: "Restore workspace", exact: true })
+    .click();
+  await expect(restore).toBeHidden();
+  await page.getByRole("button", { name: "Load sample workspace" }).click();
+  await expect(
+    replacement.getByText("Alex Morgan · English", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    replacement.getByRole("button", { name: "Replace workspace", exact: true }),
+  ).toBeDisabled();
+  await replacement
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
   await page.reload();
   await closeSettings(page);
   await page

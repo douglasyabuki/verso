@@ -130,7 +130,7 @@ test("signs out with unconfirmed work kept on this device for the same user", as
   ).toBeVisible();
 });
 
-test("imports the guest workspace only after review and leaves it unchanged", async ({
+test("reviews a guest import, retries a lost acknowledgment once, and leaves the guest unchanged", async ({
   page,
 }) => {
   await page.goto("/app");
@@ -151,12 +151,34 @@ test("imports the guest workspace only after review and leaves it unchanged", as
     name: "Review guest workspace import",
   });
   await expect(review).toContainText("Nothing is merged");
-  await review
-    .getByRole("button", { name: "Continue without exporting snapshot" })
-    .click();
-  await review.getByRole("button", { name: "Confirm adoption" }).click();
+  await expect(
+    review.getByRole("button", { name: "Continue without downloading" }),
+  ).toHaveCount(0);
+  const attempts: string[] = [];
+  await page.route("**/api/account/workspace/replace", async (route) => {
+    attempts.push(route.request().postDataJSON().operationId);
+    if (attempts.length > 1) return route.continue();
+    const response = await route.fetch();
+    expect(response.ok()).toBe(true);
+    await route.abort("connectionreset");
+  });
+  const replace = review.getByRole("button", {
+    name: "Replace workspace",
+    exact: true,
+  });
+  await replace.click();
+  await expect(review.getByRole("alert")).toContainText(
+    "Your account did not confirm this change",
+  );
+  expect(await revision(userId)).toBe(1);
+  await replace.click();
   await expect(review).toBeHidden();
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0]).toBe(attempts[1]);
   await expect.poll(() => revision(userId)).toBe(1);
+  await expect(
+    settings.getByRole("button", { name: "Undo workspace replacement" }),
+  ).toBeVisible();
   await settings.getByRole("button", { name: "Close settings" }).click();
   await expect(status(page, /^Saved to account · revision 1$/)).toBeVisible();
 

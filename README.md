@@ -17,7 +17,8 @@ resumes, customize each resume, and generate PDFs in the browser.
 - Extensible content languages, one language per resume, and verified PDF output
   capabilities for English and Brazilian Portuguese. The interface is English.
 - Explicit Save/Cancel, workspace Undo/Redo, separate unsaved-draft recovery,
-  JSON backups, and reviewed replacement retaining one previous workspace.
+  and JSON backups. Settings › Data lets you review a workspace replacement
+  and restore the one previous workspace.
 - Browser-based LaTeX compilation and PDF preview/download. Refresh is manual by
   default; automatic refresh after saved output changes is optional.
 - A product presentation at `/` with Sign in, Sign up, Continue as guest, and

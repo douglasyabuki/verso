@@ -82,7 +82,10 @@ describe("Settings drafts and device preference persistence", () => {
       .toBeVisible();
     await expect
       .element(
-        page.getByRole("button", { name: "Export recovery", exact: true }),
+        page.getByRole("button", {
+          name: "Export unsaved drafts",
+          exact: true,
+        }),
       )
       .toBeVisible();
     expect(controller.getSnapshot().draft?.draftId).toBe(formId);
@@ -182,8 +185,10 @@ describe("Settings drafts and device preference persistence", () => {
     const incoming = createCareerDocument("pt-BR");
     expect(
       await controller.replace(controller.getSnapshot().head!, incoming),
-    ).toBe(true);
-    expect(await controller.replace(controller.getSnapshot().head!)).toBe(true);
+    ).toEqual({ ok: true });
+    expect(await controller.replace(controller.getSnapshot().head!)).toEqual({
+      ok: true,
+    });
     const prune = vi.spyOn(CareerStorage.prototype, "pruneCompleted");
     const reloaded = await owner();
     expect(prune).toHaveBeenCalledWith(30, 17);

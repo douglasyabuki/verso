@@ -81,9 +81,16 @@ snapshot unchanged and needs no export decision.
 Validate incoming data before writes, then atomically recheck the reviewed revision,
 adopt incoming content, and preserve outgoing committed content as one previous
 workspace. Failure changes neither the active workspace nor the snapshot. Rollback
-uses the same checks and preserves the pre-rollback workspace. Identify the snapshot
-being replaced and offer export; failed/canceled export leaves adoption uncommitted
-until retry or explicit continuation without export.
+uses the same checks and swaps the active and retained workspaces. The shared
+review shows resume names and counts for both workspaces and requires explicit
+confirmation. If replacement discards an older retained workspace, require
+starting its download or explicitly continuing without it. A failed download
+leaves confirmation gated until either choice succeeds. First replacement and
+restore each require confirmation without an export decision.
+
+Settings › Data offers **Restore previous workspace** when a retained workspace
+exists. After confirmed replacement, **Undo workspace replacement** opens that
+same review for the generation just created.
 
 This is **one previous workspace**, not version history. It does not expire
 automatically but remains subject to browser clearing/eviction. Recovery is separate
@@ -107,8 +114,9 @@ do not prove transactional safety. No new verification is implied by this refere
 
 ## Recovery exports
 
-Workspace backups contain saved content only. Recovery exports preserve unsaved
-form and entry-order versions, including their baseline context. Export never
+**Download workspace backup** contains saved content only. **Export unsaved
+drafts** appears when there are stored drafts or active unsaved form or entry-order
+edits and preserves their latest versions with baseline context. Export never
 discards a draft. Keep the downloaded files until restoration and an explicit
 Save have succeeded.
 
