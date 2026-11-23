@@ -9,13 +9,16 @@ let database: Client;
 
 export function setupAccountTests() {
   test.beforeAll(async () => {
-    // Playwright can run both files in one worker; closed pg clients cannot reconnect.
-    database = new Client({ connectionString: accountsTestEnv.DATABASE_URL });
+    const connectionString = process.env.ACCOUNTS_E2E_DATABASE_URL;
+    if (!connectionString)
+      throw new Error("Account test database did not start");
+    // Playwright can run several files in one worker; closed pg clients cannot reconnect.
+    database = new Client({ connectionString });
     await database.connect();
   });
 
   test.afterAll(async () => {
-    await database.end();
+    await database?.end();
   });
 }
 

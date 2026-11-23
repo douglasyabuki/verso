@@ -150,8 +150,9 @@ npx playwright install chromium firefox webkit
 ```
 
 E2E commands build fresh production servers on `127.0.0.1` ports 3100 (guest) and 3101
-(accounts). Tests use isolated origins/databases and do not require real OAuth
-credentials. Run focused checks for the behavior being changed; documentation
+(accounts). The isolated account test database uses an OS-assigned loopback port.
+Tests use isolated origins/databases and do not require real OAuth credentials.
+Run focused checks for the behavior being changed; documentation
 changes generally need only formatting and link/configuration validation.
 
 Tests are grouped by runner, then feature under `tests/unit/`, `tests/db/`,
