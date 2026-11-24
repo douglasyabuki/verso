@@ -148,24 +148,28 @@ describe("preview coordinator bounds", () => {
     expect(urls).toEqual([]);
   });
 
-  it("applies timeout preferences to the next compiler instance without interrupting active work", async () => {
+  it("uses fixed compiler timeouts and keeps the compiler when automatic refresh changes", async () => {
     const { coordinator, pending, compilers } = harness();
     coordinator.setTarget(job("a"));
     coordinator.refresh();
     coordinator.setPreferences({
       ...devicePreferenceDefaults,
-      compilationTimeoutMs: 45_000,
+      automaticRefresh: true,
     });
     expect(compilers[0].closed).toBe(false);
     pending.shift()!.resolve();
     await settle();
     coordinator.setTarget(job("b"));
     coordinator.refresh();
-    expect(compilers).toHaveLength(2);
-    expect(compilers[0].closed).toBe(true);
-    expect(compilers[1].settings).toMatchObject({
-      compilationTimeoutMs: 45_000,
+    expect(compilers).toHaveLength(1);
+    expect(compilers[0].closed).toBe(false);
+    expect(compilers[0].settings).toMatchObject({
+      initializationTimeoutMs: 120_000,
+      compilationTimeoutMs: 30_000,
     });
+    pending.shift()!.resolve();
+    await settle();
+    coordinator.dispose();
   });
 });
 

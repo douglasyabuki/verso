@@ -7,6 +7,7 @@ import { draftConflict } from "@/lib/career/conflict";
 import {
   devicePreferencesSchema,
   readDevicePreferences,
+  writeDevicePreferences,
 } from "@/lib/career/device-preferences";
 import { layoutDefaults, sameLayout } from "@/lib/career/layout";
 import {
@@ -35,6 +36,7 @@ import {
 import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
 import {
   describeSaveStatus,
+  type SaveFailureReason,
   type SaveStatus,
   type StorageMode,
 } from "@/types-and-constants/career-status";
@@ -45,9 +47,10 @@ import {
 
 export type CareerDraftTarget = "form" | "order";
 
+type WorkspaceReplacementResult =
+  { ok: true } | { ok: false; reason: SaveFailureReason; message: string };
+
 export type CareerControllerOptions = {
-  completedOperationDays?: number;
-  completedOperationCount?: number;
   /** Open this owner's storage; defaults to the guest IndexedDB backend. */
   openBackend?: () => Promise<CareerBackend>;
   /** Owner kind of `openBackend`, used for status wording if it fails to open. */
@@ -164,19 +167,7 @@ export class CareerController {
     return this.options.owner ?? "guest";
   }
 
-  /** Configure completed receipt retention without limiting unresolved work.
-   * @param options Nonnegative retention days/count, defaulting to 30/1,000.
-   * @example new CareerController({ completedOperationCount: 500 })
-   */
-  constructor(private readonly options: CareerControllerOptions = {}) {
-    for (const value of [
-      options.completedOperationDays,
-      options.completedOperationCount,
-    ]) {
-      if (value !== undefined && (!Number.isFinite(value) || value < 0))
-        throw new Error("Receipt retention must be finite and nonnegative.");
-    }
-  }
+  constructor(private readonly options: CareerControllerOptions = {}) {}
 
   private preferenceVersion = 0;
   private preferencesLoaded = false;
@@ -185,7 +176,7 @@ export class CareerController {
   /** Apply immediate browser preferences, serializing durable writes without workspace history.
    * @param patch Valid preference changes, or no changes to retry persistence.
    * @returns Completion; failures retain current-tab values with retry feedback.
-   * @example await controller.changePreferences({ compilationTimeoutMs: 45000 })
+   * @example await controller.changePreferences({ automaticRefresh: true })
    */
   async changePreferences(
     patch: Partial<DevicePreferences> = {},
@@ -204,10 +195,9 @@ export class CareerController {
       .then(async () => {
         try {
           if (!this.storage) throw new Error("Browser storage is unavailable.");
-          await this.storage.writeDevicePreferences({
-            version: 1,
-            values: preferences,
-          });
+          await this.storage.writeDevicePreferences(
+            writeDevicePreferences(preferences),
+          );
           this.preferencesLoaded = true;
           if (!this.disposed && version === this.preferenceVersion)
             this.publish({ preferenceStatus: "Browser preferences saved." });
@@ -228,13 +218,7 @@ export class CareerController {
   private async maintain(): Promise<void> {
     try {
       await this.storage?.retryDraftCleanup();
-      if (this.preferencesLoaded)
-        await this.storage?.pruneCompleted(
-          this.options.completedOperationDays ??
-            this.state.preferences.completedOperationDays,
-          this.options.completedOperationCount ??
-            this.state.preferences.completedOperationCount,
-        );
+      if (this.preferencesLoaded) await this.storage?.pruneCompleted();
     } catch (error) {
       this.publish({
         error: `Storage maintenance needs retry. ${String(error)}`,
@@ -1511,14 +1495,15 @@ export class CareerController {
   /** Replace/rollback using an already-reviewed revision, preserving recovery and resetting committed history.
    * @param reviewed Destination head reviewed by the user.
    * @param incoming Validated incoming content, or undefined for rollback.
-   * @returns {Promise<boolean>} True after atomic durable adoption, false without mutation on failure.
+   * @param kind Whether incoming content is from a file or the browser's guest workspace.
+   * @returns Acknowledged adoption or a failure for this review to display.
    * @example await controller.replace(reviewed, incoming)
    */
   async replace(
     reviewed: CareerHead,
     incoming?: CareerDocument,
     kind: "replace" | "import" = "replace",
-  ): Promise<boolean> {
+  ): Promise<WorkspaceReplacementResult> {
     if (
       !this.storage ||
       this.session ||
@@ -1526,27 +1511,38 @@ export class CareerController {
       this.state.draft ||
       this.state.orderDraft
     )
-      return false;
+      return {
+        ok: false,
+        reason: "invalid",
+        message:
+          "Finish any open edits and make sure durable saving is available before continuing.",
+      };
     this.publish({ saving: true });
     try {
       if (incoming) validateDocument(incoming);
       const head = await this.storage.replace(reviewed, incoming, kind);
+      const recovery = await this.readRecovery().catch(() => undefined);
       this.undo = [];
       this.redo = [];
       this.pendingHistory = null;
       this.committedIds.clear();
       this.publish({
         head,
-        error: "",
+        error: recovery
+          ? ""
+          : "Workspace saved. Unsaved drafts could not be refreshed. Reload to check them.",
         historyBoundary: false,
         saveStatus: { kind: "saved", revision: head.revision },
-        recovery: await this.readRecovery(),
+        ...(recovery ? { recovery } : {}),
       });
       this.announce("replaced");
-      return true;
+      return { ok: true };
     } catch (error) {
-      this.publish({ error: String(error) });
-      return false;
+      return {
+        ok: false,
+        reason: saveFailureReason(error),
+        message: error instanceof Error ? error.message : String(error),
+      };
     } finally {
       this.publish({ saving: false });
       if (this.refreshPending) void this.refresh();

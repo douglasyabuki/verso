@@ -1,5 +1,6 @@
 import { BrowserCompiler } from "@/tools/compiler-proof/compiler.mjs";
 import {
+  compilerTimeouts,
   devicePreferenceDefaults,
   type DevicePreferences,
 } from "@/types-and-constants/settings";
@@ -91,7 +92,6 @@ export class PreviewCoordinator {
   };
   private listeners = new Set<() => void>();
   private compiler: CompilerLike | null = null;
-  private compilerSettings = "";
   private preferences: DevicePreferences = devicePreferenceDefaults;
   private target: PreviewJob | null = null;
   private targetIdentity: Pick<PreviewTag, "generation" | "resumeId"> | null =
@@ -145,9 +145,7 @@ export class PreviewCoordinator {
     return this.timer !== null;
   }
 
-  /** Apply device preferences. Timeout changes reach the next compiler
-   * instance without interrupting active work; disabling automatic refresh
-   * cancels a pending automatic request. */
+  /** Apply the preview preference; disabling it cancels pending automatic refreshes. */
   setPreferences(preferences: DevicePreferences) {
     this.preferences = preferences;
     if (!preferences.automaticRefresh) {
@@ -311,20 +309,12 @@ export class PreviewCoordinator {
     const lifecycle = this.lifecycle;
     const key = previewKey(job.tag);
     this.running = true;
-    const settings = JSON.stringify([
-      this.preferences.initializationTimeoutMs,
-      this.preferences.compilationTimeoutMs,
-    ]);
-    if (this.compiler && this.compilerSettings !== settings)
-      this.closeCompiler();
-    this.compilerSettings = settings;
     this.publish({
       active: key,
       status: { kind: this.compiler ? "generating" : "preparing" },
     });
     const compiler = (this.compiler ??= this.createCompiler({
-      initializationTimeoutMs: this.preferences.initializationTimeoutMs,
-      compilationTimeoutMs: this.preferences.compilationTimeoutMs,
+      ...compilerTimeouts,
       onState: (state) => {
         if (
           this.lifecycle === lifecycle &&

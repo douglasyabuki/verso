@@ -66,8 +66,11 @@ See the [README](../README.md#configuration) for setup and
   without an owner-approved freshness bound and purge path.
 - Client: `stores/releases/release-store.ts` (per-owner, session header, stable
   in-memory operation IDs reused on unanswered retries), `hooks/releases/use-releases.ts`,
-  `components/career/release-dialog.tsx` (enabled only for a Current preview), and
-  `components/account/releases-panel.tsx`. `PreviewOutput` retains the compiled
+  `components/career/release-dialog.tsx`, and `components/account/releases-panel.tsx`.
+  **Publish PDF** reviews a current preview and updates latest. **Publish pinned
+  version** preserves the latest selection. After confirmation, the dialog offers
+  the corresponding link to copy. Settings › Public PDFs manages versions and
+  automatic publishing. `PreviewOutput` retains the compiled
   bytes and template identity. `useCommittedPreview`'s `automaticResumeIds` forces
   automatic preview refresh (one effective-preferences effect, so a preferences
   object republished on Save cannot cancel the pending refresh) while the previewed

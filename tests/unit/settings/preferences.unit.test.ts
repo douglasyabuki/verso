@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   devicePreferencesSchema,
   readDevicePreferences,
+  writeDevicePreferences,
 } from "@/lib/career/device-preferences";
 import {
   applyScope,
@@ -74,65 +75,58 @@ describe("browser preference boundaries", () => {
     for (const input of [
       undefined,
       null,
-      { version: 2, values: devicePreferenceDefaults },
+      { version: 2, values: { automaticRefresh: true } },
       {
         version: 1,
-        values: { ...devicePreferenceDefaults, completedOperationDays: -1 },
+        values: { automaticRefresh: "yes" },
       },
     ]) {
       const result = readDevicePreferences(input);
-      expect(result).toEqual({
-        initializationTimeoutMs: 120000,
-        compilationTimeoutMs: 30000,
-        completedOperationDays: 30,
-        completedOperationCount: 1000,
-        automaticRefresh: false,
-      });
+      expect(result).toEqual({ automaticRefresh: false });
       expect(result).not.toBe(devicePreferenceDefaults);
     }
   });
 
-  it("accepts compiler bounds and zero eligible-receipt retention", () => {
+  it("reads the refresh choice from version-1 records without taking their operational overrides", () => {
     const values = {
       initializationTimeoutMs: 100,
       compilationTimeoutMs: 600000,
       completedOperationDays: 0,
       completedOperationCount: 0,
     };
-    expect(readDevicePreferences({ version: 1, values })).toEqual(values);
-  });
-
-  it("keeps automatic preview refresh optional in version-1 records and rejects non-boolean values", () => {
-    const values = { ...devicePreferenceDefaults };
-    delete values.automaticRefresh;
-    expect(readDevicePreferences({ version: 1, values })).toEqual(values);
+    expect(readDevicePreferences({ version: 1, values })).toEqual({
+      automaticRefresh: false,
+    });
     expect(
       readDevicePreferences({
         version: 1,
         values: { ...values, automaticRefresh: true },
-      }).automaticRefresh,
-    ).toBe(true);
-    expect(
-      readDevicePreferences({
-        version: 1,
-        values: { ...values, automaticRefresh: "yes" },
       }),
-    ).toEqual(devicePreferenceDefaults);
+    ).toEqual({ automaticRefresh: true });
   });
 
-  it.each([
-    { initializationTimeoutMs: 99 },
-    { compilationTimeoutMs: 600001 },
-    { compilationTimeoutMs: Infinity },
-    { completedOperationDays: 0.5 },
-    { completedOperationCount: Number.MAX_SAFE_INTEGER + 1 },
-    { completedOperationCount: -1 },
-  ])("rejects invalid device preference %j", (patch) => {
+  it("writes a version-1 record readable by builds that require the legacy numeric fields", () => {
+    expect(writeDevicePreferences({ automaticRefresh: true })).toEqual({
+      version: 1,
+      values: {
+        initializationTimeoutMs: 120_000,
+        compilationTimeoutMs: 30_000,
+        completedOperationDays: 30,
+        completedOperationCount: 1000,
+        automaticRefresh: true,
+      },
+    });
+  });
+
+  it("rejects direct changes to removed settings or invalid toggle values", () => {
     expect(
       devicePreferencesSchema.safeParse({
-        ...devicePreferenceDefaults,
-        ...patch,
+        automaticRefresh: true,
+        compilationTimeoutMs: 100,
       }).success,
+    ).toBe(false);
+    expect(
+      devicePreferencesSchema.safeParse({ automaticRefresh: 1 }).success,
     ).toBe(false);
   });
 });

@@ -96,12 +96,13 @@ Back/Forward. Data viewing/export remains accessible without resolution, includi
 detours from a dirty Settings form. These workspace forms use controller-owned
 Save/recovery/history; `defaults` affects future blank resumes only.
 
-Device theme, preview/compiler preferences, and receipt retention apply immediately
-outside workspace history and portable exports. Versioned preferences use a record
-in IndexedDB separate from cleanup intents. Serialize writes; report tab-only
-failures with retry. Read retention before pruning; skip pruning if that read fails
-until preferences can be saved. Compiler settings affect the next instance without
-interrupting active work.
+Device theme and automatic preview refresh apply immediately outside workspace
+history and portable exports. The preview preference uses a versioned IndexedDB
+record separate from cleanup intents. Writes are serialized and tab-only failures
+offer a retry. On load, legacy records preserve the automatic refresh choice.
+The editor uses a 120-second compiler initialization timeout and a 30-second
+compilation timeout. Receipt maintenance uses fixed defaults and skips pruning
+after a preference read fails until a preference write succeeds.
 
 ## Layout and library interactions
 
@@ -130,6 +131,7 @@ mounted through library navigation so expansion, scroll, and entrance state are
 preserved; visiting Library must not expand or select a resume. Keep Library
 accessible beside independently scrolling collections. Collection creation aligns
 with the title-row end; omit preset/starter search in collections and pickers.
+New presets and starters created from scratch use the built-in appearance.
 Saved Library cards show Apply preset or Create resume beside a quick-actions
 menu for Edit, Duplicate, and Delete. Delete appears last after a divider.
 
@@ -156,8 +158,15 @@ disclosure offers an explanatory empty state or explicit selection/load/capture/
 manage actions. Selection alone does not load; loading opens an uncommitted draft
 and its announcement stays visible outside the disclosure. Applying from Library
 requires an explicit target, dirty-draft resolution, and identity rechecks. Missing
-targets/configurations must not silently create a blank resume. Starter creation
-shares the explicit Blank resume / From starter flow and mapping review.
+targets/configurations must not silently create a blank resume. **Use this layout
+for new blank resumes…** resolves pending edits and opens Settings › Resume
+defaults with the source resume’s saved appearance for review and Save.
+
+The Create resume dialog shows only the blank form until a saved starter exists.
+With starters available, it offers From starter and a mapping review. Library
+starter cards open the same review with the starter selected. If the selected
+starter becomes unavailable, the user must choose another starter or explicitly
+switch to blank before creating the resume.
 
 ## Readiness and output
 

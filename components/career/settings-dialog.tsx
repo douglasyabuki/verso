@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "cn";
 import {
   Database,
   Globe,
@@ -11,22 +10,11 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import {
-  type ReactNode,
-  type RefObject,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, type RefObject, useLayoutEffect, useRef } from "react";
 
 import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -34,20 +22,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  DisclosureChevron,
-  DisclosureGuide,
-  DisclosureLabel,
-  disclosureTriggerClassName,
-} from "@/components/ui/disclosure";
-import {
   Field,
   FieldContent,
   FieldDescription,
-  FieldError,
-  FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
   Sidebar,
   SidebarContent,
@@ -59,7 +38,6 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { SidebarSelection } from "@/components/ui/sidebar-selection";
-import { devicePreferencesSchema } from "@/lib/career/device-preferences";
 import {
   type DevicePreferences,
   type SettingsPanel,
@@ -86,13 +64,13 @@ const panelDescriptions: Record<SettingsPanel, string> = {
   languages:
     "Languages your career content is written in. Changes require Save.",
   "editing-preview":
-    "Preview and compiler behavior in this browser. Applies immediately and is excluded from backups.",
+    "Preview behavior in this browser. Applies immediately and is excluded from backups.",
   releases: "Unlisted public links to released PDFs, stored in your account.",
 };
 
-/** Render immediate numeric preferences, retaining malformed input until corrected.
- * @param props Effective preferences and the owning persistence command.
- * @returns Advanced controls; Enter/blur applies valid values only.
+/** Render the browser's automatic preview refresh preference.
+ * @param props Current preference and the owning persistence command.
+ * @returns An immediately applied toggle for committed PDF refreshes.
  * @example <DeviceSettings values={preferences} change={changePreferences} />
  */
 export function DeviceSettings({
@@ -103,145 +81,23 @@ export function DeviceSettings({
   change: (patch: Partial<DevicePreferences>) => void;
 }) {
   return (
-    <div className="flex flex-col gap-5">
-      <Field orientation="horizontal">
-        <Checkbox
-          id="automatic-refresh"
-          checked={Boolean(values.automaticRefresh)}
-          onCheckedChange={(checked) =>
-            change({ automaticRefresh: Boolean(checked) })
-          }
-        />
-        <FieldContent>
-          <FieldLabel htmlFor="automatic-refresh">
-            Refresh preview automatically after Save
-          </FieldLabel>
-          <FieldDescription>
-            The PDF preview shows saved content only and refreshes manually by
-            default. When on, it refreshes shortly after a Save changes the
-            selected resume&apos;s PDF. Unsaved edits, preset loads, and resets
-            never refresh it.
-          </FieldDescription>
-        </FieldContent>
-      </Field>
-      <Collapsible>
-        <CollapsibleTrigger
-          render={<Button variant="ghost" />}
-          className={cn(disclosureTriggerClassName, "min-h-8")}
-        >
-          <DisclosureChevron />
-          <DisclosureLabel>Advanced settings</DisclosureLabel>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <DisclosureGuide>
-            <FieldGroup>
-              {(
-                [
-                  [
-                    "initializationTimeoutMs",
-                    "Compiler initialization timeout (seconds)",
-                    1000,
-                  ],
-                  [
-                    "compilationTimeoutMs",
-                    "Compilation timeout (seconds)",
-                    1000,
-                  ],
-                  [
-                    "completedOperationDays",
-                    "Completed-operation retention (days)",
-                    1,
-                  ],
-                  [
-                    "completedOperationCount",
-                    "Maximum retained completed operations",
-                    1,
-                  ],
-                ] as const
-              ).map(([name, label, divisor]) => (
-                <PreferenceNumber
-                  key={name}
-                  name={name}
-                  label={label}
-                  divisor={divisor}
-                  values={values}
-                  change={change}
-                />
-              ))}
-              <p className="text-xs text-muted-foreground">
-                Timeouts affect the next compiler instance; active compilation
-                is preserved. Completed receipts expire at the first age/count
-                limit. Zero retains no eligible completed receipts. Pending,
-                uncertain, unacknowledged, and recovery-referenced operations
-                remain protected. Missing receipts require comparison before
-                retry; unresolved recovery never expires automatically.
-              </p>
-            </FieldGroup>
-          </DisclosureGuide>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
-  );
-}
-
-/** Apply a numeric preference only after explicit Enter or blur validation.
- * @param props Effective field value and update command.
- * @returns An accessible input with retained invalid text and field feedback.
- * @example <PreferenceNumber name="completedOperationDays" label="Days" divisor={1} values={values} change={change} />
- */
-function PreferenceNumber({
-  name,
-  label,
-  divisor,
-  values,
-  change,
-}: {
-  name: Exclude<keyof DevicePreferences, "automaticRefresh">;
-  label: string;
-  divisor: number;
-  values: DevicePreferences;
-  change: (patch: Partial<DevicePreferences>) => void;
-}) {
-  const [text, setText] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const apply = () => {
-    if (text === null) return;
-    const value = Number(text) * divisor;
-    const parsed = devicePreferencesSchema.safeParse({
-      ...values,
-      [name]: text.trim() ? value : NaN,
-    });
-    if (!parsed.success) {
-      setError(
-        divisor === 1000
-          ? "Enter seconds between 0.1 and 600."
-          : "Enter a nonnegative safe whole number.",
-      );
-      return;
-    }
-    if (values[name] !== value) change({ [name]: value });
-    setText(null);
-    setError("");
-  };
-  return (
-    <Field data-invalid={Boolean(error)}>
-      <FieldLabel htmlFor={`device-${name}`}>{label}</FieldLabel>
-      <Input
-        id={`device-${name}`}
-        inputMode="decimal"
-        value={text ?? String(values[name] / divisor)}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? `error-${name}` : undefined}
-        onChange={(event) => setText(event.target.value)}
-        onBlur={apply}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            apply();
-          }
-        }}
+    <Field orientation="horizontal">
+      <Checkbox
+        id="automatic-refresh"
+        checked={values.automaticRefresh}
+        onCheckedChange={(checked) =>
+          change({ automaticRefresh: Boolean(checked) })
+        }
       />
-      {error && <FieldError id={`error-${name}`}>{error}</FieldError>}
+      <FieldContent>
+        <FieldLabel htmlFor="automatic-refresh">
+          Refresh preview automatically after Save
+        </FieldLabel>
+        <FieldDescription>
+          Refreshes shortly after a Save changes the selected resume&apos;s PDF.
+          The preview shows saved content only.
+        </FieldDescription>
+      </FieldContent>
     </Field>
   );
 }

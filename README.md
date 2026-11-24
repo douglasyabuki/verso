@@ -14,12 +14,18 @@ resumes, customize each resume, and generate PDFs in the browser.
   grouped by career section with section and change-type filters and an All rows
   view. Appearance presets, empty-structure starters, duplication, and a
   fictional sample workspace help reuse existing setups.
+- **Create resume** shows a blank form until you save a starter in Library ›
+  Resume starters. In a resume’s Layout, **Use this layout for new blank resumes…**
+  opens Settings › Resume defaults for review and Save. New Library presets and
+  starters created from scratch use the built-in appearance.
 - Extensible content languages, one language per resume, and verified PDF output
   capabilities for English and Brazilian Portuguese. The interface is English.
 - Explicit Save/Cancel, workspace Undo/Redo, separate unsaved-draft recovery,
-  JSON backups, and reviewed replacement retaining one previous workspace.
+  and JSON backups. Settings › Data lets you review a workspace replacement
+  and restore the one previous workspace.
 - Browser-based LaTeX compilation and PDF preview/download. Refresh is manual by
-  default; automatic refresh after saved output changes is optional.
+  default. Enable **Refresh preview automatically after Save** in Settings ›
+  Editing & preview.
 - A product presentation at `/` with Sign in, Sign up, Continue as guest, and
   a navbar Appearance control.
   An interactive fictional example shows which parts of one career record two
@@ -31,7 +37,8 @@ resumes, customize each resume, and generate PDFs in the browser.
   account storage and cross-device freshness checks. Sign-up is explicit; Settings ›
   Account shows which providers are connected, connects or disconnects them (keeping
   at least one), and permanently deletes the account. Configured accounts can
-  publish PDFs through latest and pinned public links, with optional automatic releases.
+  use **Publish PDF** in the preview to update a public latest link or publish a
+  pinned version. Settings › Public PDFs manages versions and automatic publishing.
 
 Saving, draft recovery, PDF generation, backups, and publication are separate
 operations. Unsaved text does not enter a generated PDF. Incomplete content can be

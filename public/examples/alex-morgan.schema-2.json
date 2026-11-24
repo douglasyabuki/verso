@@ -1498,9 +1498,10 @@
           "contactRows": "3",
           "contactRowSizes": [],
           "contactRowGap": 3,
-          "contactSeparator": "dot"
+          "contactSeparator": "dot",
+          "contactLocation": "combined"
         },
-        "color": "indigo",
+        "color": "rose",
         "profileSelection": [
           "example-profile-email",
           "example-profile-phone",
@@ -1744,11 +1745,12 @@
           "paper": "a4",
           "font": "source-sans",
           "contactRows": "custom",
-          "contactRowSizes": [3, 2, 2],
+          "contactRowSizes": [2, 2, 2],
           "contactRowGap": 4,
-          "contactSeparator": "bar"
+          "contactSeparator": "bar",
+          "contactLocation": "combined"
         },
-        "color": "indigo",
+        "color": "emerald",
         "profileSelection": [
           "example-profile-email",
           "example-profile-phone",

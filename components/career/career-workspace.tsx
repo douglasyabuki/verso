@@ -79,6 +79,10 @@ import {
   SetupEditor,
   SetupLibrary,
 } from "@/components/career/setup-library";
+import {
+  type WorkspaceReplacement,
+  WorkspaceReplacementDialog,
+} from "@/components/career/workspace-replacement-dialog";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { CareerSectionIconPicker } from "@/components/content/career-section-icon-picker";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -134,6 +138,7 @@ import {
   layoutAppearance,
   layoutDefaults,
   layoutFromPreset,
+  sameAppearance,
   sameLayout,
 } from "@/lib/career/layout";
 import {
@@ -185,6 +190,7 @@ import {
   VERIFIED_OUTPUT_LANGUAGES,
   WORKSPACE_BYTES,
 } from "@/types-and-constants/career";
+import type { SaveFailureReason } from "@/types-and-constants/career-status";
 import { appLayoutDefaults } from "@/types-and-constants/layout";
 import { defaultSectionIcons } from "@/types-and-constants/section-icons";
 
@@ -200,8 +206,34 @@ function download(value: unknown, filename: string) {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  try {
+    anchor.click();
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+}
+
+function sameWorkspaceRevision(
+  current: CareerHead | null,
+  reviewed: CareerHead,
+) {
+  return (
+    current?.workspaceId === reviewed.workspaceId &&
+    current.generation === reviewed.generation &&
+    current.revision === reviewed.revision
+  );
+}
+
+function exportableDrafts(controller: CareerController) {
+  const { draft, orderDraft, recovery } = controller.getSnapshot();
+  return [
+    ...recovery.filter(
+      (item) =>
+        item.draftId !== draft?.draftId && item.draftId !== orderDraft?.draftId,
+    ),
+    ...(draft && controller.isDirty("form") ? [draft] : []),
+    ...(orderDraft && controller.isDirty("order") ? [orderDraft] : []),
+  ];
 }
 
 function DraftEditor({
@@ -774,6 +806,7 @@ export function CareerWorkspace({
   });
   const panel = settingsPanel(view.destination);
   const destination = panel ? view.background : view.destination;
+  const canReplaceWorkspace = state.durable && state.storageMode !== "session";
   const settingsDraft =
     state.draft?.scope === "languages" || state.draft?.scope === "defaults";
   const settingsReturnFocus = useRef<HTMLElement | null>(null);
@@ -798,13 +831,60 @@ export function CareerWorkspace({
     action: () => void;
     targets: CareerDraftTarget[];
   } | null>(null);
-  const [review, setReview] = useState<{
-    head: CareerHead;
-    incoming?: CareerDocument;
-    previous?: CareerHead;
-    /** Guest import into an account; otherwise a file replacement or rollback. */
-    kind?: "import";
+  const [review, setReview] = useState<
+    | (WorkspaceReplacement & {
+        panel: "data" | "account";
+      })
+    | null
+  >(null);
+  const [replacementNotice, setReplacementNotice] = useState<{
+    panel: "data" | "account";
+    workspaceId: string;
+    generation: number;
+    restored: boolean;
   } | null>(null);
+  const [reviewFailure, setReviewFailure] = useState<{
+    message: string;
+    reason?: SaveFailureReason;
+  } | null>(null);
+  const [previousCheck, setPreviousCheck] = useState<{
+    key: string;
+    available: boolean;
+    error?: string;
+  } | null>(null);
+  const [previousRetry, setPreviousRetry] = useState(0);
+  const previousKey =
+    panel === "data" && canReplaceWorkspace && state.head
+      ? JSON.stringify([
+          view.index,
+          state.head.workspaceId,
+          state.head.generation,
+          previousRetry,
+        ])
+      : null;
+  const previousAvailability =
+    previousKey === previousCheck?.key ? previousCheck : null;
+  useEffect(() => {
+    if (previousKey === null) return;
+    let active = true;
+    void controller.previous().then(
+      (previous) => {
+        if (active)
+          setPreviousCheck({ key: previousKey, available: Boolean(previous) });
+      },
+      (error: unknown) => {
+        if (active)
+          setPreviousCheck({
+            key: previousKey,
+            available: false,
+            error: String(error),
+          });
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [controller, previousKey]);
   const [localError, setLocalError] = useState("");
   const [sessionReview, setSessionReview] = useState<{
     head: CareerHead;
@@ -832,12 +912,21 @@ export function CareerWorkspace({
     object | null
   >(null);
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
-  const [exportChoice, setExportChoice] = useState(false);
+  const [exportChoice, setExportChoice] = useState<
+    "downloaded" | "skipped" | null
+  >(null);
   const [rawExport, setRawExport] = useState(false);
   const [loadingSample, setLoadingSample] = useState(false);
   const [importPending, setImportPending] = useState(false);
   const importJob = useRef<AbortController | null>(null);
-  useEffect(() => () => importJob.current?.abort(), []);
+  const replacementJob = useRef<AbortController | null>(null);
+  useEffect(
+    () => () => {
+      importJob.current?.abort();
+      replacementJob.current?.abort();
+    },
+    [],
+  );
   const route = useRef({
     index: 0,
     restoring: false,
@@ -1239,19 +1328,11 @@ export function CareerWorkspace({
       );
     download(content, "verso-workspace.json");
   };
-  const exportRecovery = () => {
-    const active = [state.draft, state.orderDraft].filter(
-      (draft) => draft !== null,
-    );
-    const drafts = [
-      ...state.recovery.filter(
-        (item) => !active.some((draft) => draft.draftId === item.draftId),
-      ),
-      ...active.filter((draft) =>
-        controller.isDirty(draft === state.orderDraft ? "order" : "form"),
-      ),
-    ];
-    if (oversizedRecovery(drafts).length && !rawExport) {
+  const canExportDrafts = exportableDrafts(controller).length > 0;
+  const downloadRecovery = (allowRaw: boolean) => {
+    const drafts = exportableDrafts(controller);
+    if (!drafts.length) return;
+    if (oversizedRecovery(drafts).length && !allowRaw) {
       setRawExport(true);
       setLocalError(
         "A draft exceeds normal recovery limits. Keep this tab open. Choose Export raw recovery chunks to preserve its complete JSON; chunks require reassembly and are not a normal recovery import.",
@@ -1259,21 +1340,156 @@ export function CareerWorkspace({
       return;
     }
     try {
-      for (const file of recoveryFiles(drafts, state.head!.workspaceId))
+      for (const file of recoveryFiles(
+        drafts,
+        controller.getSnapshot().head!.workspaceId,
+      ))
         download(file.content, file.name);
+      setLocalError("");
       setRawExport(false);
     } catch (error) {
       setLocalError(String(error));
     }
   };
+  const exportRecovery = () => downloadRecovery(false);
 
-  const importFile = async (file: File | undefined, recovery: boolean) => {
-    if (!file) return;
+  const requestWorkspaceReview = (
+    source:
+      | { kind: "replace"; incoming: CareerDocument }
+      | { kind: "import" }
+      | { kind: "restore"; generation?: number },
+    signal?: AbortSignal,
+  ) => {
+    const { index, destination } = route.current;
+    const origin = settingsPanel(destination);
+    if (origin !== "data" && origin !== "account") return;
+    const job = new AbortController();
+    replacementJob.current?.abort();
+    if (!signal) importJob.current?.abort();
+    replacementJob.current = job;
+    const isCurrent = () =>
+      !job.signal.aborted &&
+      !signal?.aborted &&
+      route.current.index === index &&
+      route.current.destination === destination;
+    setLocalError("");
+    resolveTargets(controller.navigationTargets(), () => {
+      if (!isCurrent()) return;
+      const { head, durable, storageMode } = controller.getSnapshot();
+      if (!head || !durable || storageMode === "session") {
+        setLocalError(
+          storageMode === "session"
+            ? "Return to durable saving before replacing or restoring the workspace."
+            : "Durable saving is unavailable. Reload before replacing the workspace.",
+        );
+        return;
+      }
+      void (async () => {
+        const incoming =
+          source.kind === "replace"
+            ? source.incoming
+            : source.kind === "import"
+              ? (await readGuestWorkspace())?.document
+              : undefined;
+        if (source.kind === "import" && !incoming)
+          throw new Error("No workspace is saved in this browser as a guest.");
+        if (!isCurrent()) return;
+        const previous = await controller.previous();
+        if (!isCurrent()) return;
+        if (
+          !sameWorkspaceRevision(controller.getSnapshot().head, head) ||
+          (source.kind === "restore" &&
+            source.generation !== undefined &&
+            source.generation !== head.generation) ||
+          (previous &&
+            (previous.workspaceId !== head.workspaceId ||
+              previous.generation !== head.generation - 1))
+        ) {
+          await controller.refresh();
+          throw new Error(
+            "Saved content changed while opening the review. Open it again to review the current workspace.",
+          );
+        }
+        if (source.kind === "restore") {
+          if (!previous)
+            throw new Error("No previous workspace is available to restore.");
+          setReview({ panel: origin, head, kind: "restore", previous });
+        } else if (incoming) {
+          setReview({
+            panel: origin,
+            head,
+            kind: source.kind,
+            previous,
+            incoming,
+          });
+        }
+        setExportChoice(null);
+        setReviewFailure(null);
+      })().catch((error: unknown) => {
+        if (isCurrent())
+          setLocalError(error instanceof Error ? error.message : String(error));
+      });
+    });
+  };
+
+  const retryUnconfirmed =
+    reviewFailure?.reason === "offline" ||
+    reviewFailure?.reason === "uncertain";
+  const staleReview = Boolean(
+    review &&
+    (reviewFailure?.reason === "conflict" ||
+      reviewFailure?.reason === "replaced" ||
+      (!retryUnconfirmed && !sameWorkspaceRevision(state.head, review.head))),
+  );
+  const confirmWorkspaceReview = async () => {
+    if (
+      !review ||
+      staleReview ||
+      (review.kind !== "restore" && review.previous && !exportChoice)
+    )
+      return;
+    const restored = review.kind === "restore";
+    const result = await controller.replace(
+      review.head,
+      review.kind === "restore" ? undefined : review.incoming,
+      review.kind === "import" ? "import" : "replace",
+    );
+    if (!result.ok) {
+      setReviewFailure(result);
+      if (result.reason === "conflict" || result.reason === "replaced")
+        void controller.refresh();
+      return;
+    }
+    setReplacementNotice({
+      panel: review.panel,
+      workspaceId: review.head.workspaceId,
+      generation: review.head.generation + 1,
+      restored,
+    });
+    setReview(null);
+  };
+
+  const importFile = async (
+    source: File | undefined | ((signal: AbortSignal) => Promise<File>),
+    recovery: boolean,
+  ) => {
+    if (!source) return;
+    const { index, destination } = route.current;
     importJob.current?.abort();
+    replacementJob.current?.abort();
     const job = new AbortController();
     importJob.current = job;
-    const progress = setTimeout(() => setImportPending(true), 500);
+    const isCurrent = () =>
+      !job.signal.aborted &&
+      route.current.index === index &&
+      route.current.destination === destination;
+    const progress = setTimeout(() => {
+      if (isCurrent()) setImportPending(true);
+    }, 500);
     try {
+      const file =
+        typeof source === "function" ? await source(job.signal) : source;
+      if (!isCurrent()) return;
       if (file.size > (recovery ? RECOVERY_BYTES : WORKSPACE_BYTES))
         throw new Error("Import exceeds its byte limit.");
       const envelope = await importPortable(
@@ -1281,27 +1497,17 @@ export function CareerWorkspace({
         recovery ? "recovery" : "workspace",
         job.signal,
       );
-      if (job.signal.aborted) return;
+      if (!isCurrent()) return;
+      setLocalError("");
       if (envelope.format === "verso.recovery")
         await controller.importRecovery(envelope.drafts);
-      else {
-        resolveTargets(controller.navigationTargets(), () => {
-          void controller
-            .previous()
-            .then((previous) => {
-              setReview({
-                head: controller.getSnapshot().head!,
-                incoming: envelope.document,
-                previous,
-              });
-              setExportChoice(false);
-            })
-            .catch((error) => setLocalError(String(error)));
-        });
-      }
-      setLocalError("");
+      else
+        requestWorkspaceReview(
+          { kind: "replace", incoming: envelope.document },
+          job.signal,
+        );
     } catch (error) {
-      if (!job.signal.aborted) setLocalError(String(error));
+      if (isCurrent()) setLocalError(String(error));
     } finally {
       clearTimeout(progress);
       if (importJob.current === job) setImportPending(false);
@@ -1311,19 +1517,18 @@ export function CareerWorkspace({
     setLoadingSample(true);
     setLocalError("");
     try {
-      const response = await fetch("/examples/alex-morgan.schema-2.json");
-      if (!response.ok)
-        throw new Error(
-          "Sample workspace could not be loaded. Please try again.",
-        );
-      await importFile(
-        new File([await response.blob()], "alex-morgan.schema-2.json", {
+      await importFile(async (signal) => {
+        const response = await fetch("/examples/alex-morgan.schema-2.json", {
+          signal,
+        });
+        if (!response.ok)
+          throw new Error(
+            "Sample workspace could not be loaded. Please try again.",
+          );
+        return new File([await response.blob()], "alex-morgan.schema-2.json", {
           type: "application/json",
-        }),
-        false,
-      );
-    } catch (error) {
-      setLocalError(String(error));
+        });
+      }, false);
     } finally {
       setLoadingSample(false);
     }
@@ -1459,6 +1664,31 @@ export function CareerWorkspace({
       navigate(`preset/${item.id}`, item);
     });
 
+  const reviewLayoutAsDefaults = (resumeId: string) => {
+    const next = "settings/defaults";
+    const generation = controller.getSnapshot().head?.generation;
+    resolveTargets(routeTargets(next), () => {
+      const head = controller.getSnapshot().head;
+      const resume = head?.document.resumes.find(
+        (item) => item.id === resumeId,
+      );
+      if (!head || head.generation !== generation || !resume) {
+        setLocalError(
+          "This resume is unavailable. Open a saved resume to use its layout.",
+        );
+        return;
+      }
+      setLocalError("");
+      const appearance = layoutAppearance(resume.layout);
+      navigate(
+        next,
+        sameAppearance(appearance, head.document.defaults)
+          ? undefined
+          : appearance,
+      );
+    });
+  };
+
   /** Resolve drafts and load copied appearance into an uncommitted Layout scope.
    * @param presetId Saved appearance to recheck after resolving drafts.
    * @param resumeId Explicitly selected target resume to recheck before navigation.
@@ -1547,7 +1777,7 @@ export function CareerWorkspace({
         id: crypto.randomUUID(),
         name: "",
         template: "yabuki-reference@1.0.3",
-        layout: structuredClone(document.defaults),
+        layout: structuredClone(appLayoutDefaults),
       };
       navigate(
         `${kind}/${base.id}`,
@@ -1655,6 +1885,40 @@ export function CareerWorkspace({
       draft.draftId !== state.draft?.draftId &&
       draft.draftId !== state.orderDraft?.draftId,
   );
+  const workspaceReplacementNotice =
+    replacementNotice &&
+    panel === replacementNotice.panel &&
+    state.head?.workspaceId === replacementNotice.workspaceId &&
+    state.head.generation === replacementNotice.generation ? (
+      <Alert role="status">
+        <AlertTitle>
+          {replacementNotice.restored
+            ? "Workspace restored"
+            : "Workspace replaced"}
+        </AlertTitle>
+        <AlertDescription>
+          {replacementNotice.restored
+            ? "The workspace you just left is now available to restore in Settings → Data."
+            : "Your previous workspace is available to restore."}
+        </AlertDescription>
+        {!replacementNotice.restored && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="justify-self-start"
+            disabled={state.saving || !canReplaceWorkspace}
+            onClick={() =>
+              requestWorkspaceReview({
+                kind: "restore",
+                generation: replacementNotice.generation,
+              })
+            }
+          >
+            Undo workspace replacement
+          </Button>
+        )}
+      </Alert>
+    ) : null;
   const backupPanel = (
     <div className="flex flex-col gap-6">
       <SettingsSection
@@ -1690,12 +1954,14 @@ export function CareerWorkspace({
             }}
           >
             <Download data-icon="inline-start" aria-hidden="true" />
-            Export workspace
+            Download workspace backup
           </Button>
-          <Button size="sm" variant="outline" onClick={exportRecovery}>
-            <Download data-icon="inline-start" aria-hidden="true" />
-            Export recovery
-          </Button>
+          {canExportDrafts && (
+            <Button size="sm" variant="outline" onClick={exportRecovery}>
+              <Download data-icon="inline-start" aria-hidden="true" />
+              Export unsaved drafts
+            </Button>
+          )}
         </div>
       </SettingsSection>
       <SettingsSection
@@ -1732,39 +1998,31 @@ export function CareerWorkspace({
             />
           </Field>
         </FieldGroup>
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium">Previous workspace</p>
-            <p className="text-xs text-muted-foreground">
-              The one workspace kept before the last import or replacement.
-            </p>
-          </div>
+        {previousAvailability?.available && (
           <Button
             size="sm"
             variant="outline"
-            disabled={!state.durable}
-            onClick={() =>
-              resolveTargets(controller.navigationTargets(), () => {
-                void controller
-                  .previous()
-                  .then((previous) => {
-                    if (!previous)
-                      setLocalError("No previous workspace is retained.");
-                    else {
-                      setReview({
-                        head: controller.getSnapshot().head!,
-                        previous,
-                      });
-                      setExportChoice(false);
-                    }
-                  })
-                  .catch((error) => setLocalError(String(error)));
-              })
-            }
+            className="self-start"
+            disabled={state.saving}
+            onClick={() => requestWorkspaceReview({ kind: "restore" })}
           >
-            Review previous workspace
+            Restore previous workspace
           </Button>
-        </div>
+        )}
+        {previousAvailability?.error && (
+          <Alert variant="destructive">
+            <AlertTitle>Could not check for a previous workspace</AlertTitle>
+            <AlertDescription>{previousAvailability.error}</AlertDescription>
+            <Button
+              size="sm"
+              variant="outline"
+              className="justify-self-start"
+              onClick={() => setPreviousRetry((retry) => retry + 1)}
+            >
+              Retry previous workspace check
+            </Button>
+          </Alert>
+        )}
       </SettingsSection>
       <SettingsSection
         title="Sample workspace"
@@ -1774,7 +2032,7 @@ export function CareerWorkspace({
           size="sm"
           variant="outline"
           className="self-start"
-          disabled={loadingSample || state.saving || !state.durable}
+          disabled={loadingSample || state.saving || !canReplaceWorkspace}
           onClick={() => void loadSample()}
         >
           {loadingSample ? "Loading sample…" : "Load sample workspace"}
@@ -1888,6 +2146,7 @@ export function CareerWorkspace({
         retryPreferences={() => void controller.changePreferences()}
         accountMode={state.storageMode === "account"}
       >
+        {workspaceReplacementNotice}
         {panel === "editing-preview" ? (
           <DeviceSettings
             values={state.preferences}
@@ -1925,8 +2184,8 @@ export function CareerWorkspace({
                 Validating import... Your saved workspace is unchanged.
               </p>
             )}
-            {rawExport && (
-              <Button variant="outline" onClick={exportRecovery}>
+            {rawExport && canExportDrafts && (
+              <Button variant="outline" onClick={() => downloadRecovery(true)}>
                 Export raw recovery chunks
               </Button>
             )}
@@ -1944,29 +2203,8 @@ export function CareerWorkspace({
           >
             {account?.session.kind === "authenticated" && (
               <GuestImport
-                disabled={state.saving || !state.head}
-                review={() =>
-                  resolveTargets(controller.navigationTargets(), () => {
-                    void readGuestWorkspace()
-                      .then(async (guest) => {
-                        if (!guest) {
-                          setLocalError(
-                            "No workspace is saved in this browser as a guest.",
-                          );
-                          return;
-                        }
-                        setReview({
-                          head: controller.getSnapshot().head!,
-                          incoming: guest.document,
-                          previous: await controller.previous(),
-                          kind: "import",
-                        });
-                        setExportChoice(false);
-                        setLocalError("");
-                      })
-                      .catch((error) => setLocalError(String(error)));
-                  })
-                }
+                disabled={state.saving || !canReplaceWorkspace}
+                review={() => requestWorkspaceReview({ kind: "import" })}
                 error={localError}
               />
             )}
@@ -2002,19 +2240,6 @@ export function CareerWorkspace({
             }
           })
         }
-        createStarter={() => {
-          const document = controller.getSnapshot().head!.document;
-          if (document.starters.length >= 100) return;
-          const id = crypto.randomUUID();
-          navigate(`starter/${id}`, {
-            id,
-            name: "",
-            template: "yabuki-reference@1.0.3",
-            layout: structuredClone(document.defaults),
-            sections: [],
-            summaryIncluded: false,
-          });
-        }}
         getDocument={() => controller.getSnapshot().head!.document}
         getResume={(id) =>
           controller
@@ -2249,8 +2474,8 @@ export function CareerWorkspace({
                       : "Back to Career details"}
                 </Button>
               )}
-            {rawExport && (
-              <Button variant="outline" onClick={exportRecovery}>
+            {rawExport && canExportDrafts && (
+              <Button variant="outline" onClick={() => downloadRecovery(true)}>
                 Export raw recovery chunks
               </Button>
             )}
@@ -2716,6 +2941,16 @@ export function CareerWorkspace({
                               savedValues={activeResume.layout}
                               onLoaded={() => setPresetNotice(scope)}
                             />
+                            <Button
+                              id="use-layout-for-blank-resumes"
+                              variant="outline"
+                              className="h-auto min-h-8 max-w-full self-start py-1 text-start whitespace-normal"
+                              onClick={() =>
+                                reviewLayoutAsDefaults(activeResume.id)
+                              }
+                            >
+                              Use this layout for new blank resumes…
+                            </Button>
                             <p className="text-xs text-muted-foreground">
                               Save layout to update PDF output. The PDF pane
                               continues to show saved content.
@@ -3061,95 +3296,34 @@ export function CareerWorkspace({
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Dialog
-              open={Boolean(review)}
-              onOpenChange={(open) => {
-                if (!open) setReview(null);
+            <WorkspaceReplacementDialog
+              review={review}
+              saving={state.saving}
+              stale={staleReview}
+              error={
+                retryUnconfirmed
+                  ? "Your account did not confirm this change. Retry from this review to check the same request."
+                  : (reviewFailure?.message ?? "")
+              }
+              exportChoice={exportChoice}
+              onClose={() => setReview(null)}
+              onDownload={(previous) => {
+                try {
+                  exportWorkspace(previous);
+                  setExportChoice("downloaded");
+                  setReviewFailure(null);
+                } catch (error) {
+                  setReviewFailure({
+                    message: `Download failed. Try again or continue without downloading. ${String(error)}`,
+                  });
+                }
               }}
-            >
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {review?.kind === "import"
-                      ? "Review guest workspace import"
-                      : review?.incoming
-                        ? "Review workspace replacement"
-                        : "Review rollback"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Replace saved workspace at revision {review?.head.revision}.
-                    The outgoing workspace becomes one previous workspace.
-                    Recovery is preserved separately.{" "}
-                    {review?.previous
-                      ? `This replaces the retained snapshot at revision ${review.previous.revision}.`
-                      : "No previous snapshot is currently retained."}
-                  </DialogDescription>
-                </DialogHeader>
-                {review?.kind === "import" && (
-                  <p>
-                    This browser&apos;s guest workspace replaces your account
-                    workspace ({review.head.document.sections.length} sections,{" "}
-                    {review.head.document.resumes.length} resumes). Nothing is
-                    merged, and the guest workspace stays in this browser
-                    unchanged.
-                  </p>
-                )}
-                <p>
-                  Incoming sections:{" "}
-                  {
-                    (review?.incoming ?? review?.previous?.document)?.sections
-                      .length
-                  }
-                  . Incoming resumes:{" "}
-                  {
-                    (review?.incoming ?? review?.previous?.document)?.resumes
-                      .length
-                  }
-                  .
-                </p>
-                {review?.previous && !exportChoice && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      try {
-                        exportWorkspace(review.previous);
-                      } catch (error) {
-                        setLocalError(
-                          `Export failed. Retry or explicitly continue without export. ${String(error)}`,
-                        );
-                      }
-                    }}
-                  >
-                    Export snapshot being replaced (download initiated)
-                  </Button>
-                )}
-                <Button variant="outline" onClick={() => setExportChoice(true)}>
-                  Continue without exporting snapshot
-                </Button>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setReview(null)}>
-                    Cancel replacement
-                  </Button>
-                  <Button
-                    disabled={state.saving || !exportChoice}
-                    onClick={() => {
-                      if (review)
-                        void controller
-                          .replace(
-                            review.head,
-                            review.incoming,
-                            review.kind ?? "replace",
-                          )
-                          .then((saved) => {
-                            if (saved) setReview(null);
-                          });
-                    }}
-                  >
-                    Confirm adoption
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              onContinue={() => {
+                setExportChoice("skipped");
+                setReviewFailure(null);
+              }}
+              onConfirm={() => void confirmWorkspaceReview()}
+            />
           </CareerWorkspaceShell>
         )}
       </ResumeManager>

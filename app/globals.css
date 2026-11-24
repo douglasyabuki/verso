@@ -523,6 +523,21 @@ html[data-theme-switching] *::after {
   }
 }
 
+/* 404 spread: the same page turn as the loader, but shallower and slower so
+   the words printed on each page stay readable throughout the loop. */
+@keyframes verso-spread-turn {
+  0%,
+  50%,
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scaleX(0.55);
+    opacity: 0.75;
+  }
+}
+
 @keyframes verso-loader-in {
   from {
     opacity: 0;
@@ -553,6 +568,26 @@ html[data-theme-switching] *::after {
 
   @media (prefers-reduced-motion: reduce) {
     .brand-loading-page {
+      animation: none;
+    }
+  }
+
+  .brand-spread-page {
+    transform-box: fill-box;
+    animation: verso-spread-turn 4.8s ease-in-out infinite;
+  }
+
+  .brand-spread-page-left {
+    transform-origin: right center;
+  }
+
+  .brand-spread-page-right {
+    transform-origin: left center;
+    animation-delay: -2.4s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .brand-spread-page {
       animation: none;
     }
   }

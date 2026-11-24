@@ -5,7 +5,7 @@ import { cleanup, render } from "vitest-browser-react";
 import { CareerWorkspace } from "@/components/career/career-workspace";
 import { createCareerDocument } from "@/lib/career/model";
 import { CareerController } from "@/stores/career/controller";
-import { CareerStorage } from "@/stores/career/persistence";
+import { CareerStorage, openCareerStorage } from "@/stores/career/persistence";
 
 const controllers: CareerController[] = [];
 const connections: CareerStorage[] = [];
@@ -41,7 +41,7 @@ afterEach(async () => {
 });
 
 describe("Settings drafts and device preference persistence", () => {
-  it("does not prune receipts using unknown preferences when their storage read fails", async () => {
+  it("defers receipt pruning after a preference read fails until a write succeeds", async () => {
     vi.spyOn(
       CareerStorage.prototype,
       "readDevicePreferences",
@@ -52,14 +52,14 @@ describe("Settings drafts and device preference persistence", () => {
       "could not be loaded",
     );
     expect(prune).not.toHaveBeenCalled();
-    await controller.changePreferences({ completedOperationCount: 17 });
+    await controller.changePreferences({ automaticRefresh: true });
     controller.open("defaults");
     controller.change({
       ...controller.getSnapshot().head!.document.defaults,
       fontSize: 12,
     });
     expect(await controller.save()).toBe(true);
-    expect(prune).toHaveBeenCalledWith(30, 17);
+    expect(prune).toHaveBeenCalledWith();
   });
 
   it("opens recovery tools without resolving either editor draft and closes back to editing", async () => {
@@ -82,7 +82,10 @@ describe("Settings drafts and device preference persistence", () => {
       .toBeVisible();
     await expect
       .element(
-        page.getByRole("button", { name: "Export recovery", exact: true }),
+        page.getByRole("button", {
+          name: "Export unsaved drafts",
+          exact: true,
+        }),
       )
       .toBeVisible();
     expect(controller.getSnapshot().draft?.draftId).toBe(formId);
@@ -126,22 +129,33 @@ describe("Settings drafts and device preference persistence", () => {
     expect(controller.getSnapshot().draft?.scope).toBe("summary");
   });
 
-  it("retains immediate preferences after write failure and retries without workspace history", async () => {
+  it("applies the visible refresh toggle immediately and offers retry after a write failure", async () => {
     const controller = await owner();
     const write = vi
       .spyOn(CareerStorage.prototype, "writeDevicePreferences")
       .mockRejectedValueOnce(new Error("quota"));
-    await controller.changePreferences({ compilationTimeoutMs: 45000 });
-    expect(controller.getSnapshot().preferences.compilationTimeoutMs).toBe(
-      45000,
-    );
-    expect(controller.getSnapshot().preferenceStatus).toContain("tab only");
+    window.history.replaceState({}, "", "?scope=settings/editing-preview");
+    await render(<CareerWorkspace controller={controller} />);
+    const toggle = page.getByRole("checkbox", {
+      name: "Refresh preview automatically after Save",
+    });
+    await expect.element(toggle).not.toBeChecked();
+    await expect
+      .element(page.getByRole("button", { name: "Advanced settings" }))
+      .not.toBeInTheDocument();
+    await toggle.click();
+    await expect.element(toggle).toBeChecked();
     expect(controller.getSnapshot().undoCount).toBe(0);
     expect(controller.getSnapshot().head!.revision).toBe(0);
-    await controller.changePreferences();
+    await page
+      .getByRole("button", { name: "Retry saving preferences" })
+      .click();
+    await expect
+      .element(page.getByText("Browser preferences saved."))
+      .toBeVisible();
     expect(write).toHaveBeenCalledTimes(2);
     const reloaded = await owner();
-    expect(reloaded.getSnapshot().preferences.compilationTimeoutMs).toBe(45000);
+    expect(reloaded.getSnapshot().preferences.automaticRefresh).toBe(true);
   });
 
   it("serializes rapid preference writes and persists the latest choice", async () => {
@@ -157,39 +171,47 @@ describe("Settings drafts and device preference persistence", () => {
         await gate;
         await original.call(this, value);
       });
-    const first = controller.changePreferences({ compilationTimeoutMs: 40000 });
+    const first = controller.changePreferences({ automaticRefresh: true });
     await expect.poll(() => write.mock.calls.length).toBe(1);
-    const second = controller.changePreferences({
-      compilationTimeoutMs: 50000,
-    });
-    expect(controller.getSnapshot().preferences.compilationTimeoutMs).toBe(
-      50000,
-    );
+    const second = controller.changePreferences({ automaticRefresh: false });
+    expect(controller.getSnapshot().preferences.automaticRefresh).toBe(false);
     await Promise.resolve();
     expect(write).toHaveBeenCalledTimes(1);
     release();
     await Promise.all([first, second]);
     const reloaded = await owner();
-    expect(reloaded.getSnapshot().preferences.compilationTimeoutMs).toBe(50000);
+    expect(reloaded.getSnapshot().preferences.automaticRefresh).toBe(false);
   });
 
-  it("keeps device preferences across replacement and rotating rollback", async () => {
+  it("loads legacy preferences without rewriting them and keeps refresh across replacement and rollback", async () => {
+    const storage = await openCareerStorage();
+    connections.push(storage);
+    const legacy = {
+      version: 1,
+      values: {
+        automaticRefresh: true,
+        completedOperationDays: 0,
+        completedOperationCount: 17,
+        initializationTimeoutMs: 60_000,
+        compilationTimeoutMs: 45_000,
+      },
+    };
+    await storage.writeDevicePreferences(legacy);
     const controller = await owner();
-    await controller.changePreferences({
-      completedOperationCount: 17,
-      initializationTimeoutMs: 60000,
+    expect(controller.getSnapshot().preferences).toEqual({
+      automaticRefresh: true,
     });
     const incoming = createCareerDocument("pt-BR");
     expect(
       await controller.replace(controller.getSnapshot().head!, incoming),
-    ).toBe(true);
-    expect(await controller.replace(controller.getSnapshot().head!)).toBe(true);
+    ).toEqual({ ok: true });
+    expect(await controller.replace(controller.getSnapshot().head!)).toEqual({
+      ok: true,
+    });
     const prune = vi.spyOn(CareerStorage.prototype, "pruneCompleted");
     const reloaded = await owner();
-    expect(prune).toHaveBeenCalledWith(30, 17);
-    expect(reloaded.getSnapshot().preferences.completedOperationCount).toBe(17);
-    expect(reloaded.getSnapshot().preferences.initializationTimeoutMs).toBe(
-      60000,
-    );
+    expect(prune).toHaveBeenCalledWith();
+    expect(reloaded.getSnapshot().preferences.automaticRefresh).toBe(true);
+    expect(await storage.readDevicePreferences()).toEqual(legacy);
   });
 });
