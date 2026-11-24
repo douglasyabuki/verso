@@ -70,6 +70,7 @@ export const ACCOUNT_SESSION_HEADER = "X-Verso-Session";
 /** Account API routes. */
 export const ACCOUNT_ROUTES = {
   options: "/api/auth-options",
+  session: "/api/auth/get-session",
   workspace: "/api/account/workspace",
   operations: "/api/account/workspace/operations",
   replace: "/api/account/workspace/replace",
