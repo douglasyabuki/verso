@@ -389,6 +389,13 @@ it("imports the downloadable schema-2 sample and renders both complete language 
     "Alex Morgan · English",
     "Alex Morgan · Português",
   ]);
+  expect(document.resumes.map((resume) => resume.color)).toEqual([
+    "rose",
+    "emerald",
+  ]);
+  expect(
+    document.resumes.map((resume) => resume.layout.contactLocation),
+  ).toEqual(["combined", "combined"]);
   expect(source).not.toContain("?");
   for (const resume of document.resumes) {
     const output = renderCareerResume(document, resume.id, 1);
@@ -397,6 +404,9 @@ it("imports the downloadable schema-2 sample and renders both complete language 
     // rather than an Alt-suffixed control sequence.
     expect(output).toContain("\\faMapMarker*");
     expect(output).not.toContain("\\faMapMarkerAlt");
+    expect(output).toContain(
+      resume.language === "en-US" ? "Curitiba, Brazil" : "Curitiba, Brasil",
+    );
     expect(output).toContain("DEMO-2024-001");
     expect(output).toContain("https://example.com/project");
     expect(output).toContain(
