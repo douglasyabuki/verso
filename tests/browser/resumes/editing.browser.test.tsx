@@ -372,6 +372,83 @@ describe("resume editing and transactional lifecycle", () => {
     expect(controller.getSnapshot().undoCount).toBe(1);
   });
 
+  it("includes a newly selected entry's details in one Save that undoes in one step", async () => {
+    const { document, resume, entry } = fixture();
+    entry.achievements = [
+      { id: "kept", archived: false, wording: { "en-US": "Shipped" } },
+      { id: "retired", archived: true, wording: { "en-US": "Old" } },
+    ];
+    const controller = await owner(document);
+    window.history.replaceState({}, "", `?scope=resume-content/${resume.id}`);
+    await render(<CareerWorkspace controller={controller} />);
+    await page
+      .getByRole("checkbox", { name: "Include Experience", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Experience entries", exact: true })
+      .click();
+    await page
+      .getByRole("checkbox", { name: "Include Engineer", exact: true })
+      .click();
+    expect(
+      controller.getSnapshot().head!.document.resumes[0].selection,
+    ).toEqual([]);
+    const details = page.getByRole("button", {
+      name: /^Fields, achievements, and links/,
+    });
+    await expect
+      .element(details)
+      .toHaveTextContent(
+        `${entry.fields.length + 1} of ${entry.fields.length + 1} included`,
+      );
+    await details.click();
+    await expect
+      .element(
+        page.getByRole("checkbox", { name: "Include Title", exact: true }),
+      )
+      .toBeChecked();
+    await expect
+      .element(
+        page.getByRole("checkbox", {
+          name: "Include Achievement 1",
+          exact: true,
+        }),
+      )
+      .toBeChecked();
+    await expect
+      .element(
+        page.getByRole("checkbox", {
+          name: "Include Achievement 2",
+          exact: true,
+        }),
+      )
+      .not.toBeInTheDocument();
+    await page
+      .getByRole("region", { name: "Editing form" })
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+    await expect
+      .poll(() => controller.getSnapshot().head!.document.resumes[0].selection)
+      .toMatchObject([
+        {
+          sectionId: document.sections[0].id,
+          entryIds: [entry.id],
+          fieldIds: entry.fields.map((field) => field.id),
+          achievementIds: ["kept"],
+          linkIds: [],
+        },
+      ]);
+    // Wait for the Save to settle, then close the still-open Content form
+    // before invoking a separate history operation.
+    await expect.poll(() => controller.getSnapshot().saving).toBe(false);
+    expect(controller.getSnapshot().undoCount).toBe(1);
+    await controller.cancel();
+    expect(await controller.history("undo")).toBe(true);
+    expect(
+      controller.getSnapshot().head!.document.resumes[0].selection,
+    ).toEqual([]);
+  });
+
   it("reorders selected contacts with keyboard alternatives without committing or moving excluded rows", async () => {
     const { document, resume } = fixture();
     const ids = document.profile.fields

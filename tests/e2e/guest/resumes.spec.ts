@@ -177,18 +177,21 @@ test("creates, tailors, duplicates, copies languages, compares and deletes indep
   await page
     .getByRole("checkbox", { name: "Include Product engineering", exact: true })
     .click();
-  await page
-    .getByRole("button", {
-      name: "Fields, achievements, and links",
-      exact: true,
-    })
-    .click();
-  await page
-    .getByRole("checkbox", { name: "Include title", exact: true })
-    .click();
-  await page
-    .getByRole("checkbox", { name: "Include Achievement 1", exact: true })
-    .click();
+  const details = page.getByRole("button", {
+    name: /^Fields, achievements, and links/,
+  });
+  await expect(details).toContainText(/(\d+) of \1 included/);
+  await details.click();
+  await expect(
+    page.getByRole("checkbox", { name: "Include Title", exact: true }),
+  ).toBeChecked();
+  const achievement = page.getByRole("checkbox", {
+    name: "Include Achievement 1",
+    exact: true,
+  });
+  await expect(achievement).toBeChecked();
+  await achievement.click();
+  await expect(achievement).not.toBeChecked();
   await page
     .getByRole("region", { name: "Editing form" })
     .getByRole("button", { name: "Save", exact: true })

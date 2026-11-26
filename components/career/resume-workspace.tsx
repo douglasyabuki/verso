@@ -84,6 +84,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ResumeColorPicker } from "@/components/variants/resume-color-picker";
 import { useListEntrance } from "@/hooks/use-list-entrance";
+import { careerFieldLabel } from "@/lib/career/labels";
 import { outputCapabilities } from "@/lib/career/output";
 import {
   copyResume,
@@ -96,7 +97,7 @@ import {
   type ResumeWordingRow,
 } from "@/lib/career/resumes";
 import {
-  fieldsForNewEntries,
+  detailsForNewEntries,
   prepareStarterResume,
   starterMappings,
 } from "@/lib/career/starters";
@@ -1229,11 +1230,7 @@ export function ResumeContentEditor({
                             ];
                             return {
                               ...current,
-                              fieldIds: fieldsForNewEntries(
-                                section,
-                                current,
-                                ids,
-                              ),
+                              ...detailsForNewEntries(section, current, ids),
                               entryIds,
                               hiddenEntryIds: entryIds.filter(
                                 (id) => !ids.includes(id),
@@ -1248,93 +1245,101 @@ export function ResumeContentEditor({
                               showArchived ||
                               configured?.entryIds.includes(entry.id),
                           )
-                          .map((entry) => ({
-                            id: entry.id,
-                            label:
-                              entry.name ||
-                              wordingText(
-                                entry.fields.find((field) =>
-                                  ["title", "degree"].includes(field.key),
-                                )?.wording[resume.language] ?? "",
-                              ) ||
-                              "Untitled entry",
-                            archived: entry.archived || section.archived,
-                            value: entry.fields
-                              .map((field) =>
-                                field.type === "text"
-                                  ? wording(field.id, field.wording)
-                                  : field.fact,
-                              )
-                              .filter(Boolean)
-                              .join(" · "),
-                            children: configured?.entryIds.includes(
-                              entry.id,
-                            ) ? (
-                              <Collapsible>
-                                <CollapsibleTrigger
-                                  render={
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className={disclosureTriggerClassName}
-                                    />
-                                  }
-                                >
-                                  <DisclosureChevron />
-                                  <DisclosureLabel>
-                                    Fields, achievements, and links
-                                  </DisclosureLabel>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                  <DisclosureGuide className="flex flex-col gap-4">
-                                    {(
-                                      [
-                                        "fieldIds",
-                                        "achievementIds",
-                                        "linkIds",
-                                      ] as const
-                                    ).map((key) => {
-                                      const records: Choice[] =
-                                        key === "fieldIds"
-                                          ? entry.fields.map((field) => ({
-                                              id: field.id,
-                                              label: field.key,
-                                              value:
-                                                field.type === "text"
-                                                  ? wording(
-                                                      field.id,
-                                                      field.wording,
-                                                    )
-                                                  : field.fact,
-                                            }))
-                                          : key === "achievementIds"
-                                            ? entry.achievements.map(
-                                                (item, index) => ({
-                                                  id: item.id,
-                                                  label: `Achievement ${index + 1}`,
-                                                  value: wording(
-                                                    item.id,
-                                                    item.wording,
-                                                  ),
-                                                  archived: item.archived,
-                                                }),
-                                              )
-                                            : entry.links.map(
-                                                (item, index) => ({
-                                                  id: item.id,
-                                                  label: `Link ${index + 1}`,
-                                                  value:
-                                                    wording(
-                                                      item.id,
-                                                      item.label,
-                                                    ) || item.url,
-                                                  archived: item.archived,
-                                                }),
-                                              );
-                                      const ownIds = new Set(
-                                        records.map((item) => item.id),
-                                      );
-                                      return (
+                          .map((entry) => {
+                            const details = (
+                              ["fieldIds", "achievementIds", "linkIds"] as const
+                            ).map((key) => {
+                              const records: Choice[] =
+                                key === "fieldIds"
+                                  ? entry.fields.map((field) => ({
+                                      id: field.id,
+                                      label: careerFieldLabel(field.key),
+                                      value:
+                                        field.type === "text"
+                                          ? wording(field.id, field.wording)
+                                          : field.fact,
+                                    }))
+                                  : key === "achievementIds"
+                                    ? entry.achievements.map((item, index) => ({
+                                        id: item.id,
+                                        label: `Achievement ${index + 1}`,
+                                        value: wording(item.id, item.wording),
+                                        archived: item.archived,
+                                      }))
+                                    : entry.links.map((item, index) => ({
+                                        id: item.id,
+                                        label: `Link ${index + 1}`,
+                                        value:
+                                          wording(item.id, item.label) ||
+                                          item.url,
+                                        archived: item.archived,
+                                      }));
+                              const chosen = configured?.[key] ?? [];
+                              return {
+                                key,
+                                ownIds: new Set(records.map((item) => item.id)),
+                                items: records.filter(
+                                  (item) =>
+                                    !item.archived || chosen.includes(item.id),
+                                ),
+                                chosen,
+                              };
+                            });
+                            const shownCount = details.reduce(
+                              (total, detail) => total + detail.items.length,
+                              0,
+                            );
+                            const includedCount = details.reduce(
+                              (total, detail) =>
+                                total +
+                                detail.items.filter((item) =>
+                                  detail.chosen.includes(item.id),
+                                ).length,
+                              0,
+                            );
+                            return {
+                              id: entry.id,
+                              label:
+                                entry.name ||
+                                wordingText(
+                                  entry.fields.find((field) =>
+                                    ["title", "degree"].includes(field.key),
+                                  )?.wording[resume.language] ?? "",
+                                ) ||
+                                "Untitled entry",
+                              archived: entry.archived || section.archived,
+                              value: entry.fields
+                                .map((field) =>
+                                  field.type === "text"
+                                    ? wording(field.id, field.wording)
+                                    : field.fact,
+                                )
+                                .filter(Boolean)
+                                .join(" · "),
+                              children: configured?.entryIds.includes(
+                                entry.id,
+                              ) ? (
+                                <Collapsible>
+                                  <CollapsibleTrigger
+                                    render={
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={disclosureTriggerClassName}
+                                      />
+                                    }
+                                  >
+                                    <DisclosureChevron />
+                                    <DisclosureLabel>
+                                      Fields, achievements, and links
+                                    </DisclosureLabel>
+                                    <span className="ms-auto shrink-0 text-xs font-normal text-muted-foreground">
+                                      {includedCount} of {shownCount} included
+                                    </span>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <DisclosureGuide className="flex flex-col gap-4">
+                                      {details.map(({ key, ownIds, items }) => (
                                         <Choices
                                           key={key}
                                           label={
@@ -1349,11 +1354,7 @@ export function ResumeContentEditor({
                                           disabled={
                                             !selectedIds.includes(entry.id)
                                           }
-                                          items={records.filter(
-                                            (item) =>
-                                              !item.archived ||
-                                              configured[key].includes(item.id),
-                                          )}
+                                          items={items}
                                           selected={configured[key].filter(
                                             (id) => ownIds.has(id),
                                           )}
@@ -1384,13 +1385,13 @@ export function ResumeContentEditor({
                                             )
                                           }
                                         />
-                                      );
-                                    })}
-                                  </DisclosureGuide>
-                                </CollapsibleContent>
-                              </Collapsible>
-                            ) : undefined,
-                          }))}
+                                      ))}
+                                    </DisclosureGuide>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              ) : undefined,
+                            };
+                          })}
                       />
                     </DisclosureGuide>
                   </CollapsibleContent>

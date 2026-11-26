@@ -249,7 +249,7 @@ export function ResumeSheet({
         variant === "preview" && "mx-auto mt-4 w-[min(76%,244px)]",
         // The shared grid cell lets wrapped text exceed the A4 minimum height.
         isDemo &&
-          "grid origin-top grid-cols-1 before:col-start-1 before:row-start-1 before:aspect-[210/297] before:w-full motion-safe:animate-welcome-paper motion-safe:transition-colors motion-safe:delay-[var(--document-delay,0ms)] motion-safe:duration-230 motion-safe:ease-welcome max-[361px]:text-[0.65625rem]/[1.3]",
+          "grid origin-top grid-cols-1 opacity-[var(--document-opacity,0.65)] before:col-start-1 before:row-start-1 before:aspect-[210/297] before:w-full motion-safe:animate-welcome-paper motion-safe:transition-[color,background-color,border-color,opacity] motion-safe:delay-[var(--document-delay,0ms)] motion-safe:duration-230 motion-safe:ease-welcome max-[361px]:text-[0.65625rem]/[1.3]",
       )}
       lang={resume.language}
     >

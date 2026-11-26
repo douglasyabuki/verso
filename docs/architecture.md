@@ -33,7 +33,11 @@ not define active behavior. Do not add retired features merely for parity.
 New workspaces contain empty Experience, Projects, Education, Skills, and
 Certifications sections. Never reseed existing content. Career details owns shared
 facts and reusable wording; resumes independently select/order content and override
-display wording. Shared edits do not overwrite overrides; Use career wording
+display wording. Selecting an entry that is not yet in a resume's `entryIds` adds
+its fields (or only the fields matching copied starter defaults) and its
+non-archived achievements and links to the draft, after existing choices and in
+career order. An entry that was excluded and is selected again keeps its earlier
+detail choices. Shared edits do not overwrite overrides; Use career wording
 removes an override. Summaries and achievements/details use rich prose; headings,
 names, facts, short values, and link labels use plain controls.
 

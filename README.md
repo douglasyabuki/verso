@@ -9,7 +9,10 @@ resumes, customize each resume, and generate PDFs in the browser.
 - Career profile, summaries, built-in and custom sections, entries, achievements,
   and links, with archive/restore for shared content.
 - Independent resumes with their own content selection, order, wording overrides,
-  and layout. Compare saved resumes from the Resumes collection or any resume's
+  and layout. Selecting an entry includes its fields (or a starter's default
+  fields) and its non-archived achievements and links. Each one can then be
+  excluded, and re-selecting an entry keeps those choices. Compare saved resumes
+  from the Resumes collection or any resume's
   action menu. Compare highlights wording, inclusion, and order differences,
   grouped by career section with section and change-type filters and an All rows
   view. Appearance presets, empty-structure starters, duplication, and a

@@ -170,3 +170,51 @@ export function fieldsForNewEntries(
       ]
     : selection.fieldIds;
 }
+
+/** Include details for entries that become selected for the first time, retaining prior explicit choices.
+ * @param section Shared section supplying entries and their detail identities.
+ * @param selection Current resume configuration; entries already in `entryIds` are not new.
+ * @param ids Next visible entry IDs.
+ * @returns Existing detail IDs plus, for genuinely new entries in career order, starter-default or all fields and every non-archived achievement and link.
+ * @example detailsForNewEntries(section, selection, [entry.id])
+ */
+export function detailsForNewEntries(
+  section: CareerDocument["sections"][number],
+  selection: CareerResume["selection"][number],
+  ids: string[],
+): Pick<
+  CareerResume["selection"][number],
+  "fieldIds" | "achievementIds" | "linkIds"
+> {
+  const added = section.entries.filter(
+    (entry) => ids.includes(entry.id) && !selection.entryIds.includes(entry.id),
+  );
+  const append = (existing: string[], next: string[]) => [
+    ...existing,
+    ...next.filter(
+      (id, index) => !existing.includes(id) && next.indexOf(id) === index,
+    ),
+  ];
+  return {
+    fieldIds: selection.fieldDefaults
+      ? fieldsForNewEntries(section, selection, ids)
+      : append(
+          selection.fieldIds,
+          added.flatMap((entry) => entry.fields.map((field) => field.id)),
+        ),
+    achievementIds: append(
+      selection.achievementIds,
+      added.flatMap((entry) =>
+        entry.achievements
+          .filter((item) => !item.archived)
+          .map((item) => item.id),
+      ),
+    ),
+    linkIds: append(
+      selection.linkIds,
+      added.flatMap((entry) =>
+        entry.links.filter((item) => !item.archived).map((item) => item.id),
+      ),
+    ),
+  };
+}

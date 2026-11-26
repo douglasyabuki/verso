@@ -17,6 +17,7 @@ import {
 import { copyResume, createResume } from "@/lib/career/resumes";
 import {
   captureStarter,
+  detailsForNewEntries,
   fieldsForNewEntries,
   prepareStarterResume,
   starterMappings,
@@ -279,6 +280,92 @@ describe("independent appearance and reusable structure", () => {
         [entry.id],
       ),
     ).toEqual([]);
+  });
+  describe("details for newly selected entries", () => {
+    function detailed() {
+      const { document, entry } = fixture();
+      entry.achievements = [
+        { id: "a1", archived: false, wording: { "en-US": "First" } },
+        { id: "a2", archived: true, wording: { "en-US": "Archived" } },
+        { id: "a3", archived: false, wording: {} },
+      ];
+      entry.links = [
+        { id: "l1", archived: true, url: "https://a.example", label: {} },
+        { id: "l2", archived: false, url: "https://b.example", label: {} },
+      ];
+      const selection = {
+        sectionId: document.sections[0].id,
+        entryIds: [] as string[],
+        fieldIds: [] as string[],
+        achievementIds: [] as string[],
+        linkIds: [] as string[],
+      };
+      return { section: document.sections[0], entry, selection };
+    }
+
+    it("includes every field and non-archived achievement and link in career order", () => {
+      const { section, entry, selection } = detailed();
+      expect(detailsForNewEntries(section, selection, [entry.id])).toEqual({
+        fieldIds: entry.fields.map((field) => field.id),
+        achievementIds: ["a1", "a3"],
+        linkIds: ["l2"],
+      });
+    });
+
+    it("follows starter field defaults while still including achievements and links", () => {
+      const { section, entry, selection } = detailed();
+      expect(
+        detailsForNewEntries(
+          section,
+          { ...selection, fieldDefaults: ["organization"] },
+          [entry.id],
+        ),
+      ).toEqual({
+        fieldIds: [entry.fields[1].id],
+        achievementIds: ["a1", "a3"],
+        linkIds: ["l2"],
+      });
+    });
+
+    it("keeps earlier choices when a hidden entry is selected again", () => {
+      const { section, entry, selection } = detailed();
+      const previous = {
+        ...selection,
+        entryIds: [entry.id],
+        hiddenEntryIds: [entry.id],
+        fieldIds: [entry.fields[0].id],
+        achievementIds: ["a3"],
+        linkIds: [],
+      };
+      expect(detailsForNewEntries(section, previous, [entry.id])).toEqual({
+        fieldIds: [entry.fields[0].id],
+        achievementIds: ["a3"],
+        linkIds: [],
+      });
+    });
+
+    it("appends after existing choices without duplicating or reordering them", () => {
+      const { section, entry, selection } = detailed();
+      const other = createEntry("experience");
+      section.entries.push(other);
+      const result = detailsForNewEntries(
+        section,
+        {
+          ...selection,
+          entryIds: [other.id],
+          fieldIds: [other.fields[1].id, entry.fields[0].id],
+          achievementIds: ["a3"],
+        },
+        [other.id, entry.id],
+      );
+      expect(result.fieldIds).toEqual([
+        other.fields[1].id,
+        entry.fields[0].id,
+        ...entry.fields.slice(1).map((field) => field.id),
+      ]);
+      expect(result.achievementIds).toEqual(["a3", "a1"]);
+      expect(result.linkIds).toEqual(["l2"]);
+    });
   });
   it("round-trips current setups while rejecting earlier template/layout data", () => {
     const { document, resume } = fixture();
