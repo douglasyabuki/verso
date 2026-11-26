@@ -647,6 +647,7 @@ html[data-theme-switching] *::after {
 @utility welcome-selected-paper {
   --document-delay: var(--welcome-paper-delay);
   --document-edge: var(--primary);
+  --document-opacity: 1;
   --document-shift: -3px;
   --document-surface: var(--paper);
   --document-indicator: var(--paper-teal);
@@ -694,12 +695,12 @@ html[data-theme-switching] *::after {
 
   @keyframes welcome-set-paper {
     from {
-      opacity: 0.72;
+      opacity: calc(var(--document-opacity, 0.65) * 0.72);
       transform: translateY(10px) scaleY(0.97);
     }
 
     to {
-      opacity: 1;
+      opacity: var(--document-opacity, 0.65);
       transform: none;
     }
   }
