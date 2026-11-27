@@ -13,6 +13,7 @@ export async function inspectPdf(base64: string) {
     const pages = [];
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
+      const { width, height } = page.getViewport({ scale: 1 });
       const text = await page.getTextContent();
       await page.getOperatorList();
       const fontIds = [
@@ -36,6 +37,8 @@ export async function inspectPdf(base64: string) {
         };
       });
       pages.push({
+        width,
+        height,
         text: text.items
           .flatMap((item) => ("str" in item ? [item.str] : []))
           .join(" "),

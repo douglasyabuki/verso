@@ -20,12 +20,14 @@ export function PdfPreviewPlaceholder({
   title = "Your resume, ready to preview",
   description = "Generate a PDF to see how your saved resume looks on the page.",
   busy = false,
+  announce = true,
   onGenerate,
   actionLabel = "Generate preview",
 }: {
   title?: string;
   description?: string;
   busy?: boolean;
+  announce?: boolean;
   onGenerate?: () => void;
   actionLabel?: string;
 }) {
@@ -59,7 +61,7 @@ export function PdfPreviewPlaceholder({
             </div>
           )}
         </EmptyMedia>
-        <EmptyHeader role={busy ? "status" : undefined}>
+        <EmptyHeader role={busy && announce ? "status" : undefined}>
           <EmptyTitle>{title}</EmptyTitle>
           <EmptyDescription>{description}</EmptyDescription>
         </EmptyHeader>

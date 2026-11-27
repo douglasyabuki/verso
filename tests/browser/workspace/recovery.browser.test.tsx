@@ -70,7 +70,7 @@ describe("Save and recovery", () => {
     } finally {
       fault.mockRestore();
     }
-    expect(await owner.drafts()).toEqual([first]);
+    expect(await owner.drafts()).toEqual([]);
     const newer = {
       ...first,
       draftVersion: 2,
@@ -208,10 +208,13 @@ describe("Save and recovery", () => {
     await controller.flushRecovery();
     const draft = controller.getSnapshot().draft;
     const fault = vi
-      .spyOn(CareerStorage.prototype, "discardDraft")
+      .spyOn(CareerStorage.prototype, "confirmDraftDiscard")
       .mockRejectedValue(new Error("Cleanup unavailable"));
     try {
-      await expect(controller.cancel()).rejects.toThrow(/Cleanup unavailable/);
+      await expect(controller.cancel()).resolves.toMatchObject({
+        kind: "unconfirmed",
+        message: expect.stringContaining("Cleanup unavailable"),
+      });
     } finally {
       fault.mockRestore();
     }
@@ -222,6 +225,50 @@ describe("Save and recovery", () => {
     await controller.cancel();
     expect(controller.getSnapshot().draft).toBeNull();
     expect(await owner.drafts()).toEqual([]);
+  });
+
+  it("confirms Cancel before physical removal and excludes only its resolved version after reload", async () => {
+    const controller = await controllerOwner();
+    const owner = await storage();
+    const head = controller.getSnapshot().head!;
+    controller.open("summary");
+    controller.change({
+      ...head.document.summary,
+      wording: { "en-US": "Discarded" },
+    });
+    await controller.flushRecovery();
+    const draft = controller.getSnapshot().draft!;
+    const original = IDBObjectStore.prototype.delete;
+    const fault = vi
+      .spyOn(IDBObjectStore.prototype, "delete")
+      .mockImplementation(function (this: IDBObjectStore, key) {
+        if (this.name === "drafts") throw new Error("Removal unavailable");
+        return original.call(this, key);
+      });
+    try {
+      expect(await controller.cancel()).toEqual({
+        kind: "discarded",
+        draftId: draft.draftId,
+        draftVersion: draft.draftVersion,
+      });
+      expect(controller.getSnapshot().draft).toBeNull();
+      await expect
+        .poll(() => controller.getSnapshot().recoveryCleanupPending)
+        .toBe(true);
+      const reloaded = await controllerOwner();
+      expect(reloaded.getSnapshot().recovery).toEqual([]);
+      expect(reloaded.getSnapshot().recoveryCleanupPending).toBe(true);
+      const newer = { ...draft, draftVersion: draft.draftVersion + 1 };
+      await owner.writeDraft(newer);
+      expect(await owner.drafts()).toEqual([newer]);
+    } finally {
+      fault.mockRestore();
+    }
+    expect(await controller.retryRecoveryCleanup()).toBe(true);
+    expect(controller.getSnapshot().recoveryCleanupPending).toBe(false);
+    expect((await owner.drafts()).map((item) => item.draftVersion)).toEqual([
+      draft.draftVersion + 1,
+    ]);
   });
 
   it("imports recovery with fresh identities and no replayable operation or committed changes", async () => {

@@ -21,10 +21,15 @@ export type ResumeOutputTarget = { destination: string; fieldId: string };
 
 export type ResumeOutputIssue = {
   id: string;
-  code: "missing-resume" | "unverified-language" | "missing-wording";
+  code:
+    | "missing-resume"
+    | "unverified-language"
+    | "missing-wording"
+    | "invalid-draft";
   message: string;
   recordId: string;
   target?: ResumeOutputTarget;
+  wordingTarget?: ResumeOutputTarget;
 };
 
 export type ResumeOutputAssessment = {

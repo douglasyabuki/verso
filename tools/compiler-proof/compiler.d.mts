@@ -23,6 +23,7 @@ export class BrowserCompiler {
     source: string;
     snapshotId: string;
     locale: string;
+    current?: () => boolean;
   }): Promise<CompileResult>;
   close(): void;
 }

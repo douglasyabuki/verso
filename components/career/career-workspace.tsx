@@ -41,7 +41,6 @@ import {
 } from "@/components/career/career-fields";
 import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
-import { CommittedOutputView } from "@/components/career/committed-output";
 import { ConflictPanel } from "@/components/career/conflict-panel";
 import {
   RestoredDraftBanner,
@@ -49,6 +48,8 @@ import {
 } from "@/components/career/draft-recovery-banners";
 import { LayoutFields } from "@/components/career/layout-editor";
 import { libraryDestinationKind } from "@/components/career/library-navigation";
+import { LiveOutput } from "@/components/career/live-output";
+import { LivePdfRelease } from "@/components/career/live-pdf-release";
 import {
   type CareerActions,
   careerDetailsQuickActions,
@@ -56,7 +57,6 @@ import {
   sectionQuickActions,
 } from "@/components/career/quick-actions";
 import { RecoveryList } from "@/components/career/recovery-list";
-import { ReleaseControl } from "@/components/career/release-dialog";
 import { ResumeComparison } from "@/components/career/resume-comparison";
 import {
   CareerResumeCollection,
@@ -130,8 +130,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useAccountActions } from "@/hooks/account/use-account-actions";
-import { useAutomaticRelease } from "@/hooks/output/use-automatic-release";
-import { useCommittedPreview } from "@/hooks/output/use-committed-preview";
+import { useLivePreview } from "@/hooks/output/use-live-preview";
+import type { PdfViewPosition } from "@/hooks/output/use-pdf-document";
 import { useReleases } from "@/hooks/releases/use-releases";
 import { draftConflict } from "@/lib/career/conflict";
 import {
@@ -175,6 +175,7 @@ import {
   type CareerDraftTarget,
 } from "@/stores/career/controller";
 import type { CareerHead } from "@/stores/career/persistence";
+import type { LivePreview } from "@/stores/output/live-preview";
 import type {
   CareerDocument,
   CareerDraft,
@@ -243,8 +244,12 @@ function DraftEditor({
   document,
   onChange,
   disabled = false,
+  preview,
+  focusRequest,
 }: {
   disabled?: boolean;
+  preview?: LivePreview;
+  focusRequest?: { fieldId: string } | null;
   scope: string;
   values: unknown;
   language: string;
@@ -324,6 +329,8 @@ function DraftEditor({
   )
     return (
       <ResumeContentEditor
+        preview={preview}
+        focusRequest={focusRequest}
         document={document}
         resume={resume}
         values={values as ResumeContent}
@@ -813,15 +820,28 @@ export function CareerWorkspace({
   const [issueFocus, setIssueFocus] = useState<{
     fieldId: string;
     resumeId: string;
+    scope: string;
   } | null>(null);
   useEffect(() => {
     if (!issueFocus) return;
     const frame = requestAnimationFrame(() => {
-      const card = window.document.getElementById(
-        `resume-wording-${issueFocus.resumeId}-${issueFocus.fieldId}`,
-      );
-      card?.focus({ preventScroll: true });
-      card?.scrollIntoView({ block: "center", behavior: "instant" });
+      const { scope, resumeId, fieldId } = issueFocus;
+      const row =
+        scope === "resume-wording"
+          ? document.getElementById(`resume-wording-${resumeId}-${fieldId}`)
+          : document.querySelector<HTMLElement>(
+              `[data-preview-field="${CSS.escape(fieldId)}"]`,
+            );
+      const control = row?.matches("input,button,[role=checkbox]")
+        ? row
+        : (row?.querySelector<HTMLElement>(
+            'input, textarea, [contenteditable="true"]',
+          ) ??
+          row?.querySelector<HTMLElement>(
+            'button[data-wording-customize], button, [role="checkbox"], [role="combobox"]',
+          ));
+      control?.focus({ preventScroll: true });
+      control?.scrollIntoView({ block: "center", behavior: "instant" });
     });
     return () => cancelAnimationFrame(frame);
   }, [issueFocus]);
@@ -830,6 +850,7 @@ export function CareerWorkspace({
   const [guard, setGuard] = useState<{
     action: () => void;
     targets: CareerDraftTarget[];
+    issueNavigation?: boolean;
   } | null>(null);
   const [review, setReview] = useState<
     | (WorkspaceReplacement & {
@@ -990,17 +1011,25 @@ export function CareerWorkspace({
   );
 
   const resolveTargets = useCallback(
-    (targets: CareerDraftTarget[], action: () => void) => {
+    (
+      targets: CareerDraftTarget[],
+      action: () => void,
+      issueNavigation = false,
+    ) => {
       if (controller.getSnapshot().saving) return;
       const dirty = targets.filter((target) => controller.isDirty(target));
       const clean = targets.filter((target) => !controller.isDirty(target));
       const proceed = () => {
-        if (dirty.length) setGuard({ action, targets: dirty });
+        if (dirty.length) setGuard({ action, targets: dirty, issueNavigation });
         else action();
       };
       if (clean.length)
         void (async () => {
-          for (const target of clean) await controller.cancel(target);
+          for (const target of clean) {
+            const state = controller.getSnapshot();
+            if (!(target === "form" ? state.draft : state.orderDraft)) continue;
+            if ((await controller.cancel(target)).kind !== "discarded") return;
+          }
           proceed();
         })().catch(() => {});
       else proceed();
@@ -1013,11 +1042,7 @@ export function CareerWorkspace({
     if (save) {
       if (!(await controller.save(false, target))) return;
     } else {
-      try {
-        await controller.cancel(target);
-      } catch {
-        return;
-      }
+      if ((await controller.cancel(target)).kind !== "discarded") return;
     }
     if (controller.isDirty(target)) return;
     if (remaining.length) setGuard({ ...guard, targets: remaining });
@@ -1165,6 +1190,10 @@ export function CareerWorkspace({
         destination,
       ),
   );
+  const keepPreviewCurrent = Boolean(
+    activeResume &&
+    /^(resume-layout|resume-wording|resume-content)\//.test(destination),
+  );
   const releases = useReleases({
     session: account?.session,
     onSessionInvalid: () => account?.store.invalidate(),
@@ -1180,17 +1209,31 @@ export function CareerWorkspace({
         : [],
     [accountMode, releaseLinks],
   );
-  const preview = useCommittedPreview({
-    head: state.head,
-    preferences: state.preferences,
-    activeResumeId: activeResume?.id,
+  const preview = useLivePreview(
+    controller,
+    activeResume?.id ?? "",
+    keepPreviewCurrent,
+    state.preferences.automaticRefresh,
     automaticResumeIds,
-  });
-  useAutomaticRelease({ preview, releases, accountMode });
-  const currentOutput =
-    preview.state.output && preview.state.output.key === preview.key
-      ? preview.state.output
-      : null;
+  );
+  const previewResume =
+    activeResume ??
+    documentValue?.resumes.find((resume) => resume.id === preview.selected) ??
+    documentValue?.resumes[0];
+  const readingIdentity = JSON.stringify([
+    state.head?.workspaceId,
+    state.head?.generation,
+    previewResume?.id,
+  ]);
+  const [reading, setReading] = useState(() => ({
+    identity: readingIdentity,
+    ref: { current: { page: 1, scale: "page-width" } as PdfViewPosition },
+  }));
+  if (reading.identity !== readingIdentity)
+    setReading({
+      identity: readingIdentity,
+      ref: { current: { page: 1, scale: "page-width" } },
+    });
   const contentLanguage =
     activeResume?.language ||
     language ||
@@ -1201,12 +1244,17 @@ export function CareerWorkspace({
     initialValues?: unknown,
     focusFieldId?: string,
     replace = false,
+    issueNavigation = false,
   ) => {
     const next = parseDestination(incoming);
     const focusIssue = () =>
       setIssueFocus(
         focusFieldId
-          ? { fieldId: focusFieldId, resumeId: next.split("/")[1] }
+          ? {
+              fieldId: focusFieldId,
+              resumeId: next.split("/")[1],
+              scope: next.split("/")[0],
+            }
           : null,
       );
     const perform = () => {
@@ -1286,7 +1334,7 @@ export function CareerWorkspace({
       focusIssue();
       return;
     }
-    resolveTargets(routeTargets(next), perform);
+    resolveTargets(routeTargets(next), perform, issueNavigation);
   };
   const unconfirmedAccountWork =
     state.recovery.length +
@@ -1312,8 +1360,14 @@ export function CareerWorkspace({
       } else navigate(background, undefined, undefined, true);
     });
   };
-  const openOutputIssue = (target: ResumeOutputTarget) =>
-    navigate(target.destination, undefined, target.fieldId);
+  const openOutputIssue = (target: ResumeOutputTarget) => {
+    if (target.destination === destination) {
+      const [scope, resumeId] = target.destination.split("/");
+      setIssueFocus({ fieldId: target.fieldId, resumeId, scope });
+      return;
+    }
+    navigate(target.destination, undefined, target.fieldId, false, true);
+  };
   const exportWorkspace = (head = state.head!) => {
     const content = JSON.stringify({
       format: "verso.workspace",
@@ -1729,7 +1783,7 @@ export function CareerWorkspace({
   ): Promise<boolean> => {
     for (const target of controller.navigationTargets()) {
       if (controller.isDirty(target)) return false;
-      await controller.cancel(target);
+      if ((await controller.cancel(target)).kind !== "discarded") return false;
     }
     const saved = await controller.command(scope, values, reviewed);
     if (saved) navigate(scope.startsWith("preset/") ? "presets" : "starters");
@@ -2073,10 +2127,9 @@ export function CareerWorkspace({
             onKeepDraft={() => controller.reconcile()}
             onUseSaved={() => {
               const savedScope = state.draft!.scope;
-              return controller
-                .cancel()
-                .then(() => controller.open(savedScope))
-                .catch(() => {});
+              return controller.cancel().then((outcome) => {
+                if (outcome.kind === "discarded") controller.open(savedScope);
+              });
             }}
             onExport={exportRecovery}
           />
@@ -2090,10 +2143,9 @@ export function CareerWorkspace({
             disabled={(!controller.isDirty() && !restoredDraft) || state.saving}
             onClick={() => {
               const savedScope = state.draft!.scope;
-              void controller
-                .cancel()
-                .then(() => controller.open(savedScope))
-                .catch(() => {});
+              void controller.cancel().then((outcome) => {
+                if (outcome.kind === "discarded") controller.open(savedScope);
+              });
             }}
           >
             Cancel
@@ -2261,7 +2313,8 @@ export function CareerWorkspace({
           )
             return false;
           for (const target of controller.navigationTargets())
-            await controller.cancel(target);
+            if ((await controller.cancel(target)).kind !== "discarded")
+              return false;
           const saved = await controller.command(scope, values, reviewed);
           if (saved) navigate(after);
           else {
@@ -2310,24 +2363,43 @@ export function CareerWorkspace({
                   ? resolveTargets(controller.navigationTargets(), () => {})
                   : void controller.history("redo"),
             }}
-            output={(visible) => (
-              <CommittedOutputView
-                preview={preview}
-                visible={visible}
-                showSelector={!activeResume}
-                onIssue={openOutputIssue}
-                actions={
-                  state.head && (
-                    <ReleaseControl
-                      releases={accountMode ? releases : null}
-                      output={currentOutput}
-                      workspaceId={state.head.workspaceId}
-                    />
-                  )
-                }
+            onMobilePreview={preview.commands.mobile}
+            output={(visible) =>
+              state.head && previewResume ? (
+                <LiveOutput
+                  preview={preview}
+                  head={state.head}
+                  resume={previewResume}
+                  visible={visible}
+                  showSelector={!activeResume}
+                  canPublish={Boolean(accountMode && releases)}
+                  onIssue={openOutputIssue}
+                  reading={reading}
+                />
+              ) : null
+            }
+          >
+            {state.head && (
+              <LivePdfRelease
+                coordinator={preview.coordinator}
+                releases={accountMode ? releases : null}
+                workspaceId={state.head.workspaceId}
               />
             )}
-          >
+            {state.recoveryCleanupPending && (
+              <Alert>
+                <AlertTitle>Recovery cleanup pending</AlertTitle>
+                <AlertDescription>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void controller.retryRecoveryCleanup()}
+                  >
+                    Retry recovery cleanup
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1 basis-48">
                 <div className="flex items-center gap-2 [&>svg]:size-8 [&>svg]:shrink-0">
@@ -2698,7 +2770,7 @@ export function CareerWorkspace({
                     </div>
                   }
                   onKeepDraft={() => controller.reconcile("order")}
-                  onUseSaved={() => controller.cancel("order").catch(() => {})}
+                  onUseSaved={() => void controller.cancel("order")}
                   onExport={exportRecovery}
                 />
               )}
@@ -2729,7 +2801,7 @@ export function CareerWorkspace({
                     navigate(`entries/${listSection.id}`);
                 }}
                 onSave={() => void controller.save(false, "order")}
-                onCancel={() => void controller.cancel("order").catch(() => {})}
+                onCancel={() => void controller.cancel("order")}
                 onOpen={(entry) => navigate(`entry/${entry.id}`)}
                 onCreate={() =>
                   careerActions.createEntry(listSection.id, navigate)
@@ -2844,11 +2916,10 @@ export function CareerWorkspace({
                       variant="outline"
                       disabled={!controller.isDirty() || state.saving}
                       onClick={() =>
-                        void controller
-                          .cancel()
-                          .then(() =>
-                            navigate(`resume-overview/${activeResume.id}`),
-                          )
+                        void controller.cancel().then((outcome) => {
+                          if (outcome.kind === "discarded")
+                            navigate(`resume-overview/${activeResume.id}`);
+                        })
                       }
                     >
                       Cancel
@@ -2870,6 +2941,7 @@ export function CareerWorkspace({
                 <section
                   className="flex flex-col gap-4"
                   aria-label="Editing form"
+                  data-live-preview-editor={keepPreviewCurrent ? "" : undefined}
                   onClickCapture={(event) => {
                     if (
                       event.target instanceof HTMLElement &&
@@ -2951,11 +3023,12 @@ export function CareerWorkspace({
                             >
                               Use this layout for new blank resumes…
                             </Button>
-                            <p className="text-xs text-muted-foreground">
-                              Save layout to update PDF output. The PDF pane
-                              continues to show saved content.
-                            </p>
                             <LayoutFields
+                              focusField={
+                                issueFocus?.scope === "resume-layout"
+                                  ? issueFocus.fieldId
+                                  : undefined
+                              }
                               defaults={layoutDefaults(
                                 resumeLayoutSchema.safeParse(
                                   state.draft.baseline,
@@ -2983,6 +3056,7 @@ export function CareerWorkspace({
                             state.draft.values,
                           ).success ? (
                           <ResumeWordingEditor
+                            preview={preview.coordinator}
                             document={documentValue}
                             resume={activeResume}
                             values={
@@ -2998,6 +3072,12 @@ export function CareerWorkspace({
                           />
                         ) : (
                           <DraftEditor
+                            preview={preview.coordinator}
+                            focusRequest={
+                              issueFocus?.scope === "resume-content"
+                                ? issueFocus
+                                : null
+                            }
                             disabled={state.saving}
                             key={state.draft.draftId}
                             scope={state.draft.scope}
@@ -3039,9 +3119,7 @@ export function CareerWorkspace({
                             conflict={formConflict}
                             disabled={state.saving}
                             onKeepDraft={() => controller.reconcile()}
-                            onUseSaved={() =>
-                              controller.cancel().catch(() => {})
-                            }
+                            onUseSaved={() => void controller.cancel()}
                             onExport={exportRecovery}
                           />
                         )}
@@ -3120,9 +3198,8 @@ export function CareerWorkspace({
                         }
                         variant="outline"
                         onClick={() =>
-                          void controller
-                            .cancel()
-                            .then(() =>
+                          void controller.cancel().then((outcome) => {
+                            if (outcome.kind === "discarded")
                               navigate(
                                 scope.startsWith("resume/")
                                   ? "resumes"
@@ -3137,9 +3214,8 @@ export function CareerWorkspace({
                                           : contextSection
                                             ? `list/${contextSection.id}`
                                             : "overview",
-                              ),
-                            )
-                            .catch(() => {})
+                              );
+                          })
                         }
                       >
                         {state.orderDraft ? "Cancel entry" : "Cancel"}
@@ -3271,27 +3347,36 @@ export function CareerWorkspace({
                       : "Unsaved form"}
                   </DialogTitle>
                   <DialogDescription>
-                    {guard?.targets[0] === "order"
-                      ? "Save or discard the pending entry order before leaving this section. Cancel keeps editing."
-                      : "Save or discard this form's changes before leaving it. Cancel keeps editing."}
+                    {guard?.issueNavigation
+                      ? "Save your changes before opening the editor for this issue."
+                      : guard?.targets[0] === "order"
+                        ? "Save or discard the pending entry order before leaving this section. Cancel keeps editing."
+                        : "Save or discard this form's changes before leaving it. Cancel keeps editing."}
                   </DialogDescription>
                 </DialogHeader>
+                {guard?.issueNavigation && state.error && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {state.error}
+                  </p>
+                )}
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setGuard(null)}>
-                    Cancel
+                    {guard?.issueNavigation ? "Keep editing" : "Cancel"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    disabled={state.saving}
-                    onClick={() => void resolveGuard(false)}
-                  >
-                    Discard
-                  </Button>
+                  {!guard?.issueNavigation && (
+                    <Button
+                      variant="outline"
+                      disabled={state.saving}
+                      onClick={() => void resolveGuard(false)}
+                    >
+                      Discard
+                    </Button>
+                  )}
                   <Button
                     disabled={state.saving}
                     onClick={() => void resolveGuard(true)}
                   >
-                    Save
+                    {guard?.issueNavigation ? "Save and go" : "Save"}
                   </Button>
                 </DialogFooter>
               </DialogContent>

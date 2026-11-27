@@ -301,6 +301,7 @@ function previewOutput(): PreviewOutput {
     url: "blob:x",
     key: "k",
     bytes: new TextEncoder().encode("%PDF-1.7 %%EOF"),
+    trigger: "manual",
     template: "yabuki-reference@1.0.3",
   };
 }

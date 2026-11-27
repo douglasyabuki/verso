@@ -8,7 +8,10 @@ import {
 import { useCommittedPreview } from "@/hooks/output/use-committed-preview";
 import { createCareerDocument } from "@/lib/career/model";
 import type { CareerHead } from "@/stores/career/persistence";
+import { setupCareerTests } from "@/tests/support/browser/career";
 import { devicePreferenceDefaults } from "@/types-and-constants/settings";
+
+setupCareerTests();
 
 const runtime = vi.hoisted(() => ({
   options: vi.fn(),

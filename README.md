@@ -26,9 +26,11 @@ resumes, customize each resume, and generate PDFs in the browser.
 - Explicit Save/Cancel, workspace Undo/Redo, separate unsaved-draft recovery,
   and JSON backups. Settings › Data lets you review a workspace replacement
   and restore the one previous workspace.
-- Browser-based LaTeX compilation and PDF preview/download. Refresh is manual by
-  default. Enable **Refresh preview automatically after Save** in Settings ›
-  Editing & preview.
+- Browser-based LaTeX compilation and live PDF preview in Layout, Wording, and
+  Content & order. Finish an interaction or leave the text fields to preview the
+  open draft. Use **Update preview** to refresh immediately. On mobile, select
+  **PDF preview** to see the draft. Enable **Refresh preview automatically after
+  Save** in Settings › Editing & preview to refresh saved output in other views.
 - A product presentation at `/` with Sign in, Sign up, Continue as guest, and
   a navbar Appearance control.
   An interactive fictional example shows which parts of one career record two
@@ -40,12 +42,14 @@ resumes, customize each resume, and generate PDFs in the browser.
   account storage and cross-device freshness checks. Sign-up is explicit; Settings ›
   Account shows which providers are connected, connects or disconnects them (keeping
   at least one), and permanently deletes the account. Configured accounts can
-  use **Publish PDF** in the preview to update a public latest link or publish a
+  use **Publish saved PDF** to review and update a public latest link or publish a
   pinned version. Settings › Public PDFs manages versions and automatic publishing.
 
 Saving, draft recovery, PDF generation, backups, and publication are separate
-operations. Unsaved text does not enter a generated PDF. Incomplete content can be
-saved; the preview's Issues list explains missing wording that blocks generation.
+operations. The preview labels unsaved PDFs and keeps the last readable version
+visible while updating. **Download saved PDF** and **Publish saved PDF** prepare
+the committed PDF on demand. Incomplete content can be saved. The preview’s
+**Issues** list links to fields that need attention for Save or PDF generation.
 
 ## Technology
 

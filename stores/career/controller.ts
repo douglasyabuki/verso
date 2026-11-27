@@ -88,6 +88,11 @@ async function sha256(text: string): Promise<string> {
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
+export type DiscardResult =
+  | { kind: "discarded"; draftId: string; draftVersion: number }
+  | { kind: "refused" }
+  | { kind: "unconfirmed"; message: string };
+
 export type CareerState = {
   preferences: DevicePreferences;
   preferenceStatus: string;
@@ -98,6 +103,7 @@ export type CareerState = {
   orderError: string;
   orderRecoveryStatus: string;
   recovery: CareerDraft[];
+  recoveryCleanupPending: boolean;
   error: string;
   /** Toolbar text derived from saveStatus; kept for display only. */
   status: string;
@@ -129,6 +135,7 @@ export class CareerController {
     orderError: "",
     orderRecoveryStatus: "",
     recovery: [],
+    recoveryCleanupPending: false,
     error: "",
     status: describeSaveStatus({ kind: "opening" }),
     saveStatus: { kind: "opening" },
@@ -151,11 +158,13 @@ export class CareerController {
   private committedIds = new Set<string>();
   private pristineDraftIds = new Set<string>();
   private disposed = false;
+  private closing: Promise<void> | null = null;
   private lifecycle = 0;
   private session = false;
   private refreshPending = false;
   private accountSync: AccountSync | null = null;
   private writeChain: Promise<void> = Promise.resolve();
+  private recoveryRemovals = new Set<Promise<boolean>>();
   private pendingHistory: {
     direction: "undo" | "redo";
     step: Step;
@@ -216,14 +225,42 @@ export class CareerController {
    * @example await this.maintain()
    */
   private async maintain(): Promise<void> {
+    if (!(await this.retryRecoveryCleanup())) return;
     try {
-      await this.storage?.retryDraftCleanup();
       if (this.preferencesLoaded) await this.storage?.pruneCompleted();
     } catch (error) {
       this.publish({
         error: `Storage maintenance needs retry. ${String(error)}`,
       });
     }
+  }
+
+  /** Retry only previously confirmed, version-specific recovery removals.
+   * @returns True when all pending intents are cleaned up.
+   * @example await controller.retryRecoveryCleanup()
+   */
+  async retryRecoveryCleanup(): Promise<boolean> {
+    try {
+      await this.storage?.retryDraftCleanup();
+      this.publish({ recoveryCleanupPending: false });
+      return true;
+    } catch {
+      this.publish({ recoveryCleanupPending: true });
+      return false;
+    }
+  }
+
+  /** Observe a confirmed discard's physical cleanup through disposal.
+   * @param finished True after removal, false when the durable intent needs retry.
+   * @returns No value.
+   * @example this.watchRecoveryCleanup(removal.finished)
+   */
+  private watchRecoveryCleanup(finished: Promise<boolean>): void {
+    this.recoveryRemovals.add(finished);
+    void finished.then((removed) => {
+      this.recoveryRemovals.delete(finished);
+      if (!removed) this.publish({ recoveryCleanupPending: true });
+    });
   }
 
   /** Merge durable drafts with interrupted receipt requests without hiding newer edits.
@@ -245,6 +282,14 @@ export class CareerController {
    * @example controller.getSnapshot()
    */
   getSnapshot = (): CareerState => this.state;
+
+  /** Report whether a form has stored or edited values without comparing its payload.
+   * @param draft Open form version.
+   * @returns True once the form has been edited or restored.
+   * @example controller.hasPreviewDraft(state.draft)
+   */
+  hasPreviewDraft = (draft: CareerDraft | null) =>
+    Boolean(draft && !this.pristineDraftIds.has(draft.draftId));
 
   /** Subscribe to controller state changes.
    * @param listener Callback invoked after publication.
@@ -374,6 +419,11 @@ export class CareerController {
     this.disposed = false;
     const lifecycle = ++this.lifecycle;
     try {
+      if (this.closing) {
+        await this.closing;
+        if (this.disposed || lifecycle !== this.lifecycle) return;
+        this.closing = null;
+      }
       const storage: CareerBackend = await (
         this.options.openBackend ?? openCareerStorage
       )();
@@ -856,68 +906,74 @@ export class CareerController {
     await this.writeChain;
   }
 
-  /** Cancel/Discard one form and conditionally remove its exact recovery version.
+  /** Resolve the exact open draft, then clean up its recovery independently.
    * @param target Only this lane is discarded (default form).
-   * @returns {Promise<void>} Completed discard, or rejection retaining the draft when cleanup fails.
-   * @example await controller.cancel()
+   * @returns Confirmation for the resolved version, or a retained/refused outcome.
+   * @example const result = await controller.cancel()
    */
-  async cancel(target: CareerDraftTarget = "form"): Promise<void> {
+  async cancel(target: CareerDraftTarget = "form"): Promise<DiscardResult> {
     const draft = this.draftFor(target);
-    if (!draft || this.state.saving) return;
-    // A locally opened, never-edited form has no recovery write to resolve.
-    // Avoid toggling the entire list's saving state and writing cleanup intents
-    // while navigating between pristine entry forms.
-    if (this.pristineDraftIds.delete(draft.draftId)) {
-      this.publishFor(target, { draft: null, error: "", recoveryStatus: "" });
-      return;
+    if (!draft || this.state.saving) return { kind: "refused" };
+    const { draftId, draftVersion } = draft;
+    const resolved = { kind: "discarded", draftId, draftVersion } as const;
+    const close = () => {
+      const current = this.draftFor(target);
+      if (current?.draftId !== draftId || current.draftVersion !== draftVersion)
+        return false;
+      this.publishFor(target, {
+        draft: null,
+        error: "",
+        recoveryStatus: "",
+        recovery: this.state.recovery.filter(
+          (item) =>
+            item.draftId !== draftId || item.draftVersion > draftVersion,
+        ),
+      });
+      return true;
+    };
+    if (this.pristineDraftIds.delete(draftId)) {
+      close();
+      return resolved;
     }
     clearTimeout(this.timer);
     clearTimeout(this.maxTimer);
     this.timer = undefined;
     this.maxTimer = undefined;
     this.publish({ saving: true });
-    const cleanup = this.writeChain.then(async () => {
-      try {
-        if (this.storage)
-          await this.storage.discardDraft(
-            draft.draftId,
-            draft.draftVersion,
-            draft.operationId,
-          );
-        const current = this.draftFor(target);
-        if (
-          current?.draftId !== draft.draftId ||
-          current.draftVersion !== draft.draftVersion
-        )
-          throw new Error(
-            "Newer edits were retained. Review them before discarding again.",
-          );
-        this.publishFor(target, {
-          draft: null,
-          error: "",
-          recoveryStatus: "",
-          recovery: this.state.recovery.filter(
-            (item) => item.draftId !== draft.draftId,
-          ),
-        });
-      } catch (error) {
-        this.publishFor(target, {
-          error: `Discard cleanup failed; draft retained. ${String(error)}`,
-        });
-        throw error;
-      } finally {
-        this.publish({ saving: false });
-        clearTimeout(this.timer);
-        this.timer = undefined;
-        if (this.hasUnsavedChanges() && !this.disposed)
-          this.timer = setTimeout(() => {
-            void this.flushRecovery();
-          }, 500);
-      }
-    });
-    // Future recovery writes must run after cleanup, including when cleanup fails.
-    this.writeChain = cleanup.catch(() => {});
-    await cleanup;
+    const confirmation = this.writeChain.then(
+      async (): Promise<DiscardResult> => {
+        try {
+          const cleanup = this.storage
+            ? await this.storage.confirmDraftDiscard(
+                draftId,
+                draftVersion,
+                draft.operationId,
+              )
+            : null;
+          if (cleanup) this.watchRecoveryCleanup(cleanup.finished);
+          if (close()) return resolved;
+          this.publishFor(target, {
+            error:
+              "Newer edits were retained. Review them before discarding again.",
+          });
+          return { kind: "refused" };
+        } catch (error) {
+          const message = `Discard unconfirmed; draft retained. ${String(error)}`;
+          this.publishFor(target, { error: message });
+          return { kind: "unconfirmed", message };
+        } finally {
+          this.publish({ saving: false });
+          clearTimeout(this.timer);
+          this.timer = undefined;
+          if (this.hasUnsavedChanges() && !this.disposed)
+            this.timer = setTimeout(() => {
+              void this.flushRecovery();
+            }, 500);
+        }
+      },
+    );
+    this.writeChain = confirmation.then(() => {});
+    return confirmation;
   }
 
   /** Save one scope as one atomic history step, retrying the same immutable operation after an uncertain response.
@@ -934,8 +990,7 @@ export class CareerController {
     const head = this.state.head;
     if (!draft || !head || this.state.saving) return false;
     if (!this.isDirty(target)) {
-      await this.cancel(target);
-      return true;
+      return (await this.cancel(target)).kind === "discarded";
     }
     this.publishFor(target, {
       saving: true,
@@ -1298,36 +1353,44 @@ export class CareerController {
   }
 
   /** Explicitly discard one listed recovery record without opening it.
-   * @param draft Unresolved recovery entry chosen from the recovery list; open form/order drafts use Cancel/Discard instead.
-   * @returns {Promise<boolean>} True after its version (and older stored versions) were removed; false when refused or cleanup failed, retaining the record.
+   * @param draft Unresolved recovery entry chosen from the recovery list.
+   * @returns True after intent confirmation. A refusal or an unconfirmed intent retains the record.
    * @example await controller.discardRecovery(state.recovery[0])
    */
   async discardRecovery(draft: CareerDraft): Promise<boolean> {
+    const storage = this.storage;
     if (
-      !this.storage ||
+      !storage ||
       this.state.saving ||
       this.state.draft?.draftId === draft.draftId ||
       this.state.orderDraft?.draftId === draft.draftId
     )
       return false;
-    const cleanup = this.writeChain.then(async () => {
-      await this.storage!.discardDraft(
-        draft.draftId,
-        draft.draftVersion,
-        draft.operationId,
-      );
-      this.publish({ recovery: await this.readRecovery() });
-    });
-    this.writeChain = cleanup.catch(() => {});
-    try {
-      await cleanup;
-      return true;
-    } catch (error) {
+    const confirmation = this.writeChain.then(async () => {
+      try {
+        const cleanup = await storage.confirmDraftDiscard(
+          draft.draftId,
+          draft.draftVersion,
+          draft.operationId,
+        );
+        this.watchRecoveryCleanup(cleanup.finished);
+      } catch (error) {
+        this.publish({
+          error: `Discard unconfirmed; recovery retained. ${String(error)}`,
+        });
+        return false;
+      }
       this.publish({
-        error: `Discard cleanup failed; recovery retained. ${String(error)}`,
+        recovery: this.state.recovery.filter(
+          (item) =>
+            item.draftId !== draft.draftId ||
+            item.draftVersion > draft.draftVersion,
+        ),
       });
-      return false;
-    }
+      return true;
+    });
+    this.writeChain = confirmation.then(() => {});
+    return confirmation;
   }
 
   /** Explicitly accept current committed baseline while keeping recovered values for further editing.
@@ -1592,12 +1655,16 @@ export class CareerController {
   }
 
   /** Preserve latest recovery best-effort and release this tab's timers/channel/database/listeners.
-   * @returns {void} No value; page-close recovery cannot be guaranteed.
+   * @returns Completion of best-effort recovery and closing the connection.
    * @example controller.dispose()
    */
-  dispose(): void {
+  dispose(): Promise<void> {
+    if (this.disposed && this.closing) return this.closing;
     const storage = this.storage;
-    void this.flushRecovery().finally(() => storage?.close());
+    const closing = this.flushRecovery()
+      .then(() => Promise.all(this.recoveryRemovals))
+      .finally(() => storage?.close())
+      .then(() => {});
     this.disposed = true;
     this.lifecycle++;
     clearTimeout(this.timer);
@@ -1609,6 +1676,8 @@ export class CareerController {
     this.accountSync?.stop();
     this.accountSync = null;
     this.listeners.clear();
+    this.closing = closing;
+    return closing;
   }
 
   /** Read the durable workspace for review before leaving session mode.

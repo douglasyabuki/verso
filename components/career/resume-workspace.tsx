@@ -18,6 +18,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import {
@@ -70,7 +71,12 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { QuickActionsMenu } from "@/components/ui/quick-actions";
 import {
   Select,
@@ -103,8 +109,10 @@ import {
 } from "@/lib/career/starters";
 import { type RichText, wordingText } from "@/lib/career/wording";
 import { reorderVisible } from "@/lib/ordering";
+import type { LivePreview } from "@/stores/output/live-preview";
 import type {
   CareerDocument,
+  CareerEntry,
   CareerResume,
 } from "@/types-and-constants/career";
 import { CAREER_FIELD_LABELS } from "@/types-and-constants/career";
@@ -859,6 +867,7 @@ type Choice = {
   value?: string;
   archived?: boolean;
   children?: ReactNode;
+  issue?: string;
 };
 
 function Choices({
@@ -870,6 +879,7 @@ function Choices({
   revision,
   query = "",
   disabled = false,
+  onDraggingChange,
 }: {
   label: string;
   scope: string;
@@ -879,6 +889,7 @@ function Choices({
   revision: object;
   query?: string;
   disabled?: boolean;
+  onDraggingChange?: (dragging: boolean) => void;
 }) {
   const available = items.filter(
     (item) =>
@@ -901,6 +912,10 @@ function Choices({
           <Checkbox
             className="mt-1.5"
             aria-label={`Include ${item.label}`}
+            data-preview-field={item.id}
+            aria-describedby={
+              item.issue ? `selection-issue-${item.id}` : undefined
+            }
             checked={selected.includes(item.id)}
             disabled={
               disabled || (item.archived && !selected.includes(item.id))
@@ -915,6 +930,14 @@ function Choices({
           />
           <span className="min-w-0 pt-1 text-sm leading-5 wrap-anywhere">
             {item.label}
+            {item.issue && (
+              <span
+                id={`selection-issue-${item.id}`}
+                className="block text-destructive"
+              >
+                {item.issue}
+              </span>
+            )}
             {item.archived && (
               <Badge variant="secondary" className="ms-2">
                 Archived
@@ -944,6 +967,7 @@ function Choices({
         </Empty>
       ) : (
         <SortableList
+          onDraggingChange={onDraggingChange}
           scope={`resume:${scope}`}
           revision={revision}
           contextKey={query}
@@ -989,13 +1013,42 @@ export function ResumeContentEditor({
   resume,
   values,
   onChange,
+  preview,
+  focusRequest,
 }: {
   document: CareerDocument;
   resume: CareerResume;
   values: ResumeContent;
   onChange: (value: ResumeContent) => void;
+  preview?: LivePreview;
+  focusRequest?: { fieldId: string } | null;
 }) {
+  const outputIssues = useSyncExternalStore(
+    preview?.subscribeIssues ?? noopSubscribe,
+    preview?.getIssues ?? emptyIssues,
+    emptyIssues,
+  );
+  const selectionIssue = (id: string) =>
+    outputIssues.find(
+      (issue) =>
+        issue.target?.destination.startsWith("resume-content/") &&
+        issue.target.fieldId === id,
+    )?.message;
   const [query, setQuery] = useState("");
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const [revealed, setRevealed] = useState(focusRequest);
+  if (revealed !== focusRequest) {
+    setRevealed(focusRequest);
+    if (focusRequest) {
+      setQuery("");
+      setOpened({});
+    }
+  }
+  const target = focusRequest?.fieldId;
+  const entryMatches = (entry: CareerEntry) =>
+    [...entry.fields, ...entry.achievements, ...entry.links].some(
+      (item) => item.id === target,
+    );
   const [showArchived, setShowArchived] = useState(false);
   const effective = effectiveResume(document, { ...resume, ...values });
   const wording = (id: string, shared: Record<string, RichText>) =>
@@ -1069,6 +1122,7 @@ export function ResumeContentEditor({
             ) || "Empty"}
           </p>
           <Choices
+            onDraggingChange={preview?.setSorting}
             label="Contact details"
             scope={`${resume.id}:contacts`}
             items={contacts.filter(
@@ -1145,6 +1199,7 @@ export function ResumeContentEditor({
         </p>
       )}
       <Choices
+        onDraggingChange={preview?.setSorting}
         label="Sections"
         scope={`${resume.id}:sections`}
         selected={effective.selection.map((item) => item.sectionId)}
@@ -1189,10 +1244,18 @@ export function ResumeContentEditor({
               ) ?? [];
             return {
               id: section.id,
+              issue: selectionIssue(section.id),
               label: section.name || section.kind,
               archived: section.archived,
               children: (
-                <Collapsible>
+                <Collapsible
+                  open={
+                    opened[section.id] ?? section.entries.some(entryMatches)
+                  }
+                  onOpenChange={(open) =>
+                    setOpened({ ...opened, [section.id]: open })
+                  }
+                >
                   <CollapsibleTrigger
                     render={
                       <Button
@@ -1214,6 +1277,7 @@ export function ResumeContentEditor({
                   <CollapsibleContent>
                     <DisclosureGuide>
                       <Choices
+                        onDraggingChange={preview?.setSorting}
                         label="Entries"
                         scope={`${resume.id}:${section.id}:entries`}
                         disabled={!sectionVisible}
@@ -1253,6 +1317,7 @@ export function ResumeContentEditor({
                                 key === "fieldIds"
                                   ? entry.fields.map((field) => ({
                                       id: field.id,
+                                      issue: selectionIssue(field.id),
                                       label: careerFieldLabel(field.key),
                                       value:
                                         field.type === "text"
@@ -1262,12 +1327,14 @@ export function ResumeContentEditor({
                                   : key === "achievementIds"
                                     ? entry.achievements.map((item, index) => ({
                                         id: item.id,
+                                        issue: selectionIssue(item.id),
                                         label: `Achievement ${index + 1}`,
                                         value: wording(item.id, item.wording),
                                         archived: item.archived,
                                       }))
                                     : entry.links.map((item, index) => ({
                                         id: item.id,
+                                        issue: selectionIssue(item.id),
                                         label: `Link ${index + 1}`,
                                         value:
                                           wording(item.id, item.label) ||
@@ -1319,7 +1386,12 @@ export function ResumeContentEditor({
                               children: configured?.entryIds.includes(
                                 entry.id,
                               ) ? (
-                                <Collapsible>
+                                <Collapsible
+                                  open={opened[entry.id] ?? entryMatches(entry)}
+                                  onOpenChange={(open) =>
+                                    setOpened({ ...opened, [entry.id]: open })
+                                  }
+                                >
                                   <CollapsibleTrigger
                                     render={
                                       <Button
@@ -1341,6 +1413,7 @@ export function ResumeContentEditor({
                                     <DisclosureGuide className="flex flex-col gap-4">
                                       {details.map(({ key, ownIds, items }) => (
                                         <Choices
+                                          onDraggingChange={preview?.setSorting}
                                           key={key}
                                           label={
                                             key === "fieldIds"
@@ -1458,6 +1531,10 @@ function WordingList({
   );
 }
 
+const noPreviewIssues: ReturnType<LivePreview["getIssues"]> = [];
+const emptyIssues = () => noPreviewIssues;
+const noopSubscribe = () => () => {};
+
 function WordingRow({
   row,
   resumeId,
@@ -1465,6 +1542,7 @@ function WordingRow({
   values,
   onChange,
   surface,
+  error,
 }: {
   row: ResumeWordingRow;
   resumeId: string;
@@ -1472,9 +1550,11 @@ function WordingRow({
   values: CareerResume["overrides"];
   onChange: (value: CareerResume["overrides"]) => void;
   surface: "standard" | "nested";
+  error?: string;
 }) {
   const custom = Object.hasOwn(values, row.id);
   const shared = wordingText(row.shared);
+  const errorId = `resume-wording-error-${row.id}`;
   return (
     <AnimatedListItem
       itemId={row.id}
@@ -1509,6 +1589,8 @@ function WordingRow({
           variant="ghost"
           size="xs"
           className="ms-auto"
+          data-wording-customize={!custom || undefined}
+          aria-describedby={error && !custom ? errorId : undefined}
           onClick={() => {
             if (custom) {
               const next = { ...values };
@@ -1531,6 +1613,7 @@ function WordingRow({
           {row.rich ? (
             <CareerRichField
               hideLabel
+              error={error}
               language={language}
               label={row.label}
               value={values[row.id]}
@@ -1539,6 +1622,7 @@ function WordingRow({
           ) : (
             <CareerTextField
               hideLabel
+              error={error}
               label={row.label}
               value={wordingText(values[row.id])}
               onChange={(value) => onChange({ ...values, [row.id]: value })}
@@ -1557,6 +1641,7 @@ function WordingRow({
           )}
         </p>
       )}
+      {!custom && error && <FieldError id={errorId}>{error}</FieldError>}
     </AnimatedListItem>
   );
 }
@@ -1573,6 +1658,7 @@ export function ResumeWordingEditor({
   onChange,
   navigate,
   focusRequest = null,
+  preview,
 }: {
   document: CareerDocument;
   resume: CareerResume;
@@ -1580,7 +1666,15 @@ export function ResumeWordingEditor({
   onChange: (value: CareerResume["overrides"]) => void;
   navigate: (destination: string) => void;
   focusRequest?: { fieldId: string } | null;
+  preview?: LivePreview;
 }) {
+  const issues = useSyncExternalStore(
+    preview?.subscribeIssues ?? noopSubscribe,
+    preview?.getIssues ?? emptyIssues,
+    emptyIssues,
+  );
+  const issueFor = (id: string) =>
+    issues.find((issue) => issue.recordId === id)?.message;
   const groups = useMemo(
     () => resumeWordingGroups(document, resume),
     [document, resume],
@@ -1678,6 +1772,7 @@ export function ResumeWordingEditor({
                     language={resume.language}
                     values={values}
                     onChange={onChange}
+                    error={issueFor(row.id)}
                     surface="standard"
                   />
                 ))}
@@ -1760,6 +1855,7 @@ export function ResumeWordingEditor({
                                     language={resume.language}
                                     values={values}
                                     onChange={onChange}
+                                    error={issueFor(row.id)}
                                     surface="nested"
                                   />
                                 ))}

@@ -40,23 +40,23 @@ export class CompilerError extends Error {
 
 /** Decode compiler resources while allowing navigation and paints between batches.
  * @param {Array<[string, string]>} encoded Ordered names and padded base64 contents.
- * @param {AbortSignal} signal Initialization cancellation and timeout signal.
+ * @param {() => void} check Initialization cancellation and version guard.
  * @returns {Promise<Array<[string, ArrayBuffer]>>} Ordered worker-ready resources.
- * @example const files = await decodeResources(encoded, controller.signal);
+ * @example const files = await decodeResources(encoded, check);
  */
-async function decodeResources(encoded, signal) {
+async function decodeResources(encoded, check) {
   const files = [];
   let batchStarted = performance.now();
 
   for (const [name, text] of encoded) {
-    signal.throwIfAborted();
+    check();
     const padding = text.endsWith("==") ? 2 : text.endsWith("=") ? 1 : 0;
     const bytes = new Uint8Array((text.length / 4) * 3 - padding);
     let offset = 0;
 
     // A multiple of four keeps every base64 chunk aligned, including padding.
     for (let start = 0; start < text.length; start += 65_536) {
-      signal.throwIfAborted();
+      check();
       const binary = atob(text.slice(start, start + 65_536));
       for (let index = 0; index < binary.length; index++) {
         bytes[offset++] = binary.charCodeAt(index);
@@ -64,7 +64,7 @@ async function decodeResources(encoded, signal) {
 
       if (performance.now() - batchStarted >= 8) {
         await new Promise((resolve) => setTimeout(resolve, 0));
-        signal.throwIfAborted();
+        check();
         batchStarted = performance.now();
       }
     }
@@ -105,7 +105,7 @@ export class BrowserCompiler {
     this.pending = new Set();
   }
 
-  async initialize() {
+  async initialize(checkCurrent = () => {}) {
     if (this.ready) return { initializationMs: 0, reused: true };
     const start = performance.now();
     this.onState("initializing");
@@ -113,7 +113,7 @@ export class BrowserCompiler {
     let timer;
     try {
       await Promise.race([
-        this.loadAssets(this.controller.signal),
+        this.loadAssets(this.controller.signal, checkCurrent),
         new Promise((_, reject) => {
           timer = setTimeout(
             () =>
@@ -139,7 +139,11 @@ export class BrowserCompiler {
     }
   }
 
-  async loadAssets(signal) {
+  async loadAssets(signal, checkCurrent) {
+    const check = () => {
+      signal.throwIfAborted();
+      checkCurrent();
+    };
     const response = await fetch(new URL("manifest.json", this.assetBase), {
       signal,
     });
@@ -169,16 +173,16 @@ export class BrowserCompiler {
       .stream()
       .pipeThrough(new DecompressionStream("gzip"));
     const encoded = await new Response(stream).json();
-    signal.throwIfAborted();
-    const files = await decodeResources(encoded, signal);
+    check();
+    const files = await decodeResources(encoded, check);
     for (const name of ["xetex", "dvipdfm"]) {
-      signal.throwIfAborted();
+      check();
       const worker = new Worker(
         new URL(`swiftlatex${name}.js`, this.assetBase),
       );
       this.workers.push(worker);
       await this.receive(worker, undefined);
-      signal.throwIfAborted();
+      check();
       await this.send(worker, "bundle", { files });
     }
   }
@@ -230,7 +234,7 @@ export class BrowserCompiler {
 
   /**
    * Compile an identifiable source snapshot using two TeX passes and XDV-to-PDF.
-   * @param {{source: string, snapshotId: string, locale: string}} request Frozen source identity.
+   * @param {{source: string, snapshotId: string, locale: string, current?: () => boolean}} request Frozen source identity.
    * @returns {Promise<object>} PDF bytes, logs, identity, and separate timing measurements.
    * @example await compiler.compile({source, snapshotId: "draft-1", locale: "en-US"})
    */
@@ -244,11 +248,16 @@ export class BrowserCompiler {
         "Source must be nonempty and no larger than 1 MB",
       );
     }
+    const checkCurrent = () => {
+      if (request.current && !request.current())
+        throw new DOMException("Preview superseded", "AbortError");
+    };
     this.busy = true;
     let timer;
     let log = "";
     try {
-      const initialization = await this.initialize();
+      const initialization = await this.initialize(checkCurrent);
+      checkCurrent();
       const start = performance.now();
       this.onState("compiling");
       const result = await Promise.race([
@@ -260,14 +269,18 @@ export class BrowserCompiler {
             url: "main.tex",
             src: request.source,
           });
+          checkCurrent();
           tex.postMessage({ cmd: "setmainfile", url: "main.tex" });
           await this.send(tex, "compilelatex");
+          checkCurrent();
           const xdv = await this.send(tex, "compilelatex");
+          checkCurrent();
           log = xdv.log;
           await this.send(pdf, "writefile", {
             url: "main.xdv",
             src: new Uint8Array(xdv.pdf),
           });
+          checkCurrent();
           pdf.postMessage({ cmd: "setmainfile", url: "main.xdv" });
           const compiled = await this.send(pdf, "compilepdf");
           const bytes = new Uint8Array(compiled.pdf);
@@ -298,7 +311,7 @@ export class BrowserCompiler {
       this.onState("successful");
       return result;
     } catch (error) {
-      this.close();
+      if (error.name !== "AbortError") this.close();
       this.onState(error.timedOut ? "timed-out" : "failed");
       throw error;
     } finally {

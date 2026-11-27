@@ -17,10 +17,12 @@ const initialUrl = window.location.href;
 const initialState = window.history.state;
 
 afterEach(async () => {
+  for (const controller of controllers)
+    await expect.poll(() => controller.getSnapshot().saving).toBe(false);
   await cleanup();
   for (const controller of controllers) {
     await controller.flushRecovery();
-    controller.dispose();
+    await controller.dispose();
   }
   controllers.length = 0;
   vi.restoreAllMocks();

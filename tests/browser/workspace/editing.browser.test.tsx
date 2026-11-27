@@ -312,12 +312,13 @@ describe("independent entry and order drafts", () => {
     const entryDraft = controller.getSnapshot().draft!;
     const orderDraft = controller.getSnapshot().orderDraft!;
     const fault = vi
-      .spyOn(CareerStorage.prototype, "discardDraft")
+      .spyOn(CareerStorage.prototype, "confirmDraftDiscard")
       .mockRejectedValueOnce(new Error("Cleanup unavailable"));
     try {
-      await expect(controller.cancel("order")).rejects.toThrow(
-        /Cleanup unavailable/,
-      );
+      await expect(controller.cancel("order")).resolves.toMatchObject({
+        kind: "unconfirmed",
+        message: expect.stringContaining("Cleanup unavailable"),
+      });
     } finally {
       fault.mockRestore();
     }
@@ -329,7 +330,7 @@ describe("independent entry and order drafts", () => {
         storedDraft(orderDraft),
       ]),
     );
-    controller.dispose();
+    await controller.dispose();
     const reloaded = await controllerOwner();
     expect(reloaded.getSnapshot().draft).toBeNull();
     expect(reloaded.getSnapshot().orderDraft).toBeNull();

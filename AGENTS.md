@@ -73,7 +73,8 @@ limitations. Keep it current when shipped behavior changes.
 
 ## Data integrity and security
 
-- Keep drafts/recovery separate from committed content, history, and preview inputs.
+- Keep drafts and recovery separate from committed content, history, and saved PDF
+  inputs. Draft preview uses the active form version and is labeled unsaved.
   Explicit Save validates and commits one scope atomically; failures retain drafts.
   Incomplete valid content may be saved independently of PDF readiness.
 - Recheck generation and scope baselines at commit; unrelated edits must not conflict.
@@ -93,10 +94,11 @@ limitations. Keep it current when shipped behavior changes.
 - Keep guest/account data isolated. Derive private ownership from the verified
   server session on every request. Account Save success requires server acknowledgment;
   typing remains local recovery. Preserve session/origin checks and atomic receipts.
-- Render committed effective content only; use safe text encoding and verified
-  language capabilities. Saving, recovery, compilation, backup, and release status
-  are distinct. Public PDFs require reviewed publication or explicit automatic-release
-  opt-in; preserve immutable releases, quotas, and uncached revocation behavior.
+- Render effective content with safe text encoding and verified language
+  capabilities. Download and publish use saved PDF artifacts. Saving, recovery,
+  compilation, backup, and release status are distinct. Public PDFs require
+  reviewed publication or explicit automatic-release opt-in. Preserve immutable
+  releases, quotas, and uncached revocation behavior.
 
 ## Validation and maintenance
 

@@ -28,6 +28,8 @@ export type PreviewOutput = Omit<PreviewJob, "source"> & {
   url: string;
   key: string;
   bytes: Uint8Array;
+  /** Opening the editor alone does not authorize automatic publication. */
+  trigger: RefreshTrigger;
   /** Compiler-reported template identity, such as `yabuki-reference@1.0.3`. */
   template: string;
 };
@@ -45,11 +47,14 @@ export type PreviewState = {
   active: string | null;
   /** Key of the single replaceable queued job, if any. */
   queued: string | null;
-  /** True while a committed output change waits for automatic refresh. */
+  /** True while automatic generation is debouncing or waiting for visibility. */
   automaticPending: boolean;
 };
 
 type CompilerLike = Pick<BrowserCompiler, "compile" | "close">;
+
+type RefreshTrigger = "manual" | "committed-change" | "editor-open";
+type AutomaticTrigger = Exclude<RefreshTrigger, "manual">;
 
 export type PreviewCoordinatorOptions = {
   /** Creates one compiler instance (worker pair); replaced only after close. */
@@ -60,7 +65,7 @@ export type PreviewCoordinatorOptions = {
   }) => CompilerLike;
   createUrl?: (bytes: Uint8Array) => string;
   revokeUrl?: (url: string) => void;
-  /** Automatic-refresh debounce after a committed output change. */
+  /** Debounce for automatic generation on editor open or after a committed change. */
   automaticDelayMs?: number;
 };
 
@@ -92,13 +97,14 @@ export class PreviewCoordinator {
   };
   private listeners = new Set<() => void>();
   private compiler: CompilerLike | null = null;
-  private preferences: DevicePreferences = devicePreferenceDefaults;
+  private automaticRefresh = devicePreferenceDefaults.automaticRefresh;
+  private keepCurrent = false;
   private target: PreviewJob | null = null;
   private targetIdentity: Pick<PreviewTag, "generation" | "resumeId"> | null =
     null;
-  private queuedJob: PreviewJob | null = null;
-  private queuedAutomatic = false;
-  private running = false;
+  private pendingAutomatic: AutomaticTrigger | null = null;
+  private queuedTrigger: RefreshTrigger | null = null;
+  private activeTrigger: RefreshTrigger | null = null;
   private visible = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private lifecycle = 0;
@@ -145,18 +151,10 @@ export class PreviewCoordinator {
     return this.timer !== null;
   }
 
-  /** Apply the preview preference; disabling it cancels pending automatic refreshes. */
+  /** Apply the preview preference and cancel work that no longer qualifies. */
   setPreferences(preferences: DevicePreferences) {
-    this.preferences = preferences;
-    if (!preferences.automaticRefresh) {
-      this.clearTimer();
-      if (this.queuedAutomatic) {
-        this.queuedJob = null;
-        this.queuedAutomatic = false;
-        this.publish({ queued: null });
-      }
-      this.publish({ automaticPending: false });
-    } else this.scheduleAutomatic();
+    this.automaticRefresh = preferences.automaticRefresh;
+    this.cancelIneligibleAutomatic();
   }
 
   /** Report whether the preview is visible (pane shown, tab active, document visible).
@@ -167,10 +165,10 @@ export class PreviewCoordinator {
     if (visible) this.scheduleAutomatic();
     else {
       this.clearTimer();
-      if (this.queuedAutomatic) {
-        this.queuedJob = null;
-        this.queuedAutomatic = false;
-        this.publish({ queued: null, automaticPending: true });
+      if (this.queuedTrigger && this.queuedTrigger !== "manual") {
+        const trigger = this.queuedTrigger;
+        this.clearQueue();
+        this.deferAutomatic(trigger);
       }
     }
   }
@@ -181,6 +179,7 @@ export class PreviewCoordinator {
    * when readiness blocks output, so becoming ready after a Save refreshes.
    * @param job Ready committed output, or null when blocked.
    * @param identity Selected resume and generation, including while blocked.
+   * @param keepCurrent Whether the current editor generates missing or outdated output on open and after a committed change.
    * @returns No value; updates the target and any pending automatic refresh.
    * @example preview.setTarget(null, { generation: 1, resumeId: "resume" });
    */
@@ -188,74 +187,77 @@ export class PreviewCoordinator {
     job: PreviewJob | null,
     identity: Pick<PreviewTag, "generation" | "resumeId"> | null = job?.tag ??
       null,
+    keepCurrent = false,
   ) {
     const previous = this.target;
     const previousIdentity = this.targetIdentity;
+    const enteredEditor = keepCurrent && !this.keepCurrent;
+    this.keepCurrent = keepCurrent;
     this.target = job;
     this.targetIdentity = identity;
     if (
       previousIdentity &&
-      identity &&
-      previousIdentity.generation !== identity.generation
+      previousIdentity.generation !== identity?.generation
     ) {
+      this.lifecycle += 1;
       this.closeCompiler();
-      this.queuedJob = null;
-      this.queuedAutomatic = false;
-      this.publish({ queued: null });
+      this.activeTrigger = null;
+      this.publish({ active: null, status: idle });
     }
     const sameTarget =
       previousIdentity !== null &&
       identity !== null &&
       previousIdentity.generation === identity.generation &&
       previousIdentity.resumeId === identity.resumeId;
-    if ((!sameTarget || !job) && this.queuedJob) {
-      this.queuedJob = null;
-      this.queuedAutomatic = false;
-      this.publish({ queued: null });
+    const key = previewKey(job?.tag);
+    const changed = key !== previewKey(previous?.tag);
+    const output = this.state.output;
+    if (job && output?.key === key && output.targetPages !== job.targetPages)
+      this.publish({ output: { ...output, targetPages: job.targetPages } });
+    if (!sameTarget || !job || changed) {
+      this.clearAutomatic();
+      if (!sameTarget || !job || this.queuedTrigger !== "manual")
+        this.clearQueue();
+      else this.publish({ queued: key });
+      if (this.state.status.kind === "failed") this.publish({ status: idle });
     }
-    const changed =
-      sameTarget &&
-      job !== null &&
-      previous?.tag.fingerprint !== job.tag.fingerprint;
-    if (changed && this.preferences.automaticRefresh) {
-      this.publish({ automaticPending: true });
-      this.scheduleAutomatic();
-    } else if ((!sameTarget || !job) && this.state.automaticPending) {
-      this.clearTimer();
-      this.publish({ automaticPending: false });
-    }
+    this.cancelIneligibleAutomatic();
+    if (!job || this.queuedTrigger === "manual") return;
+    if (sameTarget && changed && this.canRunAutomatically("committed-change"))
+      this.deferAutomatic("committed-change");
+    else if (keepCurrent && (enteredEditor || changed))
+      this.deferAutomatic("editor-open");
   }
 
   /** Request a compile of the current target. A running job is never
    * interrupted; the request replaces any queued job instead. */
   refresh() {
-    this.requestRefresh(false);
+    this.requestRefresh("manual");
   }
 
-  /** Start or queue a refresh without losing whether it was automatic.
-   * @param automatic Whether hidden previews and preference changes may defer or cancel this request.
-   * @returns No value; starts work or replaces the single queued request.
-   * @example this.requestRefresh(true);
-   */
-  private requestRefresh(automatic: boolean) {
+  private requestRefresh(trigger: RefreshTrigger) {
     const job = this.target;
     if (!job) return;
-    this.clearTimer();
-    if (this.state.automaticPending) this.publish({ automaticPending: false });
+    this.clearAutomatic();
     const key = previewKey(job.tag);
-    if (this.running) {
-      if (this.state.active === key) {
-        this.queuedJob = null;
-        this.queuedAutomatic = false;
-        this.publish({ queued: null });
-        return;
+    if (trigger !== "manual" && this.state.output?.key === key) {
+      if (
+        trigger === "committed-change" &&
+        this.state.output.trigger === "editor-open"
+      ) {
+        // The committed change can reuse the PDF that was generated on open.
+        this.publish({ output: { ...this.state.output, trigger } });
       }
-      this.queuedJob = job;
-      this.queuedAutomatic = automatic;
-      this.publish({ queued: key });
       return;
     }
-    void this.run(job);
+    if (this.state.active === key) {
+      this.clearQueue();
+      if (this.activeTrigger === "editor-open" && trigger !== "editor-open")
+        this.activeTrigger = trigger;
+    } else if (this.state.active) {
+      this.queuedTrigger = trigger;
+      this.publish({ queued: key });
+    } else void this.run(job, trigger);
   }
 
   /** Close the compiler, cancel timers/queue, revoke the retained URL and reset
@@ -264,11 +266,12 @@ export class PreviewCoordinator {
     this.lifecycle += 1;
     this.clearTimer();
     this.closeCompiler();
-    this.queuedJob = null;
-    this.queuedAutomatic = false;
+    this.pendingAutomatic = null;
+    this.queuedTrigger = null;
+    this.activeTrigger = null;
+    this.keepCurrent = false;
     this.target = null;
     this.targetIdentity = null;
-    this.running = false;
     if (this.state.output) this.revokeUrl(this.state.output.url);
     this.state = {
       status: idle,
@@ -280,19 +283,66 @@ export class PreviewCoordinator {
     this.emit();
   }
 
-  private scheduleAutomatic() {
+  private canRunAutomatically(trigger: AutomaticTrigger) {
+    return (
+      this.keepCurrent ||
+      (trigger === "committed-change" && this.automaticRefresh)
+    );
+  }
+
+  private cancelIneligibleAutomatic() {
     if (
-      !this.state.automaticPending ||
-      !this.preferences.automaticRefresh ||
-      !this.visible ||
-      !this.target
+      this.pendingAutomatic &&
+      !this.canRunAutomatically(this.pendingAutomatic)
+    )
+      this.clearAutomatic();
+    if (
+      this.queuedTrigger &&
+      this.queuedTrigger !== "manual" &&
+      !this.canRunAutomatically(this.queuedTrigger)
+    )
+      this.clearQueue();
+  }
+
+  private deferAutomatic(trigger: AutomaticTrigger) {
+    const key = previewKey(this.target?.tag);
+    const current = this.state.output;
+    if (
+      !key ||
+      this.state.status.kind === "failed" ||
+      (trigger === "editor-open" &&
+        (this.state.active === key ||
+          this.state.queued === key ||
+          this.pendingAutomatic)) ||
+      (current?.key === key &&
+        (trigger === "editor-open" || current.trigger !== "editor-open"))
     )
       return;
+    this.pendingAutomatic = trigger;
+    if (!this.state.automaticPending) this.publish({ automaticPending: true });
+    this.scheduleAutomatic();
+  }
+
+  private scheduleAutomatic() {
+    const trigger = this.pendingAutomatic;
+    if (!trigger || !this.visible) return;
     this.clearTimer();
     this.timer = setTimeout(() => {
       this.timer = null;
-      this.requestRefresh(true);
+      this.requestRefresh(trigger);
     }, this.automaticDelayMs);
+  }
+
+  private clearAutomatic() {
+    this.clearTimer();
+    this.pendingAutomatic = null;
+    if (this.state.automaticPending) this.publish({ automaticPending: false });
+  }
+
+  private clearQueue() {
+    if (!this.queuedTrigger) return;
+    this.queuedTrigger = null;
+    this.publish({ queued: null });
   }
 
   private clearTimer() {
@@ -305,10 +355,10 @@ export class PreviewCoordinator {
     this.compiler = null;
   }
 
-  private async run(job: PreviewJob) {
+  private async run(job: PreviewJob, trigger: RefreshTrigger) {
     const lifecycle = this.lifecycle;
     const key = previewKey(job.tag);
-    this.running = true;
+    this.activeTrigger = trigger;
     this.publish({
       active: key,
       status: { kind: this.compiler ? "generating" : "preparing" },
@@ -318,7 +368,7 @@ export class PreviewCoordinator {
       onState: (state) => {
         if (
           this.lifecycle === lifecycle &&
-          this.state.active === key &&
+          this.state.active &&
           (state === "initializing" || state === "compiling")
         )
           this.publish({
@@ -336,15 +386,17 @@ export class PreviewCoordinator {
         locale: job.language,
       });
       if (this.lifecycle !== lifecycle) return;
-      if (key === previewKey(this.target?.tag)) {
+      const latest = this.target;
+      if (latest && key === previewKey(latest.tag)) {
         const previous = this.state.output;
         next.output = {
           tag: job.tag,
           revision: job.revision,
           resumeName: job.resumeName,
           language: job.language,
-          targetPages: job.targetPages,
+          targetPages: latest.targetPages,
           key,
+          trigger: this.activeTrigger ?? trigger,
           url: this.createUrl(result.bytes),
           bytes: result.bytes,
           template: `${result.templateId}@${result.templateVersion}`,
@@ -363,25 +415,11 @@ export class PreviewCoordinator {
           },
         };
     }
-    this.running = false;
-    const queued = this.queuedJob;
-    const automatic = this.queuedAutomatic;
-    this.queuedJob = null;
-    this.queuedAutomatic = false;
+    const queued = this.queuedTrigger;
+    this.activeTrigger = null;
+    this.queuedTrigger = null;
     this.publish({ ...next, active: null, queued: null });
-    const latest = this.target;
-    // The queued request runs against the latest committed target for the
-    // same resume and generation; stale queued sources are never compiled.
-    if (
-      queued &&
-      latest &&
-      latest.tag.resumeId === queued.tag.resumeId &&
-      latest.tag.generation === queued.tag.generation
-    ) {
-      if (automatic && (!this.visible || !this.preferences.automaticRefresh)) {
-        this.publish({ automaticPending: this.preferences.automaticRefresh });
-      } else void this.run(latest);
-    }
+    if (queued) this.requestRefresh(queued);
   }
 
   private publish(patch: Partial<PreviewState>) {

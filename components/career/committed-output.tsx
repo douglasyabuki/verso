@@ -63,7 +63,7 @@ export const CommittedOutput = memo(function CommittedOutput({
 /** Render committed preview state without owning compiler or URL lifecycles.
  * When not visible, the PDF viewer is unmounted so its document, canvases, and
  * worker are released while the coordinator retains the PDF and in-flight job.
- * @param props Coordinator-backed preview, visibility, selector flag, issue navigation, and optional header actions.
+ * @param props Coordinator-backed preview, pane visibility, selector and unsaved-edit flags, issue navigation, and optional header actions.
  * @returns Preview header, retained-PDF label, viewer, and Issues footer.
  * @example <CommittedOutputView preview={preview} visible onIssue={openIssue} />
  */
@@ -71,12 +71,14 @@ export const CommittedOutputView = memo(function CommittedOutputView({
   preview,
   visible,
   showSelector,
+  unsavedEdits = false,
   onIssue,
   actions,
 }: {
   preview: CommittedPreview;
   visible: boolean;
   showSelector: boolean;
+  unsavedEdits?: boolean;
   onIssue: (target: ResumeOutputTarget) => void;
   /** Optional header actions, such as the account Release control. */
   actions?: ReactNode;
@@ -129,9 +131,9 @@ export const CommittedOutputView = memo(function CommittedOutputView({
             </Button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {preview.automaticRefresh ? "Automatic refresh" : "Manual refresh"} ·
-          Saved content only
+        <p className="text-xs text-muted-foreground" role="status">
+          {preview.automaticRefresh ? "Automatic refresh" : "Manual refresh"} ·{" "}
+          {unsavedEdits ? "Save to update the PDF" : "Saved content only"}
           {state.automaticPending && " · Refresh pending"}
         </p>
         {showSelector && (
@@ -233,6 +235,12 @@ export const CommittedOutputView = memo(function CommittedOutputView({
               title="A few details need attention"
               description="Open Issues below to see what needs wording before this resume can become a PDF."
             />
+          ) : state.automaticPending ? (
+            <PdfPreviewPlaceholder
+              busy
+              title="Preparing your preview"
+              description="Your saved resume will appear here."
+            />
           ) : (
             <PdfPreviewPlaceholder onGenerate={compile} />
           ))}
@@ -245,6 +253,11 @@ export const CommittedOutputView = memo(function CommittedOutputView({
             </p>
             {visible && (
               <PdfPreview
+                key={JSON.stringify([
+                  output.tag.generation,
+                  output.tag.resumeId,
+                ])}
+                preservePosition={output.trigger !== "manual"}
                 pageWarningThreshold={output.targetPages}
                 document={{
                   key: output.key,

@@ -104,6 +104,7 @@ export function ReleaseControl({
   output,
   workspaceId,
   signedOutHint,
+  requested,
 }: {
   releases: Releases | null;
   /** Current committed output, or null when the preview is missing or outdated. */
@@ -111,10 +112,24 @@ export function ReleaseControl({
   workspaceId: string;
   /** Explanation shown in place of the trigger for guests; omitted when accounts are unavailable. */
   signedOutHint?: string;
+  requested?: { output: PreviewOutput; workspaceId: string } | null;
 }) {
   const [open, setOpen] = useState(false);
   const [review, setReview] = useState<Review | null>(null);
   const [publication, setPublication] = useState<Publication | null>(null);
+  const [lastRequest, setLastRequest] = useState(requested);
+  if (requested !== lastRequest) {
+    setLastRequest(requested);
+    if (requested && publication?.kind !== "publishing") {
+      if (publication?.kind !== "unconfirmed") {
+        setReview(requested);
+        setPublication(null);
+      }
+      setOpen(true);
+    } else if (!requested && publication?.kind !== "publishing") {
+      setOpen(false);
+    }
+  }
   if (!releases)
     return signedOutHint ? (
       <p className="text-xs text-muted-foreground">{signedOutHint}</p>
@@ -178,19 +193,30 @@ export function ReleaseControl({
         setOpen(next);
       }}
     >
-      <DialogTrigger
-        render={<Button variant="outline" size="sm" />}
-        disabled={!output && !unconfirmed}
-        title={
-          output || unconfirmed
+      {requested === undefined && (
+        <DialogTrigger
+          render={<Button variant="outline" size="sm" />}
+          disabled={!output && !unconfirmed}
+          title={
+            output || unconfirmed
+              ? undefined
+              : "Refresh the preview to publish saved content"
+          }
+        >
+          <Globe aria-hidden="true" data-icon="inline-start" />
+          Publish PDF
+        </DialogTrigger>
+      )}
+      <DialogContent
+        finalFocus={
+          requested === undefined
             ? undefined
-            : "Refresh the preview to publish saved content"
+            : () =>
+                document.querySelector<HTMLElement>(
+                  "[data-publish-saved-pdf]",
+                ) ?? false
         }
       >
-        <Globe aria-hidden="true" data-icon="inline-start" />
-        Publish PDF
-      </DialogTrigger>
-      <DialogContent>
         <DialogHeader>
           <DialogTitle>
             {published ? "PDF published" : "Publish this PDF"}
@@ -217,6 +243,14 @@ export function ReleaseControl({
                   : "A new unlisted link is created"}
               </dd>
             </dl>
+            <a
+              className="w-fit text-sm underline"
+              href={reviewOutput.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open the saved PDF being reviewed
+            </a>
             <Alert>
               <AlertTitle>Anyone with the link can open this PDF</AlertTitle>
               <AlertDescription>

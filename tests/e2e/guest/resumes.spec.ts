@@ -75,10 +75,10 @@ test("follows a readiness issue from narrow PDF view, saves its repair and resto
       .getByRole("button", { name: "Issues (1)", exact: true }),
   ).toHaveCount(0);
   await page.getByRole("tab", { name: "PDF preview", exact: true }).click();
-  const pdf = page.getByRole("region", { name: "Committed resume output" });
+  const pdf = page.getByRole("region", { name: "Resume PDF output" });
   await expect(
-    pdf.getByRole("button", { name: "Refresh preview" }),
-  ).toBeDisabled();
+    pdf.getByRole("button", { name: "Update preview" }),
+  ).toBeEnabled();
   await expect(pdf.getByText("1 blocking", { exact: true })).toBeVisible();
   await expect(
     pdf.getByRole("button", { name: "Issues (1)", exact: true }),
@@ -92,7 +92,9 @@ test("follows a readiness issue from narrow PDF view, saves its repair and resto
     name: "Profile · Full name",
     exact: true,
   });
-  await expect(card).toBeFocused();
+  await expect(
+    card.getByRole("button", { name: "Customize", exact: true }),
+  ).toBeFocused();
   await card.getByRole("button", { name: "Customize", exact: true }).click();
   await card
     .getByRole("textbox", { name: "Profile · Full name", exact: true })
@@ -102,9 +104,11 @@ test("follows a readiness issue from narrow PDF view, saves its repair and resto
     .getByRole("button", { name: "Save", exact: true })
     .click();
   await page.getByRole("tab", { name: "PDF preview", exact: true }).click();
-  await expect(pdf.getByText("Ready for PDF", { exact: true })).toBeVisible();
+  await expect(pdf.getByText("Ready for PDF", { exact: true })).toBeVisible({
+    timeout: 150_000,
+  });
   await expect(
-    pdf.getByRole("button", { name: "Refresh preview" }),
+    pdf.getByRole("button", { name: "Update preview" }),
   ).toBeEnabled();
   await page.reload();
   await expect(

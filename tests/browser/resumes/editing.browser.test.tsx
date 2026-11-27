@@ -47,7 +47,7 @@ afterEach(async () => {
   await cleanup();
   for (const controller of controllers) {
     await controller.flushRecovery();
-    controller.dispose();
+    await controller.dispose();
   }
   controllers.length = 0;
   vi.restoreAllMocks();
@@ -82,7 +82,7 @@ describe("resume editing and transactional lifecycle", () => {
       .click();
     await page
       .getByRole("dialog", { name: "Unsaved form" })
-      .getByRole("button", { name: "Save", exact: true })
+      .getByRole("button", { name: "Save and go", exact: true })
       .click();
     await expect.poll(() => controller.getSnapshot().saving).toBe(false);
     expect(controller.getSnapshot().head).toEqual(saved);
@@ -92,7 +92,7 @@ describe("resume editing and transactional lifecycle", () => {
     expect(controller.getSnapshot().error).toMatch(/valid.*date/);
     await page
       .getByRole("dialog", { name: "Unsaved form" })
-      .getByRole("button", { name: "Cancel", exact: true })
+      .getByRole("button", { name: "Keep editing", exact: true })
       .click();
     const valid = structuredClone(invalid);
     valid.fields.find((field) => field.key === "start")!.fact = "";
@@ -103,11 +103,13 @@ describe("resume editing and transactional lifecycle", () => {
       .click();
     await page
       .getByRole("dialog", { name: "Unsaved form" })
-      .getByRole("button", { name: "Save", exact: true })
+      .getByRole("button", { name: "Save and go", exact: true })
       .click();
     await expect
       .element(
-        page.getByRole("group", { name: "Profile · Full name", exact: true }),
+        page
+          .getByRole("group", { name: "Profile · Full name", exact: true })
+          .getByRole("button", { name: "Customize", exact: true }),
       )
       .toHaveFocus();
     expect(controller.getSnapshot().draft?.scope).toBe(
@@ -116,7 +118,7 @@ describe("resume editing and transactional lifecycle", () => {
     expect(controller.getSnapshot().undoCount).toBe(1);
   });
 
-  it("keeps readiness committed-only and guards issue navigation before focusing the exact Wording card", async () => {
+  it("guards cross-editor issues, then focuses the inherited or customized wording control", async () => {
     await page.viewport(1440, 900);
     const { document, resume } = fixture();
     document.profile.fields[0].wording = {};
@@ -136,7 +138,9 @@ describe("resume editing and transactional lifecycle", () => {
       .getByRole("button", { name: "Edit wording", exact: true })
       .click();
     const guard = page.getByRole("dialog", { name: "Unsaved form" });
-    await guard.getByRole("button", { name: "Cancel", exact: true }).click();
+    await guard
+      .getByRole("button", { name: "Keep editing", exact: true })
+      .click();
     expect(controller.getSnapshot().draft?.scope).toBe(
       `resume-content/${resume.id}`,
     );
@@ -144,23 +148,38 @@ describe("resume editing and transactional lifecycle", () => {
     await readiness
       .getByRole("button", { name: "Edit wording", exact: true })
       .click();
-    await guard.getByRole("button", { name: "Discard", exact: true }).click();
+    await guard
+      .getByRole("button", { name: "Save and go", exact: true })
+      .click();
     const card = page.getByRole("group", {
       name: "Profile · Full name",
       exact: true,
     });
-    await expect.element(card).toHaveFocus();
-    await card.getByRole("button", { name: "Customize", exact: true }).click();
-    await card
-      .getByRole("textbox", { name: "Profile · Full name", exact: true })
-      .fill("Ana");
+    const customize = card.getByRole("button", {
+      name: "Customize",
+      exact: true,
+    });
+    await expect.element(customize).toHaveFocus();
+    await customize.click();
+    const field = card.getByRole("textbox", {
+      name: "Profile \u00b7 Full name",
+      exact: true,
+    });
     await expect
       .element(readiness.getByText("1 blocking", { exact: true }))
       .toBeVisible();
+    const issues = readiness.getByRole("button", {
+      name: "Issues (1)",
+      exact: true,
+    });
+    if (issues.element().getAttribute("aria-expanded") === "false")
+      await issues.click();
     await readiness
       .getByRole("button", { name: "Edit wording", exact: true })
       .click();
-    await expect.element(card).toHaveFocus();
+    await expect.element(field).toHaveFocus();
+    await expect.element(field).toHaveAttribute("aria-invalid", "true");
+    await field.fill("Ana");
     expect(controller.isDirty()).toBe(true);
     const historyLength = window.history.length;
     const historyIndex = window.history.state.versoIndex;
@@ -169,11 +188,16 @@ describe("resume editing and transactional lifecycle", () => {
       .getByRole("button", { name: "Save", exact: true })
       .click();
     await expect
-      .element(readiness.getByText("Ready for PDF", { exact: true }))
-      .toBeVisible();
+      .poll(
+        () =>
+          controller.getSnapshot().head?.document.resumes[0].overrides[
+            document.profile.fields[0].id
+          ],
+      )
+      .toBe("Ana");
     expect(window.history.length).toBe(historyLength);
     expect(window.history.state.versoIndex).toBe(historyIndex);
-    expect(controller.getSnapshot().undoCount).toBe(1);
+    expect(controller.getSnapshot().undoCount).toBe(2);
     await card
       .getByRole("button", { name: "Use career wording", exact: true })
       .click();

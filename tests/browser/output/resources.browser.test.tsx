@@ -1,10 +1,17 @@
 import "pdfjs-dist/web/pdf_viewer.css";
 
+import { useRef, useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 
-import { CommittedOutput } from "@/components/career/committed-output";
+import {
+  CommittedOutput,
+  CommittedOutputView,
+} from "@/components/career/committed-output";
+import PdfPreview, { type StagedPdf } from "@/components/output/pdf-preview";
+import { useCommittedPreview } from "@/hooks/output/use-committed-preview";
+import type { PdfViewPosition } from "@/hooks/output/use-pdf-document";
 import { createCareerDocument } from "@/lib/career/model";
 import type { CareerHead } from "@/stores/career/persistence";
 import { previewPdf } from "@/tests/fixtures/pdf";
@@ -31,12 +38,11 @@ vi.mock("@/components/output/lazy-pdf-preview", async () => ({
 }));
 
 const OriginalWorker = globalThis.Worker;
-const workers = { created: 0, terminated: 0 };
+const workers = new Set<Worker>();
 const urls = { created: [] as string[], revoked: [] as string[] };
 
 beforeEach(() => {
-  workers.created = 0;
-  workers.terminated = 0;
+  workers.clear();
   urls.created = [];
   urls.revoked = [];
   runtime.created = 0;
@@ -44,14 +50,12 @@ beforeEach(() => {
   runtime.compile.mockReset();
   runtime.compile.mockImplementation(async () => ({ bytes: previewPdf() }));
   globalThis.Worker = class extends OriginalWorker {
-    private live = true;
     constructor(...args: ConstructorParameters<typeof Worker>) {
       super(...args);
-      workers.created += 1;
+      workers.add(this);
     }
     terminate() {
-      if (this.live) workers.terminated += 1;
-      this.live = false;
+      workers.delete(this);
       super.terminate();
     }
   };
@@ -70,6 +74,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   await cleanup();
+  await expect.poll(liveWorkers).toBe(0);
   globalThis.Worker = OriginalWorker;
   vi.restoreAllMocks();
 });
@@ -98,13 +103,52 @@ function head(revision = 1, name = "Application"): CareerHead {
   };
 }
 
-const liveWorkers = () => workers.created - workers.terminated;
+const liveWorkers = () => workers.size;
 const liveUrls = () =>
   urls.created.filter((url) => !urls.revoked.includes(url)).length;
 
 function frame(children: React.ReactNode) {
   return <div style={{ height: 700, display: "flex" }}>{children}</div>;
 }
+
+it("keeps the page and zoom on automatic PDF replacement and clamps to a shorter document", async () => {
+  await page.viewport(1440, 900);
+  function EditorPreview({ value }: { value: CareerHead }) {
+    const preview = useCommittedPreview({ head: value, keepCurrent: true });
+    return frame(
+      <CommittedOutputView
+        preview={preview}
+        visible
+        showSelector={false}
+        onIssue={() => {}}
+      />,
+    );
+  }
+  const screen = await render(<EditorPreview value={head()} />);
+  const zoom = screen.getByRole("textbox", { name: "PDF zoom" });
+  const number = screen.getByRole("textbox", { name: "PDF page number" });
+  await expect.element(zoom).toBeEnabled();
+  await zoom.fill("125");
+  await userEvent.keyboard("{Enter}");
+  await number.fill("3");
+  await userEvent.keyboard("{Enter}");
+  await expect.element(number).toHaveValue("3");
+
+  await screen.rerender(
+    <EditorPreview value={head(2, "Updated application")} />,
+  );
+  await expect.element(screen.getByText(/revision 2.*Current/)).toBeVisible();
+  await expect.element(zoom).toHaveValue("125%");
+  await expect.element(number).toHaveValue("3");
+
+  runtime.compile.mockResolvedValueOnce({ bytes: previewPdf("Shorter", 1) });
+  await screen.rerender(
+    <EditorPreview value={head(3, "Shorter application")} />,
+  );
+  await expect.element(screen.getByText(/revision 3.*Current/)).toBeVisible();
+  await expect.element(zoom).toHaveValue("125%");
+  await expect.element(number).toHaveValue("1");
+});
 
 it("returns compiler, PDF.js worker, blob URL, and listener counts to declared bounds across refresh, hide, failure, replacement, and unmount", async () => {
   await page.viewport(1440, 900);
@@ -134,7 +178,7 @@ it("returns compiler, PDF.js worker, blob URL, and listener counts to declared b
 
   await refresh();
   await expect.element(pages()).toBeVisible();
-  expect(liveWorkers()).toBe(1);
+  await expect.poll(liveWorkers).toBe(1);
   expect(liveUrls()).toBe(1);
 
   // Rapid committed changes and refreshes keep one compiler, one retained URL,
@@ -189,4 +233,66 @@ it("returns compiler, PDF.js worker, blob URL, and listener counts to declared b
   expect(liveUrls()).toBe(0);
   expect(runtime.closed).toBe(runtime.created);
   expect(visibility()).toBe(0);
+});
+
+it("retains the rendered page when a staged PDF fails, then clamps a valid shorter PDF", async () => {
+  await page.viewport(1440, 900);
+  const blob = (bytes: Uint8Array<ArrayBuffer>) =>
+    URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const original = blob(previewPdf());
+  const corrupt = blob(new TextEncoder().encode("not a PDF"));
+  const shorter = blob(previewPdf("Shorter", 1));
+  const failure = vi.fn();
+  function Staging({ next }: { next?: string }) {
+    const [visible, setVisible] = useState(original);
+    const [failed, setFailed] = useState("");
+    const position = useRef<PdfViewPosition>({ page: 1, scale: "page-width" });
+    const candidate = (url: string): StagedPdf => ({
+      source: { url, key: url, fileName: "fixture.pdf" },
+      targetPages: 3,
+      onRendered: (value) => {
+        position.current = value;
+        setVisible(url);
+      },
+      onFailure: (reason) => {
+        failure(reason);
+        setFailed(url);
+      },
+    });
+    return frame(
+      <PdfPreview
+        staging={{
+          displayed: candidate(visible),
+          candidate:
+            next && next !== visible && next !== failed
+              ? candidate(next)
+              : null,
+          position,
+        }}
+      />,
+    );
+  }
+  const screen = await render(<Staging />);
+  try {
+    const number = screen.getByRole("textbox", { name: "PDF page number" });
+    const zoom = screen.getByRole("textbox", { name: "PDF zoom" });
+    await expect.element(zoom).toBeEnabled();
+    await zoom.fill("125");
+    await userEvent.keyboard("{Enter}");
+    await number.fill("3");
+    await userEvent.keyboard("{Enter}");
+    await expect.element(number).toHaveValue("3");
+    await screen.rerender(<Staging next={corrupt} />);
+    await expect.poll(() => failure.mock.calls.length).toBe(1);
+    await expect.element(number).toHaveValue("3");
+    await expect.element(zoom).toHaveValue("125%");
+    await expect.poll(liveWorkers).toBe(1);
+    await screen.rerender(<Staging next={shorter} />);
+    await expect.element(number).toHaveValue("1");
+    await expect.element(zoom).toHaveValue("125%");
+    await expect.poll(liveWorkers).toBe(1);
+  } finally {
+    await screen.unmount();
+    for (const url of [original, corrupt, shorter]) URL.revokeObjectURL(url);
+  }
 });

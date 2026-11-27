@@ -32,9 +32,11 @@ test.describe("public PDF releases", () => {
   }
 
   async function compile(page: Page) {
-    const pdf = page.getByRole("region", { name: "Committed resume output" });
-    await pdf.getByRole("button", { name: "Refresh preview" }).click();
-    await expect(pdf.getByText(/· Current$/)).toBeVisible({ timeout: 150_000 });
+    const pdf = page.getByRole("region", { name: "Resume PDF output" });
+    await pdf.getByRole("button", { name: "Update preview" }).click();
+    await expect(pdf.getByText(/^Saved PDF \u00b7 Revision \d+$/)).toBeVisible({
+      timeout: 150_000,
+    });
     return pdf;
   }
 
@@ -89,10 +91,9 @@ test.describe("public PDF releases", () => {
       timeout: 15_000,
     });
     const publish = page
-      .getByRole("region", { name: "Committed resume output" })
-      .getByRole("button", { name: "Publish PDF", exact: true });
-    await expect(publish).toBeDisabled();
-    await compile(page);
+      .getByRole("region", { name: "Resume PDF output" })
+      .getByRole("button", { name: "Publish saved PDF", exact: true });
+    await expect(publish).toBeEnabled();
     const dialog = page.getByRole("dialog", { name: "Publish this PDF" });
     const publishLatest = dialog.getByRole("button", {
       name: "Publish PDF",
@@ -103,7 +104,9 @@ test.describe("public PDF releases", () => {
     });
 
     await publish.click();
-    await expect(dialog).toContainText("A new unlisted link is created");
+    await expect(dialog).toContainText("A new unlisted link is created", {
+      timeout: 150_000,
+    });
     expect(await releaseCount(userId)).toBe(0);
     await publishPinned.click();
     await expect(
@@ -123,9 +126,41 @@ test.describe("public PDF releases", () => {
     const firstBytes = await first.body();
     expect(firstBytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
 
+    await page.goto(`/app/resume-wording/${resumeId}`);
+    const wording = page.getByRole("group", {
+      name: "Profile \u00b7 Full name",
+      exact: true,
+    });
+    await wording
+      .getByRole("button", { name: "Customize", exact: true })
+      .click();
+    await wording
+      .getByRole("textbox", { name: "Profile \u00b7 Full name", exact: true })
+      .fill("Unpublished draft wording");
+    await page.getByRole("button", { name: "Update preview" }).click();
+    await expect(
+      page.getByText("Draft PDF \u00b7 Unsaved", { exact: true }),
+    ).toBeVisible({ timeout: 150_000 });
     await publish.click();
+    const reviewed = dialog.getByRole("link", {
+      name: "Open the saved PDF being reviewed",
+    });
+    await expect(reviewed).toBeVisible({ timeout: 150_000 });
+    const reviewedBytes = await reviewed.evaluate(async (link) => {
+      const response = await fetch((link as HTMLAnchorElement).href);
+      return Array.from(new Uint8Array(await response.arrayBuffer()));
+    });
     await publishLatest.click();
     await copyPublishedLink(page, "Copy latest link", latest);
+    expect(
+      (await (await anonymous.get(latest)).body()).equals(
+        Buffer.from(reviewedBytes),
+      ),
+    ).toBe(true);
+    await page
+      .getByRole("region", { name: "Editing form" })
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
     expect(
       (await anonymous.get(latest)).headers()["content-disposition"],
     ).toContain("ana-public-en-us-v2.pdf");
@@ -201,6 +236,18 @@ test.describe("public PDF releases", () => {
     ).toBeChecked();
     // Customize the full name in this resume's Wording view so its preview stays visible.
     await page.goto(`/app/resume-wording/${resumeId}`);
+    await expect(publish).toBeEnabled({ timeout: 150_000 });
+    await expect(
+      page.getByRole("button", { name: "Search PDF", exact: true }),
+    ).toBeEnabled({ timeout: 150_000 });
+    await page.evaluate(
+      (id) => navigator.locks.request(`verso-release-${id}`, () => {}),
+      userId,
+    );
+    expect(await releaseCount(userId)).toBe(4);
+    expect(
+      (await anonymous.get(latest)).headers()["content-disposition"],
+    ).toContain("ana-public-en-us-v1.pdf");
     const nameCard = page.getByRole("group", {
       name: "Profile · Full name",
       exact: true,

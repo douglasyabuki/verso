@@ -105,8 +105,10 @@ export function CareerRichField({
   language,
   disabled = false,
   hideLabel = false,
+  error,
 }: {
   disabled?: boolean;
+  error?: string;
   hideLabel?: boolean;
   label: string;
   value: RichText;
@@ -115,7 +117,7 @@ export function CareerRichField({
 }) {
   const id = useId();
   return (
-    <Field>
+    <Field data-invalid={!!error}>
       <div
         className={
           hideLabel ? "sr-only" : "flex flex-wrap items-center gap-1.5"
@@ -132,6 +134,7 @@ export function CareerRichField({
       </div>
       <TextEditorCore
         disabled={disabled}
+        error={error}
         id={id}
         fieldKey={id}
         label={label}

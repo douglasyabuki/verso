@@ -57,7 +57,11 @@ export function LayoutColorPicker({
     setting,
   );
   return (
-    <Field data-disabled={disabled} data-invalid={!!error}>
+    <Field
+      data-preview-field={setting}
+      data-disabled={disabled}
+      data-invalid={!!error}
+    >
       <div className="flex items-center justify-between gap-2">
         <FieldLabel htmlFor={id}>{label}</FieldLabel>
         <Popover open={open && !disabled} onOpenChange={setOpen}>

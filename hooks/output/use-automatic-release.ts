@@ -34,7 +34,10 @@ export function useAutomaticRelease({
 }: AutomaticReleaseOptions): void {
   const attempted = useRef(new Set<string>());
   const output = preview.state.output;
-  const current = output && output.key === preview.key ? output : null;
+  const current =
+    output && output.key === preview.key && output.trigger !== "editor-open"
+      ? output
+      : null;
   const link = releases?.state.list?.links.find(
     (item) => item.resumeId === current?.tag.resumeId,
   );

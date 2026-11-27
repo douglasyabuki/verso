@@ -171,7 +171,7 @@ test("reviews replacement, downloads a backup, and restores either workspace", a
     .getByRole("button", { name: "Cancel", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Refresh preview" }),
+    page.getByRole("button", { name: "Update preview" }),
   ).toHaveCount(0);
   await page.getByLabel("Import workspace for review").setInputFiles({
     name: "workspace.json",
@@ -247,7 +247,7 @@ test("reviews replacement, downloads a backup, and restores either workspace", a
     .getByRole("button", { name: "Application (en-US)", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Refresh preview" }),
+    page.getByRole("button", { name: "Update preview" }),
   ).toBeVisible();
 });
 

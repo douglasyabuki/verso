@@ -67,16 +67,18 @@ See the [README](../README.md#configuration) for setup and
 - Client: `stores/releases/release-store.ts` (per-owner, session header, stable
   in-memory operation IDs reused on unanswered retries), `hooks/releases/use-releases.ts`,
   `components/career/release-dialog.tsx`, and `components/account/releases-panel.tsx`.
-  **Publish PDF** reviews a current preview and updates latest. **Publish pinned
-  version** preserves the latest selection. After confirmation, the dialog offers
-  the corresponding link to copy. Settings › Public PDFs manages versions and
-  automatic publishing. `PreviewOutput` retains the compiled
-  bytes and template identity. `useCommittedPreview`'s `automaticResumeIds` forces
-  automatic preview refresh (one effective-preferences effect, so a preferences
-  object republished on Save cannot cancel the pending refresh) while the previewed
-  resume's link opts in; `hooks/output/use-automatic-release.ts` releases each
-  committed output at most once per tab under a `verso-release-<userId>` Web Lock
-  and never replays failures.
+  **Publish saved PDF** prepares the current committed PDF and opens review for
+  those exact bytes. The dialog links to the reviewed PDF. Confirm **Publish PDF**
+  to update latest or **Publish pinned version** to preserve the latest selection.
+  A pending preparation follows a newer committed head for the same resume and
+  clears when the resume, owner, or workspace generation changes. A stale review
+  requires fresh confirmation. An unanswered upload retains its original request
+  for receipt-aware retry.
+- Settings › Public PDFs manages versions and automatic publishing. An acknowledged
+  account Save can authorize publication for the previewed resume’s opted-in link.
+  Opening an editor or preparing a saved PDF for download or review confers no
+  automatic-publication authorization. Eligible committed output releases at most
+  once per tab under a `verso-release-<userId>` Web Lock.
 - Database statement regression bounds (`tests/db/accounts/operation-counts.db.test.ts`, including the 2-read
   session lookup for owner routes): public download 1 read; list 4; release 12
   (2 writes); first release 14 (4 writes); set-latest 8 (1 write). Treat these as

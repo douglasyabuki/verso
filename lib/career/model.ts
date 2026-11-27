@@ -5,6 +5,7 @@ import { settingsSchema } from "@/lib/output/schema";
 import type {
   CareerDocument,
   CareerEntry,
+  CareerResume,
   CareerSection,
 } from "@/types-and-constants/career";
 import {
@@ -403,128 +404,277 @@ export const careerDocumentSchema = z
       addId(item.id);
     for (const resume of document.resumes) {
       addId(resume.id);
-      if (resume.profileSelection) {
-        const pool = [
-          ...document.profile.fields.filter(
-            (field) => field.key !== "fullName",
-          ),
-          ...document.profile.links,
-        ];
-        if (
-          new Set(resume.profileSelection).size !==
-            resume.profileSelection.length ||
-          resume.profileSelection.some(
-            (value) => !pool.some((item) => item.id === value),
-          )
-        )
-          ctx.addIssue({
-            code: "custom",
-            message: "Duplicate or dangling contact selection.",
-          });
-      }
-      if (
-        resume.createdSectionIds &&
-        (new Set(resume.createdSectionIds).size !==
-          resume.createdSectionIds.length ||
-          resume.createdSectionIds.some(
-            (id) =>
-              !resume.selection.some((section) => section.sectionId === id),
-          ))
-      )
-        ctx.addIssue({
-          code: "custom",
-          message:
-            "Created-section provenance must reference distinct configured sections.",
-        });
       if (!languages.has(resume.language))
         ctx.addIssue({
           code: "custom",
           message: "Resume language is missing.",
         });
-      for (const key of Object.keys(resume.overrides))
-        if (!wordingIds.has(key))
-          ctx.addIssue({
-            code: "custom",
-            message: `Dangling wording customization: ${key}`,
-          });
-      for (const [key, value] of Object.entries(resume.overrides))
-        if (typeof value !== "string" && !richIds.has(key))
-          ctx.addIssue({
-            code: "custom",
-            message:
-              "Inline formatting is supported only in summaries and achievement/detail prose.",
-          });
-      const selectedSections = new Set<string>();
-      for (const selected of resume.selection) {
-        if (selectedSections.has(selected.sectionId))
-          ctx.addIssue({
-            code: "custom",
-            message: "Duplicate section selection.",
-          });
-        selectedSections.add(selected.sectionId);
-        if (
-          new Set(selected.hiddenEntryIds).size !==
-            (selected.hiddenEntryIds?.length ?? 0) ||
-          selected.hiddenEntryIds?.some(
-            (value) => !selected.entryIds.includes(value),
-          )
-        )
-          ctx.addIssue({
-            code: "custom",
-            message: "Hidden entries must retain their configured selection.",
-          });
-        const section = document.sections.find(
-          (item) => item.id === selected.sectionId,
-        );
-        if (!section) {
-          ctx.addIssue({
-            code: "custom",
-            message: "Dangling section selection.",
-          });
-          continue;
-        }
-        if (
-          selected.fieldDefaults &&
-          (new Set(selected.fieldDefaults).size !==
-            selected.fieldDefaults.length ||
-            selected.fieldDefaults.some(
-              (key) =>
-                !(BUILTIN_FIELDS[section.kind] as readonly string[]).includes(
-                  key,
-                ),
-            ))
-        )
-          ctx.addIssue({
-            code: "custom",
-            message: "Invalid field defaults for section kind.",
-          });
-        const entries = section.entries.filter((item) =>
-          selected.entryIds.includes(item.id),
-        );
-        const pools = [
-          section.entries.map((item) => item.id),
-          entries.flatMap((item) => item.achievements.map((value) => value.id)),
-          entries.flatMap((item) => item.fields.map((value) => value.id)),
-          entries.flatMap((item) => item.links.map((value) => value.id)),
-        ];
-        [
-          selected.entryIds,
-          selected.achievementIds,
-          selected.fieldIds,
-          selected.linkIds,
-        ].forEach((values, index) => {
-          if (
-            new Set(values).size !== values.length ||
-            values.some((value) => !pools[index].includes(value))
-          )
-            ctx.addIssue({
-              code: "custom",
-              message: "Duplicate or dangling resume selection.",
-            });
-        });
-      }
+      checkWordingReferences(
+        resume.overrides,
+        (id) =>
+          richIds.has(id) ? "rich" : wordingIds.has(id) ? "plain" : undefined,
+        (message) => ctx.addIssue({ code: "custom", message }),
+      );
+      checkSelectionReferences(document, resume, (message) =>
+        ctx.addIssue({ code: "custom", message }),
+      );
     }
   });
+
+/** Resume scopes supported by both explicit Save and browser preview. */
+export type PreviewResumeScope =
+  "resume-content" | "resume-wording" | "resume-layout";
+
+const contentSchema = resumeSchema.pick({
+  selection: true,
+  profileSelection: true,
+  summaryIncluded: true,
+});
+
+/** Check override identities and allowed formatting independently of inclusion.
+ * @param overrides Validated wording values.
+ * @param target Looks up the formatting capability of one career record.
+ * @param issue Receives the message and offending record identity.
+ * @returns No value.
+ * @example checkWordingReferences(resume.overrides, targets.get.bind(targets), report)
+ */
+export function checkWordingReferences(
+  overrides: CareerResume["overrides"],
+  target: (id: string) => "rich" | "plain" | undefined,
+  issue: (message: string, id: string) => void,
+) {
+  for (const [id, value] of Object.entries(overrides)) {
+    const kind = target(id);
+    if (!kind) issue(`Dangling wording customization: ${id}`, id);
+    else if (kind === "plain" && typeof value !== "string")
+      issue(
+        "Inline formatting is supported only in summaries and achievement/detail prose.",
+        id,
+      );
+  }
+}
+
+/** Check configured resume relationships against shared records.
+ * @param document Shared records referenced by the configuration.
+ * @param resume Resume to check.
+ * @param issue Receives each validation message.
+ * @returns No value.
+ * @example checkSelectionReferences(document, resume, report)
+ */
+function checkSelectionReferences(
+  document: Pick<CareerDocument, "sections" | "profile">,
+  resume: CareerResume,
+  issue: (message: string) => void,
+) {
+  if (resume.profileSelection) {
+    const pool = [
+      ...document.profile.fields.filter((field) => field.key !== "fullName"),
+      ...document.profile.links,
+    ];
+    if (
+      new Set(resume.profileSelection).size !==
+        resume.profileSelection.length ||
+      resume.profileSelection.some(
+        (value) => !pool.some((item) => item.id === value),
+      )
+    )
+      issue("Duplicate or dangling contact selection.");
+  }
+  if (
+    resume.createdSectionIds &&
+    (new Set(resume.createdSectionIds).size !==
+      resume.createdSectionIds.length ||
+      resume.createdSectionIds.some(
+        (id) => !resume.selection.some((section) => section.sectionId === id),
+      ))
+  )
+    issue(
+      "Created-section provenance must reference distinct configured sections.",
+    );
+  const selectedSections = new Set<string>();
+  for (const selected of resume.selection) {
+    if (selectedSections.has(selected.sectionId))
+      issue("Duplicate section selection.");
+    selectedSections.add(selected.sectionId);
+    if (
+      new Set(selected.hiddenEntryIds).size !==
+        (selected.hiddenEntryIds?.length ?? 0) ||
+      selected.hiddenEntryIds?.some(
+        (value) => !selected.entryIds.includes(value),
+      )
+    )
+      issue("Hidden entries must retain their configured selection.");
+    const section = document.sections.find(
+      (item) => item.id === selected.sectionId,
+    );
+    if (!section) {
+      issue("Dangling section selection.");
+      continue;
+    }
+    if (
+      selected.fieldDefaults &&
+      (new Set(selected.fieldDefaults).size !== selected.fieldDefaults.length ||
+        selected.fieldDefaults.some(
+          (key) =>
+            !(BUILTIN_FIELDS[section.kind] as readonly string[]).includes(key),
+        ))
+    )
+      issue("Invalid field defaults for section kind.");
+    const entries = section.entries.filter((item) =>
+      selected.entryIds.includes(item.id),
+    );
+    const pools = [
+      section.entries.map((item) => item.id),
+      entries.flatMap((item) => item.achievements.map((value) => value.id)),
+      entries.flatMap((item) => item.fields.map((value) => value.id)),
+      entries.flatMap((item) => item.links.map((value) => value.id)),
+    ];
+    [
+      selected.entryIds,
+      selected.achievementIds,
+      selected.fieldIds,
+      selected.linkIds,
+    ].forEach((values, index) => {
+      if (
+        new Set(values).size !== values.length ||
+        values.some((value) => !pools[index].includes(value))
+      )
+        issue("Duplicate or dangling resume selection.");
+    });
+  }
+}
+
+/** Enforce archive restrictions on newly selected contacts.
+ * @param document Profile containing the referenced contacts.
+ * @param resume Committed resume and contact selection.
+ * @param content Proposed selection.
+ * @returns No value; throws if an archived contact would be newly selected.
+ * @example checkContactArchive(document, resume, content)
+ */
+function checkContactArchive(
+  document: Pick<CareerDocument, "profile">,
+  resume: CareerResume,
+  content: Pick<CareerResume, "profileSelection">,
+) {
+  if (
+    content.profileSelection?.some(
+      (value) =>
+        document.profile.links.some(
+          (link) => link.id === value && link.archived,
+        ) &&
+        !(
+          resume.profileSelection ??
+          document.profile.links
+            .filter((link) => !link.archived)
+            .map((link) => link.id)
+        ).includes(value),
+    )
+  )
+    throw new Error("Archived contacts are unavailable for new selections.");
+}
+
+/** Enforce archive restrictions on new selections and restored entries.
+ * @param document Shared career sections.
+ * @param resume Committed resume.
+ * @param selected Proposed configured sections.
+ * @returns No value; throws if archived content would be newly selected.
+ * @example checkSelectionArchive(document, resume, selected)
+ */
+function checkSelectionArchive(
+  document: Pick<CareerDocument, "sections">,
+  resume: CareerResume,
+  selected: CareerResume["selection"],
+) {
+  for (const selection of selected) {
+    const section = document.sections.find(
+      (item) => item.id === selection.sectionId,
+    );
+    const prior = resume.selection.find(
+      (item) => item.sectionId === selection.sectionId,
+    );
+    if (section?.archived && !selection.hidden && (!prior || prior.hidden))
+      throw new Error("Archived sections are unavailable for new selections.");
+    if (
+      selection.entryIds.some(
+        (value) =>
+          !selection.hiddenEntryIds?.includes(value) &&
+          prior?.hiddenEntryIds?.includes(value) &&
+          (section?.archived ||
+            section?.entries.some(
+              (entry) => entry.id === value && entry.archived,
+            )),
+      )
+    )
+      throw new Error("Archived entries are unavailable for new selections.");
+    for (const entryId of selection.entryIds)
+      if (
+        !prior?.entryIds.includes(entryId) &&
+        (section?.archived ||
+          section?.entries.find((entry) => entry.id === entryId)?.archived)
+      )
+        throw new Error("Archived content is unavailable for new selections.");
+    for (const entry of section?.entries ?? []) {
+      if (
+        selection.achievementIds.some(
+          (value) =>
+            !prior?.achievementIds.includes(value) &&
+            entry.achievements.some(
+              (item) => item.id === value && item.archived,
+            ),
+        ) ||
+        selection.linkIds.some(
+          (value) =>
+            !prior?.linkIds.includes(value) &&
+            entry.links.some((item) => item.id === value && item.archived),
+        )
+      )
+        throw new Error("Archived content is unavailable for new selections.");
+    }
+  }
+}
+
+/** Parse and apply one resume scope without validating unrelated workspace data.
+ * @param document The profile and sections referenced by the scope.
+ * @param resume Committed resume.
+ * @param scope The editable resume scope.
+ * @param values Raw form values.
+ * @returns A validated scope patch; invalid values or new archived selections throw.
+ * @example previewResumeScope(document, resume, "resume-layout", values)
+ */
+export function previewResumeScope(
+  document: Pick<CareerDocument, "profile" | "sections">,
+  resume: CareerResume,
+  scope: PreviewResumeScope,
+  values: unknown,
+): Partial<CareerResume> {
+  if (scope === "resume-wording")
+    return { overrides: resumeSchema.shape.overrides.parse(values) };
+  if (scope === "resume-layout") {
+    const layout = resumeLayoutSchema.parse(values);
+    const { defaults, ...appearance } = resume.layout;
+    return {
+      layout: {
+        ...layout,
+        defaults: layout.defaults ?? defaults ?? appearance,
+      },
+    };
+  }
+  const content = contentSchema.parse(values);
+  checkContactArchive(document, resume, content);
+  checkSelectionArchive(document, resume, content.selection);
+  checkSelectionReferences(
+    document,
+    { ...resume, ...content, profileSelection: content.profileSelection },
+    (message) => {
+      throw new Error(message);
+    },
+  );
+  return {
+    selection: content.selection,
+    profileSelection: content.profileSelection,
+    summaryIncluded: content.summaryIncluded,
+  };
+}
 
 export const workspaceEnvelopeSchema = z.strictObject({
   format: z.literal("verso.workspace"),
@@ -883,14 +1033,10 @@ export function applyScope(
   }
   if (kind === "resume-layout") {
     const resume = next.resumes.find((item) => item.id === target)!;
-    const previous = resume.layout;
-    const layout = resumeLayoutSchema.parse(values);
-    const { defaults: _previousDefaults, ...appearance } = previous;
-    void _previousDefaults;
-    resume.layout = {
-      ...layout,
-      defaults: layout.defaults ?? previous.defaults ?? appearance,
-    };
+    Object.assign(
+      resume,
+      previewResumeScope(document, resume, "resume-layout", values),
+    );
   } else if (kind === "resume") {
     if (values === null)
       next.resumes = next.resumes.filter((item) => item.id !== target);
@@ -913,37 +1059,14 @@ export function applyScope(
       details,
     );
   } else if (kind === "resume-wording") {
-    next.resumes.find((item) => item.id === target)!.overrides =
-      resumeSchema.shape.overrides.parse(values);
+    const resume = next.resumes.find((item) => item.id === target)!;
+    resume.overrides = resumeSchema.shape.overrides.parse(values);
   } else if (kind === "resume-content") {
-    const content = resumeSchema
-      .pick({ selection: true, profileSelection: true, summaryIncluded: true })
-      .parse(values);
-    // The selection scope remains supported for existing immutable recovery requests.
-    const selected = applyScope(
-      document,
-      `selection/${target}`,
-      content.selection,
+    const original = document.resumes.find((item) => item.id === target)!;
+    Object.assign(
+      next.resumes.find((item) => item.id === target)!,
+      previewResumeScope(document, original, "resume-content", values),
     );
-    const resume = selected.resumes.find((item) => item.id === target)!;
-    if (
-      content.profileSelection?.some(
-        (value) =>
-          document.profile.links.some(
-            (link) => link.id === value && link.archived,
-          ) &&
-          !(
-            document.resumes.find((item) => item.id === target)!
-              .profileSelection ??
-            document.profile.links
-              .filter((link) => !link.archived)
-              .map((link) => link.id)
-          ).includes(value),
-      )
-    )
-      throw new Error("Archived contacts are unavailable for new selections.");
-    Object.assign(resume, content);
-    return validateDocument(selected);
   } else if (scope === "profile") {
     const profile = careerDocumentSchema.shape.profile.parse(values);
     if (profile.id !== document.profile.id)
@@ -978,58 +1101,7 @@ export function applyScope(
   } else if (kind === "selection") {
     const resume = next.resumes.find((item) => item.id === target)!;
     const selected = z.array(selectionSchema).max(100).parse(values);
-    for (const selection of selected) {
-      const section = next.sections.find(
-        (item) => item.id === selection.sectionId,
-      );
-      const prior = resume.selection.find(
-        (item) => item.sectionId === selection.sectionId,
-      );
-      if (section?.archived && !selection.hidden && (!prior || prior.hidden))
-        throw new Error(
-          "Archived sections are unavailable for new selections.",
-        );
-      if (
-        selection.entryIds.some(
-          (value) =>
-            !selection.hiddenEntryIds?.includes(value) &&
-            prior?.hiddenEntryIds?.includes(value) &&
-            (section?.archived ||
-              section?.entries.some(
-                (entry) => entry.id === value && entry.archived,
-              )),
-        )
-      )
-        throw new Error("Archived entries are unavailable for new selections.");
-      for (const entryId of selection.entryIds)
-        if (
-          !prior?.entryIds.includes(entryId) &&
-          (section?.archived ||
-            section?.entries.find((entry) => entry.id === entryId)?.archived)
-        )
-          throw new Error(
-            "Archived content is unavailable for new selections.",
-          );
-      for (const entry of section?.entries ?? []) {
-        if (
-          selection.achievementIds.some(
-            (value) =>
-              !prior?.achievementIds.includes(value) &&
-              entry.achievements.some(
-                (item) => item.id === value && item.archived,
-              ),
-          ) ||
-          selection.linkIds.some(
-            (value) =>
-              !prior?.linkIds.includes(value) &&
-              entry.links.some((item) => item.id === value && item.archived),
-          )
-        )
-          throw new Error(
-            "Archived content is unavailable for new selections.",
-          );
-      }
-    }
+    checkSelectionArchive(document, resume, selected);
     resume.selection = selected;
   } else if (kind === "entry") {
     for (const section of next.sections) {

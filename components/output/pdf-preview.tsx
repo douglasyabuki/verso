@@ -18,7 +18,15 @@ import {
 } from "lucide-react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { PDFDateString } from "pdfjs-dist";
-import { useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { PdfPreviewPlaceholder } from "@/components/output/pdf-preview-placeholder";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -62,7 +70,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { usePdfDocument } from "@/hooks/output/use-pdf-document";
+import {
+  type PdfViewPosition,
+  usePdfDocument,
+} from "@/hooks/output/use-pdf-document";
 import type { PdfOutline, PdfSource } from "@/types-and-constants/pdf-preview";
 
 function Thumbnail({
@@ -269,20 +280,41 @@ function Properties({
   );
 }
 
-function LoadedPreview({
+type ViewerState = ReturnType<typeof usePdfDocument>;
+
+const emptyViewer: ViewerState = {
+  pdf: null,
+  rendered: false,
+  page: 1,
+  scale: { value: "page-width", percent: 100 },
+  outline: [],
+  outlineError: "",
+  error: "",
+  matches: "",
+  setScale: () => {},
+  go: () => 1,
+  find: () => {},
+  closeFind: () => {},
+  goToDestination: () => {},
+};
+
+function ViewerChrome({
   source,
+  pdf = emptyViewer,
   pageWarningThreshold,
+  savedAction,
+  children,
 }: {
-  source: PdfSource;
+  source?: PdfSource;
+  pdf?: ViewerState;
   pageWarningThreshold?: number;
+  savedAction?: () => void;
+  children: ReactNode;
 }) {
-  const container = useRef<HTMLDivElement>(null);
-  const pages = useRef<HTMLDivElement>(null);
   const searchButton = useRef<HTMLButtonElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const focusFrame = useRef(0);
   useEffect(() => () => cancelAnimationFrame(focusFrame.current), []);
-  const pdf = usePdfDocument({ source, container, pages });
   const [navigation, setNavigation] = useState(false);
   const [navigationTab, setNavigationTab] = useState("thumbnails");
   const [search, setSearch] = useState(false);
@@ -477,12 +509,19 @@ function LoadedPreview({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuGroup>
-              <DropdownMenuItem
-                render={<a href={source.url} download={source.fileName} />}
-              >
-                <Download />
-                Download PDF
-              </DropdownMenuItem>
+              {savedAction ? (
+                <DropdownMenuItem onClick={savedAction}>
+                  <Download />
+                  Download saved PDF
+                </DropdownMenuItem>
+              ) : source ? (
+                <DropdownMenuItem
+                  render={<a href={source.url} download={source.fileName} />}
+                >
+                  <Download />
+                  Download PDF
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 disabled={!count}
                 onClick={() => setProperties(true)}
@@ -671,34 +710,7 @@ function LoadedPreview({
             </Tabs>
           </aside>
         )}
-        <div className="relative min-w-0 flex-1">
-          <div
-            ref={container}
-            className="absolute inset-0 overflow-auto"
-            tabIndex={0}
-            role="region"
-            aria-label="PDF document pages"
-          >
-            <div ref={pages} className="pdfViewer" />
-          </div>
-          {!pdf.rendered && (
-            <div className="absolute inset-0 z-10 flex">
-              <PdfPreviewPlaceholder
-                busy={!pdf.error}
-                title={
-                  pdf.error
-                    ? "Your PDF could not be displayed"
-                    : "Opening your PDF"
-                }
-                description={
-                  pdf.error
-                    ? "Try refreshing the preview, or download the PDF from the actions menu."
-                    : "Loading the pages and getting them ready to read."
-                }
-              />
-            </div>
-          )}
-        </div>
+        <div className="relative min-w-0 flex-1">{children}</div>
       </div>
       <Dialog open={properties} onOpenChange={setProperties}>
         <DialogContent className="max-h-[85dvh] overflow-auto">
@@ -708,7 +720,7 @@ function LoadedPreview({
               Properties of the last successful PDF.
             </DialogDescription>
           </DialogHeader>
-          {properties && pdf.pdf && (
+          {properties && pdf.pdf && source && (
             <Properties pdf={pdf.pdf} source={source} page={pdf.page} />
           )}
         </DialogContent>
@@ -717,20 +729,162 @@ function LoadedPreview({
   );
 }
 
+export type StagedPdf = {
+  source: PdfSource;
+  targetPages: number;
+  onRendered: (position: PdfViewPosition) => void;
+  onFailure: (message: string) => void;
+};
+
+function PdfLayer({
+  source,
+  staged,
+  position,
+  restorePosition,
+  report,
+  onRendered,
+  onFailure,
+}: {
+  source: PdfSource;
+  staged: boolean;
+  position: RefObject<PdfViewPosition>;
+  restorePosition: boolean;
+  report: (url: string, pdf: ViewerState | null) => void;
+  onRendered?: StagedPdf["onRendered"];
+  onFailure?: StagedPdf["onFailure"];
+}) {
+  const container = useRef<HTMLDivElement>(null);
+  const pages = useRef<HTMLDivElement>(null);
+  const layerPosition = useRef<PdfViewPosition>({
+    page: 1,
+    scale: "page-width",
+  });
+  const livePosition = useRef<RefObject<PdfViewPosition> | undefined>(
+    undefined,
+  );
+  useLayoutEffect(() => {
+    livePosition.current = staged ? undefined : position;
+  }, [staged, position]);
+  const pdf = usePdfDocument({
+    source,
+    container,
+    pages,
+    positionRef: layerPosition,
+    initialPositionRef: restorePosition ? position : undefined,
+    activePositionRef: livePosition,
+    restorePosition,
+  });
+  useLayoutEffect(() => {
+    report(source.url, pdf);
+  }, [source.url, pdf, report]);
+  useEffect(() => () => report(source.url, null), [source.url, report]);
+  useLayoutEffect(() => {
+    if (!staged) return;
+    if (pdf.error) onFailure?.(pdf.error);
+    else if (pdf.rendered) onRendered?.(layerPosition.current);
+  }, [staged, pdf.error, pdf.rendered, onRendered, onFailure]);
+  return (
+    <div
+      inert={staged}
+      aria-hidden={staged || undefined}
+      className={staged ? "invisible absolute inset-0" : "absolute inset-0"}
+    >
+      <div
+        ref={container}
+        className="absolute inset-0 overflow-auto"
+        tabIndex={0}
+        role="region"
+        aria-label="PDF document pages"
+      >
+        <div ref={pages} className="pdfViewer" />
+      </div>
+      {!staged && !pdf.rendered && (
+        <div className="absolute inset-0 z-10 flex">
+          <PdfPreviewPlaceholder
+            busy={!pdf.error}
+            announce={false}
+            title={
+              pdf.error ? "Your PDF could not be displayed" : "Opening your PDF"
+            }
+            description={
+              pdf.error
+                ? "Try updating the preview, or download the saved PDF."
+                : "Getting the pages ready to read."
+            }
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PdfPreview({
   document,
   pageWarningThreshold,
+  preservePosition = false,
+  staging,
+  savedAction,
 }: {
   document?: PdfSource;
   pageWarningThreshold?: number;
+  preservePosition?: boolean;
+  staging?: {
+    displayed: StagedPdf | null;
+    candidate: StagedPdf | null;
+    position: RefObject<PdfViewPosition>;
+  };
+  savedAction?: () => void;
 }) {
-  return document ? (
-    <LoadedPreview
-      key={`${document.key}:${document.url}`}
-      source={document}
-      pageWarningThreshold={pageWarningThreshold}
-    />
-  ) : (
-    <PdfPreviewPlaceholder />
+  const positionRef = useRef<PdfViewPosition>({ page: 1, scale: "page-width" });
+  const [views, setViews] = useState<Record<string, ViewerState>>({});
+  const report = useCallback((url: string, pdf: ViewerState | null) => {
+    setViews((current) => {
+      if (current[url] === pdf || (!current[url] && !pdf)) return current;
+      const next = { ...current };
+      if (pdf) next[url] = pdf;
+      else delete next[url];
+      return next;
+    });
+  }, []);
+  const source = staging ? staging.displayed?.source : document;
+  const candidate = staging?.candidate;
+  const position = staging?.position ?? positionRef;
+  if (!source && !candidate) return <PdfPreviewPlaceholder />;
+  return (
+    <ViewerChrome
+      source={source}
+      pdf={source ? views[source.url] : undefined}
+      pageWarningThreshold={
+        staging?.displayed?.targetPages ?? pageWarningThreshold
+      }
+      savedAction={savedAction}
+    >
+      {!source && (
+        <div className="absolute inset-0 flex">
+          <PdfPreviewPlaceholder
+            busy
+            announce={false}
+            title="Opening your PDF"
+          />
+        </div>
+      )}
+      {[
+        ...(source ? [{ source, candidate: null }] : []),
+        ...(candidate && candidate.source.url !== source?.url
+          ? [{ source: candidate.source, candidate }]
+          : []),
+      ].map((layer) => (
+        <PdfLayer
+          key={layer.source.url}
+          source={layer.source}
+          staged={Boolean(layer.candidate)}
+          position={position}
+          restorePosition={Boolean(staging) || preservePosition}
+          report={report}
+          onRendered={layer.candidate?.onRendered}
+          onFailure={layer.candidate?.onFailure}
+        />
+      ))}
+    </ViewerChrome>
   );
 }

@@ -90,6 +90,7 @@ export function SortableList({
   selectedId,
   onReorder,
   onBeforeReorder,
+  onDraggingChange,
   children,
 }: {
   scope: string;
@@ -99,6 +100,7 @@ export function SortableList({
   selectedId?: string | null;
   onReorder: (sourceId: string, targetId: string) => void;
   onBeforeReorder?: () => boolean;
+  onDraggingChange?: (dragging: boolean) => void;
   children: ReactNode;
 }) {
   const latest = useRef(revision);
@@ -114,8 +116,9 @@ export function SortableList({
     mounted.current = true;
     return () => {
       mounted.current = false;
+      if (started.current) onDraggingChange?.(false);
     };
-  }, []);
+  }, [onDraggingChange]);
   const reorder = (source: string, target: string) => {
     if (onBeforeReorder?.() === false) return false;
     onReorder(source, target);
@@ -145,10 +148,12 @@ export function SortableList({
         }}
         onDragStart={() => {
           setDragging(true);
+          onDraggingChange?.(true);
           started.current = { revision, key };
         }}
         onDragEnd={(event) => {
           setDragging(false);
+          onDraggingChange?.(false);
           const snapshot = started.current;
           started.current = null;
           const { source, target } = event.operation;

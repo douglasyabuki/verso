@@ -37,10 +37,12 @@ async function owner(document?: CareerDocument) {
   return controller;
 }
 afterEach(async () => {
+  for (const controller of controllers)
+    await expect.poll(() => controller.getSnapshot().saving).toBe(false);
   await cleanup();
   for (const controller of controllers.splice(0)) {
     await controller.flushRecovery();
-    controller.dispose();
+    await controller.dispose();
   }
   connections.splice(0).forEach((storage) => storage.close());
   vi.restoreAllMocks();

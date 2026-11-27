@@ -443,6 +443,7 @@ export function TextEditorCore({
               {selection?.linked ? "Edit link" : "Add link"}
             </PopoverTrigger>
             <PopoverContent
+              data-preview-text-popover={id}
               initialFocus={urlInput}
               finalFocus={() =>
                 returnFocus.current && editor ? editor.view.dom : false

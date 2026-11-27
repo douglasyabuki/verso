@@ -94,8 +94,8 @@ export function DeviceSettings({
           Refresh preview automatically after Save
         </FieldLabel>
         <FieldDescription>
-          Refreshes shortly after a Save changes the selected resume&apos;s PDF.
-          The preview shows saved content only.
+          Layout, Wording, and Content &amp; order refresh automatically. Enable
+          this to refresh after an output-changing Save in other views, too.
         </FieldDescription>
       </FieldContent>
     </Field>

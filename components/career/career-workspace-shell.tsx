@@ -599,6 +599,7 @@ export function CareerWorkspaceShell({
   history,
   children,
   output,
+  onMobilePreview,
   editorRequest,
   libraryItemState,
 }: CareerNavigation & {
@@ -614,6 +615,7 @@ export function CareerWorkspaceShell({
   children: ReactNode;
   /** Render the preview; `visible` is false when it is mounted but hidden. */
   output: (visible: boolean) => ReactNode;
+  onMobilePreview?: () => void;
   editorRequest?: object | null;
   libraryItemState?: "new" | "missing";
 }) {
@@ -694,8 +696,10 @@ export function CareerWorkspaceShell({
           if (
             (value === "editor" || value === "preview") &&
             value !== mobilePanel
-          )
+          ) {
+            if (value === "preview" && !desktop) onMobilePreview?.();
             setMobilePanel(value);
+          }
         }}
         className="h-dvh min-h-0 gap-0"
       >

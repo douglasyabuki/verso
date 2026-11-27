@@ -1,12 +1,17 @@
 /** Build an isolated three-page PDF with bookmarks, metadata, links, and searchable text.
  * @param title Embedded title, useful for detecting stale document results.
+ * @param pageCount Use one page to check a replacement that reduces pagination.
  * @returns Complete UTF-8 PDF bytes with a deterministic cross-reference table.
  * @example const url = URL.createObjectURL(new Blob([previewPdf().buffer]));
  */
-export function previewPdf(title = "Viewer fixture"): Uint8Array<ArrayBuffer> {
+export function previewPdf(
+  title = "Viewer fixture",
+  pageCount: 1 | 3 = 3,
+): Uint8Array<ArrayBuffer> {
+  const kids = pageCount === 1 ? "3 0 R" : "3 0 R 5 0 R 7 0 R";
   const objects = [
-    "<< /Type /Catalog /Pages 2 0 R /Outlines 10 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R] /Count 3 >>",
+    `<< /Type /Catalog /Pages 2 0 R${pageCount === 3 ? " /Outlines 10 0 R" : ""} >>`,
+    `<< /Type /Pages /Kids [${kids}] /Count ${pageCount} >>`,
     "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 9 0 R >> >> /Contents 4 0 R /Annots [14 0 R] >>",
     stream("First page search needle"),
     "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 9 0 R >> >> /Contents 6 0 R >>",

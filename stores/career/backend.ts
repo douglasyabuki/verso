@@ -21,6 +21,11 @@ export interface CareerBackend {
     version: number,
     operationId?: string,
   ): Promise<void>;
+  confirmDraftDiscard(
+    id: string,
+    version: number,
+    operationId?: string,
+  ): Promise<{ finished: Promise<boolean> }>;
   retryDraftCleanup(): Promise<void>;
   prepare(request: SaveRequest, fresh?: boolean): Promise<void>;
   commit(operationId: string): Promise<CareerHead>;

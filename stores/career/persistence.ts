@@ -54,6 +54,8 @@ type Operation = {
   awaitingAcknowledgment?: boolean;
   result?: Pick<CareerHead, "revision" | "generation">;
 };
+type ResolvedDraft = { id: string; version: number; operationId?: string };
+
 const STORES = [
   "heads",
   "previous",
@@ -322,9 +324,38 @@ export class CareerStorage implements CareerBackend {
    * @example await storage.drafts()
    */
   async drafts(): Promise<CareerDraft[]> {
-    return this.transaction(["drafts"], "readonly", async (tx) =>
-      requestResult(tx.objectStore("drafts").getAll()),
+    return this.transaction(
+      ["drafts", "preferences"],
+      "readonly",
+      async (tx) => {
+        const drafts = await requestResult<CareerDraft[]>(
+          tx.objectStore("drafts").getAll(),
+        );
+        const versions = await this.resolvedDrafts(tx);
+        return drafts.filter(
+          (draft) => (versions.get(draft.draftId) ?? -1) < draft.draftVersion,
+        );
+      },
     );
+  }
+
+  /** Read resolved versions in the same transaction as recovery discovery.
+   * @param tx Transaction including preferences.
+   * @returns Maximum explicitly resolved version per draft.
+   * @example await this.resolvedDrafts(tx)
+   */
+  private async resolvedDrafts(tx: IDBTransaction) {
+    const store = tx.objectStore("preferences");
+    const keys = await requestResult(store.getAllKeys());
+    const values = await requestResult(store.getAll());
+    const versions = new Map<string, number>();
+    for (const [i, key] of keys.entries()) {
+      if (typeof key !== "string" || !key.startsWith("resolved-draft/"))
+        continue;
+      const { id, version } = values[i] as ResolvedDraft;
+      versions.set(id, Math.max(version, versions.get(id) ?? -1));
+    }
+    return versions;
   }
 
   /** Discard the explicitly resolved recovery version and older stored versions of it, preserving newer typing.
@@ -339,12 +370,45 @@ export class CareerStorage implements CareerBackend {
     version: number,
     operationId?: string,
   ): Promise<void> {
+    const cleanup = await this.recordDiscard(id, version, operationId);
+    await cleanup.finished;
+  }
+
+  /** Acknowledge the durable discard intent before physical recovery cleanup completes.
+   * @param id Resolved draft identity.
+   * @param version Highest resolved version.
+   * @param operationId Explicitly resolved interrupted request.
+   * @returns A cleanup result only after the intent commits; rejects before confirmation.
+   * @example await storage.confirmDraftDiscard(draft.draftId, draft.draftVersion)
+   */
+  async confirmDraftDiscard(id: string, version: number, operationId?: string) {
+    const cleanup = await this.recordDiscard(id, version, operationId);
+    return {
+      finished: cleanup.finished.then(
+        () => true,
+        () => false,
+      ),
+    };
+  }
+
+  /** Write a versioned intent, then begin retryable removal.
+   * @param id Resolved draft identity.
+   * @param version Highest resolved version.
+   * @param operationId Explicitly resolved interrupted request.
+   * @returns The separate removal promise after durable confirmation.
+   * @example await this.recordDiscard(id, version)
+   */
+  private async recordDiscard(
+    id: string,
+    version: number,
+    operationId?: string,
+  ) {
     const key = `resolved-draft/${id}/${version}`;
     const intent = { id, version, operationId };
     await this.transaction(["preferences"], "readwrite", async (tx) => {
       tx.objectStore("preferences").put(intent, key);
     });
-    await this.cleanupDraft(key, intent);
+    return { finished: this.cleanupDraft(key, intent) };
   }
 
   /** Retry durable, explicitly resolved versions; never delete a newer draft.
@@ -621,33 +685,40 @@ export class CareerStorage implements CareerBackend {
    * @example const interrupted = await storage.uncertainDrafts()
    */
   async uncertainDrafts(): Promise<CareerDraft[]> {
-    return this.transaction(["operations", "heads"], "readonly", async (tx) => {
-      const operations = await requestResult<Operation[]>(
-        tx.objectStore("operations").getAll(),
-      );
-      const head = await requestResult<CareerHead | undefined>(
-        tx.objectStore("heads").get(this.headKey),
-      );
-      return operations
-        .filter(
-          (op) =>
-            op.awaitingAcknowledgment &&
-            op.request.draftId &&
-            op.request.draftVersion,
-        )
-        .map(({ request }) => ({
-          draftId: request.draftId!,
-          draftVersion: request.draftVersion!,
-          workspaceId: request.workspaceId,
-          generation: request.generation,
-          baselineRevision: request.baselineRevision ?? head?.revision ?? 0,
-          scope: request.scope,
-          baseline: request.baseline,
-          values: request.values,
-          operationId: request.id,
-          fingerprint: request.fingerprint,
-        }));
-    });
+    return this.transaction(
+      ["operations", "heads", "preferences"],
+      "readonly",
+      async (tx) => {
+        const operations = await requestResult<Operation[]>(
+          tx.objectStore("operations").getAll(),
+        );
+        const head = await requestResult<CareerHead | undefined>(
+          tx.objectStore("heads").get(this.headKey),
+        );
+        const versions = await this.resolvedDrafts(tx);
+        return operations
+          .filter(
+            (op) =>
+              op.awaitingAcknowledgment &&
+              op.request.draftId &&
+              op.request.draftVersion &&
+              (versions.get(op.request.draftId) ?? -1) <
+                op.request.draftVersion,
+          )
+          .map(({ request }) => ({
+            draftId: request.draftId!,
+            draftVersion: request.draftVersion!,
+            workspaceId: request.workspaceId,
+            generation: request.generation,
+            baselineRevision: request.baselineRevision ?? head?.revision ?? 0,
+            scope: request.scope,
+            baseline: request.baseline,
+            values: request.values,
+            operationId: request.id,
+            fingerprint: request.fingerprint,
+          }));
+      },
+    );
   }
 
   /** Replace or roll back only the destination revision reviewed by the user, rotating one previous workspace atomically.

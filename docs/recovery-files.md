@@ -35,12 +35,15 @@ when recovery could not be stored). Missing source records require explicit
 restore-as-new with valid references, or reconciliation/export, never attachment
 to an unrelated record. Retain original recovery separately until resolution.
 
-Unresolved drafts never expire automatically; export does not remove them. After
-confirmed Save or explicit Discard, remove the resolved draft version and any older
-stored version of the same draft ID (the resolved in-memory version is always the
-newest); never remove a newer stored version. Durable cleanup intents use the
-IndexedDB preferences store; retry failures on next load without deleting newer
-edits. Protect pending, uncertain,
+Unresolved drafts never expire automatically. Export keeps recovery available.
+When recovery storage is involved, Cancel confirms once IndexedDB records an
+intent for the exact draft ID and version. The controller closes the matching
+draft and the preview returns to saved output. A refused or unconfirmed discard
+keeps the form open. Confirmed intents exclude resolved versions from discovery
+while physical removal is pending. **Recovery cleanup pending** offers a retry,
+and the next load also attempts cleanup. Removal after confirmed Save or Discard
+is limited to the resolved version and older versions of the same draft ID.
+Protect pending, uncertain,
 unacknowledged, and recovery-referenced receipts regardless of retention limits.
 Eligible completed receipts are kept for up to 30 days or 1,000 per workspace,
 whichever limit is reached first. If the device preference read fails, skip

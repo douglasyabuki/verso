@@ -13,7 +13,7 @@ export function renderTemplate(options: {
   settings: TemplateSettings;
   name: string;
   resumeName: string;
-  revision: number;
+  revision: number | null;
   locale: string;
   languageNumber: number;
   pageLabel: string;
@@ -196,7 +196,7 @@ ${color("dividerColor", "dividerclr", "gray")}
 \newif\ifRemVS
 \newcommand{\rvs}{${settings.sectionBelow === defaultValue && settings.headingSubtitleGap === defaultValue && settings.sectionSize === defaultValue && settings.entryTitleSize === defaultValue ? "\\ifRemVS\\vspace{-1.5ex}\\fi" : ""}\global\RemVSfalse}
 \usepackage[bookmarks=true,bookmarksdepth=1]{hyperref}
-\hypersetup{colorlinks=true,urlcolor=linkclr,pdftitle={${escapeLatex(name + " · " + resumeName)}},pdfauthor={${escapeLatex(name)}},pdflang={${locale}},pdfsubject={Verso revision ${revision}; ${templateIdentity.id}@${templateIdentity.version}}}
+\hypersetup{colorlinks=true,urlcolor=linkclr,pdftitle={${escapeLatex(name + " · " + resumeName)}},pdfauthor={${escapeLatex(name)}},pdflang={${locale}},pdfsubject={${revision === null ? "Verso unsaved draft" : `Verso revision ${revision}`}; ${templateIdentity.id}@${templateIdentity.version}}}
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \renewcommand{\headrulewidth}{0pt}

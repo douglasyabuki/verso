@@ -64,7 +64,7 @@ history, recovery, backups, and rollback, but not PDF graphics or readiness.
 
 Forms, selection, and ordering use explicit Cancel / Save. Incomplete valid values
 can be saved; malformed values retain the failed draft. Typing and recovery never
-mutate committed content, preview inputs, or workspace history. A successful Save
+mutate committed content, saved PDF inputs, or workspace history. A successful Save
 creates one atomic history step; Cancel/Discard creates none. Creation history
 archives/restores shared identities; resume creation/deletion history preserves
 resume identities without changing shared content.
@@ -174,7 +174,7 @@ switch to blank before creating the resume.
 
 ## Readiness and output
 
-`lib/career/readiness.ts` and the renderer share committed effective-selection
+`lib/career/readiness.ts` and the renderer share effective-selection
 assessment. Blockers are an unverified PDF language, missing full name, a rendered
 custom heading, selected title/degree, or selected achievement wording. Other empty
 values remain optional. Preserve built-in headings, URL-label fallback, and explicit
@@ -183,41 +183,48 @@ archive/deactivation status alone do not block output. Save validation is separa
 
 Issues appear only in the PDF preview footer, initially collapsed with a persistent
 count/status row, and an independently scrolling body capped at 40dvh. Preserve its
-toggle while mounted. Wording actions use guarded navigation, reveal Editor only
-after success, expand the owner/excluded content, and focus the exact row without
-editing text. Targets are transient; durable URLs contain no private wording.
+toggle while mounted. Issue actions reveal Editor on mobile, expand the relevant
+group, and focus the input, selection control, or Customize button. Cross-editor
+issue navigation offers Save and go or Keep editing while the current form is
+dirty. Targets are transient. Durable URLs contain no private wording.
 Wording groups rows by Career details owner, initially lists included content, and
 omits shared facts. Keep shared checkbox and URL-validation helpers independent of
 retired review/state modules.
 
-`lib/career/output.ts` resolves committed selected facts/wording with explicit output
+`lib/career/output.ts` resolves selected facts and wording with explicit output
 capabilities. `lib/output/template.ts` assembles the pinned template independently
 of content schemas; `lib/output/encoding.ts` safely escapes text. Selected archived
 content remains rendered. Rendered output, not revision alone, determines staleness.
 
-The per-tab workspace preview coordinator owns the compiler and retained PDF above
-the editor/preview layout. Hiding the pane, visiting a full-width destination, or
-selecting narrow-screen Editor unmounts the PDF.js viewer and releases its document,
-worker, canvases, and services, while retaining the last PDF and in-flight compile.
-Reopening redisplays the retained PDF without recompilation. Failure retains labeled
-download access; viewer failures do not remove the compiled artifact.
+The workspace preview coordinator tracks committed and draft versions synchronously
+and exposes PDF status to the pane separately from the editor. Layout, Wording, and
+Content & order coalesce completed interactions for 300 ms. Text fields, rich-text
+formatting controls, and their popovers share an editing session. Composition
+finishes before a request captures the accepted text. **Update preview** and mobile
+PDF pane entry request the eligible version immediately. Hidden panes and background
+tabs defer automatic draft work. Other destinations can opt into refresh after Save.
 
-Stale-result rejection uses generation, resume ID, and rendered-source fingerprint,
-excluding only revision metadata. Automatic refresh is off by default; when enabled
-it debounces committed output changes for the same resume/generation by 800 ms.
-Switching resumes/generations or changing drafts does not schedule it. Hidden panes
-and background tabs defer timers and queued automatic work. A running job is not
-interrupted; one replaceable queued request compiles the latest target afterward.
-Disabling automatic refresh cancels queued automatic work, preserving explicit
-requests and active compilation. A blocked target retains its identity so a Save
-that resolves readiness can schedule refresh. Automatic public-release opt-in can
-require refresh; see the account reference.
+A dedicated worker receives the active resume’s projected shared records in
+acknowledged batches. Wording and layout updates send changed scope keys, including
+deletions. The projection includes language-specific wording, selected records,
+an identity and formatting index for override validation, and the committed byte
+allowance. Preview applies the Save scope rules and the shared renderer. Save still
+validates and commits the complete workspace at its authoritative storage boundary.
 
-Allow one active compile, one replaceable queued request, one compiler/worker pair,
-one retained successful PDF, and one in-flight result per workspace/tab. Reject
-stale results; terminate timed-out workers before retry. Release obsolete object
-URLs, documents, canvases, listeners, and timers. Compiler defaults are 120 seconds
-initialization, 30 seconds compilation, and a 1,000,000-byte source limit.
+One worker owns the warm XeTeX and XDV-to-PDF pair and runs one job at a time.
+Saved actions take priority after the active job reaches a safe boundary. Resume,
+workspace generation, committed head, and exact draft version guard preparation,
+compilation, and viewer handoff. Rendered fingerprints allow equivalent PDFs to be
+reused, including layout changes that only affect the page warning. Draft PDF
+metadata says unsaved. Saved output retains its actual compiled revision.
+
+The pane keeps the last readable document while an inert PDF.js candidate renders
+the intended page. Promotion preserves page, zoom or fit mode, and relative
+vertical scroll. A removed page lands at the top of the new last page. Closing
+the pane releases PDF.js resources and keeps reading position for reopening on
+the same resume. A resume, owner, or workspace generation change clears that
+position and retained output. Compiler defaults are 120 seconds for initialization,
+30 seconds for compilation, and a 1,000,000-byte source limit.
 
 ## Capacity and measurement
 

@@ -129,7 +129,7 @@ export function resolveResumeWording(
  * @example effectiveResume(document, resume).selection
  */
 export function effectiveResume(
-  document: CareerDocument,
+  document: Pick<CareerDocument, "profile">,
   resume: CareerResume,
 ): CareerResume {
   return {
@@ -416,7 +416,7 @@ export type ProfileContact =
  * @example profileContacts(document, resume, "combined")
  */
 export function profileContacts(
-  document: CareerDocument,
+  document: Pick<CareerDocument, "profile">,
   resume: CareerResume,
   contactLocation: CareerResume["layout"]["contactLocation"] = resume.layout
     .contactLocation,

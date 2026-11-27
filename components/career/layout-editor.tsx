@@ -214,6 +214,7 @@ export function LayoutFields({
   editContacts,
   defaults = appLayoutDefaults,
   resumeLayout = false,
+  focusField,
 }: {
   values: unknown;
   onChange: (value: unknown) => void;
@@ -221,6 +222,7 @@ export function LayoutFields({
   editContacts?: () => void;
   defaults?: CareerResume["layout"];
   resumeLayout?: boolean;
+  focusField?: string;
 }) {
   const id = useId();
   const [opened, setOpened] = useState<Record<string, boolean>>({
@@ -321,6 +323,7 @@ export function LayoutFields({
     return (
       <div
         key={key}
+        data-preview-field={key}
         className={
           key === "paper" ? "col-span-full flex flex-col gap-4" : "min-w-0"
         }
@@ -575,6 +578,7 @@ export function LayoutFields({
           key={group.name}
           open={
             opened[group.name] ||
+            (focusField !== undefined && group.keys.includes(focusField)) ||
             issues.some((issue) => group.keys.includes(String(issue.path[0])))
           }
           onOpenChange={(value) =>

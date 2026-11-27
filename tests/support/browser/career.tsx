@@ -97,7 +97,7 @@ export function setupCareerTests() {
     for (const owner of controllers) {
       await expect.poll(() => owner.getSnapshot().saving).toBe(false);
       await owner.flushRecovery();
-      owner.dispose();
+      await owner.dispose();
     }
     controllers.length = 0;
     owners.forEach((owner) => owner.close());

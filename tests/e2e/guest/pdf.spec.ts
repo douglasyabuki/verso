@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, type Page, test } from "@playwright/test";
 
 import { createCareerDocument, createEntry } from "@/lib/career/model";
@@ -62,6 +64,192 @@ async function seed(
   await page.goto(`/app/${destination}`);
 }
 
+async function downloadSaved(page: Page) {
+  const downloaded = page.waitForEvent("download", { timeout: 150_000 });
+  await page
+    .getByRole("button", { name: "Download saved PDF", exact: true })
+    .click();
+  const file = await downloaded;
+  const bytes = await readFile((await file.path())!);
+  await installPdfInspector(page);
+  return page.evaluate(
+    (base64) => window.careerPdf.inspectPdf(base64),
+    bytes.toString("base64"),
+  );
+}
+
+test("defers typing, previews an unsaved override and keeps one-click downloads saved", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  const { document } = fixture();
+  const resume = createResume(document, "en-US");
+  resume.overrides[document.profile.fields[0].id] = "Ana Silva";
+  document.resumes = [resume];
+  await page.addInitScript(() => {
+    const original = Worker.prototype.postMessage;
+    const messages: { kind: string; keys?: string[] }[] = [];
+    Object.assign(window, { previewMessages: messages });
+    Worker.prototype.postMessage = function (message, options) {
+      if (message?.kind === "run" || message?.kind === "pieces") {
+        messages.push({
+          kind: message.kind,
+          keys: message.pieces?.map(([key]: [string]) => key),
+        });
+      }
+      return original.call(
+        this,
+        message,
+        options as StructuredSerializeOptions,
+      );
+    };
+  });
+  const messages = () =>
+    page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            previewMessages: { kind: string; keys?: string[] }[];
+          }
+        ).previewMessages,
+    );
+  const expectedText = "Ana Draft";
+  await seed(page, document, `resume-wording/${resume.id}`);
+  const output = page.getByRole("region", { name: "Resume PDF output" });
+  const saved = output
+    .getByRole("status")
+    .filter({ hasText: /^Saved PDF \u00b7 Revision/ });
+  await expect(saved).toBeVisible({ timeout: 150_000 });
+  const before = (await messages()).length;
+  const form = page.getByRole("region", { name: "Editing form" });
+  const input = form.getByRole("textbox", {
+    name: "Profile \u00b7 Full name",
+    exact: true,
+  });
+  await input.fill("Ana composing");
+  await expect(output.getByText(/Draft changes pending/)).toBeVisible();
+  // The coalescing window elapses while focus stays inside the editing session.
+  await page.waitForTimeout(400);
+  expect(await messages()).toHaveLength(before);
+  await expect(output.getByText(/Draft changes pending/)).toBeVisible();
+  // A synthetic composition leaves focus in the input until the final input
+  // transaction. A native click can commit the composition on blur in Firefox.
+  await input.evaluate((field) => {
+    field.dispatchEvent(
+      new CompositionEvent("compositionstart", { bubbles: true }),
+    );
+  });
+  await output
+    .getByRole("button", { name: "Update preview" })
+    .evaluate((button) => (button as HTMLButtonElement).click());
+  expect(await messages()).toHaveLength(before);
+  await input.fill(expectedText);
+  await input.evaluate((field, value) => {
+    field.dispatchEvent(
+      new CompositionEvent("compositionend", { bubbles: true, data: value }),
+    );
+  }, expectedText);
+  await expect(
+    output.getByText("Draft PDF \u00b7 Unsaved", { exact: true }),
+  ).toBeVisible({ timeout: 30_000 });
+  const updates = (await messages()).slice(before);
+  expect(updates.filter(({ kind }) => kind === "run")).toHaveLength(1);
+  expect(updates.flatMap(({ keys }) => keys ?? []).sort()).toEqual(
+    [`draft/${document.profile.fields[0].id}`, "draftShape"].sort(),
+  );
+  const viewer = output.getByRole("region", { name: "PDF document pages" });
+  await expect(viewer.getByText(expectedText, { exact: true })).toBeVisible();
+  const committed = await downloadSaved(page);
+  expect(committed.pages[0].text).toContain("Ana Silva");
+  expect(committed.pages[0].text).not.toContain(expectedText);
+  expect((committed.info as { Subject?: string }).Subject).toMatch(
+    /^Verso revision /,
+  );
+  await form.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(saved).toBeVisible();
+  await expect(viewer.getByText("Ana Silva", { exact: true })).toBeVisible();
+});
+
+test("starts a saved download on one click when no PDF has been generated", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  const { document } = fixture();
+  const resume = createResume(document, "en-US");
+  document.resumes = [resume];
+  await seed(page, document, `resume-overview/${resume.id}`);
+  const inspection = await downloadSaved(page);
+  expect(inspection.pages[0].text).toContain("Ana Silva");
+  await expect(
+    page.getByRole("link", { name: "Download saved PDF directly" }),
+  ).toBeVisible();
+});
+
+test("keeps zoom through Layout Save and opens the latest saved PDF on narrow screens", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  page.setDefaultTimeout(20_000);
+  const { document } = fixture();
+  const resume = createResume(document, "en-US");
+  resume.name = "Layout preview";
+  document.resumes = [resume];
+  await seed(page, document, `resume-layout/${resume.id}`);
+  const pdf = page.getByRole("region", { name: "Resume PDF output" });
+  const form = page.getByRole("region", { name: "Editing form" });
+  const zoom = pdf.getByRole("textbox", { name: "PDF zoom" });
+  const output = pdf.getByRole("status").filter({ hasText: "Revision" });
+  await expect(zoom).toBeEnabled({ timeout: 150_000 });
+  await zoom.fill("125");
+  await zoom.press("Enter");
+  await expect(zoom).toHaveValue("125%");
+
+  const margin = form.getByRole("textbox", {
+    name: "Left margin (mm)",
+    exact: true,
+  });
+  await margin.fill("bad");
+  await pdf.getByRole("button", { name: "Update preview" }).click();
+  await expect(pdf.getByText(/Draft preview blocked/)).toBeVisible();
+  await pdf.getByRole("button", { name: "Issues (1)", exact: true }).click();
+  await pdf.getByRole("button", { name: "Go to field", exact: true }).click();
+  await expect(margin).toBeFocused();
+  await expect(margin).toHaveAttribute("aria-invalid", "true");
+  await expect(margin).toHaveValue("bad");
+  await form.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(output).toHaveText(/^Saved PDF \u00b7 Revision \d+$/);
+  const before = await output.textContent();
+  await form
+    .getByRole("button", { name: "Paper: US Letter", exact: true })
+    .click();
+  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(output).not.toHaveText(before!);
+  await expect(output).toHaveText(/^Saved PDF \u00b7 Revision \d+$/, {
+    timeout: 30_000,
+  });
+  await expect(zoom).toHaveValue("125%");
+
+  const previous = await output.textContent();
+  await page.setViewportSize({ width: 430, height: 900 });
+  await expect(
+    page.getByRole("tab", { name: "Editor", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await form.getByRole("button", { name: "Paper: A4", exact: true }).click();
+  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    form.getByRole("button", { name: "Save", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("tab", { name: "PDF preview", exact: true }).click();
+  await expect(output).not.toHaveText(previous!);
+  await expect(output).toHaveText(/^Saved PDF \u00b7 Revision \d+$/, {
+    timeout: 30_000,
+  });
+  const inspection = await downloadSaved(page);
+  const paper = inspection.pages[0];
+  expect(paper.width).toBeCloseTo(595, 0);
+  expect(paper.height).toBeCloseTo(842, 0);
+});
+
 for (const language of ["en-US", "pt-BR"]) {
   test(`renders independent committed ${language} selections and custom wording in the actual PDF`, async ({
     page,
@@ -86,28 +274,10 @@ for (const language of ["en-US", "pt-BR"]) {
     resume.overrides[entry.fields[0].id] = customTitle;
     document.resumes = [resume];
     await seed(page, document, `resume-content/${resume.id}`);
-    await page
-      .getByRole("button", { name: "Refresh preview", exact: true })
-      .click();
     await expect(
       page.getByRole("button", { name: "Search PDF", exact: true }),
     ).toBeEnabled({ timeout: 150_000 });
-    await page
-      .getByRole("button", { name: "PDF actions", exact: true })
-      .click();
-    const link = page.getByRole("menuitem", {
-      name: "Download PDF",
-      exact: true,
-    });
-    await expect(link).toBeVisible();
-    const href = await link.getAttribute("href");
-    await installPdfInspector(page);
-    const inspection = await page.evaluate(async (href) => {
-      const bytes = new Uint8Array(await (await fetch(href!)).arrayBuffer());
-      return window.careerPdf.inspectPdf(
-        btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")),
-      );
-    }, href);
+    const inspection = await downloadSaved(page);
     const text = inspection.pages.map((page) => page.text).join(" ");
     expect(text).toContain(resume.overrides[entry.fields[0].id]);
     expect(text).toContain(
@@ -119,7 +289,6 @@ for (const language of ["en-US", "pt-BR"]) {
     expect(text).not.toContain("Reusable English summary");
     expect(text).not.toContain("Resumo reutilizável");
     expect(text).not.toContain("Acme");
-    await page.keyboard.press("Escape");
     const viewer = page.getByRole("region", {
       name: "PDF viewer",
       exact: true,

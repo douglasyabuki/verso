@@ -174,6 +174,85 @@ describe("preview coordinator bounds", () => {
 });
 
 describe("automatic preview refresh", () => {
+  it("generates an editor's saved PDF on first visible open and reuses a matching PDF", async () => {
+    vi.useFakeTimers();
+    const { coordinator, pending } = harness();
+    const target = job("a");
+    coordinator.setTarget(target, undefined, true);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(pending).toHaveLength(0);
+    coordinator.setVisible(true);
+    await vi.advanceTimersByTimeAsync(799);
+    coordinator.setTarget({ ...target, revision: 2 }, undefined, true);
+    expect(pending).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    pending.shift()!.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(coordinator.getSnapshot().output?.trigger).toBe("editor-open");
+
+    coordinator.setTarget(target);
+    coordinator.setTarget({ ...target, targetPages: 2 }, undefined, true);
+    coordinator.setVisible(false);
+    coordinator.setVisible(true);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(pending).toHaveLength(0);
+    expect(coordinator.getSnapshot().output?.targetPages).toBe(2);
+    coordinator.dispose();
+  });
+
+  it("drops editor-only work on departure and debounces the latest committed change behind an active compile", async () => {
+    vi.useFakeTimers();
+    const { coordinator, pending, urls } = harness();
+    const target = job("a");
+    coordinator.setVisible(true);
+    coordinator.setTarget(target, undefined, true);
+    coordinator.setTarget(target);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(pending).toHaveLength(0);
+    coordinator.setTarget(target, undefined, true);
+    await vi.advanceTimersByTimeAsync(800);
+    coordinator.setTarget(job("b"), undefined, true);
+    await vi.advanceTimersByTimeAsync(800);
+    expect(coordinator.getSnapshot().queued).toContain('"b"');
+    coordinator.setTarget(job("c"), undefined, true);
+    pending.shift()!.resolve();
+    await vi.advanceTimersByTimeAsync(799);
+    expect(pending).toHaveLength(0);
+    expect(urls).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(pending.map((item) => item.source)).toEqual(["source-resume-c"]);
+    pending.shift()!.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(coordinator.getSnapshot().output?.trigger).toBe("committed-change");
+    coordinator.dispose();
+  });
+
+  it("keeps a failed open visible for explicit retry and ignores obsolete output when switching resumes", async () => {
+    vi.useFakeTimers();
+    const { coordinator, pending, urls } = harness();
+    coordinator.setVisible(true);
+    coordinator.setTarget(job("a"), undefined, true);
+    await vi.advanceTimersByTimeAsync(800);
+    pending.shift()!.reject(new Error("Compilation failed"));
+    await vi.advanceTimersByTimeAsync(0);
+    coordinator.setVisible(false);
+    coordinator.setVisible(true);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(coordinator.getSnapshot().status.kind).toBe("failed");
+    expect(pending).toHaveLength(0);
+    coordinator.refresh();
+    coordinator.setTarget(job("b", "other"), undefined, true);
+    await vi.advanceTimersByTimeAsync(800);
+    pending.shift()!.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(urls).toHaveLength(0);
+    expect(pending.map((item) => item.source)).toEqual(["source-other-b"]);
+    pending.shift()!.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(coordinator.getSnapshot().output?.tag.resumeId).toBe("other");
+    coordinator.dispose();
+  });
+
   it("refreshes a selected resume that becomes ready after a committed Save, including an initially blocked resume", async () => {
     vi.useFakeTimers();
     const { coordinator, pending } = harness();

@@ -14,7 +14,7 @@ import {
  * @example assessResumeOutput(document, document.resumes[0].id).ready
  */
 export function assessResumeOutput(
-  document: CareerDocument,
+  document: Pick<CareerDocument, "profile" | "sections" | "resumes">,
   resumeId: string,
 ): ResumeOutputAssessment {
   const stored = document.resumes.find((resume) => resume.id === resumeId);

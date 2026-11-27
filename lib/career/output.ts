@@ -27,9 +27,12 @@ export const outputCapabilities = CAREER_OUTPUT_CAPABILITIES;
  * @example renderCareerResume(document, resume.id, 4)
  */
 export function renderCareerResume(
-  document: CareerDocument,
+  document: Pick<
+    CareerDocument,
+    "profile" | "summary" | "sections" | "resumes"
+  >,
   resumeId: string,
-  revision: number,
+  revision: number | null,
 ): string {
   const assessment = assessResumeOutput(document, resumeId);
   if (!assessment.ready)
@@ -195,16 +198,21 @@ export function resumeFullName(
  * @example renderCareerOutput(document, resume.id, 4).fingerprint
  */
 export function renderCareerOutput(
-  document: CareerDocument,
+  document: Pick<
+    CareerDocument,
+    "profile" | "summary" | "sections" | "resumes"
+  >,
   resumeId: string,
-  revision: number,
+  revision: number | null,
 ): { source: string; fingerprint: string } {
   const source = renderCareerResume(document, resumeId, revision);
   return {
     source,
     fingerprint: outputFingerprint(
       source.replace(
-        `pdfsubject={Verso revision ${revision};`,
+        revision === null
+          ? "pdfsubject={Verso unsaved draft;"
+          : `pdfsubject={Verso revision ${revision};`,
         "pdfsubject={Verso revision;",
       ),
     ),
