@@ -2,6 +2,42 @@ import type { CareerHead, SaveRequest } from "@/stores/career/persistence";
 import type { AccountOperationStatus } from "@/types-and-constants/account";
 import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
 
+/** Workspace identity and revision a whole-workspace operation was reviewed against. */
+export type WorkspaceIdentity = Pick<
+  CareerHead,
+  "workspaceId" | "revision" | "generation"
+>;
+
+/** Durable record of one account deletion attempt, written before it is sent. */
+export type WorkspaceResetMarker = {
+  operationId: string;
+  reviewed: WorkspaceIdentity;
+  /** Hex SHA-256 the server records in the attempt's receipt. */
+  requestHash: string;
+  createdAt: number;
+};
+
+/** Outcome of deleting workspace data or resolving an earlier attempt.
+ * `deleted.by` says whether the receipt proves this attempt deleted the workspace;
+ * `cleanup: "pending"` means only this browser's local copy still needs clearing. */
+export type WorkspaceResetOutcome =
+  | {
+      status: "deleted";
+      by: "this-request" | "another-request" | "unknown";
+      head: CareerHead;
+      cleanup: "complete" | "pending";
+      operationId?: string;
+    }
+  /** The outcome is unresolved: the reviewed workspace still exists and the
+   * attempt could still commit (`unconfirmed`), or the server did not answer. */
+  | {
+      status: "pending";
+      reason: "unconfirmed" | "offline";
+      operationId: string;
+    }
+  /** The attempt can never commit: cancelled on the server, or the workspace changed. */
+  | { status: "not-deleted"; reason: "cancelled" | "changed" };
+
 /** Owner of committed workspace, recovery, receipt, and previous-workspace storage.
  * The guest backend commits to IndexedDB; an account backend keeps recovery and
  * immutable requests locally and treats only server acknowledgment as commit.
@@ -15,7 +51,8 @@ export interface CareerBackend {
   load(initial?: CareerDocument): Promise<CareerHead>;
   drafts(): Promise<CareerDraft[]>;
   uncertainDrafts(): Promise<CareerDraft[]>;
-  writeDraft(draft: CareerDraft): Promise<void>;
+  /** Store recovery; `workspaceId` is the workspace the writer observed and fences stale tabs. */
+  writeDraft(draft: CareerDraft, workspaceId: string): Promise<void>;
   discardDraft(
     id: string,
     version: number,
@@ -27,7 +64,11 @@ export interface CareerBackend {
     operationId?: string,
   ): Promise<{ finished: Promise<boolean> }>;
   retryDraftCleanup(): Promise<void>;
-  prepare(request: SaveRequest, fresh?: boolean): Promise<void>;
+  prepare(
+    request: SaveRequest,
+    fresh: boolean,
+    workspaceId: string,
+  ): Promise<void>;
   commit(operationId: string): Promise<CareerHead>;
   acknowledge(operationId: string): Promise<void>;
   /** Replace (or roll back when `incoming` is undefined) the reviewed revision.
@@ -38,6 +79,18 @@ export interface CareerBackend {
     kind?: "replace" | "import",
   ): Promise<CareerHead>;
   previous(): Promise<CareerHead | undefined>;
+  /** Permanently delete the reviewed workspace's data and adopt a fresh workspace.
+   * Throws `conflict` when the workspace changed since review; accounts may return a
+   * pending outcome when the server did not answer. */
+  resetWorkspace(reviewed: WorkspaceIdentity): Promise<WorkspaceResetOutcome>;
+  /** Account only: unresolved deletion attempts recorded in this browser. */
+  pendingResets?(): Promise<WorkspaceResetMarker[]>;
+  /** Account only: resolve one attempt from server state and its receipt, never by resending. */
+  resolveReset?(operationId: string): Promise<WorkspaceResetOutcome>;
+  /** Account only: resend the same attempt (same operation ID and reviewed identity). */
+  retryReset?(operationId: string): Promise<WorkspaceResetOutcome>;
+  /** Account only: cancel the attempt on the server under the owner lock. */
+  cancelReset?(operationId: string): Promise<WorkspaceResetOutcome>;
   pruneCompleted(days?: number, count?: number): Promise<void>;
   readDevicePreferences(): Promise<unknown>;
   /** Account only: conditional freshness check; "unchanged" transfers no document. */

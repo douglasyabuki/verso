@@ -8,6 +8,7 @@ import {
   POST as upload,
 } from "@/app/api/account/releases/route";
 import { POST as save } from "@/app/api/account/workspace/operations/route";
+import { POST as reset } from "@/app/api/account/workspace/reset/route";
 import { GET as workspace } from "@/app/api/account/workspace/route";
 import { GET as pinnedPdf } from "@/app/pdf/[token]/[number]/route";
 import { GET as latestPdf } from "@/app/pdf/[token]/route";
@@ -260,4 +261,54 @@ it("records database statements for release uploads, lists, latest moves, and pu
   expect(release.total).toBeLessThanOrEqual(12);
   expect(firstRelease.writes).toBe(4);
   expect(setLatest.writes).toBe(1);
+});
+
+it("records database statements for workspace data deletion and its replay", async () => {
+  const userId = await createUser(database.prisma, randomUUID());
+  const client = await createSession(database.prisma, userId);
+  const head = await seedWorkspace(database, userId);
+  const body = {
+    operationId: randomUUID(),
+    reviewed: {
+      workspaceId: head.workspaceId,
+      revision: head.revision,
+      generation: head.generation,
+    },
+    confirmation: "DELETE",
+  };
+  const send = () =>
+    reset(
+      new Request(`${ORIGIN}/api/account/workspace/reset`, {
+        method: "POST",
+        headers: {
+          cookie: client.cookie,
+          [ACCOUNT_SESSION_HEADER]: client.sessionId,
+          origin: ORIGIN,
+        },
+        body: JSON.stringify(body),
+      }),
+    );
+  // The session's first request refreshes it; measure deletion separately.
+  await workspace(
+    new Request(`${ORIGIN}/api/account/workspace`, {
+      headers: {
+        cookie: client.cookie,
+        [ACCOUNT_SESSION_HEADER]: client.sessionId,
+      },
+    }),
+  );
+  database.queries.take();
+  expect((await send()).status).toBe(200);
+  const deletion = summarize(database.queries.take());
+  expect((await send()).status).toBe(200);
+  const replay = summarize(database.queries.take());
+  console.info(
+    "Workspace deletion statements",
+    JSON.stringify({ deletion, replay }),
+  );
+  // Lock, receipt and workspace reads; link, release, previous, and receipt
+  // deletes; workspace update; reset receipt insert.
+  expect(deletion.writes).toBe(6);
+  expect(deletion.total).toBeLessThanOrEqual(11);
+  expect(replay.writes).toBe(0);
 });

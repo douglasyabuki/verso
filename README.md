@@ -44,7 +44,11 @@ resumes, customize each resume, and generate PDFs in the browser.
   and JSON backups. In Settings › Data › Restore, **Import workspace backup**
   shows the selected filename for review before you confirm replacement.
   **Import unsaved drafts** shows the filename in the result and puts the drafts
-  in recovery. You can also restore the one previous workspace.
+  in recovery. You can also restore the one previous workspace, or use **Delete
+  workspace data** to start fresh after typing `DELETE`. Deletion also removes
+  unsaved drafts, recovery, history, and the previous workspace. Guests clear only
+  the workspace in this browser. Signed-in users stay signed in, and their public
+  PDF links, including pinned versions, stop working.
 - Browser-based LaTeX compilation and live PDF preview in Layout, Wording, and
   Content & order. Finish an interaction or leave the text fields to preview the
   open draft. Use **Update preview** to refresh immediately. On mobile, select
@@ -216,6 +220,10 @@ concurrent PostgreSQL row locking remain separate acceptance checks.
   approximates appearance; the compiled PDF determines pagination. Unsupported
   content languages cannot generate PDFs. No PDF/UA, universal ATS, or Safari
   compatibility is claimed.
+- Deleting workspace data is permanent and is not undone by Undo or the previous
+  workspace. Backups and PDFs already downloaded remain with whoever has them.
+  Another signed-in device stops saving to the deleted workspace and clears its
+  local recovery for it when it next reconnects. Offline devices keep it until then.
 - Deleting an account is permanent: its workspace, previous workspace, connected
   sign-in methods, sessions, and public PDF links are removed. Download a backup first.
 - Public PDF links allow anyone holding the URL to download the published PDF.

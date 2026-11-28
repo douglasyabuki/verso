@@ -149,7 +149,11 @@ Device/data panels preserve career drafts. Resolve occupied drafts before langua
 or workspace-default forms; guard dirty Settings-form departure, closure, and
 Back/Forward. Data viewing/export remains accessible without resolution, including
 detours from a dirty Settings form. These workspace forms use controller-owned
-Save/recovery/history; `defaults` affects future blank resumes only.
+Save/recovery/history; `defaults` affects future blank resumes only. **Delete
+workspace data** sits last in Settings › Data and needs no draft resolution
+first: it deletes open drafts with the workspace. On success every tab of the
+owner opens the fresh Overview with no resume selected (see
+[workspace data deletion](recovery-files.md#workspace-data-deletion)).
 
 Device theme and automatic preview refresh apply immediately outside workspace
 history and portable exports. The preview preference uses a versioned IndexedDB

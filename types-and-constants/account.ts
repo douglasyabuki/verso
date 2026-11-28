@@ -16,8 +16,11 @@ export type AccountErrorCode =
   | "deletion_cancelled"
   | "unavailable";
 
-/** Kinds of committed account operations recorded as receipts. */
-export type AccountOperationKind = "save" | "replace" | "rollback" | "import";
+/** Kinds of committed account operations recorded as receipts. `reset` proves
+ * which request deleted a workspace's data; `reset-cancelled` is the tombstone that
+ * stops a delayed deletion request with the same operation ID from committing. */
+export type AccountOperationKind =
+  "save" | "replace" | "rollback" | "import" | "reset" | "reset-cancelled";
 
 /** Explicit scope Save sent immediately after local preparation. */
 export type AccountSaveRequest = ScopeRequest & {
@@ -28,11 +31,28 @@ export type AccountSaveRequest = ScopeRequest & {
 /** Reviewed whole-workspace replacement, import, or rollback. */
 export type AccountReplaceRequest = {
   operationId: string;
-  kind: Exclude<AccountOperationKind, "save">;
+  kind: "replace" | "rollback" | "import";
   reviewed: Pick<CommittedHead, "workspaceId" | "revision" | "generation">;
   /** Incoming document; omitted for rollback to the previous workspace. */
   document?: unknown;
 };
+
+/** Confirmed deletion of the reviewed account workspace's data. */
+export type AccountResetRequest = {
+  operationId: string;
+  reviewed: Pick<CommittedHead, "workspaceId" | "revision" | "generation">;
+  confirmation: typeof WORKSPACE_DELETION.confirmation;
+};
+
+/** Server-side cancellation of one deletion attempt, serialized with it under the owner lock. */
+export type AccountResetCancelRequest = Omit<
+  AccountResetRequest,
+  "confirmation"
+>;
+
+/** Cancellation outcome: `deleted` when the attempt had already committed. */
+export type AccountResetCancelResponse =
+  { deleted: true; head: CommittedHead } | { deleted: false };
 
 /** Committed head identity returned by the server. */
 export type AccountHeadIdentity = Pick<
@@ -75,6 +95,7 @@ export const ACCOUNT_ROUTES = {
   operations: "/api/account/workspace/operations",
   replace: "/api/account/workspace/replace",
   previous: "/api/account/workspace/previous",
+  reset: "/api/account/workspace/reset",
   account: "/api/account",
 } as const;
 
@@ -88,6 +109,12 @@ export const ACCOUNT_DELETION = {
   /** A prepared deletion confirmation expires after this long. */
   capabilityMs: 30 * 60_000,
   /** Text the user types to confirm permanent deletion. */
+  confirmation: "DELETE",
+} as const;
+
+/** Workspace data deletion (guests and accounts). */
+export const WORKSPACE_DELETION = {
+  /** Text the user types to confirm permanently deleting workspace data. */
   confirmation: "DELETE",
 } as const;
 

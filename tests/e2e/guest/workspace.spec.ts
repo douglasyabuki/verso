@@ -468,3 +468,125 @@ test("two tabs preserve unrelated saves and retain same-scope drafts on conflict
   );
   await other.close();
 });
+
+/** Count workspace records stored in this browser, read through IndexedDB directly. */
+function storedRecords(page: Page) {
+  return page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const open = indexedDB.open("verso-local", 1);
+      open.onsuccess = () => resolve(open.result);
+      open.onerror = () => reject(open.error);
+    });
+    const count = (name: string) =>
+      new Promise<number>((resolve, reject) => {
+        const request = database
+          .transaction(name, "readonly")
+          .objectStore(name)
+          .count();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    const result = {
+      drafts: await count("drafts"),
+      previous: await count("previous"),
+      operations: await count("operations"),
+    };
+    database.close();
+    return result;
+  });
+}
+
+test("deletes guest workspace data across tabs and keeps backup import working", async ({
+  page,
+  context,
+}, testInfo) => {
+  const { document } = fixture();
+  const backupPath = testInfo.outputPath("workspace.json");
+  await writeFile(backupPath, JSON.stringify(envelope(document)));
+  await page.goto("/app/settings/data");
+  const importBackup = page.getByRole("button", {
+    name: "Import workspace backup",
+  });
+  await (
+    await openFilePicker(page, () => importBackup.click())
+  ).setFiles(backupPath);
+  const replacement = page.getByRole("dialog", {
+    name: "Review workspace replacement",
+  });
+  await replacement
+    .getByRole("button", { name: "Replace workspace", exact: true })
+    .click();
+  await expect(replacement).toBeHidden();
+
+  // A second tab holds unsaved work that recovery has stored.
+  const other = await context.newPage();
+  await other.goto("/app");
+  await other.getByRole("button", { name: "Profile", exact: true }).click();
+  await other
+    .getByRole("textbox", { name: "Full name" })
+    .fill("Unsaved in the other tab");
+  await expect.poll(async () => (await storedRecords(page)).drafts).toBe(1);
+
+  const section = page.getByRole("region", { name: "Delete workspace data" });
+  await section
+    .getByRole("button", { name: "Delete workspace data", exact: true })
+    .click();
+  const dialog = page.getByRole("alertdialog", {
+    name: "Delete workspace data permanently?",
+  });
+  await expect(dialog).toContainText("in this browser");
+  await expect(dialog).toContainText("1 resume");
+  await expect(dialog).toContainText("The previous workspace");
+  await expect(dialog).toContainText("1 unsaved draft");
+  await expect(dialog).toContainText("Saved content only");
+  const backup = await downloadWorkspaceBackup(page);
+  expect(backup.document.resumes.map((resume) => resume.name)).toEqual([
+    "Application",
+  ]);
+  const confirm = dialog.getByRole("button", {
+    name: "Delete workspace data",
+    exact: true,
+  });
+  await expect(confirm).toBeDisabled();
+  await dialog
+    .getByRole("textbox", { name: "Type DELETE to confirm" })
+    .fill("DELETE");
+  await confirm.click();
+
+  await expect(page.getByText("Workspace data deleted")).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Settings", exact: true }),
+  ).toBeHidden();
+  await expect(
+    other.getByText("Workspace data was deleted in another tab or device"),
+  ).toBeVisible();
+  await expect(other.getByRole("textbox", { name: "Full name" })).toBeHidden();
+  // Outlast the other tab's recovery timers: nothing repopulates the fresh workspace.
+  await page.waitForTimeout(2_500);
+  expect(await storedRecords(page)).toEqual({
+    drafts: 0,
+    previous: 0,
+    operations: 0,
+  });
+
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Application (en-US)", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText("0 active · 0 archived entries")).toHaveCount(5);
+  await other.close();
+
+  // Explicit backup import still works after deletion.
+  await openDataSettings(page);
+  await (
+    await openFilePicker(page, () => importBackup.click())
+  ).setFiles(backupPath);
+  await replacement
+    .getByRole("button", { name: "Replace workspace", exact: true })
+    .click();
+  await expect(replacement).toBeHidden();
+  await closeSettings(page);
+  await expect(
+    page.getByRole("button", { name: "Application (en-US)", exact: true }),
+  ).toBeVisible();
+});

@@ -172,3 +172,45 @@ export function replaceHead<H extends CommittedHead>(
     },
   };
 }
+
+/** Decide a confirmed workspace-data deletion without performing I/O.
+ * The fresh workspace receives a new identity, so every request prepared against
+ * the deleted workspace is rejected by identity checks; revision and generation stay
+ * monotonic so generation-ordered readers adopt it.
+ * @param current Current committed head, read inside the caller's atomic boundary.
+ * @param reviewed Workspace identity and revision the user confirmed deleting.
+ * @param document Fresh validated schema-2 document.
+ * @param workspaceId New workspace identity; never the reviewed one.
+ * @returns Fresh head with a new identity and incremented revision/generation, or a conflict when the workspace changed since review.
+ * @example const decision = resetHead(current, reviewed, createCareerDocument(), crypto.randomUUID())
+ */
+export function resetHead<H extends CommittedHead>(
+  current: H,
+  reviewed: Pick<CommittedHead, "workspaceId" | "revision" | "generation">,
+  document: CareerDocument,
+  workspaceId: string,
+): CommitDecision<H> {
+  if (
+    current.workspaceId !== reviewed.workspaceId ||
+    current.generation !== reviewed.generation ||
+    current.revision !== reviewed.revision
+  )
+    return {
+      ok: false,
+      reason: "conflict",
+      message:
+        "Workspace changed since you reviewed it. Review the current workspace and confirm again.",
+    };
+  if (workspaceId === current.workspaceId)
+    throw new Error("A fresh workspace requires a new identity.");
+  return {
+    ok: true,
+    head: {
+      ...current,
+      workspaceId,
+      revision: current.revision + 1,
+      generation: current.generation + 1,
+      document,
+    },
+  };
+}

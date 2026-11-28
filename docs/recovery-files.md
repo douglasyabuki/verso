@@ -102,6 +102,46 @@ invalidates pending Saves/stale previews, and begins a new history generation.
 Device preferences survive. Recovery with missing source identities requires
 explicit restore-as-new/reconciliation rather than silent dropping.
 
+### Workspace data deletion
+
+Settings › Data › **Delete workspace data** is a dedicated operation, never a
+replacement: it keeps no previous workspace. After confirmation (typing `DELETE`),
+it permanently removes the active workspace's committed content, archived records,
+workspace settings, the one previous workspace, Undo/Redo history, open and stored
+drafts, recovery, prepared requests, receipts, and cleanup intents, and adopts a
+fresh `createCareerDocument()` workspace. Open drafts need no separate Save or
+Discard. Deleting unsaved work this way is the only exception to the
+unresolved-draft and protected-receipt retention rules. Device preferences, other
+owners' data, and files already downloaded remain. Explicit backup and recovery
+imports keep working afterwards.
+
+The fresh workspace gets a **new workspace ID** with revision and generation one
+higher than the deleted head. Only deletion changes a workspace ID: replacement and
+rollback keep it. A changed ID therefore proves the reviewed workspace is gone, and
+generation-ordered readers adopt the fresh head. The transaction rechecks the
+reviewed ID, revision, and generation; any change rejects it as `conflict` without
+writes. The confirmation then shows the updated workspace and requires `DELETE`
+again.
+
+Guests delete in one IndexedDB transaction over every `verso-local` store. It
+clears `previous`, `drafts`, `operations`, and `resolved-draft/*` keys, keeps
+`device-settings-v1`, and installs the fresh head. Accounts follow the
+[account deletion contract](accounts-and-public-pdfs.md#workspace-data-deletion).
+
+Stale work is fenced in four ways:
+
+- Recovery writes and prepared requests carry the workspace the writer observed.
+  Storage rejects them as `replaced` when the stored head names another workspace.
+- Queued writes from before a reset are dropped.
+- Saves, releases, and repeated deletions against the old ID fail their identity
+  checks.
+- Tabs learn of the reset from a `reset` notice, a rejected write, or a refresh.
+  They then drop their open drafts and history and open the fresh Overview.
+
+Deletion discards nothing before storage confirms it. Before sending, the
+controller stores the latest typing. If the deletion fails, conflicts, or stays
+unresolved, open drafts remain and recovery resumes.
+
 ### Validation boundaries
 
 Workspace imports reject unknown versions, malformed committed values, invalid

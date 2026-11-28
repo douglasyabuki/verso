@@ -58,7 +58,7 @@ const panelDescriptions: Record<SettingsPanel, string> = {
   account:
     "Sign-in for this browser. Signing in never moves or merges workspaces.",
   appearance: "How Verso looks in this browser. Applies immediately.",
-  data: "Unsaved drafts, backups, and imports for this workspace.",
+  data: "Unsaved drafts, backups, imports, and deletion for this workspace.",
   defaults:
     "Appearance copied into new blank resumes. Existing resumes, presets, and starters keep their own. Changes require Save.",
   languages:

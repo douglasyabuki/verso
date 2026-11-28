@@ -46,6 +46,7 @@ import {
 import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
 import { ConflictPanel } from "@/components/career/conflict-panel";
+import { DeleteWorkspaceData } from "@/components/career/delete-workspace-data";
 import {
   RestoredDraftBanner,
   StoredDraftNotice,
@@ -132,6 +133,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/toast";
 import { useAccountActions } from "@/hooks/account/use-account-actions";
 import { useLivePreview } from "@/hooks/output/use-live-preview";
 import type { PdfViewPosition } from "@/hooks/output/use-pdf-document";
@@ -1503,6 +1505,27 @@ export function CareerWorkspace({
     }
     navigate(target.destination, undefined, target.fieldId, false, true);
   };
+  const resetAt = state.workspaceReset?.at;
+  const handledReset = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const reset = controller.getSnapshot().workspaceReset;
+    // Navigation waits until the deletion settles (navigation is refused while saving).
+    if (!resetAt || !reset || state.saving || handledReset.current === resetAt)
+      return;
+    handledReset.current = resetAt;
+    // The deleted workspace's resumes and records no longer exist: show the fresh
+    // Overview with no resume selected, and forget its public PDF state.
+    void releases?.store.reset();
+    navigate("overview", undefined, undefined, true);
+    if (reset.source === "elsewhere")
+      toast.add({
+        type: "info",
+        title: "Workspace data was deleted in another tab or device",
+        description: "This tab now shows the fresh workspace.",
+      });
+    // Runs once per adopted fresh workspace; `navigate` reads current routing state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetAt, state.saving]);
   const exportWorkspace = (head = state.head!) => {
     const content = JSON.stringify({
       format: "verso.workspace",
@@ -2269,6 +2292,50 @@ export function CareerWorkspace({
           {loadingSample ? "Loading sample…" : "Load sample workspace"}
         </Button>
       </SettingsSection>
+      <DeleteWorkspaceData
+        owner={accountMode ? "account" : "guest"}
+        head={state.head}
+        available={canReplaceWorkspace}
+        busy={state.saving}
+        unsaved={
+          listedRecovery.length +
+          (["form", "order"] as const).filter((target) =>
+            controller.isDirty(target),
+          ).length
+        }
+        previousAvailable={Boolean(previousAvailability?.available)}
+        publicLinks={
+          releases?.state.list
+            ? {
+                links: releases.state.list.links.length,
+                releases: releases.state.list.links.reduce(
+                  (sum, link) => sum + link.releases.length,
+                  0,
+                ),
+              }
+            : undefined
+        }
+        deletion={state.workspaceDeletion}
+        exportWorkspace={(head) => exportWorkspace(head)}
+        refreshRecovery={() => controller.reloadRecovery()}
+        onDelete={(reviewed) => controller.deleteWorkspaceData(reviewed)}
+        onResolve={(id) => controller.resolveWorkspaceDeletion(id)}
+        onRetry={(id) => controller.retryWorkspaceDeletion(id)}
+        onCancelAttempt={(id) => controller.cancelWorkspaceDeletion(id)}
+        onDeleted={(result) =>
+          toast.add({
+            type: "success",
+            title:
+              result.by === "another-request"
+                ? "Workspace data was already deleted"
+                : "Workspace data deleted",
+            description:
+              result.cleanup === "pending"
+                ? "You're starting fresh. This browser's local copy still needs clearing in Settings › Data."
+                : "You're starting fresh.",
+          })
+        }
+      />
     </div>
   );
   const settingsForm =

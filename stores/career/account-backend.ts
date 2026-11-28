@@ -1,11 +1,16 @@
 import { applyCommitted } from "@/lib/career/commit";
 import { validateDocument } from "@/lib/career/model";
-import type { CareerBackend } from "@/stores/career/backend";
+import type {
+  CareerBackend,
+  WorkspaceIdentity,
+  WorkspaceResetOutcome,
+} from "@/stores/career/backend";
 import {
   type CareerHead,
   type CareerStorage,
   CareerStorageError,
   openCareerStorage,
+  saveFailureReason,
   type SaveRequest,
 } from "@/stores/career/persistence";
 import {
@@ -14,8 +19,11 @@ import {
   type AccountErrorCode,
   type AccountOperationStatus,
   type AccountReplaceRequest,
+  type AccountResetCancelResponse,
+  type AccountResetRequest,
   type AccountSaveResponse,
   type AccountWorkspaceUnchanged,
+  WORKSPACE_DELETION,
 } from "@/types-and-constants/account";
 import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
 import type { SaveFailureReason } from "@/types-and-constants/career-status";
@@ -47,6 +55,39 @@ const FAILURES: Record<AccountErrorCode, SaveFailureReason> = {
   unavailable: "offline",
 };
 
+/** Hex SHA-256 of one deletion attempt's reviewed identity, matching the server receipt hash.
+ * @param reviewed Reviewed workspace identity and revision.
+ * @returns {Promise<string>} Lowercase hex digest.
+ * @example await resetHash({ workspaceId, revision: 2, generation: 0 })
+ */
+async function resetHash(reviewed: WorkspaceIdentity): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(
+      JSON.stringify([
+        "reset",
+        reviewed.workspaceId,
+        reviewed.revision,
+        reviewed.generation,
+      ]),
+    ),
+  );
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Compare two reviewed identities.
+ * @param a First identity.
+ * @param b Second identity.
+ * @returns {boolean} True when workspace ID, revision, and generation match.
+ * @example sameIdentity(head, marker.reviewed)
+ */
+const sameIdentity = (a: WorkspaceIdentity, b: WorkspaceIdentity) =>
+  a.workspaceId === b.workspaceId &&
+  a.revision === b.revision &&
+  a.generation === b.generation;
+
 const OFFLINE =
   "Not yet saved to your account. Your change is kept on this device; retry Save when you are back online.";
 
@@ -75,6 +116,12 @@ export class AccountCareerBackend implements CareerBackend {
     { operationId: string; incoming?: CareerDocument }
   >();
 
+  /** Server-confirmed deletions whose local cleanup failed, so a retry needs no request. */
+  private confirmedResets = new Map<
+    string,
+    { deletedId: string; head: CareerHead }
+  >();
+
   constructor(
     private readonly local: CareerStorage,
     private readonly device: CareerStorage,
@@ -92,11 +139,15 @@ export class AccountCareerBackend implements CareerBackend {
    * @returns Parsed JSON response.
    * @example await this.request(ACCOUNT_ROUTES.workspace)
    */
-  private async request<T>(path: string, body?: unknown): Promise<T> {
+  private async request<T>(
+    path: string,
+    body?: unknown,
+    method: "POST" | "PATCH" = "POST",
+  ): Promise<T> {
     let response: Response;
     try {
       response = await this.fetcher(path, {
-        method: body === undefined ? "GET" : "POST",
+        method: body === undefined ? "GET" : method,
         credentials: "same-origin",
         cache: "no-store",
         signal: this.abort.signal,
@@ -123,9 +174,16 @@ export class AccountCareerBackend implements CareerBackend {
     if (code === "unauthorized" || code === "session_mismatch")
       this.options.onSessionInvalid?.(code);
     const reason = (code && FAILURES[code]) ?? "offline";
-    throw new CareerStorageError(
-      reason,
-      reason === "offline" ? OFFLINE : (message ?? "Account request rejected."),
+    // The server code stays available to callers that distinguish outcomes the
+    // Save failure reasons merge (for example a cancelled deletion).
+    throw Object.assign(
+      new CareerStorageError(
+        reason,
+        reason === "offline"
+          ? OFFLINE
+          : (message ?? "Account request rejected."),
+      ),
+      { serverCode: code },
     );
   }
 
@@ -319,6 +377,216 @@ export class AccountCareerBackend implements CareerBackend {
     return head ?? undefined;
   }
 
+  /** Permanently delete the reviewed account workspace's data, including public PDFs.
+   * A per-attempt marker is stored before sending, and retries reuse its operation ID, so a
+   * lost response is resolved from server state and the receipt, never by a new deletion.
+   * @param reviewed Identity and revision the user confirmed deleting.
+   * @returns Deleted (with local cleanup status), or pending when the server did not answer. Throws `conflict` when the workspace changed since review.
+   * @example await backend.resetWorkspace(reviewed)
+   */
+  async resetWorkspace(
+    reviewed: WorkspaceIdentity,
+  ): Promise<WorkspaceResetOutcome> {
+    const existing = (await this.local.resetMarkers()).find((marker) =>
+      sameIdentity(marker.reviewed, reviewed),
+    );
+    const marker = existing ?? {
+      operationId: crypto.randomUUID(),
+      reviewed: {
+        workspaceId: reviewed.workspaceId,
+        revision: reviewed.revision,
+        generation: reviewed.generation,
+      },
+      requestHash: await resetHash(reviewed),
+      createdAt: Date.now(),
+    };
+    // Nothing is sent unless this attempt is durably recorded first.
+    if (!existing) await this.local.writeResetMarker(marker);
+    return this.sendReset(marker.operationId);
+  }
+
+  /** Send one recorded deletion attempt and finish it locally on acknowledgment.
+   * @param operationId Recorded attempt.
+   * @returns Outcome; an unanswered request is resolved from server state.
+   * @example await this.sendReset(id)
+   */
+  private async sendReset(operationId: string): Promise<WorkspaceResetOutcome> {
+    const marker = (await this.local.resetMarkers()).find(
+      (item) => item.operationId === operationId,
+    );
+    if (!marker) return { status: "not-deleted", reason: "changed" };
+    const body: AccountResetRequest = {
+      operationId,
+      reviewed: marker.reviewed,
+      confirmation: WORKSPACE_DELETION.confirmation,
+    };
+    let head: CareerHead;
+    try {
+      head = await this.request<CareerHead>(ACCOUNT_ROUTES.reset, body);
+    } catch (error) {
+      if (saveFailureReason(error) === "offline")
+        return this.resolveReset(operationId);
+      // A changed workspace can never satisfy this attempt's reviewed check, and a
+      // cancelled attempt can never commit: neither needs further resolution.
+      const code = (error as { serverCode?: AccountErrorCode }).serverCode;
+      if (code === "conflict" || code === "deletion_cancelled")
+        await this.local.removeResetMarker(operationId).catch(() => {});
+      throw error;
+    }
+    if (head.workspaceId === marker.reviewed.workspaceId)
+      return this.resolveReset(operationId);
+    return this.finishReset(
+      operationId,
+      marker.reviewed.workspaceId,
+      head,
+      "this-request",
+    );
+  }
+
+  /** Adopt a server-confirmed fresh workspace and clean up this browser's copy in one transaction.
+   * @param operationId Attempt being resolved.
+   * @param deletedId Deleted workspace ID.
+   * @param head Fresh server head.
+   * @param by Whether the receipt proves this attempt deleted the workspace.
+   * @returns Deleted outcome; `cleanup: "pending"` when the local transaction failed.
+   * @example await this.finishReset(id, deletedId, head, "this-request")
+   */
+  private async finishReset(
+    operationId: string,
+    deletedId: string,
+    head: CareerHead,
+    by: "this-request" | "another-request" | "unknown",
+  ): Promise<WorkspaceResetOutcome> {
+    const fresh: CareerHead = {
+      workspaceId: head.workspaceId,
+      revision: head.revision,
+      generation: head.generation,
+      document: validateDocument(head.document),
+    };
+    if (!this.head || this.head.generation <= fresh.generation)
+      this.head = fresh;
+    try {
+      await this.local.completeWorkspaceReset(operationId, deletedId, fresh);
+      this.confirmedResets.delete(operationId);
+      return {
+        status: "deleted",
+        by,
+        head: fresh,
+        cleanup: "complete",
+        operationId,
+      };
+    } catch {
+      this.confirmedResets.set(operationId, { deletedId, head: fresh });
+      return {
+        status: "deleted",
+        by,
+        head: fresh,
+        cleanup: "pending",
+        operationId,
+      };
+    }
+  }
+
+  /** Unresolved deletion attempts recorded in this browser.
+   * @returns Recorded markers in creation order.
+   * @example await backend.pendingResets()
+   */
+  pendingResets() {
+    return this.local.resetMarkers();
+  }
+
+  /** Resolve one attempt from server state and its receipt, without resending it.
+   * A changed workspace ID proves the reviewed workspace is gone, and the receipt says whether
+   * this attempt deleted it. An unchanged identity stays pending because the attempt could
+   * still commit, unless the revision moved on, which makes the attempt impossible.
+   * @param operationId Recorded attempt.
+   * @returns Deleted, pending, or not-deleted outcome.
+   * @example await backend.resolveReset(id)
+   */
+  async resolveReset(operationId: string): Promise<WorkspaceResetOutcome> {
+    const confirmed = this.confirmedResets.get(operationId);
+    if (confirmed)
+      return this.finishReset(
+        operationId,
+        confirmed.deletedId,
+        confirmed.head,
+        "this-request",
+      );
+    const marker = (await this.local.resetMarkers()).find(
+      (item) => item.operationId === operationId,
+    );
+    if (!marker) return { status: "not-deleted", reason: "changed" };
+    let head: CareerHead;
+    try {
+      head = await this.request<CareerHead>(ACCOUNT_ROUTES.workspace);
+    } catch (error) {
+      if (saveFailureReason(error) === "offline")
+        return { status: "pending", reason: "offline", operationId };
+      throw error;
+    }
+    if (head.workspaceId === marker.reviewed.workspaceId) {
+      await this.adopt(head);
+      if (sameIdentity(head, marker.reviewed))
+        return { status: "pending", reason: "unconfirmed", operationId };
+      // Revisions only increase, so the reviewed check can never pass again.
+      await this.local.removeResetMarker(operationId).catch(() => {});
+      return { status: "not-deleted", reason: "changed" };
+    }
+    let by: "this-request" | "another-request" | "unknown" = "unknown";
+    try {
+      const status = await this.operationStatus(operationId);
+      by =
+        status.status === "committed" &&
+        status.kind === "reset" &&
+        status.requestHash === marker.requestHash
+          ? "this-request"
+          : "another-request";
+    } catch {}
+    return this.finishReset(operationId, marker.reviewed.workspaceId, head, by);
+  }
+
+  /** Resend the same recorded attempt; the server replays its receipt or rejects a changed workspace.
+   * @param operationId Recorded attempt.
+   * @returns Outcome as for `resetWorkspace`.
+   * @example await backend.retryReset(id)
+   */
+  retryReset(operationId: string): Promise<WorkspaceResetOutcome> {
+    return this.sendReset(operationId);
+  }
+
+  /** Cancel one unresolved attempt on the server under the owner lock.
+   * @param operationId Recorded attempt.
+   * @returns `not-deleted` after cancellation, `deleted` when the attempt had already committed, or pending when the server did not answer.
+   * @example await backend.cancelReset(id)
+   */
+  async cancelReset(operationId: string): Promise<WorkspaceResetOutcome> {
+    const marker = (await this.local.resetMarkers()).find(
+      (item) => item.operationId === operationId,
+    );
+    if (!marker) return { status: "not-deleted", reason: "cancelled" };
+    let result: AccountResetCancelResponse;
+    try {
+      result = await this.request<AccountResetCancelResponse>(
+        ACCOUNT_ROUTES.reset,
+        { operationId, reviewed: marker.reviewed },
+        "PATCH",
+      );
+    } catch (error) {
+      if (saveFailureReason(error) === "offline")
+        return { status: "pending", reason: "offline", operationId };
+      throw error;
+    }
+    if (result.deleted)
+      return this.finishReset(
+        operationId,
+        marker.reviewed.workspaceId,
+        result.head,
+        "this-request",
+      );
+    await this.local.removeResetMarker(operationId);
+    return { status: "not-deleted", reason: "cancelled" };
+  }
+
   drafts(): Promise<CareerDraft[]> {
     return this.local.drafts();
   }
@@ -327,8 +595,8 @@ export class AccountCareerBackend implements CareerBackend {
     return this.local.uncertainDrafts();
   }
 
-  writeDraft(draft: CareerDraft): Promise<void> {
-    return this.local.writeDraft(draft);
+  writeDraft(draft: CareerDraft, workspaceId: string): Promise<void> {
+    return this.local.writeDraft(draft, workspaceId);
   }
 
   discardDraft(id: string, version: number, operationId?: string) {
@@ -343,8 +611,12 @@ export class AccountCareerBackend implements CareerBackend {
     return this.local.retryDraftCleanup();
   }
 
-  prepare(request: SaveRequest, fresh?: boolean): Promise<void> {
-    return this.local.prepare(request, fresh);
+  prepare(
+    request: SaveRequest,
+    fresh: boolean,
+    workspaceId: string,
+  ): Promise<void> {
+    return this.local.prepare(request, fresh, workspaceId);
   }
 
   pruneCompleted(days?: number, count?: number): Promise<void> {

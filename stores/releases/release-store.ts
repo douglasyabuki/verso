@@ -306,6 +306,17 @@ export class ReleaseStore {
     );
   }
 
+  /** Forget prepared uploads and reload the list after the workspace's data was deleted.
+   * Every link and release was deleted with it; a prepared upload would be rejected anyway.
+   * @returns {Promise<void>} Completion of the reload; failures are kept in `error`.
+   * @example await store.reset()
+   */
+  async reset(): Promise<void> {
+    this.prepared.clear();
+    this.publish({ uncertain: false, error: null });
+    await this.load().catch(() => {});
+  }
+
   /** Abort in-flight requests and drop listeners when the owner changes. */
   dispose() {
     this.abort.abort();

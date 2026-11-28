@@ -36,6 +36,66 @@ See the [README](../README.md#configuration) for setup and
 - Unknown outcomes are settled, never replayed: `PATCH` with the capability (no session required, same origin) reports `deleted: true` when the user is gone, or cancels the intent so a delayed request cannot delete later.
 - After success the client publishes the guest owner (unmounting and closing the account workspace), deletes only `verso-account-<userId>` from IndexedDB, and loads `/`. The guest workspace and other accounts are untouched. Public PDF links stop working immediately; downloaded copies cannot be recalled.
 
+## Workspace data deletion
+
+- **Endpoint**: `app/api/account/workspace/reset/route.ts` goes through
+  `accountRequest` (verified session, same origin, session binding, strict body,
+  `no-store`).
+- **`POST`** takes `{operationId, reviewed, confirmation:"DELETE"}` and calls
+  `resetAccountWorkspace` (`lib/account/workspace-repository.ts`). Under the owner
+  lock, one transaction:
+  - checks the receipt: a matching `reset` replays the current head; a
+    `reset-cancelled` tombstone returns `deletion_cancelled`;
+  - rechecks the reviewed identity and revision (otherwise `conflict`);
+  - deletes the owner's public links and releases, the previous workspace, and
+    every receipt;
+  - installs a fresh document under a new workspace ID (revision and generation
+    - 1);
+  - records one `reset` receipt.
+
+  It never touches the user, sessions, provider links, verification rows, other
+  users, or the guest workspace. Every public URL under the deleted links, latest
+  and pinned, returns the shared 404 on the next request. Copies already
+  downloaded cannot be recalled.
+
+- **`PATCH`** takes `{operationId, reviewed}` and cancels an unresolved attempt
+  under the same lock.
+  - If the attempt already committed, it reports `deleted: true` with the head.
+  - Otherwise it records a `reset-cancelled` tombstone, which receipt pruning
+    never removes. A delayed copy of the request then cannot delete.
+- **Client** (`stores/career/account-backend.ts`): before sending, it durably
+  stores a per-attempt marker `workspace-reset/<operationId>` (reviewed identity
+  plus request hash) in `verso-account-<userId>`. If that write fails, nothing is
+  sent. Retries reuse the same operation ID.
+- **Lost response**: the client resolves it from server state, never by resending.
+  - A changed workspace ID proves the reviewed workspace is gone. The receipt then
+    shows whether this attempt or another request deleted it.
+  - An unchanged identity stays **pending**, because the request could still
+    commit. Settings › Data offers **Check status**, **Retry deletion** (same
+    request), and **Keep workspace**. Keep workspace is the server cancellation,
+    never a local dismissal.
+  - A revision that moved on makes the attempt impossible, so its marker is
+    removed.
+  - Markers left behind are resolved on the next load.
+- **Local cleanup** happens only in the IndexedDB transaction that installs the
+  fresh cached head (`completeWorkspaceReset`, and `cacheAccountHead` when the
+  cached ID changes). That makes a delayed cleanup retry remove only its own
+  marker:
+  - Newer drafts, a newer cached head, and other attempts' markers stay.
+  - Without a cached head, only records naming the deleted ID are removed.
+  - A cached head with a higher generation is never overwritten.
+  - If the server deleted but local cleanup failed, Settings › Data shows
+    **Retry cleanup**; the next load retries too.
+- **Other devices** learn of the deletion at their next freshness check or
+  rejected Save. Their stale recovery for the deleted workspace is cleared at that
+  reconciliation, including recovery imported there before it. Offline devices
+  clean up only when they reconnect.
+- **Release store**: `ReleaseStore.reset()` forgets prepared uploads and reloads
+  the empty list.
+- **Statement bounds**: the regression bounds in
+  `tests/db/accounts/operation-counts.db.test.ts` are 6 writes and at most 11
+  statements after the session lookup, with zero writes on replay.
+
 ## Public PDFs
 
 - Storage: `public_link` (one per `(userId, resumeId)`, 256-bit base64url token,

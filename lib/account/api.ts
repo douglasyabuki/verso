@@ -5,7 +5,10 @@ import { z } from "zod";
 import { accountsEnabled, getAuth } from "@/lib/account/auth";
 import { AccountStoreError } from "@/lib/account/workspace-repository";
 import type { AccountErrorCode } from "@/types-and-constants/account";
-import { ACCOUNT_SESSION_HEADER } from "@/types-and-constants/account";
+import {
+  ACCOUNT_SESSION_HEADER,
+  WORKSPACE_DELETION,
+} from "@/types-and-constants/account";
 import { WORKSPACE_BYTES } from "@/types-and-constants/career";
 
 /** Request bodies carry at most one workspace plus small request metadata. */
@@ -166,4 +169,23 @@ export const replaceRequestSchema = z.strictObject({
     generation: revision,
   }),
   document: z.unknown().optional(),
+});
+
+const reviewedIdentity = z.strictObject({
+  workspaceId: opaqueId,
+  revision,
+  generation: revision,
+});
+
+/** Strict body schema for confirmed workspace data deletion. */
+export const resetRequestSchema = z.strictObject({
+  operationId: z.uuid(),
+  reviewed: reviewedIdentity,
+  confirmation: z.literal(WORKSPACE_DELETION.confirmation),
+});
+
+/** Strict body schema for cancelling one unresolved deletion attempt. */
+export const resetCancelSchema = z.strictObject({
+  operationId: z.uuid(),
+  reviewed: reviewedIdentity,
 });

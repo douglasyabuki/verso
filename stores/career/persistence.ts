@@ -2,11 +2,21 @@ import {
   commitScopeRequest,
   type CommittedHead,
   replaceHead,
+  resetHead,
   scopeFingerprint,
   type ScopeRequest,
 } from "@/lib/career/commit";
-import { draftSchema, validateDocument } from "@/lib/career/model";
-import type { CareerBackend } from "@/stores/career/backend";
+import {
+  createCareerDocument,
+  draftSchema,
+  validateDocument,
+} from "@/lib/career/model";
+import type {
+  CareerBackend,
+  WorkspaceIdentity,
+  WorkspaceResetMarker,
+  WorkspaceResetOutcome,
+} from "@/stores/career/backend";
 import {
   type CareerDocument,
   type CareerDraft,
@@ -55,6 +65,20 @@ type Operation = {
   result?: Pick<CareerHead, "revision" | "generation">;
 };
 type ResolvedDraft = { id: string; version: number; operationId?: string };
+
+/** Preferences-store key prefixes owned by workspace data (device settings use other keys). */
+const RESOLVED_PREFIX = "resolved-draft/";
+const RESET_PREFIX = "workspace-reset/";
+
+/** Error for a write prepared against a workspace whose data was deleted.
+ * @returns {CareerStorageError} Typed `replaced` rejection.
+ * @example throw deletedWorkspace()
+ */
+const deletedWorkspace = () =>
+  new CareerStorageError(
+    "replaced",
+    "This workspace's data was deleted. The change was not stored; this tab now uses the fresh workspace.",
+  );
 
 const STORES = [
   "heads",
@@ -172,29 +196,237 @@ export class CareerStorage implements CareerBackend {
    */
   async cacheAccountHead(head: CommittedHead): Promise<void> {
     if (this.headKey !== "account") return;
-    await this.transaction(["heads"], "readwrite", async (tx) => {
-      const store = tx.objectStore("heads");
-      const current = await requestResult<CareerHead | undefined>(
-        store.get("account"),
-      );
-      if (
-        current &&
-        current.workspaceId === head.workspaceId &&
-        (current.generation > head.generation ||
-          (current.generation === head.generation &&
-            current.revision > head.revision))
-      )
-        return;
-      store.put(
-        {
-          workspaceId: head.workspaceId,
-          revision: head.revision,
-          generation: head.generation,
-          document: head.document,
-        },
-        "account",
-      );
+    await this.transaction(
+      ["heads", "drafts", "operations", "preferences"],
+      "readwrite",
+      async (tx) => {
+        const store = tx.objectStore("heads");
+        const current = await requestResult<CareerHead | undefined>(
+          store.get("account"),
+        );
+        // Generation is monotonic across deletion, so a late response for a deleted
+        // workspace can never replace the fresh workspace's cached head.
+        if (
+          current &&
+          (current.generation > head.generation ||
+            (current.workspaceId === head.workspaceId &&
+              current.generation === head.generation &&
+              current.revision > head.revision))
+        )
+          return;
+        // Only deletion changes an account's workspace ID. Every record written
+        // while this browser was bound to the cached workspace belongs to deleted
+        // data; removing it with the head install keeps any later retry a no-op.
+        if (current && current.workspaceId !== head.workspaceId)
+          await this.removeWorkspaceRecords(tx);
+        store.put(
+          {
+            workspaceId: head.workspaceId,
+            revision: head.revision,
+            generation: head.generation,
+            document: head.document,
+          },
+          "account",
+        );
+      },
+    );
+  }
+
+  /** Remove recovery, prepared requests, and cleanup intents inside a head-install transaction.
+   * Deletion markers stay so each attempt is resolved by its own receipt lookup.
+   * @param tx Transaction over drafts, operations, and preferences.
+   * @param workspaceId Remove only records naming this workspace; omitted removes every record bound to the replaced head.
+   * @returns Completion of the queued deletes.
+   * @example await this.removeWorkspaceRecords(tx, deletedId)
+   */
+  private async removeWorkspaceRecords(
+    tx: IDBTransaction,
+    workspaceId?: string,
+  ): Promise<void> {
+    const drafts = tx.objectStore("drafts");
+    const operations = tx.objectStore("operations");
+    if (workspaceId === undefined) {
+      drafts.clear();
+      operations.clear();
+      const preferences = tx.objectStore("preferences");
+      const keys = await requestResult(preferences.getAllKeys());
+      for (const key of keys)
+        if (typeof key === "string" && key.startsWith(RESOLVED_PREFIX))
+          preferences.delete(key);
+      return;
+    }
+    for (const draft of await requestResult<CareerDraft[]>(drafts.getAll()))
+      if (draft.workspaceId === workspaceId) drafts.delete(draft.draftId);
+    for (const operation of await requestResult<Operation[]>(
+      operations.getAll(),
+    ))
+      if (operation.request.workspaceId === workspaceId)
+        operations.delete(operation.request.id);
+  }
+
+  /** Reject a write whose writer observed a workspace other than the stored one.
+   * @param tx Transaction including heads.
+   * @param workspaceId Workspace the writer observed; undefined skips the fence.
+   * @returns Completion; throws `replaced` after that workspace's data was deleted.
+   * @example await this.assertWorkspace(tx, head.workspaceId)
+   */
+  private async assertWorkspace(
+    tx: IDBTransaction,
+    workspaceId: string | undefined,
+  ): Promise<void> {
+    if (workspaceId === undefined) return;
+    const head = await requestResult<CareerHead | undefined>(
+      tx.objectStore("heads").get(this.headKey),
+    );
+    if (head && head.workspaceId !== workspaceId) throw deletedWorkspace();
+  }
+
+  /** Durably record one account deletion attempt before it is sent.
+   * @param marker Stable operation ID, reviewed identity, and request hash.
+   * @returns Completion; throws `replaced` when this browser already uses another workspace, or a storage error (then nothing may be sent).
+   * @example await local.writeResetMarker(marker)
+   */
+  async writeResetMarker(marker: WorkspaceResetMarker): Promise<void> {
+    await this.transaction(
+      ["heads", "preferences"],
+      "readwrite",
+      async (tx) => {
+        await this.assertWorkspace(tx, marker.reviewed.workspaceId);
+        tx.objectStore("preferences").put(
+          structuredClone(marker),
+          `${RESET_PREFIX}${marker.operationId}`,
+        );
+      },
+    );
+  }
+
+  /** List unresolved account deletion attempts.
+   * @returns {Promise<WorkspaceResetMarker[]>} Markers in creation order.
+   * @example await local.resetMarkers()
+   */
+  async resetMarkers(): Promise<WorkspaceResetMarker[]> {
+    return this.transaction(["preferences"], "readonly", async (tx) => {
+      const store = tx.objectStore("preferences");
+      const keys = await requestResult(store.getAllKeys());
+      const values = await requestResult(store.getAll());
+      return keys
+        .flatMap((key, index) =>
+          typeof key === "string" && key.startsWith(RESET_PREFIX)
+            ? [values[index] as WorkspaceResetMarker]
+            : [],
+        )
+        .sort((a, b) => a.createdAt - b.createdAt);
     });
+  }
+
+  /** Remove one resolved deletion attempt's marker; other attempts are untouched.
+   * @param operationId Resolved attempt.
+   * @returns Completion.
+   * @example await local.removeResetMarker(id)
+   */
+  async removeResetMarker(operationId: string): Promise<void> {
+    await this.transaction(["preferences"], "readwrite", async (tx) => {
+      tx.objectStore("preferences").delete(`${RESET_PREFIX}${operationId}`);
+    });
+  }
+
+  /** Finish one server-confirmed account deletion in this browser in a single transaction.
+   * Old-workspace records are removed only together with installing the fresh head, so a
+   * delayed retry after newer work exists removes nothing but its own marker.
+   * @param operationId Deletion attempt whose marker is resolved.
+   * @param deletedId Workspace ID the server deleted.
+   * @param head Fresh server head.
+   * @returns Completion; failure leaves everything unchanged for a retry.
+   * @example await local.completeWorkspaceReset(id, deletedId, head)
+   */
+  async completeWorkspaceReset(
+    operationId: string,
+    deletedId: string,
+    head: CommittedHead,
+  ): Promise<void> {
+    await this.transaction(
+      ["heads", "drafts", "operations", "preferences"],
+      "readwrite",
+      async (tx) => {
+        const heads = tx.objectStore("heads");
+        const current = await requestResult<CareerHead | undefined>(
+          heads.get(this.headKey),
+        );
+        const install = () =>
+          heads.put(
+            {
+              workspaceId: head.workspaceId,
+              revision: head.revision,
+              generation: head.generation,
+              document: head.document,
+            },
+            this.headKey,
+          );
+        if (!current) {
+          // Without a cached head, writes were unfenced: remove only records that
+          // name the deleted workspace and keep everything else.
+          await this.removeWorkspaceRecords(tx, deletedId);
+          install();
+        } else if (
+          current.workspaceId !== head.workspaceId &&
+          current.generation < head.generation
+        ) {
+          await this.removeWorkspaceRecords(tx);
+          install();
+        }
+        // Otherwise this head or a newer one is already installed. That install
+        // removed the deleted workspace's records, and newer work stays.
+        tx.objectStore("preferences").delete(`${RESET_PREFIX}${operationId}`);
+      },
+    );
+  }
+
+  /** Permanently delete the reviewed guest workspace's data and adopt a fresh workspace atomically.
+   * One transaction rechecks the reviewed identity and revision, clears the previous workspace,
+   * drafts, receipts, and cleanup intents, and installs a fresh schema-2 head with a new
+   * workspace ID. Device preferences stay.
+   * @param reviewed Identity and revision the user confirmed deleting.
+   * @returns {Promise<WorkspaceResetOutcome>} The fresh head; throws `conflict` without writes when the workspace changed since review.
+   * @example await storage.resetWorkspace(reviewed)
+   */
+  async resetWorkspace(
+    reviewed: WorkspaceIdentity,
+  ): Promise<WorkspaceResetOutcome> {
+    if (this.headKey !== "guest")
+      throw new CareerStorageError(
+        "invalid",
+        "Account workspace data is deleted through the account.",
+      );
+    const document = validateDocument(createCareerDocument());
+    const head = await this.transaction(
+      [...STORES],
+      "readwrite",
+      async (tx) => {
+        const heads = tx.objectStore("heads");
+        const current = await requestResult<CareerHead | undefined>(
+          heads.get("guest"),
+        );
+        if (!current)
+          throw new CareerStorageError(
+            "conflict",
+            "Workspace changed since you reviewed it. Review it again.",
+          );
+        const decision = resetHead(
+          current,
+          reviewed,
+          document,
+          crypto.randomUUID(),
+        );
+        if (!decision.ok)
+          throw new CareerStorageError(decision.reason, decision.message);
+        tx.objectStore("previous").clear();
+        await this.removeWorkspaceRecords(tx);
+        const next: CareerHead = { ...decision.head, key: "guest" };
+        heads.put(next, "guest");
+        return next;
+      },
+    );
+    return { status: "deleted", by: "this-request", head, cleanup: "complete" };
   }
 
   /** Read browser preferences independently of workspace/recovery data.
@@ -297,10 +529,12 @@ export class CareerStorage implements CareerBackend {
 
   /** Persist a bounded recovery version, refusing to replace a newer acknowledged version.
    * @param draft Uncommitted scope/baseline values; malformed field values remain recoverable.
+   * @param workspaceId Workspace the writer observed when it captured the draft. A write
+   * from a tab that has not adopted a fresh workspace yet is rejected as `replaced`.
    * @returns {Promise<void>} Resolves only when the recovery transaction completes.
-   * @example await storage.writeDraft(draft)
+   * @example await storage.writeDraft(draft, head.workspaceId)
    */
-  async writeDraft(draft: CareerDraft): Promise<void> {
+  async writeDraft(draft: CareerDraft, workspaceId?: string): Promise<void> {
     draftSchema.parse(draft);
     if (
       new TextEncoder().encode(JSON.stringify(draft)).byteLength > DRAFT_BYTES
@@ -309,7 +543,8 @@ export class CareerStorage implements CareerBackend {
         "storage",
         `Recovery exceeds ${mib(DRAFT_BYTES)}. Keep this tab open and export recovery chunks.`,
       );
-    await this.transaction(["drafts"], "readwrite", async (tx) => {
+    await this.transaction(["drafts", "heads"], "readwrite", async (tx) => {
+      await this.assertWorkspace(tx, workspaceId);
       const store = tx.objectStore("drafts");
       const old = await requestResult<CareerDraft | undefined>(
         store.get(draft.draftId),
@@ -350,8 +585,7 @@ export class CareerStorage implements CareerBackend {
     const values = await requestResult(store.getAll());
     const versions = new Map<string, number>();
     for (const [i, key] of keys.entries()) {
-      if (typeof key !== "string" || !key.startsWith("resolved-draft/"))
-        continue;
+      if (typeof key !== "string" || !key.startsWith(RESOLVED_PREFIX)) continue;
       const { id, version } = values[i] as ResolvedDraft;
       versions.set(id, Math.max(version, versions.get(id) ?? -1));
     }
@@ -403,7 +637,7 @@ export class CareerStorage implements CareerBackend {
     version: number,
     operationId?: string,
   ) {
-    const key = `resolved-draft/${id}/${version}`;
+    const key = `${RESOLVED_PREFIX}${id}/${version}`;
     const intent = { id, version, operationId };
     await this.transaction(["preferences"], "readwrite", async (tx) => {
       tx.objectStore("preferences").put(intent, key);
@@ -424,7 +658,7 @@ export class CareerStorage implements CareerBackend {
         const keys = await requestResult(store.getAllKeys());
         const values = await requestResult(store.getAll());
         return keys.flatMap((key, index) =>
-          typeof key === "string" && key.startsWith("resolved-draft/")
+          typeof key === "string" && key.startsWith(RESOLVED_PREFIX)
             ? [
                 {
                   key,
@@ -495,16 +729,22 @@ export class CareerStorage implements CareerBackend {
   /** Persist one immutable request before attempting its commit.
    * @param request Validated scope/baseline/payload and stable operation identity.
    * @param fresh True only for a newly allocated operation ID, false for any retry/recovery.
+   * @param workspaceId Workspace the writer observed; rejected as `replaced` after its data was deleted.
    * @returns {Promise<void>} Durable request confirmation; unknown retries and ID reuse with different bytes throw.
-   * @example await storage.prepare(request)
+   * @example await storage.prepare(request, true, head.workspaceId)
    */
-  async prepare(request: SaveRequest, fresh = true): Promise<void> {
+  async prepare(
+    request: SaveRequest,
+    fresh = true,
+    workspaceId?: string,
+  ): Promise<void> {
     if (scopeFingerprint(request) !== request.fingerprint)
       throw new CareerStorageError(
         "invalid",
         "Save request fingerprint differs from its immutable content.",
       );
-    await this.transaction(["operations"], "readwrite", async (tx) => {
+    await this.transaction(["operations", "heads"], "readwrite", async (tx) => {
+      await this.assertWorkspace(tx, workspaceId);
       const store = tx.objectStore("operations");
       const old = await requestResult<Operation | undefined>(
         store.get(request.id),

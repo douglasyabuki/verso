@@ -90,7 +90,9 @@ limitations. Keep it current when shipped behavior changes.
   stale Saves/previews. Do not implement whole-document replacement as an edit scope.
 - Only workspace schema 2, recovery format 1, and the current complete template/layout
   model are supported. Reject unsupported imports without writes; do not add schema-1
-  conversion, silent reseeding, resets, or automatic storage clearing.
+  conversion, silent reseeding, resets, or automatic storage clearing. The only
+  clearing is the confirmed Delete workspace data operation and its scoped cleanup
+  of that deleted workspace; keep it a dedicated operation, never a replacement.
 - Keep guest/account data isolated. Derive private ownership from the verified
   server session on every request. Account Save success requires server acknowledgment;
   typing remains local recovery. Preserve session/origin checks and atomic receipts.

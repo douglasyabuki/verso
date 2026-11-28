@@ -24,7 +24,11 @@ import {
   AccountSync,
   type AccountSyncReason,
 } from "@/stores/career/account-sync";
-import type { CareerBackend } from "@/stores/career/backend";
+import type {
+  CareerBackend,
+  WorkspaceIdentity,
+  WorkspaceResetOutcome,
+} from "@/stores/career/backend";
 import {
   type CareerHead,
   CareerStorageError,
@@ -68,7 +72,31 @@ type TabMessage =
       revision: number;
       generation: number;
     }
-  | { type: "replaced" };
+  | { type: "replaced" | "reset" };
+
+/** Account deletion work this tab still has to resolve or finish. */
+export type WorkspaceDeletionStatus =
+  /** The reviewed workspace still exists and the attempt could still commit, or the server did not answer. */
+  | {
+      kind: "pending";
+      reason: "unconfirmed" | "offline";
+      operationId: string;
+    }
+  /** The server deleted the workspace; this browser's local copy still needs clearing. */
+  | { kind: "cleanup-pending"; operationId: string };
+
+/** Outcome of a workspace data deletion command, for the confirmation dialog. */
+export type WorkspaceDeletionResult =
+  | {
+      ok: true;
+      by: "this-request" | "another-request" | "unknown";
+      cleanup: "complete" | "pending";
+    }
+  | {
+      ok: false;
+      reason: SaveFailureReason | "pending" | "cancelled";
+      message: string;
+    };
 
 /** Where a refresh reads committed state: this browser (cached account head or
  * guest IndexedDB, no network) or a conditional server check (accounts). */
@@ -119,6 +147,14 @@ export type CareerState = {
   undoCount: number;
   redoCount: number;
   historyBoundary: boolean;
+  /** Unresolved account deletion or pending local cleanup; null when none. */
+  workspaceDeletion: WorkspaceDeletionStatus | null;
+  /** Set when this tab adopted a fresh workspace after deletion here or elsewhere. */
+  workspaceReset: {
+    source: "here" | "elsewhere";
+    at: number;
+    workspaceId: string;
+  } | null;
 };
 
 /** Own one tab's committed content, independent form/order drafts, recovery scheduling, and bounded workspace history.
@@ -147,8 +183,14 @@ export class CareerController {
     undoCount: 0,
     redoCount: 0,
     historyBoundary: false,
+    workspaceDeletion: null,
+    workspaceReset: null,
   };
   private listeners = new Set<() => void>();
+  /** Incremented when this tab adopts a fresh workspace; queued recovery writes from before are dropped. */
+  private workspaceEpoch = 0;
+  /** True while a deletion is sent or resolved; recovery writes wait and resume on failure. */
+  private deletionInFlight = false;
   private storage: CareerBackend | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private maxTimer: ReturnType<typeof setTimeout> | undefined;
@@ -495,7 +537,10 @@ export class CareerController {
           : { kind: "saved", revision: head.revision },
       });
       this.accountSync?.start(offlineStart ? undefined : Date.now());
-      if (!offlineStart) await this.reconcilePending();
+      if (!offlineStart) {
+        await this.resolvePendingDeletions();
+        await this.reconcilePending();
+      }
     } catch (error) {
       if (this.disposed || lifecycle !== this.lifecycle) return;
       if (!this.state.head) {
@@ -562,8 +607,8 @@ export class CareerController {
   private announce(type: TabMessage["type"], at = Date.now()): void {
     const head = this.state.head;
     const message: TabMessage =
-      type === "replaced" || !head
-        ? { type: "replaced" }
+      type === "replaced" || type === "reset" || !head
+        ? { type: type === "reset" ? "reset" : "replaced" }
         : { type, at, revision: head.revision, generation: head.generation };
     try {
       this.channel?.postMessage(message);
@@ -604,6 +649,13 @@ export class CareerController {
     if (!storage.check || !known) return storage.load();
     if (source === "local") {
       const cached = await storage.cachedHead?.();
+      // A server-confirmed fresh workspace cached by another tab after deletion.
+      if (
+        cached &&
+        cached.workspaceId !== known.workspaceId &&
+        cached.generation > known.generation
+      )
+        return cached;
       if (cached && cached.workspaceId === known.workspaceId) {
         if (
           cached.generation === known.generation &&
@@ -644,6 +696,16 @@ export class CareerController {
           this.publish({
             saveStatus: { kind: "saved", revision: this.state.head.revision },
           });
+        return true;
+      }
+      // Only deletion changes the workspace ID: this tab's drafts, history, and
+      // pending work belong to deleted data and must not reach the fresh workspace.
+      if (
+        this.state.head &&
+        head.workspaceId !== this.state.head.workspaceId &&
+        head.generation > this.state.head.generation
+      ) {
+        await this.adoptFreshWorkspace(head, "elsewhere");
         return true;
       }
       if (
@@ -868,23 +930,32 @@ export class CareerController {
     clearTimeout(this.maxTimer);
     this.timer = undefined;
     this.maxTimer = undefined;
+    // A deletion in flight resumes recovery when it fails; edits stay in memory meanwhile.
+    if (this.deletionInFlight) return;
     const captured = (["form", "order"] as const).flatMap((target) => {
       const draft = this.draftFor(target);
       return draft && this.isDirty(target) ? [{ target, draft }] : [];
     });
+    // The writer's observed workspace fences writes from before a deletion.
+    const workspaceId = this.state.head?.workspaceId;
+    const epoch = this.workspaceEpoch;
     const write = async () => {
       for (const { target, draft } of captured) {
         // A queued flush must not resurrect a draft resolved before its turn.
-        if (this.draftFor(target)?.draftId !== draft.draftId) continue;
+        if (
+          epoch !== this.workspaceEpoch ||
+          this.draftFor(target)?.draftId !== draft.draftId
+        )
+          continue;
         try {
-          if (!this.storage)
+          if (!this.storage || !workspaceId)
             throw new Error(
               "Browser storage unavailable. Newer edits have no durable recovery; export recovery and keep this tab open.",
             );
-          await this.storage.writeDraft({
-            ...draft,
-            updatedAt: new Date().toISOString(),
-          });
+          await this.storage.writeDraft(
+            { ...draft, updatedAt: new Date().toISOString() },
+            workspaceId,
+          );
           const current = this.draftFor(target);
           if (
             current?.draftVersion === draft.draftVersion &&
@@ -894,6 +965,11 @@ export class CareerController {
               recoveryStatus: `Recovery stored \u00b7 draft ${draft.draftVersion} \u00b7 workspace not saved`,
             });
         } catch (error) {
+          // Another tab deleted this workspace's data: adopt the fresh workspace.
+          if (saveFailureReason(error) === "replaced") {
+            void this.refresh("local");
+            continue;
+          }
           this.publishFor(target, {
             error: String(error),
             recoveryStatus:
@@ -1035,11 +1111,15 @@ export class CareerController {
             "Durable Save unavailable. Export recovery or explicitly choose Save in this tab only.",
           );
         await this.flushRecovery();
-        await this.storage.writeDraft({
-          ...captured,
-          updatedAt: new Date().toISOString(),
-        });
-        await this.storage.prepare(request, !draft.operationId);
+        await this.storage.writeDraft(
+          { ...captured, updatedAt: new Date().toISOString() },
+          head.workspaceId,
+        );
+        await this.storage.prepare(
+          request,
+          !draft.operationId,
+          head.workspaceId,
+        );
         next = await this.storage.commit(operationId);
         try {
           await this.storage.acknowledge(operationId);
@@ -1287,19 +1367,22 @@ export class CareerController {
       else {
         if (!this.storage) throw new Error("Storage unavailable.");
         this.pendingHistory = { direction, step, request };
-        await this.storage.writeDraft({
-          draftId: request.draftId!,
-          draftVersion: 1,
-          workspaceId: request.workspaceId,
-          generation: request.generation,
-          baselineRevision: request.baselineRevision ?? head.revision,
-          scope: request.scope,
-          baseline: request.baseline,
-          values: request.values,
-          operationId: request.id,
-          fingerprint: request.fingerprint,
-        });
-        await this.storage.prepare(request, !retry);
+        await this.storage.writeDraft(
+          {
+            draftId: request.draftId!,
+            draftVersion: 1,
+            workspaceId: request.workspaceId,
+            generation: request.generation,
+            baselineRevision: request.baselineRevision ?? head.revision,
+            scope: request.scope,
+            baseline: request.baseline,
+            values: request.values,
+            operationId: request.id,
+            fingerprint: request.fingerprint,
+          },
+          head.workspaceId,
+        );
+        await this.storage.prepare(request, !retry, head.workspaceId);
         next = await this.storage.commit(request.id);
         try {
           await this.storage.acknowledge(request.id);
@@ -1616,6 +1699,225 @@ export class CareerController {
     }
   }
 
+  /** Permanently delete the reviewed workspace's data and adopt a fresh workspace.
+   * Deletes committed content, the previous workspace, history, open and stored drafts,
+   * recovery, and receipts (and, for accounts, public PDFs). Open drafts are allowed: they
+   * are part of what the user confirmed deleting. Nothing is discarded until storage
+   * confirms the deletion; on failure the drafts stay open and recovery resumes.
+   * @param reviewed Workspace identity and revision shown in the confirmation.
+   * @returns Deleted outcome, or a failure the dialog shows: `conflict` (the workspace changed since review; state is refreshed), `pending` (account outcome unresolved), or another Save failure reason.
+   * @example await controller.deleteWorkspaceData(state.head)
+   */
+  async deleteWorkspaceData(
+    reviewed: WorkspaceIdentity,
+  ): Promise<WorkspaceDeletionResult> {
+    const storage = this.storage;
+    if (
+      !storage ||
+      this.session ||
+      !this.state.durable ||
+      this.state.workspaceDeletion?.kind === "pending"
+    )
+      return {
+        ok: false,
+        reason: "invalid",
+        message: this.state.workspaceDeletion
+          ? "Resolve the earlier deletion attempt first."
+          : "Durable saving must be available before deleting workspace data.",
+      };
+    return this.runDeletion(() => storage.resetWorkspace(reviewed));
+  }
+
+  /** Re-read stored recovery, including drafts other tabs stored, without restoring any.
+   * @returns Completion; a read failure keeps the current list.
+   * @example await controller.reloadRecovery()
+   */
+  async reloadRecovery(): Promise<void> {
+    const recovery = await this.readRecovery().catch(() => undefined);
+    if (recovery) this.publish({ recovery });
+  }
+
+  /** Account only: resolve an unconfirmed deletion attempt from server state and its receipt.
+   * Also retries this browser's cleanup after a confirmed deletion. Never resends the attempt.
+   * @param operationId Attempt from `workspaceDeletion`.
+   * @returns Outcome as for `deleteWorkspaceData`.
+   * @example await controller.resolveWorkspaceDeletion(id)
+   */
+  async resolveWorkspaceDeletion(
+    operationId: string,
+  ): Promise<WorkspaceDeletionResult> {
+    const storage = this.storage;
+    if (!storage?.resolveReset)
+      return { ok: false, reason: "invalid", message: "Nothing to resolve." };
+    return this.runDeletion(() => storage.resolveReset!(operationId));
+  }
+
+  /** Account only: resend the same deletion attempt (same operation ID and reviewed identity).
+   * @param operationId Attempt from `workspaceDeletion`.
+   * @returns Outcome as for `deleteWorkspaceData`; a changed workspace rejects without deleting.
+   * @example await controller.retryWorkspaceDeletion(id)
+   */
+  async retryWorkspaceDeletion(
+    operationId: string,
+  ): Promise<WorkspaceDeletionResult> {
+    const storage = this.storage;
+    if (!storage?.retryReset)
+      return { ok: false, reason: "invalid", message: "Nothing to retry." };
+    return this.runDeletion(() => storage.retryReset!(operationId));
+  }
+
+  /** Account only: keep the workspace by cancelling the attempt on the server.
+   * Serialized with the attempt under the owner lock; if the attempt already committed,
+   * the deletion is reported and adopted instead.
+   * @param operationId Attempt from `workspaceDeletion`.
+   * @returns `cancelled`, a deleted outcome, or `pending` when the server did not answer.
+   * @example await controller.cancelWorkspaceDeletion(id)
+   */
+  async cancelWorkspaceDeletion(
+    operationId: string,
+  ): Promise<WorkspaceDeletionResult> {
+    const storage = this.storage;
+    if (!storage?.cancelReset)
+      return { ok: false, reason: "invalid", message: "Nothing to cancel." };
+    return this.runDeletion(() => storage.cancelReset!(operationId));
+  }
+
+  /** Run one deletion step with Saves blocked, then apply its outcome.
+   * @param work Storage call producing the outcome.
+   * @returns Dialog result; drafts and recovery resume whenever nothing was deleted.
+   * @example await this.runDeletion(() => storage.resetWorkspace(reviewed))
+   */
+  private async runDeletion(
+    work: () => Promise<WorkspaceResetOutcome>,
+  ): Promise<WorkspaceDeletionResult> {
+    if (this.state.saving || this.deletionInFlight)
+      return {
+        ok: false,
+        reason: "invalid",
+        message: "Wait for the current Save to finish, then try again.",
+      };
+    this.publish({ saving: true });
+    try {
+      // Store the latest typing first, so a failed deletion keeps it after reload.
+      await this.flushRecovery();
+      this.deletionInFlight = true;
+      const outcome = await work();
+      if (outcome.status === "deleted") {
+        await this.adoptFreshWorkspace(outcome.head, "here");
+        this.publish({
+          workspaceDeletion:
+            outcome.cleanup === "pending" && outcome.operationId
+              ? { kind: "cleanup-pending", operationId: outcome.operationId }
+              : null,
+        });
+        this.announce("reset");
+        return { ok: true, by: outcome.by, cleanup: outcome.cleanup };
+      }
+      if (outcome.status === "pending") {
+        this.publish({
+          workspaceDeletion: {
+            kind: "pending",
+            reason: outcome.reason,
+            operationId: outcome.operationId,
+          },
+        });
+        return {
+          ok: false,
+          reason: "pending",
+          message:
+            outcome.reason === "offline"
+              ? "Verso could not reach your account, so it cannot tell yet whether your workspace was deleted."
+              : "Your account has not confirmed the deletion. Your workspace and public PDF links are unchanged for now, but the request could still complete.",
+        };
+      }
+      this.publish({ workspaceDeletion: null });
+      if (outcome.reason === "changed") this.refreshPending = true;
+      return outcome.reason === "cancelled"
+        ? {
+            ok: false,
+            reason: "cancelled",
+            message:
+              "Deletion cancelled. Your workspace and public PDF links are unchanged.",
+          }
+        : {
+            ok: false,
+            reason: "conflict",
+            message:
+              "Your workspace changed since you reviewed it. Nothing was deleted.",
+          };
+    } catch (error) {
+      const reason = saveFailureReason(error);
+      if (reason === "conflict" || reason === "replaced")
+        this.refreshPending = true;
+      if (reason === "session") this.accountSync?.pause();
+      return {
+        ok: false,
+        reason,
+        message: error instanceof Error ? error.message : String(error),
+      };
+    } finally {
+      this.deletionInFlight = false;
+      this.publish({ saving: false });
+      // Nothing was deleted: drafts still belong to the active workspace.
+      if (this.hasUnsavedChanges() && !this.disposed) void this.flushRecovery();
+      if (this.refreshPending) void this.refresh();
+    }
+  }
+
+  /** Adopt a fresh workspace after this workspace's data was deleted here or elsewhere.
+   * Open drafts, queued recovery writes, history, and pending refreshes belong to the deleted
+   * data and are dropped without writing discard intents (storage no longer holds them).
+   * @param head Fresh committed head with a new workspace ID.
+   * @param source Whether this tab or another tab/device deleted the data.
+   * @returns Completion after recovery is re-read for the fresh workspace.
+   * @example await this.adoptFreshWorkspace(head, "elsewhere")
+   */
+  private async adoptFreshWorkspace(
+    head: CareerHead,
+    source: "here" | "elsewhere",
+  ): Promise<void> {
+    clearTimeout(this.timer);
+    clearTimeout(this.maxTimer);
+    this.timer = undefined;
+    this.maxTimer = undefined;
+    this.workspaceEpoch++;
+    this.undo = [];
+    this.redo = [];
+    this.pendingHistory = null;
+    this.committedIds.clear();
+    this.pristineDraftIds.clear();
+    this.refreshPending = false;
+    this.publish({
+      head,
+      draft: null,
+      orderDraft: null,
+      error: "",
+      orderError: "",
+      recoveryStatus: "",
+      orderRecoveryStatus: "",
+      recovery: [],
+      historyBoundary: false,
+      saveStatus: { kind: "saved", revision: head.revision },
+      workspaceReset: { source, at: Date.now(), workspaceId: head.workspaceId },
+      ...(source === "elsewhere" ? { workspaceDeletion: null } : {}),
+    });
+    const recovery = await this.readRecovery().catch(() => undefined);
+    if (recovery && this.state.head?.workspaceId === head.workspaceId)
+      this.publish({ recovery });
+  }
+
+  /** Account only: resolve deletion attempts left by an interrupted response or another tab.
+   * @returns Completion; unresolved attempts stay pending with their actions.
+   * @example await this.resolvePendingDeletions()
+   */
+  private async resolvePendingDeletions(): Promise<void> {
+    const markers = await this.storage?.pendingResets?.().catch(() => []);
+    for (const marker of markers ?? []) {
+      const result = await this.resolveWorkspaceDeletion(marker.operationId);
+      if (!result.ok && result.reason === "pending") return;
+    }
+  }
+
   /** Read one previous workspace for review/export before adoption.
    * @returns Previous committed head, or undefined when unavailable.
    * @example await controller.previous()
@@ -1630,7 +1932,8 @@ export class CareerController {
    * @example await controller.importRecovery(envelope.drafts)
    */
   async importRecovery(drafts: CareerDraft[]): Promise<void> {
-    if (!this.storage)
+    const workspaceId = this.state.head?.workspaceId;
+    if (!this.storage || !workspaceId)
       throw new Error(
         "Recovery storage unavailable. Keep the source file available.",
       );
@@ -1643,7 +1946,7 @@ export class CareerController {
     let completed = 0;
     try {
       for (const draft of imported) {
-        await this.storage.writeDraft(draft);
+        await this.storage.writeDraft(draft, workspaceId);
         completed++;
       }
       this.publish({

@@ -7,6 +7,7 @@ import {
   commitScopeRequest,
   type CommittedHead,
   replaceHead,
+  resetHead,
   scopeFingerprint,
 } from "@/lib/career/commit";
 import { createCareerDocument, validateDocument } from "@/lib/career/model";
@@ -16,6 +17,9 @@ import type {
   AccountOperationKind,
   AccountOperationStatus,
   AccountReplaceRequest,
+  AccountResetCancelRequest,
+  AccountResetCancelResponse,
+  AccountResetRequest,
   AccountSaveRequest,
   AccountSaveResponse,
   AccountWorkspaceUnchanged,
@@ -337,6 +341,157 @@ export async function replaceAccountWorkspace(
   }, TRANSACTION);
 }
 
+/** Hash the immutable content of one deletion attempt.
+ * @param reviewed Reviewed workspace identity and revision.
+ * @returns {string} Hex SHA-256 shared by the deletion and its cancellation.
+ * @example resetRequestHash({ workspaceId, revision: 3, generation: 0 })
+ */
+export function resetRequestHash(
+  reviewed: AccountResetCancelRequest["reviewed"],
+): string {
+  return requestHash(
+    JSON.stringify([
+      "reset",
+      reviewed.workspaceId,
+      reviewed.revision,
+      reviewed.generation,
+    ]),
+  );
+}
+
+/** Permanently delete the reviewed workspace's data and adopt a fresh schema-2 workspace in one transaction.
+ * Removes committed content, the previous workspace, every receipt, and every public link
+ * with its releases; keeps the user, sessions, and sign-in methods. Serialized with Saves,
+ * replacements, releases, and cancellation under the owner lock.
+ * @param userId Session-derived owner.
+ * @param request Stable operation ID and the reviewed identity the user confirmed.
+ * @returns {Promise<CommittedHead>} Fresh head (new workspace ID, revision and generation + 1), or the current head when this operation already committed. Throws `conflict` when the workspace changed since review, `deletion_cancelled` after cancellation, and `operation_mismatch` for a reused ID.
+ * @example await resetAccountWorkspace(userId, { operationId, reviewed, confirmation: "DELETE" })
+ */
+export async function resetAccountWorkspace(
+  userId: string,
+  request: AccountResetRequest,
+): Promise<CommittedHead> {
+  const hash = resetRequestHash(request.reviewed);
+  const document = validateDocument(createCareerDocument());
+  return getPrisma().$transaction(async (tx) => {
+    await lockOwner(tx, userId);
+    const receipt = await tx.accountOperation.findUnique({
+      where: {
+        userId_operationId: { userId, operationId: request.operationId },
+      },
+    });
+    if (receipt && receipt.requestHash === hash) {
+      if (receipt.kind === "reset-cancelled")
+        throw new AccountStoreError(
+          "deletion_cancelled",
+          "This deletion was cancelled. Your workspace was not deleted.",
+        );
+      if (receipt.kind === "reset") {
+        const row = await tx.accountWorkspace.findUnique({ where: { userId } });
+        if (row) return toHead(row);
+      }
+    }
+    if (receipt)
+      throw new AccountStoreError(
+        "operation_mismatch",
+        "Operation identity cannot be reused with changed content.",
+      );
+    const row = await tx.accountWorkspace.findUnique({ where: { userId } });
+    if (!row)
+      throw new AccountStoreError(
+        "conflict",
+        "Account workspace changed since review. Review it again.",
+      );
+    const decision = resetHead(
+      toHead(row),
+      request.reviewed,
+      document,
+      randomUUID(),
+    );
+    if (!decision.ok)
+      throw new AccountStoreError(decision.reason, decision.message);
+    const next = decision.head;
+    // Links cascade to their releases; the explicit release delete keeps the
+    // contract independent of that cascade.
+    await tx.publicLink.deleteMany({ where: { userId } });
+    await tx.publicRelease.deleteMany({ where: { userId } });
+    await tx.accountPreviousWorkspace.deleteMany({ where: { userId } });
+    await tx.accountOperation.deleteMany({ where: { userId } });
+    await tx.accountWorkspace.update({
+      where: { userId },
+      data: {
+        workspaceId: next.workspaceId,
+        revision: next.revision,
+        generation: next.generation,
+        document: json(next.document),
+        operationsPrunedAt: null,
+      },
+    });
+    await tx.accountOperation.create({
+      data: {
+        userId,
+        operationId: request.operationId,
+        kind: "reset",
+        requestHash: hash,
+        resultRevision: next.revision,
+        resultGeneration: next.generation,
+      },
+    });
+    return next;
+  }, TRANSACTION);
+}
+
+/** Cancel one deletion attempt whose outcome is unknown, or report that it already committed.
+ * Runs under the owner lock, so exactly one of this cancellation and the original request wins.
+ * @param userId Session-derived owner.
+ * @param request Operation ID and reviewed identity of the attempt.
+ * @returns {Promise<AccountResetCancelResponse>} `deleted: true` with the current head when the attempt committed; otherwise `deleted: false` after recording a tombstone that the attempt can never pass.
+ * @example await cancelAccountWorkspaceReset(userId, { operationId, reviewed })
+ */
+export async function cancelAccountWorkspaceReset(
+  userId: string,
+  request: AccountResetCancelRequest,
+): Promise<AccountResetCancelResponse> {
+  const hash = resetRequestHash(request.reviewed);
+  return getPrisma().$transaction(async (tx) => {
+    await lockOwner(tx, userId);
+    const receipt = await tx.accountOperation.findUnique({
+      where: {
+        userId_operationId: { userId, operationId: request.operationId },
+      },
+    });
+    if (receipt) {
+      if (receipt.requestHash !== hash)
+        throw new AccountStoreError(
+          "operation_mismatch",
+          "Operation identity cannot be reused with changed content.",
+        );
+      if (receipt.kind === "reset-cancelled") return { deleted: false };
+      if (receipt.kind === "reset") {
+        const row = await tx.accountWorkspace.findUnique({ where: { userId } });
+        if (row) return { deleted: true, head: toHead(row) };
+      }
+      throw new AccountStoreError(
+        "operation_mismatch",
+        "Operation identity cannot be reused with changed content.",
+      );
+    }
+    const row = await tx.accountWorkspace.findUnique({ where: { userId } });
+    await tx.accountOperation.create({
+      data: {
+        userId,
+        operationId: request.operationId,
+        kind: "reset-cancelled",
+        requestHash: hash,
+        resultRevision: row?.revision ?? 0,
+        resultGeneration: row?.generation ?? 0,
+      },
+    });
+    return { deleted: false };
+  }, TRANSACTION);
+}
+
 /** Report whether an operation committed, so an interrupted client can resolve it without replay.
  * @param userId Session-derived owner.
  * @param operationId Client operation ID.
@@ -385,9 +540,12 @@ async function pruneOperations(
     take: count,
     select: { operationId: true },
   });
+  // Cancellation tombstones are never pruned: removing one could let a delayed
+  // deletion request with that operation ID commit after the user kept the workspace.
   const removed = await tx.accountOperation.deleteMany({
     where: {
       userId,
+      kind: { not: "reset-cancelled" },
       operationId: { notIn: keep.map((item) => item.operationId) },
     },
   });
