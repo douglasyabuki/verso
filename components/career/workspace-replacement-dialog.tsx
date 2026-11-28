@@ -18,6 +18,7 @@ export type WorkspaceReplacement = { head: CareerHead } & (
       kind: "replace" | "import";
       incoming: CareerDocument;
       previous?: CareerHead;
+      filename?: string;
     }
   | { kind: "restore"; previous: CareerHead }
 );
@@ -25,14 +26,21 @@ export type WorkspaceReplacement = { head: CareerHead } & (
 function WorkspaceSummary({
   title,
   document,
+  filename,
 }: {
   title: string;
   document: CareerDocument;
+  filename?: string;
 }) {
   const { sections, resumes } = document;
   return (
     <section className="min-w-0 rounded-lg border p-3">
       <h3 className="text-sm font-medium">{title}</h3>
+      {filename && (
+        <p className="mt-1 text-sm wrap-anywhere">
+          <bdi>{filename}</bdi>
+        </p>
+      )}
       <p className="mt-1 text-xs text-muted-foreground">
         {sections.length} {sections.length === 1 ? "section" : "sections"} ·{" "}
         {resumes.length} {resumes.length === 1 ? "resume" : "resumes"}
@@ -113,6 +121,7 @@ export function WorkspaceReplacementDialog({
             />
             <WorkspaceSummary
               title={restoring ? "Previous workspace" : "Incoming workspace"}
+              filename={review.kind === "restore" ? undefined : review.filename}
               document={
                 review.kind === "restore"
                   ? review.previous.document

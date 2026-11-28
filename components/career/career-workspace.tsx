@@ -4,7 +4,10 @@ import {
   ArrowLeft,
   Columns2,
   Download,
+  FilePenLine,
   FileText,
+  FileUp,
+  type LucideIcon,
   Palette,
   Plus,
 } from "lucide-react";
@@ -113,7 +116,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
   InputGroup,
   InputGroupAddon,
@@ -875,6 +877,47 @@ function createOwnerController(account?: {
   });
 }
 
+function RestoreFileButton({
+  id,
+  label,
+  icon: Icon,
+  onSelect,
+}: {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  onSelect: (file: File) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+
+  return (
+    <>
+      <Button
+        id={id}
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => input.current?.click()}
+      >
+        <Icon data-icon="inline-start" aria-hidden="true" />
+        {label}
+      </Button>
+      <input
+        id={`${id}-file`}
+        ref={input}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={({ currentTarget }) => {
+          const file = currentTarget.files?.[0];
+          currentTarget.value = "";
+          if (file) onSelect(file);
+        }}
+      />
+    </>
+  );
+}
+
 export function CareerWorkspace({
   controller: supplied,
   account,
@@ -1028,6 +1071,9 @@ export function CareerWorkspace({
   const [rawExport, setRawExport] = useState(false);
   const [loadingSample, setLoadingSample] = useState(false);
   const [importPending, setImportPending] = useState(false);
+  const [recoveryImportFilename, setRecoveryImportFilename] = useState<
+    string | null
+  >(null);
   const importJob = useRef<AbortController | null>(null);
   const replacementJob = useRef<AbortController | null>(null);
   useEffect(
@@ -1498,7 +1544,7 @@ export function CareerWorkspace({
 
   const requestWorkspaceReview = (
     source:
-      | { kind: "replace"; incoming: CareerDocument }
+      | { kind: "replace"; incoming: CareerDocument; filename?: string }
       | { kind: "import" }
       | { kind: "restore"; generation?: number },
     signal?: AbortSignal,
@@ -1564,6 +1610,7 @@ export function CareerWorkspace({
             kind: source.kind,
             previous,
             incoming,
+            filename: source.kind === "replace" ? source.filename : undefined,
           });
         }
         setExportChoice(null);
@@ -1613,10 +1660,11 @@ export function CareerWorkspace({
   };
 
   const importFile = async (
-    source: File | undefined | ((signal: AbortSignal) => Promise<File>),
+    source: File | ((signal: AbortSignal) => Promise<File>),
     recovery: boolean,
   ) => {
-    if (!source) return;
+    const filename = typeof source === "function" ? undefined : source.name;
+    if (recovery) setRecoveryImportFilename(null);
     const { index, destination } = route.current;
     importJob.current?.abort();
     replacementJob.current?.abort();
@@ -1642,15 +1690,23 @@ export function CareerWorkspace({
       );
       if (!isCurrent()) return;
       setLocalError("");
-      if (envelope.format === "verso.recovery")
+      if (envelope.format === "verso.recovery") {
         await controller.importRecovery(envelope.drafts);
-      else
+        if (isCurrent() && filename) setRecoveryImportFilename(filename);
+      } else {
         requestWorkspaceReview(
-          { kind: "replace", incoming: envelope.document },
+          { kind: "replace", incoming: envelope.document, filename },
           job.signal,
         );
+      }
     } catch (error) {
-      if (isCurrent()) setLocalError(String(error));
+      if (isCurrent()) {
+        setLocalError(
+          recovery && filename
+            ? `Could not import “${filename}”. ${String(error)}`
+            : String(error),
+        );
+      }
     } finally {
       clearTimeout(progress);
       if (importJob.current === job) setImportPending(false);
@@ -2154,36 +2210,25 @@ export function CareerWorkspace({
         title="Restore"
         description="Imported workspaces open a review before replacing saved content. Imported recovery becomes unsaved drafts and never commits on its own."
       >
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="workspace-import">
-              Import workspace for review
-            </FieldLabel>
-            <Input
-              id="workspace-import"
-              type="file"
-              accept="application/json,.json"
-              onChange={(event) => {
-                void importFile(event.target.files?.[0], false);
-                event.target.value = "";
-              }}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="recovery-import">
-              Import recovery drafts
-            </FieldLabel>
-            <Input
-              id="recovery-import"
-              type="file"
-              accept="application/json,.json"
-              onChange={(event) => {
-                void importFile(event.target.files?.[0], true);
-                event.target.value = "";
-              }}
-            />
-          </Field>
-        </FieldGroup>
+        <div className="flex flex-wrap gap-2">
+          <RestoreFileButton
+            id="workspace-import"
+            label="Import workspace backup"
+            icon={FileUp}
+            onSelect={(file) => void importFile(file, false)}
+          />
+          <RestoreFileButton
+            id="recovery-import"
+            label="Import unsaved drafts"
+            icon={FilePenLine}
+            onSelect={(file) => void importFile(file, true)}
+          />
+        </div>
+        {recoveryImportFilename && (
+          <p role="status" className="text-sm wrap-anywhere">
+            Imported recovery file <bdi>{recoveryImportFilename}</bdi>.
+          </p>
+        )}
         {previousAvailability?.available && (
           <Button
             size="sm"
@@ -2356,7 +2401,7 @@ export function CareerWorkspace({
             {(state.error || state.orderError || localError) && (
               <Alert variant="destructive">
                 <AlertTitle>Action needs attention</AlertTitle>
-                <AlertDescription className="whitespace-pre-wrap">
+                <AlertDescription className="wrap-anywhere whitespace-pre-wrap">
                   {[state.error, state.orderError, localError]
                     .filter(Boolean)
                     .join("\n")}

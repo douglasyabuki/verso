@@ -38,16 +38,19 @@ async function openData(controller: CareerController) {
   return settings;
 }
 
-async function importWorkspace(document: CareerDocument) {
+async function importWorkspace(incoming: CareerDocument) {
   const contents = JSON.stringify({
     format: "verso.workspace",
     schemaVersion: 2,
     workspaceId: "external-test-workspace",
     exportedAt: "2026-11-23T10:00:00.000Z",
-    document,
+    document: incoming,
   });
+  const input = document.querySelector<HTMLInputElement>(
+    "#workspace-import-file",
+  )!;
   await page
-    .getByLabelText("Import workspace for review")
+    .elementLocator(input)
     .upload(
       new File([contents], "workspace.json", { type: "application/json" }),
     );
@@ -80,10 +83,10 @@ it("keeps both imports available on fresh Data and offers a retry if the previou
     .element(settings.getByRole("button", { name: "Export unsaved drafts" }))
     .not.toBeInTheDocument();
   await expect
-    .element(settings.getByLabelText("Import workspace for review"))
+    .element(settings.getByRole("button", { name: "Import workspace backup" }))
     .toBeVisible();
   await expect
-    .element(settings.getByLabelText("Import recovery drafts"))
+    .element(settings.getByRole("button", { name: "Import unsaved drafts" }))
     .toBeVisible();
 });
 
