@@ -286,6 +286,7 @@ test("opens Data pickers with the keyboard and retries recovery without saving i
     name: "Unsaved drafts",
     exact: true,
   });
+  const draftRecovery = data.getByRole("button", { name: "Draft recovery" });
   const importBackup = workspace.getByRole("button", {
     name: "Import workspace backup",
   });
@@ -303,12 +304,14 @@ test("opens Data pickers with the keyboard and retries recovery without saving i
 
   await expect(data.getByRole("heading", { level: 3 })).toHaveText([
     "Workspace",
-    "Unsaved drafts",
+    "Draft recovery",
     "Sample workspace",
     "Delete workspace data",
   ]);
   await expect(data.getByRole("separator")).toHaveCount(3);
   await expect(importBackup).toBeVisible();
+  await expect(importDrafts).toBeHidden();
+  await draftRecovery.click();
   await expect(importDrafts).toBeVisible();
   await expect(backupInput).toBeAttached();
   await expect(backupInput).toBeHidden();
@@ -381,6 +384,8 @@ test("opens Data pickers with the keyboard and retries recovery without saving i
   await expect(emptyDrafts).toBeVisible();
 
   await page.keyboard.press("Tab");
+  await expect(draftRecovery).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(importDrafts).toBeFocused();
   const recoveryPath = testInfo.outputPath("summary-draft.json");
   await writeFile(recoveryPath, "{}");
@@ -429,6 +434,7 @@ test("opens Data pickers with the keyboard and retries recovery without saving i
     drafts.getByRole("button", { name: "Restore draft" }),
   ).toBeVisible();
   await page.reload();
+  await draftRecovery.click();
   await drafts.getByRole("button", { name: "Preview Summary" }).click();
   await expect(
     drafts.getByRole("cell", { name: /Imported draft wording/ }),
@@ -512,6 +518,76 @@ function storedRecords(page: Page) {
     return result;
   });
 }
+
+test("reviews newer entry recovery across tabs and keeps independent entry order", async ({
+  page,
+  context,
+}) => {
+  const { document } = fixture();
+  const section = document.sections[0];
+  const [role] = section.entries;
+  const second = { ...createEntry("experience"), name: "Beta" };
+  section.entries.push(second);
+  await page.goto("/app/settings/data");
+  const input = page.getByRole("button", { name: "Import workspace backup" });
+  await (
+    await openFilePicker(page, () => input.click())
+  ).setFiles({
+    name: "workspace.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(envelope(document))),
+  });
+  const replacement = page.getByRole("dialog", {
+    name: "Review workspace replacement",
+  });
+  await replacement
+    .getByRole("button", { name: "Replace workspace", exact: true })
+    .click();
+  await expect(replacement).toBeHidden();
+
+  const writer = await context.newPage();
+  await writer.goto(`/app/entry/${role.id}`);
+  const title = writer.getByRole("textbox", { name: "Title", exact: true });
+  await title.fill("Old unsaved title");
+  await writer
+    .getByRole("button", { name: "Move Beta up", exact: true })
+    .click();
+  await expect.poll(async () => (await storedRecords(writer)).drafts).toBe(2);
+
+  await page.goto(`/app/entry/${role.id}`);
+  const review = page.getByRole("dialog", {
+    name: "Continue editing Fictional role?",
+  });
+  await review.getByRole("button", { name: "Show changes" }).click();
+  await expect(
+    review.getByRole("cell", { name: "Old unsaved title" }),
+  ).toBeVisible();
+  await title.fill("New unsaved title");
+  await expect(review.getByRole("status")).toContainText("A newer version");
+  await expect(
+    review.getByRole("cell", { name: "New unsaved title" }),
+  ).toBeVisible();
+  await review.getByRole("button", { name: "Discard changes" }).click();
+  await expect(review).toBeHidden();
+  await expect(
+    page.getByRole("textbox", { name: "Title", exact: true }),
+  ).toHaveValue("Systems engineer");
+  await writer.close();
+  await page.reload();
+  await expect(
+    page.getByRole("textbox", { name: "Title", exact: true }),
+  ).toHaveValue("Systems engineer");
+  await expect(review).toBeHidden();
+  await page.goto(`/app/entries/${section.id}`);
+  const orderReview = page.getByRole("dialog", {
+    name: "Continue editing Fictional work entry order?",
+  });
+  await orderReview.getByRole("button", { name: "Show changes" }).click();
+  await expect(
+    orderReview.getByText("Reordered", { exact: true }),
+  ).toBeVisible();
+  await expect.poll(async () => (await storedRecords(page)).drafts).toBe(1);
+});
 
 test("deletes guest workspace data across tabs and keeps backup import working", async ({
   page,

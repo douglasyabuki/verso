@@ -1,4 +1,13 @@
+import { careerEntryLabel } from "@/components/career/career-entry-list";
+import { Badge } from "@/components/ui/badge";
 import { FieldDescription } from "@/components/ui/field";
+import { draftChanges } from "@/lib/career/draft-changes";
+import {
+  detailRowLabel,
+  linkRowLabel,
+  sectionFieldLabel,
+} from "@/lib/career/terminology";
+import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
 import { templateSettingLabels } from "@/types-and-constants/output";
 import {
   sectionIconIds,
@@ -145,6 +154,117 @@ export function ScopeComparison({
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+/** Show only edits made since the reviewed draft started. */
+export function DraftChanges({
+  draft,
+  document,
+  language,
+}: {
+  draft: CareerDraft;
+  document: CareerDocument;
+  language: string;
+}) {
+  const [scope, id] = draft.scope.split("/");
+  const sectionId =
+    scope === "language-evidence"
+      ? (draft.values as { sectionId?: unknown } | null)?.sectionId
+      : id;
+  const section = document.sections.find((section) =>
+    scope === "entry"
+      ? section.entries.some((entry) => entry.id === id)
+      : section.id === sectionId,
+  );
+  const names = new Map<string, string>([[document.summary.id, "Summary"]]);
+  for (const field of document.profile.fields)
+    names.set(field.id, sectionFieldLabel(field.key));
+  document.profile.links.forEach((link, index) =>
+    names.set(link.id, linkRowLabel(link, index, link.label[language]).title),
+  );
+  const entryNames = new Map(
+    document.sections.flatMap((owner) =>
+      owner.entries.map(
+        (entry) => [entry.id, careerEntryLabel(entry, language)] as const,
+      ),
+    ),
+  );
+  for (const owner of document.sections) {
+    names.set(
+      owner.id,
+      owner.name || owner.heading[language] || "Untitled section",
+    );
+    for (const entry of owner.entries) {
+      names.set(entry.id, entryNames.get(entry.id)!);
+      for (const field of entry.fields)
+        names.set(field.id, sectionFieldLabel(field.key, owner.kind));
+      entry.achievements.forEach((item, index) =>
+        names.set(
+          item.id,
+          detailRowLabel(owner.kind, item, index, item.wording[language]).title,
+        ),
+      );
+      entry.links.forEach((link, index) =>
+        names.set(
+          link.id,
+          linkRowLabel(link, index, link.label[language]).title,
+        ),
+      );
+      for (const evidence of entry.evidence ?? []) {
+        const name = entryNames.get(evidence.entryId);
+        if (name) names.set(evidence.id, name);
+      }
+    }
+  }
+  const changes = draftChanges(draft, {
+    sectionKind: section?.kind,
+    language,
+    reference: (id) => names.get(id),
+  });
+  return (
+    <section aria-label="Draft changes" className="min-w-0">
+      {changes.length ? (
+        <table className="w-full table-fixed text-start text-sm">
+          <thead>
+            <tr className="border-b text-start">
+              <th scope="col" className="p-2 text-start">
+                Field
+              </th>
+              <th scope="col" className="p-2 text-start">
+                Before
+              </th>
+              <th scope="col" className="p-2 text-start">
+                After
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {changes.map(({ label, kind, before, after }, index) => (
+              <tr key={index} className="border-b align-top last:border-b-0">
+                <th
+                  scope="row"
+                  className="p-2 text-start font-medium wrap-anywhere"
+                >
+                  <span className="block">{label}</span>
+                  {kind !== "Changed" && (
+                    <Badge variant="secondary">{kind}</Badge>
+                  )}
+                </th>
+                <td className="p-2 wrap-anywhere whitespace-pre-wrap">
+                  {before}
+                </td>
+                <td className="p-2 wrap-anywhere whitespace-pre-wrap">
+                  {after}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="text-sm text-muted-foreground">No changes to restore</p>
+      )}
     </section>
   );
 }

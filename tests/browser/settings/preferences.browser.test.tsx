@@ -80,6 +80,7 @@ describe("Settings drafts and device preference persistence", () => {
     await expect
       .element(page.getByRole("dialog", { name: "Settings", exact: true }))
       .toBeVisible();
+    await page.getByRole("button", { name: "Draft recovery" }).click();
     await expect
       .element(
         page.getByRole("button", {

@@ -127,6 +127,11 @@ canceling later navigation does not undo an earlier explicit resolution. Dirty-f
 keyboard undo/redo stays in the draft. Workspace Undo/Redo requires resolving the
 draft, then a separate history invocation; Undo after Save undoes that Save.
 
+Entering a scope with stored edits opens a recovery dialog before its editor
+accepts changes. Dismissing the review retains the stored draft and returns to
+the parent view. See [Save and recovery](recovery-files.md#save-and-recovery-protocol)
+for comparison and discard behavior.
+
 Durable scope URLs support reload and Back/Forward. The destination is the path
 after `/app/` (`/app/resumes`, `/app/settings/account`; `/app` is Overview), read
 and written by `destinationFromUrl` and `destinationUrl` in `lib/career/navigation.ts`.

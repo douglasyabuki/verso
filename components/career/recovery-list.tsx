@@ -2,24 +2,44 @@
 
 import { useState } from "react";
 
-import { ConfirmDiscardDraft } from "@/components/career/draft-recovery-banners";
-import { ScopeComparison } from "@/components/career/scope-comparison";
+import { DraftChanges } from "@/components/career/scope-comparison";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DisclosureChevron } from "@/components/ui/disclosure";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  DisclosureChevron,
+  DisclosureGuide,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import { draftAge, newestFirst } from "@/lib/career/recovery";
-import type { CareerDraft } from "@/types-and-constants/career";
+import type { RecoveryDiscardResult } from "@/stores/career/controller";
+import type { CareerDocument, CareerDraft } from "@/types-and-constants/career";
 
 /** Unresolved recovery drafts with preview, restore, and confirmed discard per row.
  * @param props Drafts to list plus labelling, comparison, and resolution callbacks.
  * @returns Bordered list (newest first), or null when no drafts are listed.
- * @example <RecoveryList drafts={drafts} label={label} saved={saved} outdated={outdated} onRestore={restore} onDiscard={discard} onExport={exportRecovery} />
+ * @example <RecoveryList drafts={drafts} document={document} language="en-US" label={label} outdated={outdated} onRestore={restore} onDiscard={discard} onExport={exportRecovery} />
  */
 export function RecoveryList({
   drafts,
   disabled = false,
   label,
-  saved,
+  document,
+  language,
   outdated,
   onRestore,
   onDiscard,
@@ -29,16 +49,18 @@ export function RecoveryList({
   disabled?: boolean;
   /** Human-readable name for the draft's scope. */
   label: (draft: CareerDraft) => string;
-  /** Current saved values for the draft's scope; undefined when the record is gone. */
-  saved: (draft: CareerDraft) => unknown;
+  document: CareerDocument;
+  language: string;
   /** True when saved content moved since the draft started. */
   outdated: (draft: CareerDraft) => boolean;
   onRestore: (draft: CareerDraft) => void;
-  onDiscard: (draft: CareerDraft) => void;
+  onDiscard: (draft: CareerDraft) => Promise<RecoveryDiscardResult>;
   onExport: () => void;
 }) {
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState<CareerDraft | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [unconfirmed, setUnconfirmed] = useState(false);
   if (!drafts.length) return null;
   return (
     <>
@@ -46,77 +68,119 @@ export function RecoveryList({
         {newestFirst(drafts).map((draft) => {
           const name = label(draft);
           const open = previewing === draft.draftId;
-          const current = saved(draft);
           return (
             <li key={draft.draftId} className="flex flex-col gap-3 px-4 py-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                    <span className="wrap-anywhere">{name}</span>
-                    {outdated(draft) && (
-                      <Badge variant="attention">Outdated</Badge>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Edited {draftAge(draft.updatedAt)}
-                  </p>
+              <Collapsible
+                open={open}
+                onOpenChange={(open) =>
+                  setPreviewing(open ? draft.draftId : null)
+                }
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                      <span className="wrap-anywhere">{name}</span>
+                      {outdated(draft) && (
+                        <Badge variant="attention">Outdated</Badge>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Edited {draftAge(draft.updatedAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <CollapsibleTrigger
+                      render={<Button size="sm" variant="ghost" />}
+                      aria-label={`Preview ${name}`}
+                      className={disclosureTriggerClassName}
+                    >
+                      <DisclosureChevron />
+                      <DisclosureLabel>Preview</DisclosureLabel>
+                    </CollapsibleTrigger>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={disabled}
+                      onClick={() => onRestore(draft)}
+                    >
+                      Restore draft
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={disabled}
+                      aria-label={`Discard ${name}`}
+                      onClick={() => {
+                        setUnconfirmed(false);
+                        setDiscarding(draft);
+                      }}
+                    >
+                      Discard
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-expanded={open}
-                    aria-label={`Preview ${name}`}
-                    className="[&[aria-expanded=true]>[data-slot=disclosure-chevron]]:rotate-90"
-                    onClick={() => setPreviewing(open ? null : draft.draftId)}
-                  >
-                    <DisclosureChevron />
-                    Preview
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={disabled}
-                    onClick={() => onRestore(draft)}
-                  >
-                    Restore draft
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    disabled={disabled}
-                    aria-label={`Discard ${name}`}
-                    onClick={() => setDiscarding(draft)}
-                  >
-                    Discard
-                  </Button>
-                </div>
-              </div>
-              {open &&
-                (current === undefined ? (
-                  <p className="text-xs text-muted-foreground">
-                    The original record no longer exists. Restore the draft to
-                    save it as new.
-                  </p>
-                ) : (
-                  <ScopeComparison current={current} draft={draft.values} />
-                ))}
+                <CollapsibleContent>
+                  <DisclosureGuide>
+                    <DraftChanges
+                      draft={draft}
+                      document={document}
+                      language={language}
+                    />
+                  </DisclosureGuide>
+                </CollapsibleContent>
+              </Collapsible>
             </li>
           );
         })}
       </ul>
-      <ConfirmDiscardDraft
+      <AlertDialog
         open={discarding !== null}
-        name={discarding ? label(discarding) : ""}
         onOpenChange={(open) => {
-          if (!open) setDiscarding(null);
+          if (!open && !busy) setDiscarding(null);
         }}
-        onConfirm={() => {
-          if (discarding) onDiscard(discarding);
-          setDiscarding(null);
-        }}
-        onExport={onExport}
-      />
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Discarding removes the unsaved changes to{" "}
+              {discarding ? label(discarding) : "this form"}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {unconfirmed && (
+            <p role="alert" className="text-sm text-destructive">
+              Verso couldn’t confirm the discard. Your edits are still
+              available.
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <Button variant="outline" onClick={onExport}>
+              Export recovery
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={busy || disabled}
+              onClick={async () => {
+                if (!discarding) return;
+                setBusy(true);
+                try {
+                  const result = await onDiscard(discarding);
+                  if (result === "unconfirmed") setUnconfirmed(true);
+                  else {
+                    if (result === "changed") setPreviewing(discarding.draftId);
+                    setDiscarding(null);
+                  }
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Discard draft
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

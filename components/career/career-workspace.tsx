@@ -47,10 +47,7 @@ import { CareerOverview } from "@/components/career/career-overview";
 import { CareerWorkspaceShell } from "@/components/career/career-workspace-shell";
 import { ConflictPanel } from "@/components/career/conflict-panel";
 import { DeleteWorkspaceData } from "@/components/career/delete-workspace-data";
-import {
-  RestoredDraftBanner,
-  StoredDraftNotice,
-} from "@/components/career/draft-recovery-banners";
+import { DraftRecoveryDialog } from "@/components/career/draft-recovery-dialog";
 import { LayoutFields } from "@/components/career/layout-editor";
 import { libraryDestinationKind } from "@/components/career/library-navigation";
 import { LiveOutput } from "@/components/career/live-output";
@@ -103,6 +100,11 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -110,6 +112,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DisclosureChevron,
+  DisclosureGuide,
+  DisclosureLabel,
+  disclosureTriggerClassName,
+} from "@/components/ui/disclosure";
 import {
   Field,
   FieldDescription,
@@ -167,10 +175,11 @@ import {
   settingsPanel,
 } from "@/lib/career/navigation";
 import { importPortable } from "@/lib/career/portable-import";
-import { recoveryForScope } from "@/lib/career/recovery";
+import { matchesDraftVersion, recoveryForScope } from "@/lib/career/recovery";
 import { oversizedRecovery, recoveryFiles } from "@/lib/career/recovery-export";
 import { profileContactLabels, type ResumeContent } from "@/lib/career/resumes";
 import { captureStarter } from "@/lib/career/starters";
+import { CAREER_TERMS } from "@/lib/career/terminology";
 import type {
   AccountSession,
   AccountSessionStore,
@@ -947,6 +956,12 @@ export function CareerWorkspace({
     destination: "overview",
     background: "overview",
   });
+  const [inlineOrderReview, setInlineOrderReview] = useState<string | null>(
+    null,
+  );
+  const [resolvedRecoveryScopes, setResolvedRecoveryScopes] = useState<
+    string[]
+  >([]);
   const panel = settingsPanel(view.destination);
   const destination = panel ? view.background : view.destination;
   const canReplaceWorkspace = state.durable && state.storageMode !== "session";
@@ -1240,6 +1255,10 @@ export function CareerWorkspace({
     if (!state.ready) return;
     const openDestination = (incoming: string, history = false) => {
       const next = parseDestination(incoming);
+      if (route.current.destination !== next) {
+        setInlineOrderReview(null);
+        setResolvedRecoveryScopes([]);
+      }
       const nextPanel = settingsPanel(next);
       const background = nextPanel
         ? parseDestination(window.history.state?.versoBackground ?? "overview")
@@ -1257,15 +1276,13 @@ export function CareerWorkspace({
         background: route.current.background,
       });
       const editing = destinationScope(next);
-      const head = controller.getSnapshot().head;
+      const { head, draft, recovery } = controller.getSnapshot();
       if (
         editing &&
         head &&
-        destinationExists(
-          head.document,
-          next,
-          controller.getSnapshot().draft?.scope,
-        )
+        (destinationExists(head.document, next, draft?.scope) ||
+          (readScope(head.document, editing) === null &&
+            recoveryForScope(recovery, editing)))
       )
         controller.open(
           editing,
@@ -1419,6 +1436,8 @@ export function CareerWorkspace({
             ? document.activeElement
             : null;
       if (current.destination !== next) {
+        setInlineOrderReview(null);
+        setResolvedRecoveryScopes([]);
         if (!replace) current.index++;
         const url = destinationUrl(new URL(window.location.href), next);
         window.history[replace ? "replaceState" : "pushState"](
@@ -1449,23 +1468,23 @@ export function CareerWorkspace({
         };
       setView({ index: current.index, destination: next, background });
       const editing = destinationScope(next);
-      const head = controller.getSnapshot().head;
+      const { head, draft, recovery } = controller.getSnapshot();
+      const recoverable = editing ? recoveryForScope(recovery, editing) : null;
       if (
         editing &&
         head &&
-        destinationExists(
+        (destinationExists(
           head.document,
           next,
-          initialValues !== undefined
-            ? editing
-            : controller.getSnapshot().draft?.scope,
-        )
+          initialValues !== undefined ? editing : draft?.scope,
+        ) ||
+          (readScope(head.document, editing) === null && recoverable))
       )
         controller.open(
           editing,
           editing.startsWith("entries/") ? "order" : "form",
         );
-      if (initialValues !== undefined)
+      if (initialValues !== undefined && !recoverable)
         controller.change(
           initialValues,
           editing?.startsWith("entries/") ? "order" : "form",
@@ -1829,7 +1848,6 @@ export function CareerWorkspace({
     orderDraft.values.every((id) => typeof id === "string")
       ? orderDraft
       : null;
-  const beforeEntryReorder = () => !controller.getSnapshot().saving;
   const missingDestination = !destinationExists(
     documentValue,
     destination,
@@ -2089,35 +2107,57 @@ export function CareerWorkspace({
     });
   const { create: createResume, compare: compareResumes } =
     resumeCollectionActions(documentValue, state.saving);
-  const recoveryLabel = (draft: CareerDraft): string =>
-    draft.scope.startsWith("entries/")
-      ? `${documentValue.sections.find((section) => section.id === draft.scope.split("/")[1])?.name || "Section"} entry order`
-      : draft.scope.startsWith("entry/")
-        ? (() => {
-            const entry = documentValue.sections
-              .flatMap((section) => section.entries)
-              .find((entry) => entry.id === draft.scope.split("/")[1]);
-            return entry
-              ? careerEntryLabel(entry, contentLanguage)
-              : "Unavailable entry";
-          })()
-        : draft.scope.startsWith("resume") ||
-            draft.scope.startsWith("selection/")
-          ? `${documentValue.resumes.find((resume) => resume.id === draft.scope.split("/")[1])?.name || "Unavailable resume"} · ${draft.scope.startsWith("resume-wording/") ? "Wording" : draft.scope.startsWith("resume-details/") ? "Name & color" : draft.scope.startsWith("resume-layout/") ? "Layout" : "Content"}`
-          : draft.scope.startsWith("preset/") ||
-              draft.scope.startsWith("starter/")
-            ? `${draft.scope.startsWith("preset/") ? "Layout preset" : "Resume starter"} / ${draft.values && typeof draft.values === "object" && "name" in draft.values && typeof draft.values.name === "string" ? draft.values.name : "Unsaved setup"}`
-            : draft.scope.startsWith("starter-create/")
-              ? "Resume creation from starter"
-              : draft.scope.startsWith("language-evidence/")
-                ? "New test or certificate for a language"
-                : ({
-                    profile: "Profile",
-                    summary: "Summary",
-                    languages: "Content languages",
-                    defaults: "Resume defaults",
-                    sections: "Section order",
-                  }[draft.scope] ?? "Unsaved form");
+  const recoveryLabel = (draft: CareerDraft): string => {
+    const [kind, id] = draft.scope.split("/");
+    const values = draft.values as { name?: unknown } | null;
+    const name = typeof values?.name === "string" ? values.name.trim() : "";
+    const section = documentValue.sections.find((item) => item.id === id);
+    if (kind === "entries") return `${section?.name || "Section"} entry order`;
+    if (kind === "section" || kind === "new-section")
+      return section?.name || name || "a new section";
+    if (kind === "entry" || kind === "new-entry") {
+      const entry = documentValue.sections
+        .flatMap((item) => item.entries)
+        .find((entry) => entry.id === id);
+      if (entry) return careerEntryLabel(entry, contentLanguage);
+      const parsed = entrySchema.safeParse(draft.values);
+      return parsed.success
+        ? careerEntryLabel(parsed.data, contentLanguage)
+        : name || "an unsaved entry";
+    }
+    if (kind === "starter-create") return "a resume from a starter";
+    if (kind.startsWith("resume") || kind === "selection") {
+      const resume = documentValue.resumes.find((item) => item.id === id);
+      const part = (
+        {
+          "resume-wording": "Wording",
+          "resume-details": "Name & color",
+          "resume-layout": "Layout",
+          "resume-content": "Content & order",
+          selection: "Content & order",
+        } as Record<string, string>
+      )[kind];
+      return [resume?.name || name || "an untitled resume", part]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    if (kind === "preset" || kind === "starter")
+      return (
+        name || (kind === "preset" ? "a layout preset" : "a resume starter")
+      );
+    return (
+      (
+        {
+          "language-evidence": "a new test or certificate",
+          profile: "Profile",
+          summary: "Summary",
+          languages: "Content languages",
+          defaults: "Resume defaults",
+          sections: "Section order",
+        } as Record<string, string>
+      )[kind] ?? "this form"
+    );
+  };
   const restoreRecovery = (draft: CareerDraft) => {
     const restore = () => {
       controller.restore(draft);
@@ -2146,37 +2186,193 @@ export function CareerWorkspace({
   const restoredDraft = state.draft
     ? state.recovery.find((draft) => draft.draftId === state.draft?.draftId)
     : undefined;
+  const editingScope = destinationScope(view.destination);
+  const reviewScope = inlineOrderReview ?? editingScope;
+  const reviewTarget = reviewScope?.startsWith("entries/") ? "order" : "form";
+  const reviewEditor =
+    reviewTarget === "order" ? state.orderDraft : state.draft;
   const storedDraft =
-    state.draft && !restoredDraft
-      ? recoveryForScope(state.recovery, state.draft.scope, state.draft.draftId)
+    reviewScope &&
+    !resolvedRecoveryScopes.includes(reviewScope) &&
+    (!reviewEditor ||
+      (reviewEditor.scope === reviewScope &&
+        !controller.hasPreviewDraft(reviewEditor))) &&
+    (inlineOrderReview || reviewEditor)
+      ? recoveryForScope(state.recovery, reviewScope, reviewEditor?.draftId)
       : null;
+  const savedRecoveryValues = storedDraft
+    ? readScope(documentValue, storedDraft.scope)
+    : undefined;
+  const beforeEntryReorder = () => {
+    const current = controller.getSnapshot();
+    if (current.saving || storedDraft || !listSection) return false;
+    const scope = `entries/${listSection.id}`;
+    if (
+      !current.orderDraft &&
+      !resolvedRecoveryScopes.includes(scope) &&
+      recoveryForScope(current.recovery, scope)
+    ) {
+      setInlineOrderReview(scope);
+      return false;
+    }
+    return true;
+  };
+  const recoveryParent = (draft: CareerDraft, doc: CareerDocument): string => {
+    const [kind, id] = draft.scope.split("/");
+    if (kind === "defaults" || kind === "languages") return "settings/data";
+    if (kind === "preset") return "presets";
+    if (kind === "starter") return "starters";
+    if (kind === "starter-create") return "resumes";
+    if (kind.startsWith("resume") || kind === "selection")
+      return doc.resumes.some((resume) => resume.id === id)
+        ? `resume-overview/${id}`
+        : "resumes";
+    if (kind === "language-evidence") {
+      const parent = (draft.values as { languageEntryId?: unknown } | null)
+        ?.languageEntryId;
+      const section = doc.sections.find((section) =>
+        section.entries.some((entry) => entry.id === parent),
+      );
+      return section ? `list/${section.id}` : "overview";
+    }
+    const section =
+      kind === "entry"
+        ? doc.sections.find((section) =>
+            section.entries.some((entry) => entry.id === id),
+          )
+        : doc.sections.find((section) => section.id === id);
+    return section ? `list/${section.id}` : "overview";
+  };
+  const dismissRecovery = async (draft: CareerDraft) => {
+    if (inlineOrderReview) {
+      setInlineOrderReview(null);
+      return;
+    }
+    if (
+      reviewEditor &&
+      (await controller.cancel(reviewTarget)).kind !== "discarded"
+    )
+      return;
+    if (route.current.destination === view.destination)
+      navigate(
+        recoveryParent(
+          draft,
+          controller.getSnapshot().head?.document ?? documentValue,
+        ),
+        undefined,
+        undefined,
+        true,
+      );
+  };
+  const recoveryDialog = storedDraft && (
+    <DraftRecoveryDialog
+      key={reviewScope}
+      draft={storedDraft}
+      document={documentValue}
+      language={contentLanguage}
+      name={recoveryLabel(storedDraft)}
+      subject={
+        (storedDraft.scope.startsWith("entry/") ||
+          storedDraft.scope.startsWith("new-entry/")) &&
+        contextSection
+          ? contextSection.kind === "experience"
+            ? "this experience"
+            : `this ${CAREER_TERMS[contextSection.kind].entry}`
+          : undefined
+      }
+      saved={savedRecoveryValues != null}
+      saving={state.saving}
+      onDismiss={() => void dismissRecovery(storedDraft)}
+      onContinue={async (draft) => {
+        const recovery = await controller.reloadRecovery();
+        if (route.current.destination !== view.destination) return;
+        const current =
+          recovery &&
+          recoveryForScope(
+            recovery,
+            reviewScope ?? draft.scope,
+            reviewEditor?.draftId,
+          );
+        if (recovery && (!current || !matchesDraftVersion(draft, current)))
+          return;
+        if (controller.restore(draft, true)) setInlineOrderReview(null);
+      }}
+      onDiscard={async (draft) => {
+        await controller.refresh("local");
+        if (route.current.destination !== view.destination)
+          return "unconfirmed";
+        const result = await controller.discardRecovery(draft);
+        if (
+          result !== "discarded" ||
+          route.current.destination !== view.destination
+        )
+          return result;
+        const head = controller.getSnapshot().head;
+        if (head && readScope(head.document, draft.scope) != null) {
+          setResolvedRecoveryScopes((scopes) => [
+            ...scopes,
+            reviewScope ?? draft.scope,
+          ]);
+          setInlineOrderReview(null);
+          if (reviewEditor)
+            controller.open(reviewEditor.scope, reviewTarget, true);
+        } else await dismissRecovery(draft);
+        return result;
+      }}
+    />
+  );
   const uncertainSave =
     state.saveStatus.kind === "failed" &&
     state.saveStatus.reason === "uncertain";
-  const recoveryWriteFailed =
-    state.recoveryStatus.startsWith("Recovery failed");
-  const draftNotice =
-    !state.draft || formConflict ? null : restoredDraft ||
-      uncertainSave ||
-      recoveryWriteFailed ? (
-      <RestoredDraftBanner
-        updatedAt={restoredDraft?.updatedAt}
-        current={readScope(documentValue, state.draft.scope)}
-        draft={state.draft.values}
-        disabled={state.saving}
-        onReconcile={uncertainSave ? () => controller.reconcile() : undefined}
-        onExport={recoveryWriteFailed ? exportRecovery : undefined}
-      />
-    ) : storedDraft ? (
-      <StoredDraftNotice
-        updatedAt={storedDraft.updatedAt}
-        name={recoveryLabel(storedDraft)}
-        disabled={state.saving}
-        onRestore={() => restoreRecovery(storedDraft)}
-        onDiscard={() => void controller.discardRecovery(storedDraft)}
-        onExport={exportRecovery}
-      />
+  const recoveryIssue = (target: CareerDraftTarget) => {
+    const order = target === "order";
+    const draft = order ? state.orderDraft : state.draft;
+    const failed = (
+      order ? state.orderRecoveryStatus : state.recoveryStatus
+    ).startsWith("Recovery failed");
+    const reconcile =
+      uncertainSave &&
+      draft?.operationId &&
+      !(order ? orderConflict : formConflict);
+    return draft && (failed || reconcile) ? (
+      <Alert>
+        <AlertTitle>
+          {reconcile
+            ? "Save outcome unknown"
+            : "Edits could not be stored on this device"}
+        </AlertTitle>
+        <AlertDescription className="flex flex-col items-start gap-2">
+          {reconcile && (
+            <>
+              <p>
+                Update the draft to the current saved content, review it, then
+                Save.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={state.saving}
+                onClick={() => controller.reconcile(target)}
+              >
+                Update to current
+              </Button>
+            </>
+          )}
+          {failed && (
+            <>
+              <p>
+                Keep this tab open or export your edits to recover them later.
+              </p>
+              <Button variant="outline" size="sm" onClick={exportRecovery}>
+                Export recovery
+              </Button>
+            </>
+          )}
+        </AlertDescription>
+      </Alert>
     ) : null;
+  };
+  const formReviewOpen = Boolean(storedDraft && reviewTarget === "form");
   const listedRecovery = state.recovery.filter(
     (draft) =>
       draft.draftId !== state.draft?.draftId &&
@@ -2319,73 +2515,89 @@ export function CareerWorkspace({
         )}
       </SettingsSection>
       <Separator />
-      <SettingsSection
-        title="Unsaved drafts"
-        description="Recover edits after a reload, crash, or closed tab. Import drafts from another browser to continue editing them here."
-      >
-        <RecoveryList
-          drafts={listedRecovery}
-          disabled={state.saving}
-          label={recoveryLabel}
-          saved={(draft) => readScope(documentValue, draft.scope)}
-          outdated={(draft) =>
-            Boolean(state.head && draftConflict(state.head, draft))
-          }
-          onRestore={restoreRecovery}
-          onDiscard={(draft) => void controller.discardRecovery(draft)}
-          onExport={exportRecovery}
-        />
-        {!canExportDrafts && (
-          <p className="text-sm text-muted-foreground">
-            No unsaved drafts on this device
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <RestoreFileButton
-            id="recovery-import"
-            label="Import unsaved drafts"
-            icon={FilePenLine}
-            onSelect={(file) => void importFile(file, "drafts")}
-          />
-          {canExportDrafts && (
-            <Button size="sm" variant="outline" onClick={exportRecovery}>
-              <Download data-icon="inline-start" aria-hidden="true" />
-              Export unsaved drafts
-            </Button>
-          )}
-          {panel === "data" && (state.draft || state.orderDraft) && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                navigate(
-                  settingsDraft
-                    ? `settings/${state.draft?.scope}`
-                    : view.background,
-                )
-              }
-            >
-              Back to editing
-            </Button>
-          )}
-        </div>
-        {dataSectionFeedback("drafts")}
-        {recoveryImportFilename && (
-          <p role="status" className="text-sm wrap-anywhere">
-            Imported recovery file <bdi>{recoveryImportFilename}</bdi>.
-          </p>
-        )}
-        {rawExport && canExportDrafts && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="self-start"
-            onClick={() => downloadRecovery(true)}
+      <Collapsible>
+        <h3>
+          <CollapsibleTrigger
+            render={<Button size="sm" variant="ghost" />}
+            className={disclosureTriggerClassName}
           >
-            Export raw recovery chunks
-          </Button>
-        )}
-      </SettingsSection>
+            <DisclosureChevron />
+            <DisclosureLabel>Draft recovery</DisclosureLabel>
+          </CollapsibleTrigger>
+        </h3>
+        <CollapsibleContent>
+          <DisclosureGuide>
+            <SettingsSection
+              title="Unsaved drafts"
+              description="Recover edits after a reload, crash, or closed tab. Import drafts from another browser to continue editing them here."
+            >
+              <RecoveryList
+                drafts={listedRecovery}
+                disabled={state.saving}
+                label={recoveryLabel}
+                document={documentValue}
+                language={contentLanguage}
+                outdated={(draft) =>
+                  Boolean(state.head && draftConflict(state.head, draft))
+                }
+                onRestore={restoreRecovery}
+                onDiscard={(draft) => controller.discardRecovery(draft)}
+                onExport={exportRecovery}
+              />
+              {!canExportDrafts && (
+                <p className="text-sm text-muted-foreground">
+                  No unsaved drafts on this device
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <RestoreFileButton
+                  id="recovery-import"
+                  label="Import unsaved drafts"
+                  icon={FilePenLine}
+                  onSelect={(file) => void importFile(file, "drafts")}
+                />
+                {canExportDrafts && (
+                  <Button size="sm" variant="outline" onClick={exportRecovery}>
+                    <Download data-icon="inline-start" aria-hidden="true" />
+                    Export unsaved drafts
+                  </Button>
+                )}
+                {panel === "data" && (state.draft || state.orderDraft) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      navigate(
+                        settingsDraft
+                          ? `settings/${state.draft?.scope}`
+                          : view.background,
+                      )
+                    }
+                  >
+                    Back to editing
+                  </Button>
+                )}
+              </div>
+              {dataSectionFeedback("drafts")}
+              {recoveryImportFilename && (
+                <p role="status" className="text-sm wrap-anywhere">
+                  Imported recovery file <bdi>{recoveryImportFilename}</bdi>.
+                </p>
+              )}
+              {rawExport && canExportDrafts && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="self-start"
+                  onClick={() => downloadRecovery(true)}
+                >
+                  Export raw recovery chunks
+                </Button>
+              )}
+            </SettingsSection>
+          </DisclosureGuide>
+        </CollapsibleContent>
+      </Collapsible>
       <Separator />
       <SettingsSection
         title="Sample workspace"
@@ -2428,7 +2640,9 @@ export function CareerWorkspace({
         }
         deletion={state.workspaceDeletion}
         exportWorkspace={(head) => exportWorkspace(head)}
-        refreshRecovery={() => controller.reloadRecovery()}
+        refreshRecovery={async () => {
+          await controller.reloadRecovery();
+        }}
         onDelete={(reviewed) => controller.deleteWorkspaceData(reviewed)}
         onResolve={(id) => controller.resolveWorkspaceDeletion(id)}
         onRetry={(id) => controller.retryWorkspaceDeletion(id)}
@@ -2452,8 +2666,11 @@ export function CareerWorkspace({
   const settingsForm =
     state.draft && settingsDraft ? (
       <div className="flex flex-col gap-4">
-        {draftNotice}
-        <fieldset disabled={state.saving} className="flex flex-col gap-4">
+        {recoveryIssue("form")}
+        <fieldset
+          disabled={state.saving || formReviewOpen}
+          className="flex flex-col gap-4"
+        >
           {state.draft.scope === "defaults" ? (
             <LayoutFields
               values={state.draft.values}
@@ -2475,7 +2692,7 @@ export function CareerWorkspace({
             {state.error}
           </p>
         )}
-        {formConflict ? (
+        {formConflict && !formReviewOpen ? (
           <ConflictPanel
             conflict={formConflict}
             disabled={state.saving}
@@ -2495,7 +2712,11 @@ export function CareerWorkspace({
           </span>
           <Button
             variant="outline"
-            disabled={(!controller.isDirty() && !restoredDraft) || state.saving}
+            disabled={
+              (!controller.isDirty() && !restoredDraft) ||
+              state.saving ||
+              formReviewOpen
+            }
             onClick={() => {
               const savedScope = state.draft!.scope;
               void controller.cancel().then((outcome) => {
@@ -2506,7 +2727,7 @@ export function CareerWorkspace({
             Cancel
           </Button>
           <Button
-            disabled={!controller.isDirty() || state.saving}
+            disabled={!controller.isDirty() || state.saving || formReviewOpen}
             onClick={() => {
               const savedScope = state.draft!.scope;
               void controller.save().then((saved) => {
@@ -2585,7 +2806,9 @@ export function CareerWorkspace({
             resumes={documentValue?.resumes ?? []}
           />
         ) : null}
+        {panel ? recoveryDialog : null}
       </SettingsDialog>
+      {!panel ? recoveryDialog : null}
       <SignOutConfirmation
         actions={accountActions}
         unconfirmed={unconfirmedAccountWork}
@@ -3046,6 +3269,7 @@ export function CareerWorkspace({
                 </AlertDescription>
               </Alert>
             )}
+            {listSection && recoveryIssue("order")}
             {listSection &&
               orderConflict &&
               orderConflict.scope === `entries/${listSection.id}` && (
@@ -3099,7 +3323,10 @@ export function CareerWorkspace({
                 }
                 revision={entryListRevision}
                 dirty={Boolean(orderDraft) && controller.isDirty("order")}
-                saving={state.saving}
+                saving={
+                  state.saving ||
+                  Boolean(storedDraft && reviewTarget === "order")
+                }
                 showFooter={true}
                 recoveryStatus={state.orderRecoveryStatus}
                 onBeforeReorder={beforeEntryReorder}
@@ -3211,7 +3438,8 @@ export function CareerWorkspace({
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <fieldset disabled={state.saving}>
+                    {recoveryIssue("form")}
+                    <fieldset disabled={state.saving || formReviewOpen}>
                       <ResumeIdentityFields
                         values={
                           state.draft.values as {
@@ -3290,9 +3518,9 @@ export function CareerWorkspace({
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-5">
-                      {draftNotice}
+                      {recoveryIssue("form")}
                       <fieldset
-                        disabled={state.saving}
+                        disabled={state.saving || formReviewOpen}
                         className="flex flex-col gap-4"
                       >
                         {scope.startsWith("preset/") ||
@@ -3427,6 +3655,7 @@ export function CareerWorkspace({
                         </div>
                       </fieldset>
                       {formConflict &&
+                        !formReviewOpen &&
                         !(
                           formConflict.saved === undefined &&
                           !formConflict.replaced

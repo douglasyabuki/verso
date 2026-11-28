@@ -85,6 +85,7 @@ it("keeps both imports available on fresh Data and offers a retry if the previou
   await expect
     .element(settings.getByRole("button", { name: "Import workspace backup" }))
     .toBeVisible();
+  await settings.getByRole("button", { name: "Draft recovery" }).click();
   await expect
     .element(settings.getByRole("button", { name: "Import unsaved drafts" }))
     .toBeVisible();
@@ -242,6 +243,7 @@ it("exports stored drafts and the latest active form and order exactly once", as
     return "blob:test-recovery";
   });
   vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  await settings.getByRole("button", { name: "Draft recovery" }).click();
   await settings.getByRole("button", { name: "Export unsaved drafts" }).click();
   const exported = await Promise.all(
     blobs.map(async (blob) => JSON.parse(await blob.text())),

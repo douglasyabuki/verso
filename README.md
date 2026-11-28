@@ -41,10 +41,13 @@ resumes, customize each resume, and generate PDFs in the browser.
 - Extensible content languages, one language per resume, and verified PDF output
   capabilities for English and Brazilian Portuguese. The interface is English.
 - Explicit Save/Cancel, workspace Undo/Redo, separate unsaved-draft recovery,
-  and JSON backups. In Settings › Data › Workspace, **Import workspace backup**
-  shows the selected filename for review before you confirm replacement.
+  and JSON backups. Reopening an editor with stored edits offers **Show changes**,
+  **Continue editing**, **Discard changes**, and **Decide later**. Draft files and
+  the list of stored edits are under Settings › Data › **Draft recovery**.
   **Import unsaved drafts** shows the filename in the result and puts the drafts
-  in recovery. You can also restore the one previous workspace, or use **Delete
+  in recovery. In Settings › Data › Workspace, **Import workspace backup**
+  shows the selected filename for review before you confirm replacement.
+  You can also restore the one previous workspace, or use **Delete
   workspace data** to start fresh after typing `DELETE`. Deletion also removes
   unsaved drafts, recovery, history, and the previous workspace. Guests clear only
   the workspace in this browser. Signed-in users stay signed in, and their public

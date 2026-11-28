@@ -72,7 +72,7 @@ type TabMessage =
       revision: number;
       generation: number;
     }
-  | { type: "replaced" | "reset" };
+  | { type: "replaced" | "reset" | "recovery" };
 
 /** Account deletion work this tab still has to resolve or finish. */
 export type WorkspaceDeletionStatus =
@@ -120,6 +120,8 @@ export type DiscardResult =
   | { kind: "discarded"; draftId: string; draftVersion: number }
   | { kind: "refused" }
   | { kind: "unconfirmed"; message: string };
+
+export type RecoveryDiscardResult = "discarded" | "changed" | "unconfirmed";
 
 export type CareerState = {
   preferences: DevicePreferences;
@@ -199,6 +201,8 @@ export class CareerController {
   private redo: Step[] = [];
   private committedIds = new Set<string>();
   private pristineDraftIds = new Set<string>();
+  private pendingRecovery: Partial<Record<CareerDraftTarget, CareerDraft>> = {};
+  private recoveryRead = 0;
   private disposed = false;
   private closing: Promise<void> | null = null;
   private lifecycle = 0;
@@ -582,6 +586,10 @@ export class CareerController {
    */
   private receive(data: unknown): void {
     const message = data as Partial<TabMessage> | null;
+    if (message?.type === "recovery") {
+      void this.reloadRecovery();
+      return;
+    }
     if (
       message &&
       (message.type === "saved" || message.type === "checked") &&
@@ -607,9 +615,11 @@ export class CareerController {
   private announce(type: TabMessage["type"], at = Date.now()): void {
     const head = this.state.head;
     const message: TabMessage =
-      type === "replaced" || type === "reset" || !head
-        ? { type: type === "reset" ? "reset" : "replaced" }
-        : { type, at, revision: head.revision, generation: head.generation };
+      type === "recovery"
+        ? { type }
+        : type === "replaced" || type === "reset" || !head
+          ? { type: type === "reset" ? "reset" : "replaced" }
+          : { type, at, revision: head.revision, generation: head.generation };
     try {
       this.channel?.postMessage(message);
     } catch {}
@@ -627,6 +637,7 @@ export class CareerController {
       if (reason === "focus" || reason === "visible") await this.refresh();
       return;
     }
+    if (reason === "focus" || reason === "visible") await this.reloadRecovery();
     await this.accountSync.request(reason);
     if (reason === "online") await this.reconcilePending();
   }
@@ -691,6 +702,8 @@ export class CareerController {
     try {
       const head = await this.readHead(source);
       if (this.disposed) return false;
+      await this.reloadRecovery();
+      if (this.disposed) return false;
       if (!head) {
         if (this.state.saveStatus.kind === "offline-cached" && this.state.head)
           this.publish({
@@ -727,7 +740,6 @@ export class CareerController {
       }
       this.publish({
         head,
-        recovery: await this.readRecovery(),
         ...(advanced
           ? {
               saveStatus: { kind: "remote-update", revision: head.revision },
@@ -834,12 +846,25 @@ export class CareerController {
   /** Start a clean editing scope; callers must resolve an existing dirty scope first.
    * @param scope Existing scope path.
    * @param target Independent form or section entry-order lane (default form).
+   * @param refreshPristine Reread the saved values after a stored draft was discarded.
    * @returns {void} Opens an uncommitted draft without history or committed writes.
    * @example controller.open("profile")
    */
-  open(scope: string, target: CareerDraftTarget = "form"): void {
+  open(
+    scope: string,
+    target: CareerDraftTarget = "form",
+    refreshPristine = false,
+  ): void {
     const head = this.state.head;
-    if (!head || this.draftFor(target)) return;
+    const current = this.draftFor(target);
+    if (
+      !head ||
+      (current &&
+        (!refreshPristine ||
+          current.scope !== scope ||
+          !this.pristineDraftIds.has(current.draftId)))
+    )
+      return;
     if (target === "order" && !scope.startsWith("entries/")) {
       this.publishFor(target, {
         error: "Entry-order drafts require an entries scope.",
@@ -853,6 +878,7 @@ export class CareerController {
       });
       return;
     }
+    if (current) this.pristineDraftIds.delete(current.draftId);
     const draftId = crypto.randomUUID();
     this.pristineDraftIds.add(draftId);
     this.publishFor(target, {
@@ -889,14 +915,16 @@ export class CareerController {
     )
       values = { ...values, defaults: layoutDefaults(draft.baseline) };
     this.pristineDraftIds.delete(draft.draftId);
+    const changed = {
+      ...draft,
+      draftVersion: draft.draftVersion + 1,
+      values: structuredClone(values),
+      operationId: undefined,
+      fingerprint: undefined,
+    };
+    this.pendingRecovery[target] = changed;
     this.publishFor(target, {
-      draft: {
-        ...draft,
-        draftVersion: draft.draftVersion + 1,
-        values: structuredClone(values),
-        operationId: undefined,
-        fingerprint: undefined,
-      },
+      draft: changed,
       recoveryStatus: "Recovery pending · workspace not saved",
       error: "",
     });
@@ -934,13 +962,18 @@ export class CareerController {
     if (this.deletionInFlight) return;
     const captured = (["form", "order"] as const).flatMap((target) => {
       const draft = this.draftFor(target);
-      return draft && this.isDirty(target) ? [{ target, draft }] : [];
+      const pending = this.pendingRecovery[target];
+      return draft &&
+        pending?.draftId === draft.draftId &&
+        pending.draftVersion === draft.draftVersion
+        ? [{ target, draft, pending }]
+        : [];
     });
     // The writer's observed workspace fences writes from before a deletion.
     const workspaceId = this.state.head?.workspaceId;
     const epoch = this.workspaceEpoch;
     const write = async () => {
-      for (const { target, draft } of captured) {
+      for (const { target, draft, pending } of captured) {
         // A queued flush must not resurrect a draft resolved before its turn.
         if (
           epoch !== this.workspaceEpoch ||
@@ -956,6 +989,9 @@ export class CareerController {
             { ...draft, updatedAt: new Date().toISOString() },
             workspaceId,
           );
+          if (this.pendingRecovery[target] === pending)
+            delete this.pendingRecovery[target];
+          this.announce("recovery");
           const current = this.draftFor(target);
           if (
             current?.draftVersion === draft.draftVersion &&
@@ -996,6 +1032,8 @@ export class CareerController {
       const current = this.draftFor(target);
       if (current?.draftId !== draftId || current.draftVersion !== draftVersion)
         return false;
+      delete this.pendingRecovery[target];
+      this.recoveryRead++;
       this.publishFor(target, {
         draft: null,
         error: "",
@@ -1026,7 +1064,10 @@ export class CareerController {
                 draft.operationId,
               )
             : null;
-          if (cleanup) this.watchRecoveryCleanup(cleanup.finished);
+          if (cleanup) {
+            this.watchRecoveryCleanup(cleanup.finished);
+            this.announce("recovery");
+          }
           if (close()) return resolved;
           this.publishFor(target, {
             error:
@@ -1422,29 +1463,40 @@ export class CareerController {
 
   /** Restore an explicit recovery record as an uncommitted draft, retaining both versions on conflict.
    * @param draft Selected durable/imported draft.
-   * @returns {void} Opens recovery without a history step or committed mutation.
+   * @param replacePristine Allow a recovery dialog to replace the untouched editor for this scope.
+   * @returns True when recovery opens without a history step or committed mutation.
    * @example controller.restore(draft)
    */
-  restore(draft: CareerDraft): void {
+  restore(draft: CareerDraft, replacePristine = false): boolean {
     const target = draft.scope.startsWith("entries/") ? "order" : "form";
-    if (this.draftFor(target)) return;
+    const current = this.draftFor(target);
+    if (this.state.saving) return false;
+    if (
+      current &&
+      (!replacePristine ||
+        (current.scope !== draft.scope &&
+          !(
+            current.scope.startsWith("resume-content/") &&
+            draft.scope ===
+              current.scope.replace(/^resume-content\//, "selection/")
+          )) ||
+        !this.pristineDraftIds.delete(current.draftId))
+    )
+      return false;
     this.publishFor(target, {
       draft: structuredClone(draft),
-      // Forms explain a restored draft with their own notice; entry order has none.
-      error:
-        target === "order"
-          ? "Recovered entry order. Review the pending order before Save."
-          : "",
+      error: "",
       recoveryStatus: "Recovered uncommitted draft",
     });
+    return true;
   }
 
   /** Explicitly discard one listed recovery record without opening it.
    * @param draft Unresolved recovery entry chosen from the recovery list.
-   * @returns True after intent confirmation. A refusal or an unconfirmed intent retains the record.
+   * @returns Durable confirmation, a changed version to review again, or an unconfirmed intent.
    * @example await controller.discardRecovery(state.recovery[0])
    */
-  async discardRecovery(draft: CareerDraft): Promise<boolean> {
+  async discardRecovery(draft: CareerDraft): Promise<RecoveryDiscardResult> {
     const storage = this.storage;
     if (
       !storage ||
@@ -1452,32 +1504,42 @@ export class CareerController {
       this.state.draft?.draftId === draft.draftId ||
       this.state.orderDraft?.draftId === draft.draftId
     )
-      return false;
-    const confirmation = this.writeChain.then(async () => {
-      try {
-        const cleanup = await storage.confirmDraftDiscard(
-          draft.draftId,
-          draft.draftVersion,
-          draft.operationId,
-        );
-        this.watchRecoveryCleanup(cleanup.finished);
-      } catch (error) {
+      return "unconfirmed";
+    this.publish({ saving: true });
+    const confirmation = this.writeChain.then(
+      async (): Promise<RecoveryDiscardResult> => {
+        try {
+          const cleanup = await storage.confirmDraftDiscard(
+            draft.draftId,
+            draft.draftVersion,
+            draft.operationId,
+            draft,
+          );
+          this.watchRecoveryCleanup(cleanup.finished);
+        } catch (error) {
+          if (saveFailureReason(error) === "conflict")
+            return (await this.reloadRecovery()) ? "changed" : "unconfirmed";
+          return "unconfirmed";
+        }
+        this.recoveryRead++;
         this.publish({
-          error: `Discard unconfirmed; recovery retained. ${String(error)}`,
+          recovery: this.state.recovery.filter(
+            (item) =>
+              item.draftId !== draft.draftId ||
+              item.draftVersion > draft.draftVersion,
+          ),
         });
-        return false;
-      }
-      this.publish({
-        recovery: this.state.recovery.filter(
-          (item) =>
-            item.draftId !== draft.draftId ||
-            item.draftVersion > draft.draftVersion,
-        ),
-      });
-      return true;
-    });
+        this.announce("recovery");
+        return "discarded";
+      },
+    );
     this.writeChain = confirmation.then(() => {});
-    return confirmation;
+    try {
+      return await confirmation;
+    } finally {
+      this.publish({ saving: false });
+      if (this.refreshPending) void this.refresh();
+    }
   }
 
   /** Explicitly accept current committed baseline while keeping recovered values for further editing.
@@ -1506,17 +1568,19 @@ export class CareerController {
       });
       return false;
     }
+    const changed = {
+      ...draft,
+      workspaceId: head.workspaceId,
+      baseline: structuredClone(baseline),
+      baselineRevision: head.revision,
+      generation: head.generation,
+      operationId: undefined,
+      fingerprint: undefined,
+      draftVersion: draft.draftVersion + 1,
+    };
+    this.pendingRecovery[target] = changed;
     this.publishFor(target, {
-      draft: {
-        ...draft,
-        workspaceId: head.workspaceId,
-        baseline: structuredClone(baseline),
-        baselineRevision: head.revision,
-        generation: head.generation,
-        operationId: undefined,
-        fingerprint: undefined,
-        draftVersion: draft.draftVersion + 1,
-      },
+      draft: changed,
       error: "Reconciled draft · review and Save to commit.",
     });
     void this.flushRecovery();
@@ -1542,19 +1606,21 @@ export class CareerController {
     const scope = `new-entry/${sectionId}/${entry.id}`;
     const baseline = readScope(head.document, scope);
     if (baseline !== null) return;
+    const changed = {
+      ...draft,
+      scope,
+      workspaceId: head.workspaceId,
+      baseline,
+      values: entry,
+      baselineRevision: head.revision,
+      generation: head.generation,
+      operationId: undefined,
+      fingerprint: undefined,
+      draftVersion: draft.draftVersion + 1,
+    };
+    this.pendingRecovery.form = changed;
     this.publish({
-      draft: {
-        ...draft,
-        scope,
-        workspaceId: head.workspaceId,
-        baseline,
-        values: entry,
-        baselineRevision: head.revision,
-        generation: head.generation,
-        operationId: undefined,
-        fingerprint: undefined,
-        draftVersion: draft.draftVersion + 1,
-      },
+      draft: changed,
       error: "Restored as new · review and Save to commit.",
     });
     void this.flushRecovery();
@@ -1610,25 +1676,27 @@ export class CareerController {
       applyScope(head.document, `resume/${created.id}`, resume);
       await this.flushRecovery();
       if (this.state.draft !== draft) return false;
+      const changed: CareerDraft = {
+        ...draft,
+        draftId: crypto.randomUUID(),
+        draftVersion: 1,
+        workspaceId: head.workspaceId,
+        generation: head.generation,
+        baselineRevision: head.revision,
+        scope: `resume/${created.id}`,
+        baseline: null,
+        values: resume,
+        operationId: undefined,
+        fingerprint: undefined,
+      };
+      this.pendingRecovery.form = changed;
       this.publish({
         recovery: this.state.recovery.some(
           (item) => item.draftId === draft.draftId,
         )
           ? this.state.recovery
           : [...this.state.recovery, structuredClone(draft)],
-        draft: {
-          ...draft,
-          draftId: crypto.randomUUID(),
-          draftVersion: 1,
-          workspaceId: head.workspaceId,
-          generation: head.generation,
-          baselineRevision: head.revision,
-          scope: `resume/${created.id}`,
-          baseline: null,
-          values: resume,
-          operationId: undefined,
-          fingerprint: undefined,
-        },
+        draft: changed,
         error:
           "Restored as a new resume draft. Review and Save; original recovery is retained separately.",
       });
@@ -1729,12 +1797,15 @@ export class CareerController {
   }
 
   /** Re-read stored recovery, including drafts other tabs stored, without restoring any.
-   * @returns Completion; a read failure keeps the current list.
+   * @returns The stored drafts, or null when a read fails and the current list is kept.
    * @example await controller.reloadRecovery()
    */
-  async reloadRecovery(): Promise<void> {
+  async reloadRecovery(): Promise<CareerDraft[] | null> {
+    const read = ++this.recoveryRead;
     const recovery = await this.readRecovery().catch(() => undefined);
-    if (recovery) this.publish({ recovery });
+    if (recovery && read === this.recoveryRead && !this.disposed)
+      this.publish({ recovery });
+    return recovery ?? null;
   }
 
   /** Account only: resolve an unconfirmed deletion attempt from server state and its receipt.
@@ -1886,6 +1957,8 @@ export class CareerController {
     this.pendingHistory = null;
     this.committedIds.clear();
     this.pristineDraftIds.clear();
+    this.pendingRecovery = {};
+    this.recoveryRead++;
     this.refreshPending = false;
     this.publish({
       head,
@@ -1957,7 +2030,8 @@ export class CareerController {
         `Imported ${completed} of ${imported.length} recovery drafts. Keep the source file; no workspace changes were committed. ${String(error)}`,
       );
     } finally {
-      this.publish({ recovery: await this.readRecovery() });
+      await this.reloadRecovery();
+      if (completed) this.announce("recovery");
     }
   }
 

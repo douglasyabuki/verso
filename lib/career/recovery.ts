@@ -1,3 +1,4 @@
+import { sameScope } from "@/lib/career/commit";
 import type { CareerDraft } from "@/types-and-constants/career";
 
 const units: [Intl.RelativeTimeFormatUnit, number][] = [
@@ -54,11 +55,40 @@ export function recoveryForScope(
   scope: string,
   openDraftId?: string,
 ): CareerDraft | null {
+  const selection = scope.startsWith("resume-content/")
+    ? scope.replace(/^resume-content\//, "selection/")
+    : null;
   return (
     newestFirst(
       drafts.filter(
-        (draft) => draft.scope === scope && draft.draftId !== openDraftId,
+        (draft) =>
+          (draft.scope === scope || draft.scope === selection) &&
+          draft.draftId !== openDraftId,
       ),
     )[0] ?? null
+  );
+}
+
+/** Compare the reviewed recovery version, ignoring its last-write time.
+ * @param reviewed The version shown before an action.
+ * @param current The version now offered or stored.
+ * @returns Whether identity, editing values, and the prepared request still match.
+ * @example matchesDraftVersion(draft, { ...draft, updatedAt: timestamp })
+ */
+export function matchesDraftVersion(
+  reviewed: CareerDraft,
+  current: CareerDraft,
+): boolean {
+  return (
+    reviewed.draftId === current.draftId &&
+    reviewed.draftVersion === current.draftVersion &&
+    reviewed.workspaceId === current.workspaceId &&
+    reviewed.scope === current.scope &&
+    reviewed.generation === current.generation &&
+    reviewed.baselineRevision === current.baselineRevision &&
+    reviewed.operationId === current.operationId &&
+    reviewed.fingerprint === current.fingerprint &&
+    sameScope(reviewed.baseline, current.baseline) &&
+    sameScope(reviewed.values, current.values)
   );
 }

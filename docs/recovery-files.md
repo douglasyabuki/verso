@@ -26,21 +26,35 @@ draft version/values, prepared request context, and the time each version was
 written (`updatedAt`). It schedules after 500 ms of inactivity with a 2-second
 maximum wait. Close-time flushing is best effort. Leaving a dirty form offers
 Cancel / Discard / Save; recovery exists for reloads, crashes, and closed tabs.
-Restoration opens an uncommitted draft, not a Save/history step, and is never
-automatic: opening a form with a stored draft for the same scope only offers
-Restore or Discard. Offer compare (Show changes or Preview), reconcile (Update to
-current, only when a Save outcome is unknown), discard (from the form or directly
-from Settings › Data, after confirmation), and export (Settings › Data, or inline
-when recovery could not be stored). Missing source records require explicit
-restore-as-new with valid references, or reconciliation/export, never attachment
-to an unrelated record. Retain original recovery separately until resolution.
+Opening an editor with stored edits brings up a recovery dialog before editing.
+**Continue editing** restores the reviewed version as unsaved work. **Decide
+later**, Escape, and close return to the parent view and leave recovery available
+on the next visit. **Discard changes** returns to the saved editor after
+confirmation, or to the relevant list when the item was never saved. Section
+entry order has its own recovery step when entering order editing or trying to
+move an entry. An entry form and entry order may each have pending edits.
+
+**Show changes** in the dialog and **Preview** in Settings compare the stored
+values with the draft's recorded starting values. They omit unchanged fields,
+edits reverted to their starting values, and newer saved changes from elsewhere.
+Lists match items by identity and summarize meaningful moves. The latest
+reverted values supersede any older stored edit. An empty comparison shows
+**No changes to restore**.
+
+Open **Draft recovery** in Settings › Data to manage stored drafts and import or
+export draft files. Export is also available from an editor when Verso could
+not store its edits. An unknown Save outcome still uses the existing **Update to
+current** or conflict reconciliation flow. Missing source records require an
+explicit restore-as-new with valid references, reconciliation, or export.
+Original recovery remains available until resolution.
 
 Unresolved drafts never expire automatically. Export keeps recovery available.
 When recovery storage is involved, Cancel confirms once IndexedDB records an
-intent for the exact draft ID and version. The controller closes the matching
-draft and the preview returns to saved output. A refused or unconfirmed discard
-keeps the form open. Confirmed intents exclude resolved versions from discovery
-while physical removal is pending. **Recovery cleanup pending** offers a retry,
+intent for the exact draft ID and version. A discard from the recovery dialog
+checks the reviewed version in the same transaction as that intent. A newer
+stored version goes back to review. If storage fails to confirm, the dialog stays
+open and offers retry. Confirmed intents exclude resolved versions from
+discovery while physical removal is pending. **Recovery cleanup pending** offers a retry,
 and the next load also attempts cleanup. Removal after confirmed Save or Discard
 is limited to the resolved version and older versions of the same draft ID.
 Protect pending, uncertain,
@@ -164,7 +178,7 @@ discards a draft. Keep the downloaded files until restoration and an explicit
 Save have succeeded.
 
 Normal `verso.recovery` format-1 files are independently importable through
-Settings › Data. Files are limited to 32 MiB, with each draft limited to 8 MiB
+Settings › Data › **Draft recovery**. Files are limited to 32 MiB, with each draft limited to 8 MiB
 including its baseline and metadata. Larger collections are split into normal
 files. Versioned manifest pages list filenames and draft IDs/versions; a filename
 can appear on multiple manifest pages with disjoint draft lists. Manifests are

@@ -62,6 +62,7 @@ export interface CareerBackend {
     id: string,
     version: number,
     operationId?: string,
+    reviewed?: CareerDraft,
   ): Promise<{ finished: Promise<boolean> }>;
   retryDraftCleanup(): Promise<void>;
   prepare(

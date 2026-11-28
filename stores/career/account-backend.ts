@@ -603,8 +603,10 @@ export class AccountCareerBackend implements CareerBackend {
     return this.local.discardDraft(id, version, operationId);
   }
 
-  confirmDraftDiscard(id: string, version: number, operationId?: string) {
-    return this.local.confirmDraftDiscard(id, version, operationId);
+  confirmDraftDiscard(
+    ...args: Parameters<CareerBackend["confirmDraftDiscard"]>
+  ) {
+    return this.local.confirmDraftDiscard(...args);
   }
 
   retryDraftCleanup(): Promise<void> {

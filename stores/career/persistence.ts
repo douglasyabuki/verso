@@ -11,6 +11,7 @@ import {
   draftSchema,
   validateDocument,
 } from "@/lib/career/model";
+import { matchesDraftVersion } from "@/lib/career/recovery";
 import type {
   CareerBackend,
   WorkspaceIdentity,
@@ -612,11 +613,22 @@ export class CareerStorage implements CareerBackend {
    * @param id Resolved draft identity.
    * @param version Highest resolved version.
    * @param operationId Explicitly resolved interrupted request.
+   * @param reviewed When supplied, refuse if the stored record has advanced since review.
    * @returns A cleanup result only after the intent commits; rejects before confirmation.
    * @example await storage.confirmDraftDiscard(draft.draftId, draft.draftVersion)
    */
-  async confirmDraftDiscard(id: string, version: number, operationId?: string) {
-    const cleanup = await this.recordDiscard(id, version, operationId);
+  async confirmDraftDiscard(
+    id: string,
+    version: number,
+    operationId?: string,
+    reviewed?: CareerDraft,
+  ) {
+    const cleanup = await this.recordDiscard(
+      id,
+      version,
+      operationId,
+      reviewed,
+    );
     return {
       finished: cleanup.finished.then(
         () => true,
@@ -629,6 +641,7 @@ export class CareerStorage implements CareerBackend {
    * @param id Resolved draft identity.
    * @param version Highest resolved version.
    * @param operationId Explicitly resolved interrupted request.
+   * @param reviewed Stored draft version displayed to the user, if this was a recovery review.
    * @returns The separate removal promise after durable confirmation.
    * @example await this.recordDiscard(id, version)
    */
@@ -636,12 +649,32 @@ export class CareerStorage implements CareerBackend {
     id: string,
     version: number,
     operationId?: string,
+    reviewed?: CareerDraft,
   ) {
     const key = `${RESOLVED_PREFIX}${id}/${version}`;
     const intent = { id, version, operationId };
-    await this.transaction(["preferences"], "readwrite", async (tx) => {
-      tx.objectStore("preferences").put(intent, key);
-    });
+    await this.transaction(
+      reviewed ? ["drafts", "preferences"] : ["preferences"],
+      "readwrite",
+      async (tx) => {
+        if (reviewed) {
+          const current = await requestResult<CareerDraft | undefined>(
+            tx.objectStore("drafts").get(id),
+          );
+          if (
+            current &&
+            (current.draftVersion > version ||
+              (current.draftVersion === version &&
+                !matchesDraftVersion(reviewed, current)))
+          )
+            throw new CareerStorageError(
+              "conflict",
+              "A newer draft is available.",
+            );
+        }
+        tx.objectStore("preferences").put(intent, key);
+      },
+    );
     return { finished: this.cleanupDraft(key, intent) };
   }
 

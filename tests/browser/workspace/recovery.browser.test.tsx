@@ -500,6 +500,7 @@ describe("career editing boundaries", () => {
         .getByRole("dialog", { name: "Settings", exact: true })
         .getByRole("button", { name: "Data", exact: true })
         .click();
+      await screen.getByRole("button", { name: "Draft recovery" }).click();
       await expect
         .element(screen.getByRole("region", { name: "Unsaved drafts" }))
         .toBeVisible();
@@ -619,15 +620,15 @@ describe("career editing boundaries", () => {
     });
     await settings.getByRole("button", { name: "Data", exact: true }).click();
     const drafts = screen.getByRole("region", { name: "Unsaved drafts" });
+    await expect.element(drafts).not.toBeVisible();
+    await settings.getByRole("button", { name: "Draft recovery" }).click();
     await expect.element(drafts.getByText("Summary")).toBeVisible();
     await expect
       .element(drafts.getByText("Edited 5 minutes ago"))
       .toBeVisible();
     await drafts.getByRole("button", { name: "Preview Summary" }).click();
     await expect
-      .element(
-        drafts.getByRole("region", { name: "Compare saved content and draft" }),
-      )
+      .element(drafts.getByRole("region", { name: "Draft changes" }))
       .toBeVisible();
     await drafts.getByRole("button", { name: "Discard Summary" }).click();
     const confirm = screen.getByRole("alertdialog", {
@@ -645,7 +646,7 @@ describe("career editing boundaries", () => {
     expect(await owner.load()).toEqual(head);
   });
 
-  it("offers a stored draft when its form opens and restores it only on request", async () => {
+  it("offers recovery before editing, retains it on dismissal, and continues without saving", async () => {
     const owner = await storage();
     const head = await owner.load(createCareerDocument());
     const draft = {
@@ -658,18 +659,291 @@ describe("career editing boundaries", () => {
     trackController(controller);
     await page.viewport(1280, 900);
     const screen = await render(<CareerWorkspace controller={controller} />);
-    const notice = screen.getByRole("status", { name: "Stored draft" });
-    await expect.element(notice).toBeVisible();
+    const review = screen.getByRole("dialog", {
+      name: "Continue editing Summary?",
+    });
+    await expect.element(review).toBeVisible();
     expect(controller.getSnapshot().draft?.draftId).not.toBe(draft.draftId);
-    await notice
-      .getByRole("button", { name: "Restore stored draft", exact: true })
-      .click();
+    await review.getByRole("button", { name: "Show changes" }).click();
+    await expect
+      .element(review.getByRole("cell", { name: "From last session" }))
+      .toBeVisible();
+    await review.getByRole("button", { name: "Decide later" }).click();
+    await expect.element(review).not.toBeVisible();
+    await expect.poll(() => window.location.pathname).toBe("/app");
+    expect(await owner.drafts()).toEqual([draft]);
+    await screen.getByRole("button", { name: "Summary", exact: true }).click();
+    await review.getByRole("button", { name: "Continue editing" }).click();
     await expect
       .poll(() => controller.getSnapshot().draft?.draftId)
       .toBe(draft.draftId);
     await expect
-      .element(screen.getByRole("status", { name: "Restored draft" }))
-      .toBeVisible();
+      .element(screen.getByRole("textbox", { name: "Summary" }))
+      .toHaveTextContent("From last session");
+    expect(controller.getSnapshot().undoCount).toBe(0);
     expect(await owner.load()).toEqual(head);
+  });
+
+  it("keeps the review open after a failed discard, retries, and stays discarded after reopening", async () => {
+    const owner = await storage();
+    const head = await owner.load(createCareerDocument());
+    const draft = summaryDraft(head, "Retained until confirmed");
+    await owner.writeDraft(draft);
+    window.history.replaceState({}, "", "?scope=summary");
+    const controller = new CareerController();
+    trackController(controller);
+    const screen = await render(<CareerWorkspace controller={controller} />);
+    const review = screen.getByRole("dialog", {
+      name: "Continue editing Summary?",
+    });
+    const discard = review.getByRole("button", { name: "Discard changes" });
+    const fault = vi
+      .spyOn(CareerStorage.prototype, "confirmDraftDiscard")
+      .mockRejectedValueOnce(new DOMException("Unavailable", "AbortError"));
+    try {
+      await discard.click();
+      await expect
+        .element(review.getByRole("alert"))
+        .toHaveTextContent(/Your edits are still available/);
+      expect(await owner.drafts()).toEqual([draft]);
+      await discard.click();
+      await expect.element(review).not.toBeVisible();
+      await expect
+        .element(screen.getByRole("textbox", { name: "Summary" }))
+        .toHaveTextContent(/^$/);
+      expect(await owner.drafts()).toEqual([]);
+    } finally {
+      fault.mockRestore();
+      await screen.unmount();
+    }
+    const reloaded = new CareerController();
+    trackController(reloaded);
+    const reopened = await render(<CareerWorkspace controller={reloaded} />);
+    await expect
+      .element(reopened.getByRole("textbox", { name: "Summary" }))
+      .toBeVisible();
+    await expect
+      .element(
+        reopened.getByRole("dialog", { name: "Continue editing Summary?" }),
+      )
+      .not.toBeVisible();
+    expect(await owner.load()).toEqual(head);
+  });
+
+  it("checks the reviewed version in IndexedDB and keeps an independent order draft", async () => {
+    const owner = await storage();
+    const document = createCareerDocument();
+    const section = document.sections[0];
+    const entries = ["Alpha", "Beta"].map((name) => ({
+      ...createEntry("experience"),
+      name,
+    }));
+    section.entries.push(...entries);
+    const head = await owner.load(document);
+    const draft = summaryDraft(head, "Reviewed version");
+    const newer = {
+      ...draft,
+      draftVersion: 2,
+      values: { ...head.document.summary, wording: { "en-US": "Newer edits" } },
+    };
+    const order = {
+      ...draft,
+      draftId: "independent-order",
+      scope: `entries/${section.id}`,
+      baseline: entries.map((entry) => entry.id),
+      values: entries.map((entry) => entry.id).reverse(),
+    };
+    await owner.writeDraft(draft);
+    await owner.writeDraft(order);
+    window.history.replaceState({}, "", "?scope=summary");
+    const controller = new CareerController();
+    trackController(controller);
+    const screen = await render(<CareerWorkspace controller={controller} />);
+    const review = screen.getByRole("dialog", {
+      name: "Continue editing Summary?",
+    });
+    await review.getByRole("button", { name: "Show changes" }).click();
+    await expect
+      .element(review.getByRole("cell", { name: "Reviewed version" }))
+      .toBeVisible();
+    const confirm = CareerStorage.prototype.confirmDraftDiscard;
+    const race = vi
+      .spyOn(CareerStorage.prototype, "confirmDraftDiscard")
+      .mockImplementationOnce(async function (this: CareerStorage, ...args) {
+        await owner.writeDraft(newer);
+        return confirm.apply(this, args);
+      });
+    try {
+      const discard = review.getByRole("button", { name: "Discard changes" });
+      await discard.click();
+      await expect
+        .element(review.getByRole("status"))
+        .toHaveTextContent(/newer version/);
+      await expect
+        .element(review.getByRole("cell", { name: "Newer edits" }))
+        .toBeVisible();
+      expect(await owner.drafts()).toEqual(
+        expect.arrayContaining([newer, order]),
+      );
+      await discard.click();
+      await expect.element(review).not.toBeVisible();
+      expect(await owner.drafts()).toEqual([order]);
+      expect(await owner.load()).toEqual(head);
+    } finally {
+      race.mockRestore();
+    }
+  });
+
+  it("returns to the section list after discarding a never-saved entry", async () => {
+    const owner = await storage();
+    const head = await owner.load(createCareerDocument());
+    const section = head.document.sections[0];
+    const entry = { ...createEntry("experience"), name: "New role" };
+    const scope = `new-entry/${section.id}/${entry.id}`;
+    const draft = {
+      ...summaryDraft(head),
+      scope,
+      baseline: null,
+      values: entry,
+    };
+    await owner.writeDraft(draft);
+    window.history.replaceState({}, "", `?scope=${scope}`);
+    const controller = new CareerController();
+    trackController(controller);
+    const screen = await render(<CareerWorkspace controller={controller} />);
+    const review = screen.getByRole("dialog", {
+      name: "Continue editing New role?",
+    });
+    await review.getByRole("button", { name: "Discard changes" }).click();
+    await expect
+      .poll(() => window.location.pathname)
+      .toBe(`/app/list/${section.id}`);
+    await expect.element(review).not.toBeVisible();
+    expect(await owner.drafts()).toEqual([]);
+    expect(await owner.load()).toEqual(head);
+  });
+
+  it("shows only the draft's Title edit when another connection saved Organization", async () => {
+    const owner = await storage();
+    const other = await storage();
+    const document = createCareerDocument();
+    const role = { ...createEntry("experience"), name: "CSG" };
+    role.fields[0].wording["en-US"] = "Engineer";
+    role.fields[1].wording["en-US"] = "Original company";
+    document.sections[0].entries.push(role);
+    const head = await owner.load(document);
+    const scope = `entry/${role.id}`;
+    const draftValues = structuredClone(role);
+    draftValues.fields[0].wording["en-US"] = "Senior Engineer";
+    await owner.writeDraft({
+      ...summaryDraft(head),
+      scope,
+      baseline: role,
+      values: draftValues,
+    });
+    const savedValues = structuredClone(role);
+    savedValues.fields[1].wording["en-US"] = "Company from the other tab";
+    const save = request(head, scope, role, savedValues);
+    await other.prepare(save);
+    await other.commit(save.id);
+    window.history.replaceState({}, "", `?scope=${scope}`);
+    const controller = new CareerController();
+    trackController(controller);
+    const screen = await render(<CareerWorkspace controller={controller} />);
+    const review = screen.getByRole("dialog", {
+      name: "Continue editing CSG?",
+    });
+    await review.getByRole("button", { name: "Show changes" }).click();
+    await expect
+      .element(review.getByRole("rowheader", { name: "Title" }))
+      .toBeVisible();
+    await expect
+      .element(review.getByRole("cell", { name: "Senior Engineer" }))
+      .toBeVisible();
+    await expect
+      .element(
+        review.getByText(
+          /Organization|Original company|Company from the other tab/,
+        ),
+      )
+      .not.toBeVisible();
+    await review.getByRole("button", { name: "Discard changes" }).click();
+    await expect
+      .element(screen.getByRole("textbox", { name: "Organization" }))
+      .toHaveValue("Company from the other tab");
+  });
+
+  it("offers order recovery from its move control while retaining the open entry draft", async () => {
+    const owner = await storage();
+    const document = createCareerDocument();
+    const section = document.sections[0];
+    const [alpha, beta] = ["Alpha", "Beta"].map((name) => ({
+      ...createEntry("experience"),
+      name,
+    }));
+    section.entries.push(alpha, beta);
+    const head = await owner.load(document);
+    const order = {
+      ...summaryDraft(head),
+      scope: `entries/${section.id}`,
+      baseline: [alpha.id, beta.id],
+      values: [beta.id, alpha.id],
+    };
+    await owner.writeDraft(order);
+    window.history.replaceState({}, "", `?scope=entry/${alpha.id}`);
+    const controller = new CareerController();
+    trackController(controller);
+    const screen = await render(<CareerWorkspace controller={controller} />);
+    const field = screen.getByRole("textbox", {
+      name: "Internal name",
+      exact: true,
+    });
+    await field.fill("Independent entry edit");
+    const entryDraft = controller.getSnapshot().draft;
+    const move = screen.getByRole("button", {
+      name: "Move Beta up",
+      exact: true,
+    });
+    await move.click();
+    const review = screen.getByRole("dialog", {
+      name: `Continue editing ${section.name} entry order?`,
+    });
+    await review.getByRole("button", { name: "Decide later" }).click();
+    await expect.element(review).not.toBeVisible();
+    expect(controller.getSnapshot().draft?.draftId).toBe(entryDraft?.draftId);
+    expect(controller.getSnapshot().orderDraft).toBeNull();
+    await move.click();
+    await review.getByRole("button", { name: "Continue editing" }).click();
+    await expect.element(field).toHaveValue("Independent entry edit");
+    expect(controller.getSnapshot().orderDraft?.values).toEqual([
+      beta.id,
+      alpha.id,
+    ]);
+    expect(await owner.load()).toEqual(head);
+  });
+
+  it("shows no changes when a reverted draft superseded a stored edit", async () => {
+    const writer = await controllerOwner();
+    const owner = await storage();
+    writer.open("summary");
+    const summary = writer.getSnapshot().head!.document.summary;
+    writer.change({ ...summary, wording: { "en-US": "Later reverted" } });
+    await writer.flushRecovery();
+    writer.change(summary);
+    await writer.flushRecovery();
+    expect(await owner.drafts()).toEqual([
+      storedDraft(writer.getSnapshot().draft),
+    ]);
+    window.history.replaceState({}, "", "?scope=summary");
+    const controller = new CareerController();
+    trackController(controller);
+    const screen = await render(<CareerWorkspace controller={controller} />);
+    const review = screen.getByRole("dialog", {
+      name: "Continue editing Summary?",
+    });
+    await review.getByRole("button", { name: "Show changes" }).click();
+    await expect
+      .element(review.getByText("No changes to restore"))
+      .toBeVisible();
   });
 });
