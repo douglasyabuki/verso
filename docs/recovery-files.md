@@ -105,9 +105,13 @@ starting its download or explicitly continuing without it. A failed download
 leaves confirmation gated until either choice succeeds. First replacement and
 restore each require confirmation without an export decision.
 
-Settings › Data offers **Restore previous workspace** when a retained workspace
-exists. After confirmed replacement, **Undo workspace replacement** opens that
-same review for the generation just created.
+After confirmed replacement, **Workspace replaced** offers **Undo replacement**.
+This opens the restore review for the generation just created. Settings › Data ›
+Workspace also offers **Undo replacement** while a retained copy exists, including
+after a reload. If the reviewed copy disappears or is superseded, Verso explains
+that it is unavailable and checks which actions are now available. Successful
+rollback shows **Previous workspace restored** and retains the workspace you just
+left as the new previous copy.
 
 This is **one previous workspace**, not version history. It does not expire
 automatically but remains subject to browser clearing/eviction. Recovery is separate
@@ -126,8 +130,9 @@ drafts, recovery, prepared requests, receipts, and cleanup intents, and adopts a
 fresh `createCareerDocument()` workspace. Open drafts need no separate Save or
 Discard. Deleting unsaved work this way is the only exception to the
 unresolved-draft and protected-receipt retention rules. Device preferences, other
-owners' data, and files already downloaded remain. Explicit backup and recovery
-imports keep working afterwards.
+owners' data, and files already downloaded remain. Use **Import workspace backup**
+in Settings › Data › Workspace to recover saved content from a file. Unsaved
+draft files can still be imported through **Draft recovery**.
 
 The fresh workspace gets a **new workspace ID** with revision and generation one
 higher than the deleted head. Only deletion changes a workspace ID: replacement and

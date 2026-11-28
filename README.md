@@ -47,11 +47,13 @@ resumes, customize each resume, and generate PDFs in the browser.
   **Import unsaved drafts** shows the filename in the result and puts the drafts
   in recovery. In Settings › Data › Workspace, **Import workspace backup**
   shows the selected filename for review before you confirm replacement.
-  You can also restore the one previous workspace, or use **Delete
-  workspace data** to start fresh after typing `DELETE`. Deletion also removes
-  unsaved drafts, recovery, history, and the previous workspace. Guests clear only
-  the workspace in this browser. Signed-in users stay signed in, and their public
-  PDF links, including pinned versions, stop working.
+  After replacement, **Undo replacement** opens a review of the previous saved
+  workspace. The action stays available in Settings › Data › Workspace after a
+  reload while Verso has that copy. **Delete workspace data** starts fresh after
+  you type `DELETE` and removes unsaved drafts, recovery, history, and the previous
+  workspace. Use **Import workspace backup** to recover saved content from a file
+  after deletion. Guests clear only the workspace in this browser. Signed-in users
+  stay signed in, and their public PDF links, including pinned versions, stop working.
 - Browser-based LaTeX compilation and live PDF preview in Layout, Wording, and
   Content & order. Finish an interaction or leave the text fields to preview the
   open draft. Use **Update preview** to refresh immediately. On mobile, select

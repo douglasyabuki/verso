@@ -105,7 +105,7 @@ export function WorkspaceReplacementDialog({
             <DialogDescription>
               {restoring
                 ? "The current saved workspace will become the previous workspace."
-                : "The imported workspace will replace saved content. Your current saved workspace will be kept as the previous workspace."}{" "}
+                : "Confirming will replace your saved workspace. Verso will keep a copy of the workspace you have now."}{" "}
               Unsaved recovery drafts are kept separately.
             </DialogDescription>
           </DialogHeader>
@@ -160,13 +160,9 @@ export function WorkspaceReplacementDialog({
               )}
             </div>
           )}
-          {(error || stale) && (
+          {error && (
             <Alert variant="destructive">
-              <AlertDescription>
-                {stale
-                  ? "Saved content changed since this review. Close it and review the current workspace again."
-                  : error}
-              </AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           <DialogFooter>

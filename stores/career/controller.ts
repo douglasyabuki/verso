@@ -2112,6 +2112,7 @@ export class CareerController {
           "conflict",
           "Workspace changed since review. Review the current workspace again.",
         );
+      const recovery = await this.readRecovery().catch(() => undefined);
       this.session = false;
       this.undo = [];
       this.redo = [];
@@ -2119,12 +2120,14 @@ export class CareerController {
       this.committedIds.clear();
       this.publish({
         head: next,
-        error: "",
+        error: recovery
+          ? ""
+          : "Durable saving resumed. Unsaved drafts could not be refreshed. Reload to check them.",
         historyBoundary: false,
         storageMode: this.storage.kind === "account" ? "account" : "durable",
         sessionCommits: 0,
         saveStatus: { kind: "saved", revision: next.revision },
-        recovery: await this.readRecovery(),
+        ...(recovery ? { recovery } : {}),
       });
       if (choice === "replace-durable") this.announce("replaced");
       return true;

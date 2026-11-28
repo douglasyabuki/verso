@@ -164,16 +164,29 @@ test("Back and Forward guard dirty forms with Cancel/Discard and preserve native
   await expect(field).toHaveText("");
 });
 
-test("reviews replacement, downloads a backup, and restores either workspace", async ({
+test("undoes backup and sample replacements, including after reload", async ({
   page,
 }, testInfo) => {
   const { document } = fixture();
   await page.goto("/app");
   await openDataSettings(page);
-  await expect(
-    page.getByRole("button", { name: "Restore previous workspace" }),
-  ).toHaveCount(0);
-  const importBackup = page.getByRole("button", {
+  const workspace = page.getByRole("region", {
+    name: "Workspace",
+    exact: true,
+  });
+  const undo = workspace.getByRole("button", {
+    name: "Undo replacement",
+    exact: true,
+  });
+  const replaced = workspace
+    .getByRole("status")
+    .filter({ hasText: "Workspace replaced" });
+  const restored = workspace
+    .getByRole("status")
+    .filter({ hasText: "Previous workspace restored" });
+  await expect(undo).toHaveCount(0);
+  const original = await downloadWorkspaceBackup(page);
+  const importBackup = workspace.getByRole("button", {
     name: "Import workspace backup",
   });
   const unsupported = await openFilePicker(page, () => importBackup.click());
@@ -202,9 +215,7 @@ test("reviews replacement, downloads a backup, and restores either workspace", a
   await replacement
     .getByRole("button", { name: "Cancel", exact: true })
     .click();
-  await expect(
-    page.getByRole("button", { name: "Update preview" }),
-  ).toHaveCount(0);
+  await expect(undo).toHaveCount(0);
   const secondPick = await openFilePicker(page, () => importBackup.click());
   await secondPick.setFiles(backupPath);
   await expect(
@@ -218,15 +229,14 @@ test("reviews replacement, downloads a backup, and restores either workspace", a
     .click();
   await expect(replacement).toBeHidden();
   await expect(
-    page.getByRole("status").filter({ hasText: "Workspace replaced" }),
+    replaced.getByRole("button", { name: "Undo replacement" }),
   ).toBeVisible();
+  await expect(undo).toHaveCount(1);
   const backup = await downloadWorkspaceBackup(page);
   expect(backup.document).toEqual(document);
   expect(backup.schemaVersion).toBe(2);
 
-  await page
-    .getByRole("button", { name: "Undo workspace replacement" })
-    .click();
+  await undo.click();
   const restore = page.getByRole("dialog", {
     name: "Review workspace restore",
   });
@@ -237,21 +247,33 @@ test("reviews replacement, downloads a backup, and restores either workspace", a
   await expect(
     restore.getByRole("button", { name: "Continue without downloading" }),
   ).toHaveCount(0);
+  await restore.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(restore).toBeHidden();
+  expect((await downloadWorkspaceBackup(page)).document).toEqual(document);
+
+  await page.reload();
+  await expect(
+    workspace.getByText(
+      "Verso kept a copy of the workspace you had before the replacement.",
+    ),
+  ).toBeVisible();
+  await undo.click();
   await restore
     .getByRole("button", { name: "Restore workspace", exact: true })
     .click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "Workspace restored" }),
-  ).toContainText("workspace you just left");
-  await page.reload();
-  await page
-    .getByRole("button", { name: "Restore previous workspace" })
-    .click();
+  await expect(restored).toBeVisible();
+  expect((await downloadWorkspaceBackup(page)).document).toEqual(
+    original.document,
+  );
+  // Restoration rotates the single copy, making the imported workspace available again.
+  await undo.click();
   await expect(restore.getByText("Application", { exact: true })).toBeVisible();
   await restore
     .getByRole("button", { name: "Restore workspace", exact: true })
     .click();
-  await expect(restore).toBeHidden();
+  await expect(restored).toBeVisible();
+  expect((await downloadWorkspaceBackup(page)).document).toEqual(document);
+
   await page.getByRole("button", { name: "Load sample workspace" }).click();
   await expect(
     replacement.getByText("Alex Morgan · English", { exact: true }),
@@ -260,9 +282,21 @@ test("reviews replacement, downloads a backup, and restores either workspace", a
     replacement.getByRole("button", { name: "Replace workspace", exact: true }),
   ).toBeDisabled();
   await replacement
-    .getByRole("button", { name: "Cancel", exact: true })
+    .getByRole("button", { name: "Continue without downloading" })
     .click();
-  await page.reload();
+  await replacement
+    .getByRole("button", { name: "Replace workspace", exact: true })
+    .click();
+  await expect(
+    replaced.getByRole("button", { name: "Undo replacement" }),
+  ).toBeVisible();
+  await undo.click();
+  await expect(restore.getByText("Application", { exact: true })).toBeVisible();
+  await restore
+    .getByRole("button", { name: "Restore workspace", exact: true })
+    .click();
+  await expect(restored).toBeVisible();
+  expect((await downloadWorkspaceBackup(page)).document).toEqual(document);
   await closeSettings(page);
   await page
     .getByRole("button", { name: "Application (en-US)", exact: true })
@@ -600,6 +634,9 @@ test("deletes guest workspace data across tabs and keeps backup import working",
   const importBackup = page.getByRole("button", {
     name: "Import workspace backup",
   });
+  const undo = page
+    .getByRole("region", { name: "Workspace", exact: true })
+    .getByRole("button", { name: "Undo replacement", exact: true });
   await (
     await openFilePicker(page, () => importBackup.click())
   ).setFiles(backupPath);
@@ -610,6 +647,7 @@ test("deletes guest workspace data across tabs and keeps backup import working",
     .getByRole("button", { name: "Replace workspace", exact: true })
     .click();
   await expect(replacement).toBeHidden();
+  await expect(undo).toBeVisible();
 
   // A second tab holds unsaved work that recovery has stored.
   const other = await context.newPage();
@@ -671,13 +709,23 @@ test("deletes guest workspace data across tabs and keeps backup import working",
 
   // Explicit backup import still works after deletion.
   await openDataSettings(page);
+  await expect(importBackup).toBeVisible();
+  await expect(undo).toHaveCount(0);
   await (
     await openFilePicker(page, () => importBackup.click())
-  ).setFiles(backupPath);
+  ).setFiles({
+    name: "downloaded-workspace.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(backup)),
+  });
   await replacement
     .getByRole("button", { name: "Replace workspace", exact: true })
     .click();
   await expect(replacement).toBeHidden();
+  await expect(undo).toBeVisible();
+  expect((await downloadWorkspaceBackup(page)).document).toEqual(
+    backup.document,
+  );
   await closeSettings(page);
   await expect(
     page.getByRole("button", { name: "Application (en-US)", exact: true }),

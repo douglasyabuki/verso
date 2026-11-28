@@ -133,6 +133,7 @@ it("cancels without changes, then deletes only the guest workspace and opens a f
     links: [],
   });
   const { settings, section } = await openData(controller);
+  await controller.flushRecovery();
   const before = await rawStores("verso-local");
 
   await section.getByRole("button", { name: "Delete workspace data" }).click();

@@ -229,9 +229,14 @@ function download(value: unknown, filename: string) {
   }
 }
 
+type WorkspaceRevision = Pick<
+  CareerHead,
+  "workspaceId" | "generation" | "revision"
+>;
+
 function sameWorkspaceRevision(
-  current: CareerHead | null,
-  reviewed: CareerHead,
+  current: WorkspaceRevision | null,
+  reviewed: WorkspaceRevision,
 ) {
   return (
     current?.workspaceId === reviewed.workspaceId &&
@@ -890,6 +895,14 @@ function createOwnerController(account?: {
 
 type DataActionSection = "workspace" | "drafts" | "sample";
 
+type ReplacementSurface = "data" | "account" | null;
+
+const PREVIOUS_WORKSPACE_EXPLANATION =
+  "Verso kept a copy of the workspace you had before the replacement.";
+
+const PREVIOUS_WORKSPACE_UNAVAILABLE =
+  "The previous workspace you reviewed is no longer available.";
+
 function RestoreFileButton({
   id,
   label,
@@ -1005,12 +1018,12 @@ export function CareerWorkspace({
   } | null>(null);
   const [review, setReview] = useState<
     | (WorkspaceReplacement & {
-        panel: "data" | "account";
+        panel: ReplacementSurface;
       })
     | null
   >(null);
   const [replacementNotice, setReplacementNotice] = useState<{
-    panel: "data" | "account";
+    panel: ReplacementSurface;
     workspaceId: string;
     generation: number;
     restored: boolean;
@@ -1021,12 +1034,23 @@ export function CareerWorkspace({
   } | null>(null);
   const [previousCheck, setPreviousCheck] = useState<{
     key: string;
-    available: boolean;
+    previous?: WorkspaceRevision;
     error?: string;
   } | null>(null);
   const [previousRetry, setPreviousRetry] = useState(0);
+  const currentReplacementNotice =
+    replacementNotice &&
+    panel === replacementNotice.panel &&
+    state.head?.workspaceId === replacementNotice.workspaceId &&
+    state.head.generation === replacementNotice.generation
+      ? replacementNotice
+      : null;
   const previousKey =
-    panel === "data" && canReplaceWorkspace && state.head
+    (panel === "data" ||
+      currentReplacementNotice ||
+      review?.kind === "restore") &&
+    canReplaceWorkspace &&
+    state.head
       ? JSON.stringify([
           view.index,
           state.head.workspaceId,
@@ -1036,19 +1060,30 @@ export function CareerWorkspace({
       : null;
   const previousAvailability =
     previousKey === previousCheck?.key ? previousCheck : null;
+  const retained = previousAvailability?.previous;
+  const previousAvailable =
+    retained !== undefined &&
+    state.head?.workspaceId === retained.workspaceId &&
+    state.head.generation === retained.generation + 1;
   useEffect(() => {
     if (previousKey === null) return;
     let active = true;
     void controller.previous().then(
-      (previous) => {
+      (head) => {
         if (active)
-          setPreviousCheck({ key: previousKey, available: Boolean(previous) });
+          setPreviousCheck({
+            key: previousKey,
+            previous: head && {
+              workspaceId: head.workspaceId,
+              generation: head.generation,
+              revision: head.revision,
+            },
+          });
       },
       (error: unknown) => {
         if (active)
           setPreviousCheck({
             key: previousKey,
-            available: false,
             error: String(error),
           });
       },
@@ -1611,7 +1646,8 @@ export function CareerWorkspace({
   ) => {
     const { index, destination } = route.current;
     const origin = settingsPanel(destination);
-    if (origin !== "data" && origin !== "account") return;
+    if (origin !== "data" && origin !== "account" && origin !== null) return;
+    if (origin === null && source.kind !== "restore") return;
     const job = new AbortController();
     replacementJob.current?.abort();
     if (!signal) importJob.current?.abort();
@@ -1653,25 +1689,33 @@ export function CareerWorkspace({
         if (!isCurrent()) return;
         const previous = await controller.previous();
         if (!isCurrent()) return;
+        const matchesPrevious =
+          previous?.workspaceId === head.workspaceId &&
+          previous.generation === head.generation - 1;
+        if (
+          source.kind === "restore" &&
+          (!matchesPrevious ||
+            (source.generation !== undefined &&
+              source.generation !== head.generation))
+        ) {
+          setPreviousRetry((retry) => retry + 1);
+          void controller.refresh();
+          throw new Error(
+            "The previous workspace is no longer available for this replacement.",
+          );
+        }
         if (
           !sameWorkspaceRevision(controller.getSnapshot().head, head) ||
-          (source.kind === "restore" &&
-            source.generation !== undefined &&
-            source.generation !== head.generation) ||
-          (previous &&
-            (previous.workspaceId !== head.workspaceId ||
-              previous.generation !== head.generation - 1))
+          (previous && !matchesPrevious)
         ) {
           await controller.refresh();
           throw new Error(
             "Saved content changed while opening the review. Open it again to review the current workspace.",
           );
         }
-        if (source.kind === "restore") {
-          if (!previous)
-            throw new Error("No previous workspace is available to restore.");
+        if (source.kind === "restore" && previous) {
           setReview({ panel: origin, head, kind: "restore", previous });
-        } else if (incoming) {
+        } else if (source.kind !== "restore" && incoming) {
           setReview({
             panel: origin,
             head,
@@ -1693,9 +1737,18 @@ export function CareerWorkspace({
   const retryUnconfirmed =
     reviewFailure?.reason === "offline" ||
     reviewFailure?.reason === "uncertain";
+  const reviewedCopyUnavailable =
+    review?.kind === "restore" &&
+    !retryUnconfirmed &&
+    (state.head?.workspaceId !== review.head.workspaceId ||
+      state.head.generation !== review.head.generation ||
+      (previousAvailability &&
+        !previousAvailability.error &&
+        !sameWorkspaceRevision(retained ?? null, review.previous)));
   const staleReview = Boolean(
     review &&
-    (reviewFailure?.reason === "conflict" ||
+    (reviewedCopyUnavailable ||
+      reviewFailure?.reason === "conflict" ||
       reviewFailure?.reason === "replaced" ||
       (!retryUnconfirmed && !sameWorkspaceRevision(state.head, review.head))),
   );
@@ -1714,8 +1767,14 @@ export function CareerWorkspace({
     );
     if (!result.ok) {
       setReviewFailure(result);
-      if (result.reason === "conflict" || result.reason === "replaced")
+      if (
+        result.reason === "conflict" ||
+        result.reason === "replaced" ||
+        (restored && result.reason === "invalid")
+      ) {
+        setPreviousRetry((retry) => retry + 1);
         void controller.refresh();
+      }
       return;
     }
     setReplacementNotice({
@@ -2378,40 +2437,42 @@ export function CareerWorkspace({
       draft.draftId !== state.draft?.draftId &&
       draft.draftId !== state.orderDraft?.draftId,
   );
-  const workspaceReplacementNotice =
-    replacementNotice &&
-    panel === replacementNotice.panel &&
-    state.head?.workspaceId === replacementNotice.workspaceId &&
-    state.head.generation === replacementNotice.generation ? (
-      <Alert role="status">
-        <AlertTitle>
-          {replacementNotice.restored
-            ? "Workspace restored"
-            : "Workspace replaced"}
-        </AlertTitle>
-        <AlertDescription>
-          {replacementNotice.restored
-            ? "The workspace you just left is now available to restore in Settings → Data."
-            : "Your previous workspace is available to restore."}
-        </AlertDescription>
-        {!replacementNotice.restored && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="justify-self-start"
-            disabled={state.saving || !canReplaceWorkspace}
-            onClick={() =>
-              requestWorkspaceReview({
-                kind: "restore",
-                generation: replacementNotice.generation,
-              })
-            }
-          >
-            Undo workspace replacement
-          </Button>
-        )}
-      </Alert>
-    ) : null;
+  const undoReplacement = (
+    <Button
+      size="sm"
+      variant="outline"
+      className="justify-self-start"
+      disabled={state.saving || !canReplaceWorkspace}
+      onClick={() =>
+        requestWorkspaceReview({
+          kind: "restore",
+          generation: state.head?.generation,
+        })
+      }
+    >
+      Undo replacement
+    </Button>
+  );
+  const noticeOffersUndo =
+    currentReplacementNotice &&
+    !currentReplacementNotice.restored &&
+    canReplaceWorkspace &&
+    (previousAvailable || !previousAvailability || previousAvailability.error);
+  const workspaceReplacementNotice = currentReplacementNotice ? (
+    <Alert role="status">
+      <AlertTitle>
+        {currentReplacementNotice.restored
+          ? "Previous workspace restored"
+          : "Workspace replaced"}
+      </AlertTitle>
+      {noticeOffersUndo && (
+        <>
+          <AlertDescription>{PREVIOUS_WORKSPACE_EXPLANATION}</AlertDescription>
+          {undoReplacement}
+        </>
+      )}
+    </Alert>
+  ) : null;
   const dataSectionFeedback = (section: DataActionSection) => {
     const error = [
       section === "workspace" ? state.error : "",
@@ -2484,19 +2545,12 @@ export function CareerWorkspace({
         </div>
         {dataSectionFeedback("workspace")}
         {panel === "data" && workspaceReplacementNotice}
-        {previousAvailability?.available && (
+        {previousAvailable && !noticeOffersUndo && (
           <div className="flex flex-col items-start gap-2">
             <p className="text-sm text-muted-foreground">
-              Restore the previous workspace from the copy Verso already kept.
+              {PREVIOUS_WORKSPACE_EXPLANATION}
             </p>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={state.saving}
-              onClick={() => requestWorkspaceReview({ kind: "restore" })}
-            >
-              Restore previous workspace
-            </Button>
+            {undoReplacement}
           </div>
         )}
         {previousAvailability?.error && (
@@ -2626,7 +2680,7 @@ export function CareerWorkspace({
             controller.isDirty(target),
           ).length
         }
-        previousAvailable={Boolean(previousAvailability?.available)}
+        previousAvailable={previousAvailable}
         publicLinks={
           releases?.state.list
             ? {
@@ -3091,6 +3145,7 @@ export function CareerWorkspace({
                 Export raw recovery chunks
               </Button>
             )}
+            {!panel && workspaceReplacementNotice}
             {(state.storageMode === "session" || state.sessionCommits > 0) && (
               <Alert>
                 <AlertTitle>Saving in this tab only</AlertTitle>
@@ -3240,8 +3295,15 @@ export function CareerWorkspace({
                       void controller
                         .leaveSessionMode("replace-durable", sessionReview.head)
                         .then((done) => {
-                          if (done) setSessionReview(null);
-                          else
+                          if (done) {
+                            setReplacementNotice({
+                              panel: null,
+                              workspaceId: sessionReview.head.workspaceId,
+                              generation: sessionReview.head.generation + 1,
+                              restored: false,
+                            });
+                            setSessionReview(null);
+                          } else
                             setSessionReviewError(
                               controller.getSnapshot().error,
                             );
@@ -3944,7 +4006,11 @@ export function CareerWorkspace({
               error={
                 retryUnconfirmed
                   ? "Your account did not confirm this change. Retry from this review to check the same request."
-                  : (reviewFailure?.message ?? "")
+                  : reviewedCopyUnavailable
+                    ? `${PREVIOUS_WORKSPACE_UNAVAILABLE} Close this review to see the current workspace options.`
+                    : staleReview
+                      ? "Saved content changed since this review. Close it and review the current workspace again."
+                      : (reviewFailure?.message ?? "")
               }
               exportChoice={exportChoice}
               onClose={() => setReview(null)}

@@ -130,7 +130,7 @@ test("signs out with unconfirmed work kept on this device for the same user", as
   ).toBeVisible();
 });
 
-test("reviews a guest import, retries a lost acknowledgment once, and leaves the guest unchanged", async ({
+test("retries a lost guest import acknowledgment and undoes the account replacement", async ({
   page,
 }) => {
   await page.goto("/app");
@@ -177,7 +177,10 @@ test("reviews a guest import, retries a lost acknowledgment once, and leaves the
   expect(attempts[0]).toBe(attempts[1]);
   await expect.poll(() => revision(userId)).toBe(1);
   await expect(
-    settings.getByRole("button", { name: "Undo workspace replacement" }),
+    settings
+      .getByRole("status")
+      .filter({ hasText: "Workspace replaced" })
+      .getByRole("button", { name: "Undo replacement" }),
   ).toBeVisible();
   await settings.getByRole("button", { name: "Close settings" }).click();
   await expect(status(page, /^Saved to account · revision 1$/)).toBeVisible();
@@ -186,6 +189,31 @@ test("reviews a guest import, retries a lost acknowledgment once, and leaves the
   await page.getByRole("button", { name: "Profile", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Full name" })).toHaveValue(
     "Guest Author",
+  );
+  await page.goto("/app/settings/data");
+  const workspace = settings.getByRole("region", {
+    name: "Workspace",
+    exact: true,
+  });
+  await workspace
+    .getByRole("button", { name: "Undo replacement", exact: true })
+    .click();
+  const restore = page.getByRole("dialog", {
+    name: "Review workspace restore",
+  });
+  await restore
+    .getByRole("button", { name: "Restore workspace", exact: true })
+    .click();
+  await expect(
+    workspace
+      .getByRole("status")
+      .filter({ hasText: "Previous workspace restored" }),
+  ).toBeVisible();
+  expect(await revision(userId)).toBe(2);
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Full name" })).toHaveValue(
+    "",
   );
   const guest = await page.evaluate(
     () =>

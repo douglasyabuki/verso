@@ -139,7 +139,7 @@ describe("session-only saving", () => {
     const controller = await controllerOwner();
     const other = await storage();
     const original = await other.load();
-    await other.replace(original, createCareerDocument());
+    const durable = await other.replace(original, createCareerDocument());
     await controller.refresh();
     expect(await saveSummary(controller, "Session content", true)).toBe(true);
     await render(<CareerWorkspace controller={controller} />);
@@ -189,12 +189,33 @@ describe("session-only saving", () => {
         exact: true,
       })
       .click();
+    vi.spyOn(CareerStorage.prototype, "drafts").mockRejectedValueOnce(
+      new Error("Recovery read failed"),
+    );
     await adopt.click();
     await expect.element(review).not.toBeInTheDocument();
     expect((await other.load()).document.summary.wording["en-US"]).toBe(
       "Session content",
     );
     expect((await other.previous())!.generation).toBe(1);
+    const notice = page
+      .getByRole("status")
+      .filter({ hasText: "Workspace replaced" });
+    await expect.element(notice).toBeVisible();
+    await expect
+      .element(page.getByText(/Unsaved drafts could not be refreshed/))
+      .toBeVisible();
+    await notice.getByRole("button", { name: "Undo replacement" }).click();
+    const restore = page.getByRole("dialog", {
+      name: "Review workspace restore",
+    });
+    await restore
+      .getByRole("button", { name: "Restore workspace", exact: true })
+      .click();
+    await expect
+      .element(page.getByText("Previous workspace restored", { exact: true }))
+      .toBeVisible();
+    expect((await other.load()).document).toEqual(durable.document);
   });
 
   it("returns to durable saving by discarding tab-only commits after review", async () => {
