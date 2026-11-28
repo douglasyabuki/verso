@@ -178,9 +178,9 @@ export function DeleteWorkspaceData({
   return (
     <section
       aria-labelledby="delete-workspace-title"
-      className="flex flex-col gap-3 rounded-xl border border-destructive/30 p-4"
+      className="flex flex-col gap-3"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col items-start gap-2">
         <div className="flex flex-col gap-1">
           <h3
             id="delete-workspace-title"
@@ -202,6 +202,7 @@ export function DeleteWorkspaceData({
         </div>
         <Button
           variant="destructive"
+          size="sm"
           disabled={!available || busy || !head || Boolean(pending)}
           onClick={() => review()}
         >

@@ -879,6 +879,8 @@ function createOwnerController(account?: {
   });
 }
 
+type DataActionSection = "workspace" | "drafts" | "sample";
+
 function RestoreFileButton({
   id,
   label,
@@ -1072,7 +1074,13 @@ export function CareerWorkspace({
   >(null);
   const [rawExport, setRawExport] = useState(false);
   const [loadingSample, setLoadingSample] = useState(false);
-  const [importPending, setImportPending] = useState(false);
+  const [importPending, setImportPending] = useState<DataActionSection | null>(
+    null,
+  );
+  const [dataError, setDataError] = useState<{
+    section: DataActionSection;
+    message: string;
+  } | null>(null);
   const [recoveryImportFilename, setRecoveryImportFilename] = useState<
     string | null
   >(null);
@@ -1544,9 +1552,14 @@ export function CareerWorkspace({
   const downloadRecovery = (allowRaw: boolean) => {
     const drafts = exportableDrafts(controller);
     if (!drafts.length) return;
+    const reportError = (message: string) => {
+      if (settingsPanel(route.current.destination) === "data")
+        setDataError(message ? { section: "drafts", message } : null);
+      else setLocalError(message);
+    };
     if (oversizedRecovery(drafts).length && !allowRaw) {
       setRawExport(true);
-      setLocalError(
+      reportError(
         "A draft exceeds normal recovery limits. Keep this tab open. Choose Export raw recovery chunks to preserve its complete JSON; chunks require reassembly and are not a normal recovery import.",
       );
       return;
@@ -1557,17 +1570,22 @@ export function CareerWorkspace({
         controller.getSnapshot().head!.workspaceId,
       ))
         download(file.content, file.name);
-      setLocalError("");
+      reportError("");
       setRawExport(false);
     } catch (error) {
-      setLocalError(String(error));
+      reportError(String(error));
     }
   };
   const exportRecovery = () => downloadRecovery(false);
 
   const requestWorkspaceReview = (
     source:
-      | { kind: "replace"; incoming: CareerDocument; filename?: string }
+      | {
+          kind: "replace";
+          incoming: CareerDocument;
+          section: "workspace" | "sample";
+          filename?: string;
+        }
       | { kind: "import" }
       | { kind: "restore"; generation?: number },
     signal?: AbortSignal,
@@ -1584,12 +1602,20 @@ export function CareerWorkspace({
       !signal?.aborted &&
       route.current.index === index &&
       route.current.destination === destination;
-    setLocalError("");
+    const reportError = (message: string) => {
+      if (origin === "data") {
+        const section =
+          source.kind === "replace" ? source.section : "workspace";
+        setDataError(message ? { section, message } : null);
+      } else setLocalError(message);
+    };
+    if (origin === "data") setLocalError("");
+    reportError("");
     resolveTargets(controller.navigationTargets(), () => {
       if (!isCurrent()) return;
       const { head, durable, storageMode } = controller.getSnapshot();
       if (!head || !durable || storageMode === "session") {
-        setLocalError(
+        reportError(
           storageMode === "session"
             ? "Return to durable saving before replacing or restoring the workspace."
             : "Durable saving is unavailable. Reload before replacing the workspace.",
@@ -1640,7 +1666,7 @@ export function CareerWorkspace({
         setReviewFailure(null);
       })().catch((error: unknown) => {
         if (isCurrent())
-          setLocalError(error instanceof Error ? error.message : String(error));
+          reportError(error instanceof Error ? error.message : String(error));
       });
     });
   };
@@ -1684,26 +1710,28 @@ export function CareerWorkspace({
 
   const importFile = async (
     source: File | ((signal: AbortSignal) => Promise<File>),
-    recovery: boolean,
+    section: DataActionSection,
   ) => {
     const filename = typeof source === "function" ? undefined : source.name;
-    if (recovery) setRecoveryImportFilename(null);
+    if (section === "drafts") setRecoveryImportFilename(null);
     const { index, destination } = route.current;
     importJob.current?.abort();
     replacementJob.current?.abort();
     const job = new AbortController();
     importJob.current = job;
+    setImportPending(null);
     const isCurrent = () =>
       !job.signal.aborted &&
       route.current.index === index &&
       route.current.destination === destination;
     const progress = setTimeout(() => {
-      if (isCurrent()) setImportPending(true);
+      if (isCurrent()) setImportPending(section);
     }, 500);
     try {
       const file =
         typeof source === "function" ? await source(job.signal) : source;
       if (!isCurrent()) return;
+      const recovery = section === "drafts";
       if (file.size > (recovery ? RECOVERY_BYTES : WORKSPACE_BYTES))
         throw new Error("Import exceeds its byte limit.");
       const envelope = await importPortable(
@@ -1713,31 +1741,35 @@ export function CareerWorkspace({
       );
       if (!isCurrent()) return;
       setLocalError("");
+      setDataError(null);
       if (envelope.format === "verso.recovery") {
         await controller.importRecovery(envelope.drafts);
         if (isCurrent() && filename) setRecoveryImportFilename(filename);
-      } else {
+      } else if (section !== "drafts") {
         requestWorkspaceReview(
-          { kind: "replace", incoming: envelope.document, filename },
+          { kind: "replace", incoming: envelope.document, section, filename },
           job.signal,
         );
       }
     } catch (error) {
       if (isCurrent()) {
-        setLocalError(
-          recovery && filename
-            ? `Could not import “${filename}”. ${String(error)}`
-            : String(error),
-        );
+        setDataError({
+          section,
+          message:
+            section === "drafts" && filename
+              ? `Could not import “${filename}”. ${String(error)}`
+              : String(error),
+        });
       }
     } finally {
       clearTimeout(progress);
-      if (importJob.current === job) setImportPending(false);
+      if (importJob.current === job) setImportPending(null);
     }
   };
   const loadSample = async () => {
     setLoadingSample(true);
     setLocalError("");
+    setDataError(null);
     try {
       await importFile(async (signal) => {
         const response = await fetch("/examples/alex-morgan.schema-2.json", {
@@ -1750,7 +1782,7 @@ export function CareerWorkspace({
         return new File([await response.blob()], "alex-morgan.schema-2.json", {
           type: "application/json",
         });
-      }, false);
+      }, "sample");
     } finally {
       setLoadingSample(false);
     }
@@ -2184,84 +2216,92 @@ export function CareerWorkspace({
         )}
       </Alert>
     ) : null;
-  const backupPanel = (
-    <div className="flex flex-col gap-6">
+  const dataSectionFeedback = (section: DataActionSection) => {
+    const error = [
+      section === "workspace" ? state.error : "",
+      section === "workspace" ? localError : "",
+      section === "drafts" ? state.orderError : "",
+      dataError?.section === section ? dataError.message : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    return (
+      <>
+        {importPending === section && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Validating import… Your saved workspace is unchanged.
+          </p>
+        )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Action needs attention</AlertTitle>
+            <AlertDescription className="wrap-anywhere whitespace-pre-wrap">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+      </>
+    );
+  };
+  const dataPanel = (
+    <div className="flex flex-col gap-4">
       <SettingsSection
-        title="Unsaved drafts"
-        description="Changes that were never saved, kept on this device after a reload, crash, or closed tab."
+        title="Workspace"
+        description="Backups contain saved career details, resumes, and workspace settings. Importing a backup opens a review before replacing the workspace."
       >
-        <RecoveryList
-          drafts={listedRecovery}
-          disabled={state.saving}
-          label={recoveryLabel}
-          saved={(draft) => readScope(documentValue, draft.scope)}
-          outdated={(draft) =>
-            Boolean(state.head && draftConflict(state.head, draft))
-          }
-          onRestore={restoreRecovery}
-          onDiscard={(draft) => void controller.discardRecovery(draft)}
-          onExport={exportRecovery}
-        />
-      </SettingsSection>
-      <SettingsSection
-        title="Back up"
-        description="Workspace exports contain saved content only. Recovery exports contain unsaved drafts, to continue them in another browser."
-      >
+        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+          {accountMode ? (
+            <p>
+              Saved content is stored in your account. Drafts and unconfirmed
+              Saves stay in this browser. Clearing browser storage or eviction
+              can remove them.
+            </p>
+          ) : state.storageMode === "durable" ? (
+            <p>
+              Saved content is stored in this browser. Clearing browser storage
+              or eviction can remove local data.
+            </p>
+          ) : null}
+          <p role="status">{state.status}</p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
+            variant="outline"
             onClick={() => {
               try {
                 exportWorkspace();
               } catch (error) {
-                setLocalError(String(error));
+                setDataError({ section: "workspace", message: String(error) });
               }
             }}
           >
             <Download data-icon="inline-start" aria-hidden="true" />
             Download workspace backup
           </Button>
-          {canExportDrafts && (
-            <Button size="sm" variant="outline" onClick={exportRecovery}>
-              <Download data-icon="inline-start" aria-hidden="true" />
-              Export unsaved drafts
-            </Button>
-          )}
-        </div>
-      </SettingsSection>
-      <SettingsSection
-        title="Restore"
-        description="Imported workspaces open a review before replacing saved content. Imported recovery becomes unsaved drafts and never commits on its own."
-      >
-        <div className="flex flex-wrap gap-2">
           <RestoreFileButton
             id="workspace-import"
             label="Import workspace backup"
             icon={FileUp}
-            onSelect={(file) => void importFile(file, false)}
-          />
-          <RestoreFileButton
-            id="recovery-import"
-            label="Import unsaved drafts"
-            icon={FilePenLine}
-            onSelect={(file) => void importFile(file, true)}
+            onSelect={(file) => void importFile(file, "workspace")}
           />
         </div>
-        {recoveryImportFilename && (
-          <p role="status" className="text-sm wrap-anywhere">
-            Imported recovery file <bdi>{recoveryImportFilename}</bdi>.
-          </p>
-        )}
+        {dataSectionFeedback("workspace")}
+        {panel === "data" && workspaceReplacementNotice}
         {previousAvailability?.available && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="self-start"
-            disabled={state.saving}
-            onClick={() => requestWorkspaceReview({ kind: "restore" })}
-          >
-            Restore previous workspace
-          </Button>
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted-foreground">
+              Restore the previous workspace from the copy Verso already kept.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={state.saving}
+              onClick={() => requestWorkspaceReview({ kind: "restore" })}
+            >
+              Restore previous workspace
+            </Button>
+          </div>
         )}
         {previousAvailability?.error && (
           <Alert variant="destructive">
@@ -2278,9 +2318,78 @@ export function CareerWorkspace({
           </Alert>
         )}
       </SettingsSection>
+      <Separator />
+      <SettingsSection
+        title="Unsaved drafts"
+        description="Recover edits after a reload, crash, or closed tab. Import drafts from another browser to continue editing them here."
+      >
+        <RecoveryList
+          drafts={listedRecovery}
+          disabled={state.saving}
+          label={recoveryLabel}
+          saved={(draft) => readScope(documentValue, draft.scope)}
+          outdated={(draft) =>
+            Boolean(state.head && draftConflict(state.head, draft))
+          }
+          onRestore={restoreRecovery}
+          onDiscard={(draft) => void controller.discardRecovery(draft)}
+          onExport={exportRecovery}
+        />
+        {!canExportDrafts && (
+          <p className="text-sm text-muted-foreground">
+            No unsaved drafts on this device
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <RestoreFileButton
+            id="recovery-import"
+            label="Import unsaved drafts"
+            icon={FilePenLine}
+            onSelect={(file) => void importFile(file, "drafts")}
+          />
+          {canExportDrafts && (
+            <Button size="sm" variant="outline" onClick={exportRecovery}>
+              <Download data-icon="inline-start" aria-hidden="true" />
+              Export unsaved drafts
+            </Button>
+          )}
+          {panel === "data" && (state.draft || state.orderDraft) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                navigate(
+                  settingsDraft
+                    ? `settings/${state.draft?.scope}`
+                    : view.background,
+                )
+              }
+            >
+              Back to editing
+            </Button>
+          )}
+        </div>
+        {dataSectionFeedback("drafts")}
+        {recoveryImportFilename && (
+          <p role="status" className="text-sm wrap-anywhere">
+            Imported recovery file <bdi>{recoveryImportFilename}</bdi>.
+          </p>
+        )}
+        {rawExport && canExportDrafts && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="self-start"
+            onClick={() => downloadRecovery(true)}
+          >
+            Export raw recovery chunks
+          </Button>
+        )}
+      </SettingsSection>
+      <Separator />
       <SettingsSection
         title="Sample workspace"
-        description="Explore fictional career details and English/Portuguese resumes. Loading the sample opens a replacement review before changing saved content."
+        description="Open a review of fictional career details and resumes."
       >
         <Button
           size="sm"
@@ -2291,7 +2400,9 @@ export function CareerWorkspace({
         >
           {loadingSample ? "Loading sample…" : "Load sample workspace"}
         </Button>
+        {dataSectionFeedback("sample")}
       </SettingsSection>
+      <Separator />
       <DeleteWorkspaceData
         owner={accountMode ? "account" : "guest"}
         head={state.head}
@@ -2440,53 +2551,14 @@ export function CareerWorkspace({
         returnFocus={settingsReturnFocus}
         preferenceStatus={state.preferenceStatus}
         retryPreferences={() => void controller.changePreferences()}
-        accountMode={state.storageMode === "account"}
       >
-        {workspaceReplacementNotice}
         {panel === "editing-preview" ? (
           <DeviceSettings
             values={state.preferences}
             change={(patch) => void controller.changePreferences(patch)}
           />
         ) : panel === "data" ? (
-          <>
-            {(state.draft || state.orderDraft) && (
-              <Button
-                variant="outline"
-                className="self-start"
-                onClick={() =>
-                  navigate(
-                    settingsDraft
-                      ? `settings/${state.draft?.scope}`
-                      : view.background,
-                  )
-                }
-              >
-                Back to editing
-              </Button>
-            )}
-            {(state.error || state.orderError || localError) && (
-              <Alert variant="destructive">
-                <AlertTitle>Action needs attention</AlertTitle>
-                <AlertDescription className="wrap-anywhere whitespace-pre-wrap">
-                  {[state.error, state.orderError, localError]
-                    .filter(Boolean)
-                    .join("\n")}
-                </AlertDescription>
-              </Alert>
-            )}
-            {importPending && (
-              <p role="status">
-                Validating import... Your saved workspace is unchanged.
-              </p>
-            )}
-            {rawExport && canExportDrafts && (
-              <Button variant="outline" onClick={() => downloadRecovery(true)}>
-                Export raw recovery chunks
-              </Button>
-            )}
-            {backupPanel}
-          </>
+          dataPanel
         ) : ["languages", "defaults"].includes(panel ?? "") ? (
           settingsForm
         ) : panel === "account" ? (
@@ -2502,6 +2574,7 @@ export function CareerWorkspace({
                 disabled={state.saving || !canReplaceWorkspace}
                 review={() => requestWorkspaceReview({ kind: "import" })}
                 error={localError}
+                notice={workspaceReplacementNotice}
               />
             )}
           </AccountPanel>
@@ -2794,11 +2867,6 @@ export function CareerWorkspace({
               <Button variant="outline" onClick={() => downloadRecovery(true)}>
                 Export raw recovery chunks
               </Button>
-            )}
-            {importPending && (
-              <p role="status">
-                Validating import… Your saved workspace is unchanged.
-              </p>
             )}
             {(state.storageMode === "session" || state.sessionCommits > 0) && (
               <Alert>
@@ -3514,7 +3582,7 @@ export function CareerWorkspace({
                   </Card>
                 </section>
               ) : destination === "backups" ? (
-                backupPanel
+                dataPanel
               ) : listSection ? null : (
                 <CareerOverview document={documentValue} navigate={navigate} />
               )}

@@ -12,7 +12,7 @@ import type { CareerDraft } from "@/types-and-constants/career";
 
 /** Unresolved recovery drafts with preview, restore, and confirmed discard per row.
  * @param props Drafts to list plus labelling, comparison, and resolution callbacks.
- * @returns Bordered list (newest first), or a short empty message when nothing is unresolved.
+ * @returns Bordered list (newest first), or null when no drafts are listed.
  * @example <RecoveryList drafts={drafts} label={label} saved={saved} outdated={outdated} onRestore={restore} onDiscard={discard} onExport={exportRecovery} />
  */
 export function RecoveryList({
@@ -39,13 +39,7 @@ export function RecoveryList({
 }) {
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState<CareerDraft | null>(null);
-  if (!drafts.length)
-    return (
-      <p className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
-        No unsaved drafts. Changes you leave unsaved after a reload or crash
-        appear here.
-      </p>
-    );
+  if (!drafts.length) return null;
   return (
     <>
       <ul className="flex flex-col divide-y rounded-xl border bg-card">

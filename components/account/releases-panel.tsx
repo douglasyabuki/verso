@@ -23,6 +23,7 @@ import {
   FieldDescription,
   FieldLabel,
 } from "@/components/ui/field";
+import { Separator } from "@/components/ui/separator";
 import type { Releases } from "@/hooks/releases/use-releases";
 import type { AccountSession } from "@/stores/account/session";
 import type { CareerResume } from "@/types-and-constants/career";
@@ -83,12 +84,15 @@ export function ReleasesPanel({
   const act = (work: () => Promise<unknown>) => void work().catch(ignore);
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-sm">
-        Use <strong>Publish PDF</strong> in the preview. Each resume has one
-        unlisted latest link that follows the version you choose. Numbered links
-        always show the same PDF.
-      </p>
-      {policy}
+      <div className="flex flex-col gap-2">
+        <p className="text-sm">
+          Use <strong>Publish PDF</strong> in the preview. Each resume has one
+          unlisted latest link that follows the version you choose. Numbered
+          links always show the same PDF.
+        </p>
+        {policy}
+      </div>
+      <Separator />
       {state.error && (
         <Alert variant="destructive">
           <AlertTitle>Release action failed</AlertTitle>

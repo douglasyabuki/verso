@@ -185,7 +185,9 @@ test("reviews replacement, downloads a backup, and restores either workspace", a
     ),
   });
   await expect(
-    page.getByRole("alert").filter({ hasText: "Action needs attention" }),
+    page
+      .getByRole("region", { name: "Workspace", exact: true })
+      .getByRole("alert"),
   ).toContainText("schemaVersion");
   const backupPath = testInfo.outputPath("workspace.json");
   await writeFile(backupPath, JSON.stringify(envelope(document)));
@@ -270,57 +272,73 @@ test("reviews replacement, downloads a backup, and restores either workspace", a
   ).toBeVisible();
 });
 
-test("opens Restore pickers with the keyboard and retries recovery without saving it", async ({
+test("opens Data pickers with the keyboard and retries recovery without saving it", async ({
   page,
   browserName,
 }, testInfo) => {
   await page.goto("/app/settings/data");
-  const restore = page.getByRole("region", { name: "Restore", exact: true });
-  const importBackup = restore.getByRole("button", {
-    name: "Import workspace backup",
+  const data = page.getByRole("region", { name: "Data", exact: true });
+  const workspace = data.getByRole("region", {
+    name: "Workspace",
+    exact: true,
   });
-  const importDrafts = restore.getByRole("button", {
-    name: "Import unsaved drafts",
-  });
-  const drafts = page.getByRole("region", {
+  const drafts = data.getByRole("region", {
     name: "Unsaved drafts",
     exact: true,
   });
-  const downloadBackup = page.getByRole("button", {
+  const importBackup = workspace.getByRole("button", {
+    name: "Import workspace backup",
+  });
+  const importDrafts = drafts.getByRole("button", {
+    name: "Import unsaved drafts",
+  });
+  const downloadBackup = workspace.getByRole("button", {
     name: "Download workspace backup",
   });
-  const inputs = restore.locator('input[type="file"]');
+  const backupInput = workspace.locator("#workspace-import-file");
+  const draftInput = drafts.locator("#recovery-import-file");
+  const emptyDrafts = drafts.getByText("No unsaved drafts on this device", {
+    exact: true,
+  });
 
+  await expect(data.getByRole("heading", { level: 3 })).toHaveText([
+    "Workspace",
+    "Unsaved drafts",
+    "Sample workspace",
+    "Delete workspace data",
+  ]);
+  await expect(data.getByRole("separator")).toHaveCount(3);
   await expect(importBackup).toBeVisible();
   await expect(importDrafts).toBeVisible();
-  await expect(inputs).toHaveCount(2);
-  for (const input of await inputs.all()) await expect(input).toBeHidden();
-  expect((await importDrafts.boundingBox())!.y).toBe(
+  await expect(backupInput).toBeAttached();
+  await expect(backupInput).toBeHidden();
+  await expect(draftInput).toBeAttached();
+  await expect(draftInput).toBeHidden();
+  expect((await downloadBackup.boundingBox())!.y).toBe(
     (await importBackup.boundingBox())!.y,
   );
 
   const original = await downloadWorkspaceBackup(page);
   await page.setViewportSize({ width: 375, height: 812 });
-  const backupBounds = (await importBackup.boundingBox())!;
-  const draftBounds = (await importDrafts.boundingBox())!;
-  expect(draftBounds.x).toBe(backupBounds.x);
-  expect(draftBounds.y).toBeGreaterThanOrEqual(
-    backupBounds.y + backupBounds.height,
+  const downloadBounds = (await downloadBackup.boundingBox())!;
+  const importBounds = (await importBackup.boundingBox())!;
+  expect(importBounds.x).toBe(downloadBounds.x);
+  expect(importBounds.y).toBeGreaterThanOrEqual(
+    downloadBounds.y + downloadBounds.height,
   );
   expect(
     Math.max(
-      backupBounds.x + backupBounds.width,
-      draftBounds.x + draftBounds.width,
+      downloadBounds.x + downloadBounds.width,
+      importBounds.x + importBounds.width,
     ),
   ).toBeLessThan(375);
 
   await downloadBackup.focus();
   await page.keyboard.press("Tab");
   await expect(importBackup).toBeFocused();
-  const restoreBeforeCancel = await restore.innerText();
+  const workspaceBeforeCancel = await workspace.innerText();
   if (browserName === "chromium") {
     const session = await page.context().newCDPSession(page);
-    const backupInput = restore.locator("#workspace-import-file");
     await backupInput.evaluate((input) => {
       input.addEventListener(
         "cancel",
@@ -354,11 +372,13 @@ test("opens Restore pickers with the keyboard and retries recovery without savin
     await chooser.element().dispatchEvent("cancel", { bubbles: true });
   }
   await expect(importBackup).toBeFocused();
-  await expect(restore).toHaveText(restoreBeforeCancel, { useInnerText: true });
+  await expect(workspace).toHaveText(workspaceBeforeCancel, {
+    useInnerText: true,
+  });
   await expect(
     page.getByRole("dialog", { name: "Review workspace replacement" }),
   ).toBeHidden();
-  await expect(drafts.getByText(/^No unsaved drafts\./)).toBeVisible();
+  await expect(emptyDrafts).toBeVisible();
 
   await page.keyboard.press("Tab");
   await expect(importDrafts).toBeFocused();
@@ -368,13 +388,10 @@ test("opens Restore pickers with the keyboard and retries recovery without savin
     page.keyboard.press("Space"),
   );
   await firstPick.setFiles(recoveryPath);
-  const error = page
-    .getByRole("dialog", { name: "Settings", exact: true })
-    .getByRole("alert")
-    .filter({ hasText: "Action needs attention" });
+  const error = drafts.getByRole("alert");
   await expect(error).toContainText("Could not import “summary-draft.json”");
-  await expect(restore.locator("#recovery-import-file")).toHaveValue("");
-  await expect(drafts.getByText(/^No unsaved drafts\./)).toBeVisible();
+  await expect(draftInput).toHaveValue("");
+  await expect(emptyDrafts).toBeVisible();
 
   const {
     workspaceId,
@@ -406,7 +423,7 @@ test("opens Restore pickers with the keyboard and retries recovery without savin
   );
   const retry = await openFilePicker(page, () => importDrafts.click());
   await retry.setFiles(recoveryPath);
-  await expect(restore.getByRole("status")).toContainText("summary-draft.json");
+  await expect(drafts.getByRole("status")).toContainText("summary-draft.json");
   await expect(error).toBeHidden();
   await expect(
     drafts.getByRole("button", { name: "Restore draft" }),

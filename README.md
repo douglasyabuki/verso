@@ -41,7 +41,7 @@ resumes, customize each resume, and generate PDFs in the browser.
 - Extensible content languages, one language per resume, and verified PDF output
   capabilities for English and Brazilian Portuguese. The interface is English.
 - Explicit Save/Cancel, workspace Undo/Redo, separate unsaved-draft recovery,
-  and JSON backups. In Settings › Data › Restore, **Import workspace backup**
+  and JSON backups. In Settings › Data › Workspace, **Import workspace backup**
   shows the selected filename for review before you confirm replacement.
   **Import unsaved drafts** shows the filename in the result and puts the drafts
   in recovery. You can also restore the one previous workspace, or use **Delete

@@ -54,11 +54,10 @@ const icons = {
   releases: Globe,
 } satisfies Record<SettingsPanel, unknown>;
 
-const panelDescriptions: Record<SettingsPanel, string> = {
+const panelDescriptions: Partial<Record<SettingsPanel, string>> = {
   account:
     "Sign-in for this browser. Signing in never moves or merges workspaces.",
   appearance: "How Verso looks in this browser. Applies immediately.",
-  data: "Unsaved drafts, backups, imports, and deletion for this workspace.",
   defaults:
     "Appearance copied into new blank resumes. Existing resumes, presets, and starters keep their own. Changes require Save.",
   languages:
@@ -116,7 +115,6 @@ export function SettingsDialog({
   preferenceStatus,
   retryPreferences,
   historyKey,
-  accountMode = false,
 }: {
   panel: SettingsPanel | null;
   navigate: (destination: string) => void;
@@ -126,9 +124,8 @@ export function SettingsDialog({
   preferenceStatus: string;
   retryPreferences: () => void;
   historyKey: number;
-  /** Signed-in workspace: saved content lives in the account, not this browser. */
-  accountMode?: boolean;
 }) {
+  const description = panel ? panelDescriptions[panel] : undefined;
   const heading = useRef<HTMLHeadingElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const views = useRef(new Map<number, { scroll: number; focusId?: string }>());
@@ -239,9 +236,11 @@ export function SettingsDialog({
               >
                 {settingsPanels.find((item) => item.id === panel)?.label}
               </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {panel ? panelDescriptions[panel] : null}
-              </p>
+              {description && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {description}
+                </p>
+              )}
             </header>
             <div
               ref={scroll}
@@ -294,13 +293,6 @@ export function SettingsDialog({
                     </Button>
                   )}
                 </div>
-              )}
-              {panel === "data" && (
-                <p className="text-xs text-muted-foreground">
-                  {accountMode
-                    ? "Saved content is stored in your account. Drafts and unconfirmed Saves stay in this browser until confirmed; clearing or eviction can remove them."
-                    : "Stored locally in this browser. Clearing or eviction can remove local data."}
-                </p>
               )}
             </div>
           </section>

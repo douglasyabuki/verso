@@ -170,7 +170,6 @@ export function AccountPanel({
               email={session.user.email}
             />
           )}
-          {children}
           <div className="flex flex-wrap gap-2">
             <Button
               variant="destructive"
@@ -181,6 +180,7 @@ export function AccountPanel({
               Sign out
             </Button>
           </div>
+          {children}
           {session.kind === "authenticated" && store && (
             <>
               <Separator />
@@ -262,35 +262,49 @@ export async function readGuestWorkspace(): Promise<CareerHead | undefined> {
 }
 
 /** Offer the explicit, reviewed guest-workspace import.
- * @param props Review starter, disabled state, and latest error.
- * @returns Import description and action.
+ * @param props Review starter, disabled state, and review feedback.
+ * @returns The separated guest-import section.
  * @example <GuestImport review={openReview} disabled={false} error="" />
  */
 export function GuestImport({
   review,
   disabled,
   error,
+  notice,
 }: {
   review: () => void;
   disabled: boolean;
   error: string;
+  notice?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <p>
-        Import the workspace saved in this browser as a guest. You review it
-        first; it replaces your account workspace, which is kept as the one
-        previous workspace. The guest workspace is not changed.
-      </p>
-      <Button
-        variant="outline"
-        className="self-start"
-        disabled={disabled}
-        onClick={review}
+    <>
+      <Separator />
+      <section
+        aria-labelledby="guest-workspace-import-title"
+        className="flex flex-col gap-2"
       >
-        Review guest workspace import
-      </Button>
-      {error && <p role="alert">{error}</p>}
-    </div>
+        <div className="flex flex-col gap-1">
+          <h3 id="guest-workspace-import-title" className="font-medium">
+            Guest workspace import
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Review the guest workspace saved in this browser. Importing replaces
+            your account workspace and keeps the outgoing copy as the previous
+            workspace. The guest copy stays in this browser.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          className="self-start"
+          disabled={disabled}
+          onClick={review}
+        >
+          Review guest workspace import
+        </Button>
+        {error && <p role="alert">{error}</p>}
+        {notice}
+      </section>
+    </>
   );
 }
