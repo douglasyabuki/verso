@@ -267,7 +267,7 @@ describe("Quick actions", () => {
     const summary = page.getByRole("textbox", { name: "Summary" });
     await summary.fill("Unsaved summary");
     const name = section.name || section.kind;
-    const createEntry = page.getByRole("menuitem", { name: "Create entry" });
+    const createEntry = page.getByRole("menuitem", { name: "Add role" });
     const guard = page.getByRole("dialog", { name: "Unsaved form" });
     await page
       .getByRole("navigation", { name: "Workspace navigation" })

@@ -7,7 +7,24 @@ resumes, customize each resume, and generate PDFs in the browser.
 ## Features
 
 - Career profile, summaries, built-in and custom sections, entries, achievements,
-  and links, with archive/restore for shared content.
+  and links, with archive/restore for shared content. Each section names its own
+  actions (**Add role**, **Add project**, **Add project detail**, **Add
+  verification link**, …). Groups a section rarely needs sit behind **Add more**
+  until they have content.
+- Optional **Internal name** for achievements, details, and links, shown only in
+  the editor. PDFs print the wording or display label. Profile links appear with
+  the contact details in the PDF header and can show a platform icon. The icon is
+  detected automatically for Behance, Dribbble, GitHub, GitLab, Google Scholar,
+  Instagram, LinkedIn, Medium, TikTok, X (Twitter), and YouTube, or you can choose
+  one. Entry links print as clickable labels beneath their entry. When an entry's
+  saved **Website** and a selected entry link lead to the same address, the
+  labeled link prints once.
+- An optional **Languages** section (Career details › Add section) for spoken
+  languages with optional proficiency. **Add test or certificate** attaches a
+  certification or creates one, such as a TOEFL result. Certifications have an
+  optional **Score or result**. Each resume chooses separately whether to show a
+  result beneath its language, under Certifications, or both. Settings › Content
+  languages remains the separate list of languages you write resumes in.
 - Independent resumes with their own content selection, order, wording overrides,
   and layout. Selecting an entry includes its fields (or a starter's default
   fields) and its non-archived achievements and links. Each one can then be
@@ -189,7 +206,9 @@ concurrent PostgreSQL row locking remain separate acceptance checks.
   Guest content is imported into an account only through explicit reviewed replacement.
 - Workspace schema 2 and recovery format 1 are supported. Earlier development data,
   incomplete layout models, and old template identities are rejected without conversion,
-  silent resets, or reseeding. Workspace/backup files are capped at 4 MiB; recovery
+  silent resets, or reseeding. Backups that use internal names, link icon choices,
+  Languages, or test results cannot be opened by builds released before those
+  features. Workspace/backup files are capped at 4 MiB; recovery
   files at 32 MiB, with an 8-MiB draft limit and separate raw-salvage export for oversized drafts.
 - Layout uses the supported single-column template and bundled fonts. A style sample
   approximates appearance; the compiled PDF determines pagination. Unsupported

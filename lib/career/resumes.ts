@@ -1,9 +1,11 @@
 import { careerFieldLabel } from "@/lib/career/labels";
 import { layoutFromPreset } from "@/lib/career/layout";
+import { CAREER_TERMS, sectionFieldLabel } from "@/lib/career/terminology";
 import type { RichText } from "@/lib/career/wording";
 import { wordingText } from "@/lib/career/wording";
 import type {
   CareerDocument,
+  CareerLink,
   CareerResume,
   CareerSection,
 } from "@/types-and-constants/career";
@@ -203,7 +205,7 @@ export function resumeWordingFields(
     add({
       ...profile,
       id: link.id,
-      shortLabel: `Link ${index + 1} label`,
+      shortLabel: `${link.name?.trim() || `Link ${index + 1}`} label`,
       wording: link.label,
       archived: link.archived,
     }),
@@ -245,14 +247,16 @@ export function resumeWordingFields(
         add({
           ...owner,
           id: field.id,
-          shortLabel: careerFieldLabel(field.key),
+          shortLabel: sectionFieldLabel(field.key, section.kind),
           wording: field.wording,
         });
       entry.achievements.forEach((item, index) =>
         add({
           ...owner,
           id: item.id,
-          shortLabel: `Achievement ${index + 1}`,
+          shortLabel:
+            item.name?.trim() ||
+            `${CAREER_TERMS[section.kind].detail} ${index + 1}`,
           wording: item.wording,
           archived: item.archived,
           rich: true,
@@ -262,7 +266,7 @@ export function resumeWordingFields(
         add({
           ...owner,
           id: item.id,
-          shortLabel: `Link ${index + 1} label`,
+          shortLabel: `${item.name?.trim() || `Link ${index + 1}`} label`,
           wording: item.label,
           archived: item.archived,
         }),
@@ -298,10 +302,14 @@ export function resumeSelectedIds(
           ...section.fieldIds,
           ...section.achievementIds,
           ...section.linkIds,
+          ...(section.evidenceIds ?? []),
         ].filter((key) =>
-          [...entry.fields, ...entry.achievements, ...entry.links].some(
-            (item) => item.id === key,
-          ),
+          [
+            ...entry.fields,
+            ...entry.achievements,
+            ...entry.links,
+            ...(entry.evidence ?? []),
+          ].some((item) => item.id === key),
         );
       }),
     ]),
@@ -320,6 +328,30 @@ export function resumeWordingGroups(
 ): ResumeWordingGroup[] {
   const effective = effectiveResume(document, resume);
   const selected = resumeSelectedIds(document, resume);
+  // Certifications shown beneath a language render their own wording, so Wording
+  // lists them as included even when the Certifications section is not selected.
+  for (const config of effective.selection)
+    for (const evidenceId of config.evidenceIds ?? []) {
+      const attachment = document.sections
+        .find((section) => section.id === config.sectionId)
+        ?.entries.filter((entry) => config.entryIds.includes(entry.id))
+        .flatMap((entry) => entry.evidence ?? [])
+        .find((item) => item.id === evidenceId);
+      const owner = document.sections.find((section) =>
+        section.entries.some((entry) => entry.id === attachment?.entryId),
+      );
+      const record = owner?.entries.find(
+        (entry) => entry.id === attachment?.entryId,
+      );
+      if (!owner || !record) continue;
+      for (const id of [
+        owner.id,
+        record.id,
+        ...record.fields.map((field) => field.id),
+        ...record.links.filter((link) => !link.archived).map((link) => link.id),
+      ])
+        selected.add(id);
+    }
   const byOrder = <T extends { id: string }>(items: T[], order: string[]) => {
     const rank = (id: string) => {
       const index = order.indexOf(id);
@@ -406,7 +438,7 @@ export function resumeWordingGroups(
 
 export type ProfileContact =
   | { kind: "email" | "phone" | "location"; text: string }
-  | { kind: "link"; text: string; url: string };
+  | { kind: "link"; text: string; url: string; icon?: CareerLink["icon"] };
 
 /** Resolve nonempty profile contacts in output order, optionally combining city and country.
  * @param document Committed shared career records.
@@ -469,6 +501,7 @@ export function profileContacts(
         kind: "link",
         text: wordingText(resolveResumeWording(resume, id, link.label)),
         url: link.url,
+        icon: link.icon,
       });
   }
   return items;

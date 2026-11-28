@@ -1056,6 +1056,7 @@ export class CareerController {
           before = { ...(before as object), defaults: layoutDefaults(before) };
         const after = structuredClone(
           draft.scope.startsWith("starter-create/") ||
+            draft.scope.startsWith("language-evidence/") ||
             draft.scope.startsWith("resume-layout/")
             ? readScope(next.document, draft.scope)
             : draft.values,
@@ -1089,9 +1090,12 @@ export class CareerController {
           typeof before === "object" &&
           typeof after === "object"
         ) {
-          for (const key of ["links", "achievements"] as const) {
-            const oldItems = (before as Record<string, unknown>)[key];
+          for (const key of ["links", "achievements", "evidence"] as const) {
             const newItems = (after as Record<string, unknown>)[key];
+            // Evidence is optional; an absent baseline list means no attachments.
+            const oldItems =
+              (before as Record<string, unknown>)[key] ??
+              (key === "evidence" && Array.isArray(newItems) ? [] : undefined);
             if (Array.isArray(oldItems) && Array.isArray(newItems))
               (before as Record<string, unknown>)[key] = [
                 ...oldItems,

@@ -30,6 +30,7 @@ import { StyleSample } from "@/components/career/layout-editor";
 import { resumeQuickActions } from "@/components/career/quick-actions";
 import { CareerSectionIcon } from "@/components/content/career-section-icon";
 import { EntrySearch } from "@/components/content/entry-search";
+import { LinkIcon } from "@/components/content/link-icon";
 import { SortableItemLayout } from "@/components/editor/sortable-item-layout";
 import { SortableList, SortableRow } from "@/components/editor/sortable-list";
 import { WordingSourceBadge } from "@/components/shared/semantic-badges/wording-source-badge";
@@ -90,7 +91,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ResumeColorPicker } from "@/components/variants/resume-color-picker";
 import { useListEntrance } from "@/hooks/use-list-entrance";
-import { careerFieldLabel } from "@/lib/career/labels";
+import { resolveLinkIcon } from "@/lib/career/link-icons";
+import { certificationArchived } from "@/lib/career/model";
 import { outputCapabilities } from "@/lib/career/output";
 import {
   copyResume,
@@ -107,6 +109,13 @@ import {
   prepareStarterResume,
   starterMappings,
 } from "@/lib/career/starters";
+import {
+  CAREER_TERMS,
+  detailRowLabel,
+  EVIDENCE_TERMS,
+  linkRowLabel,
+  sectionFieldLabel,
+} from "@/lib/career/terminology";
 import { type RichText, wordingText } from "@/lib/career/wording";
 import { reorderVisible } from "@/lib/ordering";
 import type { LivePreview } from "@/stores/output/live-preview";
@@ -864,6 +873,8 @@ export function ResumeOverview({
 type Choice = {
   id: string;
   label: string;
+  /** Decorative marker shown before the label, such as a link platform icon. */
+  icon?: ReactNode;
   value?: string;
   archived?: boolean;
   children?: ReactNode;
@@ -929,6 +940,11 @@ function Choices({
             }
           />
           <span className="min-w-0 pt-1 text-sm leading-5 wrap-anywhere">
+            {item.icon && (
+              <span className="me-1.5 inline-flex size-3.5 align-[-2px] text-muted-foreground">
+                {item.icon}
+              </span>
+            )}
             {item.label}
             {item.issue && (
               <span
@@ -1053,6 +1069,34 @@ export function ResumeContentEditor({
   const effective = effectiveResume(document, { ...resume, ...values });
   const wording = (id: string, shared: Record<string, RichText>) =>
     wordingText(resolveResumeWording(resume, id, shared));
+  /** Attached tests or certificates, described by their shared certification. */
+  const evidenceChoices = (entry: CareerEntry): Choice[] =>
+    (entry.evidence ?? []).map((item, index) => {
+      const record = document.sections
+        .flatMap((section) => section.entries)
+        .find((candidate) => candidate.id === item.entryId);
+      const value = (key: string) => {
+        const field = record?.fields.find((other) => other.key === key);
+        if (!field) return "";
+        return field.type === "text"
+          ? wording(field.id, field.wording)
+          : field.fact;
+      };
+      return {
+        id: item.id,
+        issue: selectionIssue(item.id),
+        label: record
+          ? record.name ||
+            value("title") ||
+            `${EVIDENCE_TERMS.item} ${index + 1}`
+          : "Unavailable certification",
+        value: [value("organization"), value("score")]
+          .filter(Boolean)
+          .join(" · "),
+        archived:
+          item.archived || certificationArchived(document, item.entryId),
+      };
+    });
   const changeSection = (
     id: string,
     update: (
@@ -1088,12 +1132,16 @@ export function ResumeContentEditor({
         value:
           field.type === "text" ? wording(field.id, field.wording) : field.fact,
       })),
-    ...document.profile.links.map((link, index) => ({
-      id: link.id,
-      label: `Profile · Link ${index + 1}`,
-      value: wording(link.id, link.label) || link.url,
-      archived: link.archived,
-    })),
+    ...document.profile.links.map((link, index) => {
+      const row = linkRowLabel(link, index, wording(link.id, link.label));
+      return {
+        id: link.id,
+        label: `Profile link · ${row.title}`,
+        icon: <LinkIcon type={resolveLinkIcon(link)} className="size-3.5" />,
+        value: row.detail,
+        archived: link.archived,
+      };
+    }),
   ];
   return (
     <div className="flex flex-col gap-5">
@@ -1294,7 +1342,12 @@ export function ResumeContentEditor({
                             ];
                             return {
                               ...current,
-                              ...detailsForNewEntries(section, current, ids),
+                              ...detailsForNewEntries(
+                                section,
+                                current,
+                                ids,
+                                document.sections,
+                              ),
                               entryIds,
                               hiddenEntryIds: entryIds.filter(
                                 (id) => !ids.includes(id),
@@ -1310,37 +1363,70 @@ export function ResumeContentEditor({
                               configured?.entryIds.includes(entry.id),
                           )
                           .map((entry) => {
+                            const terms = CAREER_TERMS[section.kind];
                             const details = (
-                              ["fieldIds", "achievementIds", "linkIds"] as const
+                              [
+                                "fieldIds",
+                                ...(section.kind === "languages" ||
+                                entry.evidence?.length
+                                  ? (["evidenceIds"] as const)
+                                  : []),
+                                "achievementIds",
+                                "linkIds",
+                              ] as const
                             ).map((key) => {
                               const records: Choice[] =
                                 key === "fieldIds"
                                   ? entry.fields.map((field) => ({
                                       id: field.id,
                                       issue: selectionIssue(field.id),
-                                      label: careerFieldLabel(field.key),
+                                      label: sectionFieldLabel(
+                                        field.key,
+                                        section.kind,
+                                      ),
                                       value:
                                         field.type === "text"
                                           ? wording(field.id, field.wording)
                                           : field.fact,
                                     }))
-                                  : key === "achievementIds"
-                                    ? entry.achievements.map((item, index) => ({
-                                        id: item.id,
-                                        issue: selectionIssue(item.id),
-                                        label: `Achievement ${index + 1}`,
-                                        value: wording(item.id, item.wording),
-                                        archived: item.archived,
-                                      }))
-                                    : entry.links.map((item, index) => ({
-                                        id: item.id,
-                                        issue: selectionIssue(item.id),
-                                        label: `Link ${index + 1}`,
-                                        value:
-                                          wording(item.id, item.label) ||
-                                          item.url,
-                                        archived: item.archived,
-                                      }));
+                                  : key === "evidenceIds"
+                                    ? evidenceChoices(entry)
+                                    : key === "achievementIds"
+                                      ? entry.achievements.map(
+                                          (item, index) => {
+                                            const text = wording(
+                                              item.id,
+                                              item.wording,
+                                            );
+                                            const row = detailRowLabel(
+                                              section.kind,
+                                              item,
+                                              index,
+                                              text,
+                                            );
+                                            return {
+                                              id: item.id,
+                                              issue: selectionIssue(item.id),
+                                              label: row.title,
+                                              value: row.detail || text,
+                                              archived: item.archived,
+                                            };
+                                          },
+                                        )
+                                      : entry.links.map((item, index) => {
+                                          const row = linkRowLabel(
+                                            item,
+                                            index,
+                                            wording(item.id, item.label),
+                                          );
+                                          return {
+                                            id: item.id,
+                                            issue: selectionIssue(item.id),
+                                            label: row.title,
+                                            value: row.detail,
+                                            archived: item.archived,
+                                          };
+                                        });
                               const chosen = configured?.[key] ?? [];
                               return {
                                 key,
@@ -1403,7 +1489,9 @@ export function ResumeContentEditor({
                                   >
                                     <DisclosureChevron />
                                     <DisclosureLabel>
-                                      Fields, achievements, and links
+                                      {section.kind === "languages"
+                                        ? "Proficiency, tests, and certificates"
+                                        : `Fields, ${terms.details.toLowerCase()}, and links`}
                                     </DisclosureLabel>
                                     <span className="ms-auto shrink-0 text-xs font-normal text-muted-foreground">
                                       {includedCount} of {shownCount} included
@@ -1418,9 +1506,11 @@ export function ResumeContentEditor({
                                           label={
                                             key === "fieldIds"
                                               ? "Fields"
-                                              : key === "achievementIds"
-                                                ? "Achievements"
-                                                : "Links"
+                                              : key === "evidenceIds"
+                                                ? EVIDENCE_TERMS.group
+                                                : key === "achievementIds"
+                                                  ? terms.details
+                                                  : terms.links
                                           }
                                           scope={`${resume.id}:${entry.id}:${key}`}
                                           revision={document}
@@ -1428,21 +1518,22 @@ export function ResumeContentEditor({
                                             !selectedIds.includes(entry.id)
                                           }
                                           items={items}
-                                          selected={configured[key].filter(
-                                            (id) => ownIds.has(id),
-                                          )}
+                                          selected={(
+                                            configured[key] ?? []
+                                          ).filter((id) => ownIds.has(id))}
                                           onChange={(ids) =>
                                             changeSection(
                                               section.id,
                                               (current) => {
-                                                const slots = current[
-                                                  key
-                                                ].flatMap((id, index) =>
-                                                  ownIds.has(id) ? [index] : [],
+                                                const existing =
+                                                  current[key] ?? [];
+                                                const slots = existing.flatMap(
+                                                  (id, index) =>
+                                                    ownIds.has(id)
+                                                      ? [index]
+                                                      : [],
                                                 );
-                                                const next = current[
-                                                  key
-                                                ].filter(
+                                                const next = existing.filter(
                                                   (id) => !ownIds.has(id),
                                                 );
                                                 next.splice(

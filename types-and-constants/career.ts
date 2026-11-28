@@ -12,6 +12,9 @@ import type {
 export type CareerDocument = z.infer<typeof careerDocumentSchema>;
 export type CareerEntry = z.infer<typeof entrySchema>;
 export type CareerField = z.infer<typeof fieldSchema>;
+export type CareerLink = CareerEntry["links"][number];
+export type CareerAchievement = CareerEntry["achievements"][number];
+export type CareerEvidence = NonNullable<CareerEntry["evidence"]>[number];
 export type CareerSection = z.infer<typeof sectionSchema>;
 export type CareerDraft = z.infer<typeof draftSchema>;
 export type CareerResume = CareerDocument["resumes"][number];
@@ -54,6 +57,7 @@ export const CAREER_FIELD_LABELS: Readonly<Record<string, string>> = {
   credential: "Credential ID",
   issued: "Issue date",
   expires: "Expiration date",
+  score: "Score or result",
 };
 
 export const RESUME_COLORS = [
@@ -89,6 +93,7 @@ export const SECTION_KINDS = [
   "projects",
   "skills",
   "certifications",
+  "languages",
   "custom",
 ] as const;
 export const FIELD_TYPES = [
@@ -111,9 +116,20 @@ export const BUILTIN_FIELDS = {
     "issued",
     "expires",
     "url",
+    "score",
   ],
+  languages: ["title", "level"],
   custom: ["title", "organization", "location", "start", "end", "url"],
 } as const;
+
+/** Built-in fields added after a kind first shipped. Entries saved earlier may omit
+ * them; editors append the field identity when a value is first entered. */
+export const LATER_FIELDS: Partial<
+  Record<(typeof SECTION_KINDS)[number], readonly string[]>
+> = { certifications: ["score"] };
+
+/** Maximum attached tests or certificates per language entry. */
+export const EVIDENCE_LIMIT = 30;
 
 export const VERIFIED_OUTPUT_LANGUAGES = ["en-US", "pt-BR"] as const;
 
@@ -138,6 +154,7 @@ export const CAREER_OUTPUT_CAPABILITIES: Record<
       projects: "Projects",
       skills: "Skills",
       certifications: "Certifications",
+      languages: "Languages",
     },
   },
   "pt-BR": {
@@ -151,6 +168,7 @@ export const CAREER_OUTPUT_CAPABILITIES: Record<
       projects: "Projetos",
       skills: "Competências",
       certifications: "Certificações",
+      languages: "Idiomas",
     },
   },
 };

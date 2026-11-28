@@ -425,7 +425,8 @@
                 "wording": {
                   "en-US": "A small writing tool that makes organizing ideas feel effortless.",
                   "pt-BR": "Uma ferramenta de escrita que facilita a organização de ideias."
-                }
+                },
+                "name": "Writing tool pitch"
               },
               {
                 "id": "example-project-technologies",
@@ -442,9 +443,10 @@
                 "archived": false,
                 "url": "https://example.com/project",
                 "label": {
-                  "en-US": "example.com/project",
-                  "pt-BR": "example.com/project"
-                }
+                  "en-US": "Live demo",
+                  "pt-BR": "Demonstração"
+                },
+                "name": "Demo link for product roles"
               }
             ]
           },
@@ -1040,7 +1042,7 @@
                 "url": "https://example.com/credential",
                 "label": {
                   "en-US": "Verify credential",
-                  "pt-BR": "Verify credential"
+                  "pt-BR": "Verificar credencial"
                 }
               }
             ]
@@ -1176,9 +1178,148 @@
               }
             ],
             "links": []
+          },
+          {
+            "id": "example-certification-toefl",
+            "name": "TOEFL iBT",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-toefl-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "TOEFL iBT",
+                  "pt-BR": "TOEFL iBT"
+                }
+              },
+              {
+                "id": "example-toefl-organization",
+                "key": "organization",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "ETS",
+                  "pt-BR": "ETS"
+                }
+              },
+              {
+                "id": "example-toefl-credential",
+                "key": "credential",
+                "type": "credential",
+                "fact": "",
+                "wording": {}
+              },
+              {
+                "id": "example-toefl-issued",
+                "key": "issued",
+                "type": "date",
+                "fact": "2023-05",
+                "wording": {}
+              },
+              {
+                "id": "example-toefl-expires",
+                "key": "expires",
+                "type": "date",
+                "fact": "",
+                "wording": {}
+              },
+              {
+                "id": "example-toefl-url",
+                "key": "url",
+                "type": "url",
+                "fact": "",
+                "wording": {}
+              },
+              {
+                "id": "example-toefl-score",
+                "key": "score",
+                "type": "credential",
+                "fact": "110/120",
+                "wording": {}
+              }
+            ],
+            "achievements": [],
+            "links": []
           }
         ],
         "icon": "award"
+      },
+      {
+        "id": "example-section-languages",
+        "kind": "languages",
+        "icon": "languages",
+        "name": "Languages",
+        "heading": {},
+        "archived": false,
+        "entries": [
+          {
+            "id": "example-language-english",
+            "name": "English",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-english-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "English",
+                  "pt-BR": "Inglês"
+                }
+              },
+              {
+                "id": "example-english-level",
+                "key": "level",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Advanced",
+                  "pt-BR": "Avançado"
+                }
+              }
+            ],
+            "achievements": [],
+            "links": [],
+            "evidence": [
+              {
+                "id": "example-english-toefl",
+                "entryId": "example-certification-toefl",
+                "archived": false
+              }
+            ]
+          },
+          {
+            "id": "example-language-portuguese",
+            "name": "Portuguese",
+            "archived": false,
+            "fields": [
+              {
+                "id": "example-portuguese-title",
+                "key": "title",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Portuguese",
+                  "pt-BR": "Português"
+                }
+              },
+              {
+                "id": "example-portuguese-level",
+                "key": "level",
+                "type": "text",
+                "fact": "",
+                "wording": {
+                  "en-US": "Native",
+                  "pt-BR": "Nativo"
+                }
+              }
+            ],
+            "achievements": [],
+            "links": []
+          }
+        ]
       },
       {
         "id": "example-section-custom",
@@ -1434,6 +1575,22 @@
             "linkIds": ["example-credential-link"]
           },
           {
+            "sectionId": "example-section-languages",
+            "entryIds": [
+              "example-language-english",
+              "example-language-portuguese"
+            ],
+            "achievementIds": [],
+            "fieldIds": [
+              "example-english-title",
+              "example-english-level",
+              "example-portuguese-title",
+              "example-portuguese-level"
+            ],
+            "linkIds": [],
+            "evidenceIds": ["example-english-toefl"]
+          },
+          {
             "sectionId": "example-section-custom",
             "entryIds": ["example-mentoring"],
             "fieldIds": [
@@ -1652,7 +1809,8 @@
             "entryIds": [
               "example-certification",
               "example-certification-accessibility",
-              "example-certification-data"
+              "example-certification-data",
+              "example-certification-toefl"
             ],
             "fieldIds": [
               "example-certification-title",
@@ -1672,7 +1830,11 @@
               "example-certification-data-credential",
               "example-certification-data-issued",
               "example-certification-data-expires",
-              "example-certification-data-url"
+              "example-certification-data-url",
+              "example-toefl-title",
+              "example-toefl-organization",
+              "example-toefl-issued",
+              "example-toefl-score"
             ],
             "achievementIds": [
               "example-certification-bullet-0",
@@ -1681,6 +1843,22 @@
               "example-certification-data-bullet-0"
             ],
             "linkIds": ["example-credential-link"]
+          },
+          {
+            "sectionId": "example-section-languages",
+            "entryIds": [
+              "example-language-english",
+              "example-language-portuguese"
+            ],
+            "achievementIds": [],
+            "fieldIds": [
+              "example-english-title",
+              "example-english-level",
+              "example-portuguese-title",
+              "example-portuguese-level"
+            ],
+            "linkIds": [],
+            "evidenceIds": []
           },
           {
             "sectionId": "example-section-custom",

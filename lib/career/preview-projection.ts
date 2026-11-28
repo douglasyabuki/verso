@@ -220,6 +220,23 @@ export async function projectPreview(
   if (!cachedBase) include(resume.selection);
   if (scope === "resume-content")
     include((values as { selection?: unknown } | null)?.selection);
+  // Attached tests or certificates render beneath languages from their shared
+  // certification records, which may live in sections this resume does not select.
+  const evidence: [string, string][] = [];
+  for (const [id, ids] of selection) {
+    const record = index.sections.get(id);
+    if (record?.section.kind !== "languages") continue;
+    for (const entryId of ids)
+      for (const item of record.entries.get(entryId)?.evidence ?? [])
+        for (const [owner, other] of index.sections)
+          if (other.entries.has(item.entryId))
+            evidence.push([owner, item.entryId]);
+  }
+  for (const [owner, entryId] of evidence) {
+    const ids = selection.get(owner) ?? new Set<string>();
+    selection.set(owner, ids);
+    ids.add(entryId);
+  }
   for (const [id, ids] of selection) {
     const record = index.sections.get(id);
     if (!record) continue;

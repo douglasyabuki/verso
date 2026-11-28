@@ -434,7 +434,7 @@ describe("resume editing and transactional lifecycle", () => {
     await expect
       .element(
         page.getByRole("checkbox", {
-          name: "Include Achievement 1",
+          name: "Include Shipped",
           exact: true,
         }),
       )
@@ -442,7 +442,7 @@ describe("resume editing and transactional lifecycle", () => {
     await expect
       .element(
         page.getByRole("checkbox", {
-          name: "Include Achievement 2",
+          name: "Include Old",
           exact: true,
         }),
       )

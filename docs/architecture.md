@@ -60,6 +60,57 @@ built-in icons are fixed. Section properties edits the icon in its existing draf
 Every section representation uses the saved icon. Icons participate in baselines,
 history, recovery, backups, and rollback, but not PDF graphics or readiness.
 
+### Section vocabulary, internal names, and links
+
+`lib/career/terminology.ts` owns per-kind interface terms (entry creation,
+detail and link actions, group headings, and which groups are primary). Entry
+lists, quick actions, the entry form, Content & order, and Wording use them;
+**Add section** stays generic. Empty secondary groups sit behind **Add more**;
+populated groups always render.
+
+Achievements/details and links accept an optional `name` (internal name). It is
+shared across resumes and languages, appears only in editors, and never reaches
+TeX. Row labels come from `detailRowLabel`/`linkRowLabel`: the internal name, then
+the applicable wording excerpt or display label and URL, else a numbered,
+kind-specific fallback ("Skill detail 2", "Link 3"). Renaming and reordering keep
+identities and resume selections.
+
+Links accept an optional `icon` override from `types-and-constants/link-icons.ts`;
+absence means Automatic. `lib/career/link-icons.ts` matches exact registrable
+domains and their subdomains (plus `scholar.google.<tld>`), otherwise the generic
+chain icon. The editor and the PDF header share one glyph/codepoint table. Profile
+links render with the contact details (icons follow **Contact icons** and the icon
+color). Entry links render beneath their entry as clickable labels without icons.
+A blank label prints the URL. Entry URLs are added through the link list. A saved
+`url` (Website) field stays editable and selectable. When a selected Website and a
+selected entry link share a destination (`sameDestination`: only scheme/host case,
+default port, and an empty root path are ignored), the labeled link prints once.
+
+### Spoken languages and attached evidence
+
+The `languages` section kind (not seeded; offered by Add section) has `title`
+(language name) and `level` (optional proficiency) wording, independent of
+Settings › Content languages. Certifications gained an optional verbatim `score`
+fact. It is listed in `LATER_FIELDS`, so older entries without it stay valid, and
+editors append it when the user first enters a value.
+
+A language entry's optional `evidence` array holds attachment records
+(`{id, entryId, archived}`) that point to certification entries. The certification
+stays the one shared record, so edits reach every resume after Save. Detach and
+Reattach archive and restore the attachment. Removal and changing its target are
+rejected like other shared identities. A resume's section selection carries
+optional `evidenceIds`, independent of any Certifications selection, so a result
+can render under Languages, Certifications, or both. Newly selecting a language
+includes its active attachments. Newly selecting a detached attachment, or one
+whose certification is archived, is rejected. Existing selections keep rendering.
+
+Creating a test from a language form first resolves that draft. A language that
+was never saved stops the flow. The flow then opens the composite
+`language-evidence/<certificationId>` scope, whose Save creates the
+certification and appends the attachment in one transaction and returns to the
+language. Undo archives both; Redo restores both. Attach existing stays a
+separate draft edit.
+
 ## Editing, history, and navigation
 
 Forms, selection, and ordering use explicit Cancel / Save. Incomplete valid values
@@ -176,7 +227,8 @@ switch to blank before creating the resume.
 
 `lib/career/readiness.ts` and the renderer share effective-selection
 assessment. Blockers are an unverified PDF language, missing full name, a rendered
-custom heading, selected title/degree, or selected achievement wording. Other empty
+custom heading, selected title/degree, selected achievement wording, or the name of
+a selected attached test or certificate. Other empty
 values remain optional. Preserve built-in headings, URL-label fallback, and explicit
 empty overrides without cross-language fallback. Hidden/excluded content and
 archive/deactivation status alone do not block output. Save validation is separate.
@@ -206,8 +258,8 @@ tabs defer automatic draft work. Other destinations can opt into refresh after S
 
 A dedicated worker receives the active resume’s projected shared records in
 acknowledged batches. Wording and layout updates send changed scope keys, including
-deletions. The projection includes language-specific wording, selected records,
-an identity and formatting index for override validation, and the committed byte
+deletions. The projection includes language-specific wording, selected records
+(including certifications attached to selected languages), an identity and formatting index for override validation, and the committed byte
 allowance. Preview applies the Save scope rules and the shared renderer. Save still
 validates and commits the complete workspace at its authoritative storage boundary.
 
@@ -229,7 +281,8 @@ position and retained output. Compiler defaults are 120 seconds for initializati
 ## Capacity and measurement
 
 Canonical model limits include 120 resumes, 100 sections, 2,000 total entries,
-300 entries per section, 100 achievements and 30 links per entry, 30 profile links,
+300 entries per section, 100 achievements, 30 links, and 30 attached tests or
+certificates per entry, 30 profile links,
 100 starters, and 100 presets. Languages are byte-bounded rather than count-bounded.
 Preserve field/rich-text validation. Byte limits and export rules are owned by the
 [recovery reference](recovery-files.md). History retains at most 100 steps or 32 MiB

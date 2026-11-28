@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InfoHint } from "@/components/ui/info-hint";
 import { QuickActionsMenu } from "@/components/ui/quick-actions";
+import { CAREER_TERMS } from "@/lib/career/terminology";
 import { wordingText } from "@/lib/career/wording";
 import { reorderVisible } from "@/lib/ordering";
 import type { CareerEntry, CareerSection } from "@/types-and-constants/career";
@@ -86,6 +87,7 @@ export function CareerEntryList({
   }
   const currentId = selectedId ?? retainedSelectedId;
   const create = createEntryQuickAction(section, saving, onCreate);
+  const terms = CAREER_TERMS[section.kind];
   const CreateIcon = create.icon;
   const visible = ids
     .flatMap((id) => {
@@ -246,15 +248,13 @@ export function CareerEntryList({
                               actions={[
                                 {
                                   key: "duplicate",
-                                  label: "Duplicate entry",
+                                  label: `Duplicate ${terms.entry}`,
                                   icon: Copy,
                                   onSelect: () => onDuplicate(entry),
                                 },
                                 {
                                   key: "archive",
-                                  label: entry.archived
-                                    ? "Restore entry"
-                                    : "Archive entry",
+                                  label: `${entry.archived ? "Restore" : "Archive"} ${terms.entry}`,
                                   icon: entry.archived
                                     ? ArchiveRestore
                                     : Archive,
@@ -279,7 +279,7 @@ export function CareerEntryList({
                   <p className="py-3 text-sm text-muted-foreground">
                     {query
                       ? "No matching entries."
-                      : "No entries yet. Add an entry to start building your career details."}
+                      : `Nothing here yet. Use ${create.label} to start building this section.`}
                   </p>
                 )}
               </div>

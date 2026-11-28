@@ -64,6 +64,7 @@ export const defaultSectionIcons = {
   education: "graduation-cap",
   skills: "code-2",
   certifications: "award",
+  languages: "languages",
   custom: "file-text",
 } as const satisfies Record<
   | "experience"
@@ -71,6 +72,7 @@ export const defaultSectionIcons = {
   | "education"
   | "skills"
   | "certifications"
+  | "languages"
   | "custom"
   | "profile"
   | "summary",

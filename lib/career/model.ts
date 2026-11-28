@@ -12,7 +12,9 @@ import {
   BUILTIN_FIELDS,
   CAREER_ENTRY_LIMIT,
   DRAFT_BYTES,
+  EVIDENCE_LIMIT,
   FIELD_TYPES,
+  LATER_FIELDS,
   mib,
   RECOVERY_BYTES,
   RESUME_COLORS,
@@ -20,6 +22,7 @@ import {
   WORKSPACE_BYTES,
 } from "@/types-and-constants/career";
 import { appLayoutDefaults } from "@/types-and-constants/layout";
+import { LINK_ICON_IDS } from "@/types-and-constants/link-icons";
 import {
   defaultSectionIcons,
   sectionIconIds,
@@ -112,16 +115,29 @@ export const fieldSchema = z
         message: "Shared facts cannot have localized copies.",
       });
   });
+/** Editor-only name shared across resumes and languages; never rendered. */
+const internalName = z.string().max(200).optional();
 const achievementSchema = z.strictObject({
   id,
   archived: z.boolean(),
+  name: internalName,
   wording: z.record(language, richTextSchema),
 });
-const linkSchema = z.strictObject({
+export const linkSchema = z.strictObject({
   id,
   archived: z.boolean(),
+  name: internalName,
+  /** Explicit icon override; absent means automatic hostname detection. */
+  icon: z.enum(LINK_ICON_IDS).optional(),
   url,
   label: wording,
+});
+/** A language entry's reference to a shared certification record. Archived
+ * attachments are detached but remain usable in existing resume selections. */
+const evidenceSchema = z.strictObject({
+  id,
+  entryId: id,
+  archived: z.boolean(),
 });
 
 export const entrySchema = z.strictObject({
@@ -131,7 +147,23 @@ export const entrySchema = z.strictObject({
   fields: z.array(fieldSchema).max(30),
   achievements: z.array(achievementSchema).max(100),
   links: z.array(linkSchema).max(30),
+  evidence: z.array(evidenceSchema).max(EVIDENCE_LIMIT).optional(),
 });
+
+/** Resolve the stored type of a built-in field key.
+ * @param key Built-in field key.
+ * @returns Field type required for that key.
+ * @example builtinFieldType("issued") // "date"
+ */
+export function builtinFieldType(key: string): (typeof FIELD_TYPES)[number] {
+  return ["start", "end", "issued", "expires"].includes(key)
+    ? "date"
+    : key === "url"
+      ? "url"
+      : key === "credential" || key === "score"
+        ? "credential"
+        : "text";
+}
 const sectionIdentitySchema = z
   .strictObject({
     kind: z.enum(SECTION_KINDS),
@@ -179,6 +211,7 @@ const selectionSchema = z.strictObject({
   achievementIds: z.array(id).max(30_000),
   fieldIds: z.array(id).max(9000),
   linkIds: z.array(id).max(9000),
+  evidenceIds: z.array(id).max(9000).optional(),
   fieldDefaults: z.array(z.string().max(80)).max(30).optional(),
 });
 const resumeSchema = z.strictObject({
@@ -323,6 +356,11 @@ export const careerDocumentSchema = z
     addId(document.summary.id);
     wordingIds.add(document.summary.id);
     let count = 0;
+    const certificationIds = new Set(
+      document.sections
+        .filter((section) => section.kind === "certifications")
+        .flatMap((section) => section.entries.map((entry) => entry.id)),
+    );
     for (const section of document.sections) {
       addId(section.id);
       wordingIds.add(section.id);
@@ -332,12 +370,42 @@ export const careerDocumentSchema = z
         addId(entry.id);
         allFields.push(...entry.fields);
         allLinks.push(...entry.links);
-        if (entry.fields.length !== BUILTIN_FIELDS[section.kind].length)
+        const later = LATER_FIELDS[section.kind] ?? [];
+        if (
+          BUILTIN_FIELDS[section.kind].some(
+            (key) =>
+              !later.includes(key) &&
+              !entry.fields.some((field) => field.key === key),
+          )
+        )
           ctx.addIssue({
             code: "custom",
             message:
               "Entries must retain their built-in fields; empty values are allowed.",
           });
+        if (entry.evidence?.length) {
+          if (section.kind !== "languages")
+            ctx.addIssue({
+              code: "custom",
+              message:
+                "Only language entries can attach tests or certificates.",
+            });
+          const attached = new Set<string>();
+          for (const item of entry.evidence) {
+            addId(item.id);
+            if (!certificationIds.has(item.entryId))
+              ctx.addIssue({
+                code: "custom",
+                message: `Attached test or certificate must be a certification: ${item.entryId}`,
+              });
+            if (attached.has(item.entryId))
+              ctx.addIssue({
+                code: "custom",
+                message: "A certification can be attached to a language once.",
+              });
+            attached.add(item.entryId);
+          }
+        }
         const keys = new Set<string>();
         for (const field of entry.fields) {
           if (
@@ -349,16 +417,7 @@ export const careerDocumentSchema = z
               code: "custom",
               message: `Unsupported ${section.kind} field: ${field.key}`,
             });
-          const expectedType = ["start", "end", "issued", "expires"].includes(
-            field.key,
-          )
-            ? "date"
-            : field.key === "url"
-              ? "url"
-              : field.key === "credential"
-                ? "credential"
-                : "text";
-          if (field.type !== expectedType)
+          if (field.type !== builtinFieldType(field.key))
             ctx.addIssue({
               code: "custom",
               message: `Invalid built-in field type for ${field.key}.`,
@@ -528,12 +587,14 @@ function checkSelectionReferences(
       entries.flatMap((item) => item.achievements.map((value) => value.id)),
       entries.flatMap((item) => item.fields.map((value) => value.id)),
       entries.flatMap((item) => item.links.map((value) => value.id)),
+      entries.flatMap((item) => (item.evidence ?? []).map((value) => value.id)),
     ];
     [
       selected.entryIds,
       selected.achievementIds,
       selected.fieldIds,
       selected.linkIds,
+      selected.evidenceIds ?? [],
     ].forEach((values, index) => {
       if (
         new Set(values).size !== values.length ||
@@ -571,6 +632,23 @@ function checkContactArchive(
     )
   )
     throw new Error("Archived contacts are unavailable for new selections.");
+}
+
+/** Check whether a certification record, or its section, is archived.
+ * @param document Shared career sections.
+ * @param entryId Certification entry identity.
+ * @returns {boolean} True when the record or its section is archived.
+ * @example certificationArchived(document, attachment.entryId)
+ */
+export function certificationArchived(
+  document: Pick<CareerDocument, "sections">,
+  entryId: string,
+): boolean {
+  for (const section of document.sections) {
+    const entry = section.entries.find((item) => item.id === entryId);
+    if (entry) return section.archived || entry.archived;
+  }
+  return false;
 }
 
 /** Enforce archive restrictions on new selections and restored entries.
@@ -626,6 +704,16 @@ function checkSelectionArchive(
           (value) =>
             !prior?.linkIds.includes(value) &&
             entry.links.some((item) => item.id === value && item.archived),
+        ) ||
+        (selection.evidenceIds ?? []).some(
+          (value) =>
+            !prior?.evidenceIds?.includes(value) &&
+            entry.evidence?.some(
+              (item) =>
+                item.id === value &&
+                (item.archived ||
+                  certificationArchived(document, item.entryId)),
+            ),
         )
       )
         throw new Error("Archived content is unavailable for new selections.");
@@ -691,7 +779,7 @@ export const draftSchema = z.strictObject({
     .string()
     .max(370)
     .regex(
-      /^(profile|summary|languages|defaults|sections|(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\/[A-Za-z0-9_-]{1,120}|new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120})$/,
+      /^(profile|summary|languages|defaults|sections|(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create|language-evidence)\/[A-Za-z0-9_-]{1,120}|new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120})$/,
       "Unsupported editing scope.",
     ),
   baseline: z.unknown(),
@@ -836,13 +924,7 @@ export function createEntry(kind: CareerSection["kind"]): CareerEntry {
     fields: BUILTIN_FIELDS[kind].map((key) => ({
       id: crypto.randomUUID(),
       key,
-      type: ["start", "end", "issued", "expires"].includes(key)
-        ? "date"
-        : key === "url"
-          ? "url"
-          : key === "credential"
-            ? "credential"
-            : "text",
+      type: builtinFieldType(key),
       fact: "",
       wording: {},
     })),
@@ -873,6 +955,12 @@ export function duplicateEntry(entry: CareerEntry): CareerEntry {
       ...structuredClone(item),
       id: crypto.randomUUID(),
     })),
+    ...(entry.evidence && {
+      evidence: entry.evidence.map((item) => ({
+        ...item,
+        id: crypto.randomUUID(),
+      })),
+    }),
   };
 }
 
@@ -890,7 +978,7 @@ export function readScope(document: CareerDocument, scope: string): unknown {
   if (scope === "sections")
     return document.sections.map((section) => section.id);
   if (
-    !/^(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)\/[A-Za-z0-9_-]{1,120}$|^new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120}$/.test(
+    !/^(entry|section|entries|selection|new-section|resume|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create|language-evidence)\/[A-Za-z0-9_-]{1,120}$|^new-entry\/[A-Za-z0-9_-]{1,120}\/[A-Za-z0-9_-]{1,120}$/.test(
       scope,
     )
   )
@@ -903,6 +991,8 @@ export function readScope(document: CareerDocument, scope: string): unknown {
       ) ?? null
     );
   if (kind === "starter-create") return readStarterCreation(document, target);
+  if (kind === "language-evidence")
+    return readLanguageEvidence(document, target);
   if (kind.startsWith("resume")) {
     const resume = document.resumes.find((item) => item.id === target);
     if (kind === "resume") return resume ?? null;
@@ -1015,6 +1105,8 @@ export function applyScope(
   const [kind, target, child] = scope.split("/");
   if (kind === "starter-create")
     return applyStarterCreation(document, target, values);
+  if (kind === "language-evidence")
+    return applyLanguageEvidence(document, target, values);
   if (kind === "preset" || kind === "starter") {
     const key = kind === "preset" ? "presets" : "starters";
     const records = [...document[key]];
@@ -1114,6 +1206,15 @@ export function applyScope(
         retainIdentities(original.fields, entry.fields);
         retainIdentities(original.achievements, entry.achievements);
         retainIdentities(original.links, entry.links);
+        retainIdentities(original.evidence ?? [], entry.evidence ?? []);
+        if (
+          original.evidence?.some(
+            (item) =>
+              entry.evidence?.find((next) => next.id === item.id)?.entryId !==
+              item.entryId,
+          )
+        )
+          throw new Error("An attachment cannot change its certification.");
         section.entries[index] = entry;
       }
     }
@@ -1189,7 +1290,8 @@ function applyStarterCreation(
         selection.entryIds.length ||
         selection.fieldIds.length ||
         selection.achievementIds.length ||
-        selection.linkIds.length,
+        selection.linkIds.length ||
+        selection.evidenceIds?.length,
     ) ||
     (input.resume.profileSelection?.length ?? 0) > 0 ||
     Object.keys(input.resume.overrides).length
@@ -1246,5 +1348,139 @@ function applyStarterCreation(
     ...document,
     sections,
     resumes: [...document.resumes, input.resume],
+  });
+}
+
+export const languageEvidenceSchema = z.strictObject({
+  languageEntryId: id,
+  sectionId: id,
+  attachmentId: id,
+  entry: entrySchema,
+});
+
+/** Read a certification created for a language entry together with its attachment.
+ * @param document Committed workspace.
+ * @param target Certification entry ID.
+ * @returns {unknown} Creation record, null before creation, or undefined when the certification exists without an attachment.
+ * @example readLanguageEvidence(document, "certification-id")
+ */
+function readLanguageEvidence(
+  document: CareerDocument,
+  target: string,
+): unknown {
+  const section = document.sections.find(
+    (item) =>
+      item.kind === "certifications" &&
+      item.entries.some((entry) => entry.id === target),
+  );
+  if (!section) return null;
+  for (const owner of document.sections)
+    for (const entry of owner.entries) {
+      const attachment = entry.evidence?.find(
+        (item) => item.entryId === target,
+      );
+      if (attachment)
+        return {
+          languageEntryId: entry.id,
+          sectionId: section.id,
+          attachmentId: attachment.id,
+          entry: section.entries.find((item) => item.id === target)!,
+        };
+    }
+  return undefined;
+}
+
+/** Create a certification and attach it to a language entry in one transaction,
+ * or reverse/repeat that creation from history.
+ * @param document Current committed workspace.
+ * @param target Stable certification entry ID.
+ * @param values Prepared creation, or null for undo (archives both records).
+ * @returns {CareerDocument} Validated workspace; throws on stale or invalid targets.
+ * @example applyLanguageEvidence(document, request.entry.id, request)
+ */
+function applyLanguageEvidence(
+  document: CareerDocument,
+  target: string,
+  values: unknown,
+): CareerDocument {
+  const current = readLanguageEvidence(document, target) as z.infer<
+    typeof languageEvidenceSchema
+  > | null;
+  const update = (archived: boolean, record: typeof current) =>
+    document.sections.map((section) => ({
+      ...section,
+      entries: section.entries.map((entry) =>
+        entry.id === target
+          ? { ...entry, archived }
+          : entry.id === record!.languageEntryId
+            ? {
+                ...entry,
+                evidence: entry.evidence!.map((item) =>
+                  item.id === record!.attachmentId
+                    ? { ...item, archived }
+                    : item,
+                ),
+              }
+            : entry,
+      ),
+    }));
+  if (values === null) {
+    if (!current) throw new Error("The created certification is missing.");
+    return validateDocument({ ...document, sections: update(true, current) });
+  }
+  const input = languageEvidenceSchema.parse(values);
+  if (input.entry.id !== target || input.entry.archived)
+    throw new Error("Creation identities must match.");
+  if (current) {
+    if (
+      !current.entry.archived ||
+      current.attachmentId !== input.attachmentId ||
+      current.languageEntryId !== input.languageEntryId ||
+      JSON.stringify({ ...current.entry, archived: false }) !==
+        JSON.stringify(input.entry)
+    )
+      throw new Error(
+        "The certification changed; reconcile before retrying history.",
+      );
+    return validateDocument({ ...document, sections: update(false, current) });
+  }
+  const destination = document.sections.find(
+    (item) => item.id === input.sectionId,
+  );
+  if (
+    !destination ||
+    destination.kind !== "certifications" ||
+    destination.archived
+  )
+    throw new Error("Choose an active Certifications section.");
+  const owner = document.sections.find(
+    (section) =>
+      section.kind === "languages" &&
+      section.entries.some((entry) => entry.id === input.languageEntryId),
+  );
+  if (!owner) throw new Error("Save the language before adding a test.");
+  return validateDocument({
+    ...document,
+    sections: document.sections.map((section) => ({
+      ...section,
+      entries:
+        section.id === destination.id
+          ? [...section.entries, input.entry]
+          : section.entries.map((entry) =>
+              entry.id === input.languageEntryId
+                ? {
+                    ...entry,
+                    evidence: [
+                      ...(entry.evidence ?? []),
+                      {
+                        id: input.attachmentId,
+                        entryId: target,
+                        archived: false,
+                      },
+                    ],
+                  }
+                : entry,
+            ),
+    })),
   });
 }

@@ -190,7 +190,7 @@ test("creates, tailors, duplicates, copies languages, compares and deletes indep
     page.getByRole("checkbox", { name: "Include Title", exact: true }),
   ).toBeChecked();
   const achievement = page.getByRole("checkbox", {
-    name: "Include Achievement 1",
+    name: "Include Delivered accessible software",
     exact: true,
   });
   await expect(achievement).toBeChecked();

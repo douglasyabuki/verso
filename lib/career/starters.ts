@@ -1,4 +1,5 @@
 import { layoutAppearance, layoutFromPreset } from "@/lib/career/layout";
+import { certificationArchived } from "@/lib/career/model";
 import { createResume } from "@/lib/career/resumes";
 import type {
   CareerDocument,
@@ -175,16 +176,18 @@ export function fieldsForNewEntries(
  * @param section Shared section supplying entries and their detail identities.
  * @param selection Current resume configuration; entries already in `entryIds` are not new.
  * @param ids Next visible entry IDs.
- * @returns Existing detail IDs plus, for genuinely new entries in career order, starter-default or all fields and every non-archived achievement and link.
- * @example detailsForNewEntries(section, selection, [entry.id])
+ * @param sections All career sections, used to skip attachments whose certification is archived.
+ * @returns Existing detail IDs plus, for genuinely new entries in career order, starter-default or all fields and every non-archived achievement, link, and attached test or certificate.
+ * @example detailsForNewEntries(section, selection, [entry.id], document.sections)
  */
 export function detailsForNewEntries(
   section: CareerDocument["sections"][number],
   selection: CareerResume["selection"][number],
   ids: string[],
+  sections: CareerDocument["sections"] = [],
 ): Pick<
   CareerResume["selection"][number],
-  "fieldIds" | "achievementIds" | "linkIds"
+  "fieldIds" | "achievementIds" | "linkIds" | "evidenceIds"
 > {
   const added = section.entries.filter(
     (entry) => ids.includes(entry.id) && !selection.entryIds.includes(entry.id),
@@ -216,5 +219,19 @@ export function detailsForNewEntries(
         entry.links.filter((item) => !item.archived).map((item) => item.id),
       ),
     ),
+    ...((section.kind === "languages" || selection.evidenceIds) && {
+      evidenceIds: append(
+        selection.evidenceIds ?? [],
+        added.flatMap((entry) =>
+          (entry.evidence ?? [])
+            .filter(
+              (item) =>
+                !item.archived &&
+                !certificationArchived({ sections }, item.entryId),
+            )
+            .map((item) => item.id),
+        ),
+      ),
+    }),
   };
 }

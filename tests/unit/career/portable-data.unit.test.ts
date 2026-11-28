@@ -376,10 +376,11 @@ it("imports the downloadable schema-2 sample and renders both complete language 
     "education",
     "skills",
     "certifications",
+    "languages",
     "custom",
   ]);
   expect(document.sections.map((section) => section.entries.length)).toEqual([
-    3, 3, 3, 3, 3, 1,
+    3, 3, 3, 3, 4, 2, 1,
   ]);
   expect(document.resumes.map((resume) => resume.language)).toEqual([
     "en-US",
@@ -408,7 +409,25 @@ it("imports the downloadable schema-2 sample and renders both complete language 
       resume.language === "en-US" ? "Curitiba, Brazil" : "Curitiba, Brasil",
     );
     expect(output).toContain("DEMO-2024-001");
-    expect(output).toContain("https://example.com/project");
+    // The project Website and its selected link share a destination, so the
+    // labeled link renders once.
+    expect(
+      output.match(/\\href\{https:\/\/example\.com\/project\}/g),
+    ).toHaveLength(1);
+    expect(output).toContain(
+      resume.language === "en-US"
+        ? "\\href{https://example.com/project}{Live demo}"
+        : "\\href{https://example.com/project}{Demonstração}",
+    );
+    expect(output).toContain(
+      resume.language === "en-US"
+        ? "\\textbf{English} · Advanced"
+        : "\\textbf{Inglês} · Avançado",
+    );
+    expect(output).toContain("110/120");
+    expect(output).toContain("\\VersoBrand{F09B}");
+    expect(output).toContain("\\VersoBrand{F0E1}");
+    expect(output).not.toContain("Demo link for product roles");
     expect(output).toContain(
       resume.language === "en-US" ? "Frontend Engineer" : "Engenheiro Frontend",
     );
@@ -420,7 +439,15 @@ it("imports the downloadable schema-2 sample and renders both complete language 
       const selected = resume.selection.find(
         (item) => item.sectionId === section.id,
       )!;
-      expect(selected.entryIds).toHaveLength(section.entries.length);
+      // The TOEFL result appears under Languages in English and under
+      // Certifications in Portuguese.
+      expect(selected.entryIds).toHaveLength(
+        section.entries.filter(
+          (entry) =>
+            resume.language === "pt-BR" ||
+            entry.id !== "example-certification-toefl",
+        ).length,
+      );
       for (const entry of section.entries) {
         for (const field of entry.fields.filter((item) => item.type === "text"))
           expect(field.wording[resume.language]).toBeDefined();

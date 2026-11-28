@@ -248,6 +248,27 @@ separate; malformed field values are preserved for editing. Layout/library draft
 use the existing scheduling, immutable operation IDs, resolved-version cleanup,
 comparison/reconciliation, and non-expiring unresolved retention contracts.
 
+Schema 2 also accepts these optional members, with no envelope or template
+version change:
+
+- link `name` and `icon`;
+- achievement `name`;
+- language-entry `evidence`;
+- selection `evidenceIds`;
+- the `languages` section kind;
+- a certification `score` field. Older certifications without it remain valid.
+
+Opening or importing never adds them. Older builds reject files that contain them,
+and no conversion is provided.
+
+`language-evidence/<certificationId>` holds one prepared composite request: the
+language entry ID, target certifications section, preallocated attachment ID, and
+the new certification entry. Commit requires a saved language and an active
+certifications section, then creates both records together. Retries keep the same
+IDs. Undo archives the certification and its attachment. Redo restores them only
+if the certification is unchanged. Recovery keeps the request uncommitted, like
+other drafts.
+
 `starter-create/<resumeId>` holds one prepared composite request: the new resume,
 missing empty sections with preallocated IDs, and reviewed metadata for reused
 Career sections. The transaction rechecks reviewed metadata and all capacity and

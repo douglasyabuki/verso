@@ -14,6 +14,7 @@ import {
 
 import type { ResumeActions } from "@/components/career/resume-workspace";
 import type { QuickAction } from "@/components/ui/quick-actions";
+import { CAREER_TERMS } from "@/lib/career/terminology";
 import type {
   CareerDocument,
   CareerEntry,
@@ -50,7 +51,7 @@ export function createEntryQuickAction(
 ): QuickAction {
   return {
     key: "create-entry",
-    label: "Create entry",
+    label: CAREER_TERMS[section.kind].addEntry,
     icon: Plus,
     disabled: busy || section.entries.length >= 300,
     hint: busy ? busyHint : "Limit of 300 entries reached.",

@@ -7,6 +7,11 @@ import {
   resumeSelectedIds,
   resumeWordingFields,
 } from "@/lib/career/resumes";
+import {
+  CAREER_TERMS,
+  EVIDENCE_TERMS,
+  sectionFieldLabel,
+} from "@/lib/career/terminology";
 import { wordingText } from "@/lib/career/wording";
 import {
   CAREER_OUTPUT_CAPABILITIES,
@@ -129,6 +134,7 @@ function factRows(
   fields: CareerDocument["profile"]["fields"],
   links: CareerDocument["profile"]["links"],
   selected: Pair<Set<string>>,
+  evidence: { id: string; label: string; value: string }[] = [],
 ): ComparisonRow[] {
   const facts = [
     ...fields
@@ -142,9 +148,10 @@ function factRows(
     ...links.map((link, index) => ({
       id: `url:${link.id}`,
       selectionId: link.id,
-      label: `Link ${index + 1} URL`,
+      label: `${link.name?.trim() || `Link ${index + 1}`} URL`,
       value: link.url,
     })),
+    ...evidence.map((item) => ({ ...item, selectionId: item.id })),
   ];
   return facts.map(({ id, selectionId, label, value }) =>
     comparisonRow(id, label, {
@@ -155,6 +162,25 @@ function factRows(
       })),
     }),
   );
+}
+
+/** Describe a language entry's attached tests or certificates by their shared record.
+ * @param document Saved workspace containing the certifications.
+ * @param entry Language entry.
+ * @returns Attachment identity, label, and the certification's internal name.
+ * @example evidenceRows(document, entry)
+ */
+function evidenceRows(
+  document: CareerDocument,
+  entry: CareerDocument["sections"][number]["entries"][number],
+) {
+  return (entry.evidence ?? []).map((item, index) => {
+    const record = document.sections
+      .flatMap((section) => section.entries)
+      .find((candidate) => candidate.id === item.entryId);
+    const value = record?.name || `${EVIDENCE_TERMS.item} ${index + 1}`;
+    return { id: item.id, label: EVIDENCE_TERMS.item, value };
+  });
 }
 
 /** Resolve the default labels that contribute effective values to the comparison.
@@ -299,6 +325,7 @@ export function buildResumeComparison(
               ...config.fieldIds,
               ...config.achievementIds,
               ...config.linkIds,
+              ...(config.evidenceIds ?? []),
             ].map((id, index) => [id, index]),
         ),
     );
@@ -306,15 +333,21 @@ export function buildResumeComparison(
       const details = [
         ...entry.fields.map((field) => ({
           id: field.id,
-          label: careerFieldLabel(field.key),
+          label: sectionFieldLabel(field.key, section.kind),
         })),
         ...entry.achievements.map((item, index) => ({
           id: item.id,
-          label: `Achievement ${index + 1}`,
+          label:
+            item.name?.trim() ||
+            `${CAREER_TERMS[section.kind].detail} ${index + 1}`,
         })),
         ...entry.links.map((item, index) => ({
           id: item.id,
-          label: `Link ${index + 1}`,
+          label: item.name?.trim() || `Link ${index + 1}`,
+        })),
+        ...evidenceRows(document, entry).map(({ id, value }) => ({
+          id,
+          label: value,
         })),
       ];
       const row = comparisonRow(
@@ -367,7 +400,14 @@ export function buildResumeComparison(
     for (const entry of section.entries)
       entryGroups
         .get(entry.id)!
-        .rows.push(...factRows(entry.fields, entry.links, selected));
+        .rows.push(
+          ...factRows(
+            entry.fields,
+            entry.links,
+            selected,
+            evidenceRows(document, entry),
+          ),
+        );
 
   const resumeOrder: ComparisonGroup = {
     id: "resume-order",

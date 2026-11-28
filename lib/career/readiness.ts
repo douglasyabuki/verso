@@ -78,6 +78,20 @@ export function assessResumeOutput(
           title.id,
           `${entryLabel}: add selected ${title.key} wording in ${resume.language} before output.`,
         );
+      for (const id of selection.evidenceIds ?? []) {
+        const attachment = entry.evidence?.find((item) => item.id === id);
+        const record = attachment
+          ? document.sections
+              .flatMap((item) => item.entries)
+              .find((item) => item.id === attachment.entryId)
+          : undefined;
+        const name = record?.fields.find((field) => field.key === "title");
+        if (name && missing(name.id, name.wording))
+          add(
+            name.id,
+            `${entryLabel}: add the attached test or certificate name in ${resume.language} before output.`,
+          );
+      }
       for (const id of selection.achievementIds) {
         const achievement = entry.achievements.find((item) => item.id === id);
         if (achievement && missing(id, achievement.wording))

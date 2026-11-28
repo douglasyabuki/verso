@@ -17,6 +17,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import type { z } from "zod";
 
 import { AccountMenu } from "@/components/account/account-menu";
 import {
@@ -146,6 +147,7 @@ import {
   createEntry,
   duplicateEntry,
   entrySchema,
+  languageEvidenceSchema,
   readScope,
   resumeLayoutSchema,
   sectionPropertiesSchema,
@@ -246,6 +248,8 @@ function DraftEditor({
   disabled = false,
   preview,
   focusRequest,
+  onCreateEvidence,
+  onOpenEntry,
 }: {
   disabled?: boolean;
   preview?: LivePreview;
@@ -255,6 +259,10 @@ function DraftEditor({
   language: string;
   document: CareerDocument;
   onChange: (values: unknown) => void;
+  /** Starts the guarded create-and-attach flow for a language entry. */
+  onCreateEvidence?: (languageEntryId: string) => void;
+  /** Opens another Career entry through guarded navigation. */
+  onOpenEntry?: (entryId: string) => void;
 }) {
   const [raw, setRaw] = useState<string | null>(null);
   const creation = scope.startsWith("starter-create/")
@@ -371,30 +379,32 @@ function DraftEditor({
   const safe =
     scope.startsWith("entry/") || scope.startsWith("new-entry/")
       ? entrySchema.safeParse(sanitized).success
-      : scope === "profile"
-        ? careerDocumentSchema.shape.profile.safeParse(sanitized).success
-        : scope === "summary"
-          ? careerDocumentSchema.shape.summary.safeParse(sanitized).success
-          : scope.startsWith("section/") || scope.startsWith("new-section/")
-            ? sectionPropertiesSchema.safeParse(sanitized).success
-            : scope === "languages"
-              ? careerDocumentSchema.shape.languages.safeParse(sanitized)
-                  .success
-              : scope.startsWith("entries/")
-                ? Array.isArray(sanitized) &&
-                  sanitized.every(
-                    (entry) => entrySchema.safeParse(entry).success,
-                  )
-                : scope === "sections"
+      : scope.startsWith("language-evidence/")
+        ? languageEvidenceSchema.safeParse(sanitized).success
+        : scope === "profile"
+          ? careerDocumentSchema.shape.profile.safeParse(sanitized).success
+          : scope === "summary"
+            ? careerDocumentSchema.shape.summary.safeParse(sanitized).success
+            : scope.startsWith("section/") || scope.startsWith("new-section/")
+              ? sectionPropertiesSchema.safeParse(sanitized).success
+              : scope === "languages"
+                ? careerDocumentSchema.shape.languages.safeParse(sanitized)
+                    .success
+                : scope.startsWith("entries/")
                   ? Array.isArray(sanitized) &&
                     sanitized.every(
-                      (section) =>
-                        sectionPropertiesSchema.safeParse(section).success,
+                      (entry) => entrySchema.safeParse(entry).success,
                     )
-                  : scope.startsWith("selection/") &&
-                    careerDocumentSchema.shape.resumes.element.shape.selection.safeParse(
-                      sanitized,
-                    ).success;
+                  : scope === "sections"
+                    ? Array.isArray(sanitized) &&
+                      sanitized.every(
+                        (section) =>
+                          sectionPropertiesSchema.safeParse(section).success,
+                      )
+                    : scope.startsWith("selection/") &&
+                      careerDocumentSchema.shape.resumes.element.shape.selection.safeParse(
+                        sanitized,
+                      ).success;
   if (!safe)
     return (
       <TextField
@@ -455,6 +465,14 @@ function DraftEditor({
                                     (link) => link.id === value,
                                   ),
                               ),
+                              ...(item.evidenceIds && {
+                                evidenceIds: item.evidenceIds.filter(
+                                  (value) =>
+                                    !entry?.evidence?.some(
+                                      (attachment) => attachment.id === value,
+                                    ),
+                                ),
+                              }),
                             }
                           : item,
                       ),
@@ -505,6 +523,71 @@ function DraftEditor({
     );
   }
   if (
+    scope.startsWith("language-evidence/") &&
+    values &&
+    typeof values === "object" &&
+    "entry" in values &&
+    values.entry &&
+    typeof values.entry === "object" &&
+    "fields" in values.entry &&
+    Array.isArray(values.entry.fields)
+  ) {
+    const evidence = values as z.infer<typeof languageEvidenceSchema>;
+    const owner = document.sections
+      .flatMap((section) => section.entries)
+      .find((entry) => entry.id === evidence.languageEntryId);
+    const destinations = document.sections.filter(
+      (section) => section.kind === "certifications" && !section.archived,
+    );
+    return (
+      <FieldGroup>
+        <p className="text-sm text-muted-foreground">
+          Saved once under Certifications and attached to{" "}
+          {owner ? careerEntryLabel(owner, language) : "this language"}. Save
+          creates both together and returns to the language; Cancel returns
+          without creating anything.
+        </p>
+        {destinations.length > 1 && (
+          <Field>
+            <FieldLabel htmlFor="evidence-section">
+              Certifications section
+            </FieldLabel>
+            <Select
+              value={evidence.sectionId}
+              items={destinations.map((section) => ({
+                value: section.id,
+                label: section.name || "Certifications",
+              }))}
+              onValueChange={(sectionId) => {
+                if (sectionId) onChange({ ...evidence, sectionId });
+              }}
+            >
+              <SelectTrigger id="evidence-section">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {destinations.map((section) => (
+                    <SelectItem key={section.id} value={section.id}>
+                      {section.name || "Certifications"}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
+        <EntryEditor
+          disabled={disabled}
+          entry={evidence.entry}
+          kind="certifications"
+          language={language}
+          onChange={(entry) => onChange({ ...evidence, entry })}
+        />
+      </FieldGroup>
+    );
+  }
+  if (
     (scope.startsWith("entry/") || scope.startsWith("new-entry/")) &&
     values &&
     typeof values === "object" &&
@@ -514,6 +597,12 @@ function DraftEditor({
     return (
       <EntryEditor
         disabled={disabled}
+        document={document}
+        onOpenEntry={onOpenEntry}
+        onCreateEvidence={
+          onCreateEvidence &&
+          (() => onCreateEvidence((values as CareerEntry).id))
+        }
         entry={values as CareerEntry}
         kind={
           document.sections.find(
@@ -1603,6 +1692,11 @@ export function CareerWorkspace({
   const libraryKind = libraryDestinationKind(destination);
   const libraryDestination = libraryKind !== null;
   const scopeId = comparingResumes ? "" : scope.split("/")[1];
+  // Creating a test or certificate always returns to its language entry.
+  const evidenceReturn = scope.startsWith("language-evidence/")
+    ? (state.draft?.values as { languageEntryId?: unknown } | undefined)
+        ?.languageEntryId
+    : undefined;
   const entrySection = libraryDestination
     ? undefined
     : documentValue.sections.find((section) =>
@@ -1686,22 +1780,58 @@ export function CareerWorkspace({
         ? "Resume starter"
         : scope.startsWith("starter-create/")
           ? "Create resume from starter"
-          : scope.startsWith("resume-content/")
-            ? "Resume content & order"
-            : scope.startsWith("resume-wording/")
-              ? "Resume wording"
-              : scope === "profile"
-                ? "Your profile"
-                : scope === "summary"
-                  ? "Summary"
-                  : scope.startsWith("entry/")
-                    ? "Entry details"
-                    : scope.startsWith("entries/") || scope === "sections"
-                      ? "Order"
-                      : scope.startsWith("section/") ||
-                          scope.startsWith("new-section/")
-                        ? "Section details"
-                        : title;
+          : scope.startsWith("language-evidence/")
+            ? "New test or certificate"
+            : scope.startsWith("resume-content/")
+              ? "Resume content & order"
+              : scope.startsWith("resume-wording/")
+                ? "Resume wording"
+                : scope === "profile"
+                  ? "Your profile"
+                  : scope === "summary"
+                    ? "Summary"
+                    : scope.startsWith("entry/")
+                      ? "Entry details"
+                      : scope.startsWith("entries/") || scope === "sections"
+                        ? "Order"
+                        : scope.startsWith("section/") ||
+                            scope.startsWith("new-section/")
+                          ? "Section details"
+                          : title;
+
+  /** Resolve the language draft, then open one transaction that creates a
+   * certification and attaches it. A language that was never saved stops here. */
+  const createEvidence = (languageEntryId: string) =>
+    resolveTargets(controller.navigationTargets(), () => {
+      const head = controller.getSnapshot().head?.document;
+      const owner = head?.sections.some(
+        (section) =>
+          section.kind === "languages" &&
+          section.entries.some((entry) => entry.id === languageEntryId),
+      );
+      const target = head?.sections.find(
+        (section) =>
+          section.kind === "certifications" &&
+          !section.archived &&
+          section.entries.length < 300,
+      );
+      if (!owner || !target) {
+        setLocalError(
+          owner
+            ? "Add a Certifications section before creating a test or certificate."
+            : "Save the language before adding a test or certificate.",
+        );
+        return;
+      }
+      setLocalError("");
+      const entry = createEntry("certifications");
+      navigate(`language-evidence/${entry.id}`, {
+        languageEntryId,
+        sectionId: target.id,
+        attachmentId: crypto.randomUUID(),
+        entry,
+      });
+    });
 
   const capturePreset = () =>
     resolveTargets(controller.navigationTargets(), () => {
@@ -1868,13 +1998,15 @@ export function CareerWorkspace({
             ? `${draft.scope.startsWith("preset/") ? "Layout preset" : "Resume starter"} / ${draft.values && typeof draft.values === "object" && "name" in draft.values && typeof draft.values.name === "string" ? draft.values.name : "Unsaved setup"}`
             : draft.scope.startsWith("starter-create/")
               ? "Resume creation from starter"
-              : ({
-                  profile: "Profile",
-                  summary: "Summary",
-                  languages: "Content languages",
-                  defaults: "Resume defaults",
-                  sections: "Section order",
-                }[draft.scope] ?? "Unsaved form");
+              : draft.scope.startsWith("language-evidence/")
+                ? "New test or certificate for a language"
+                : ({
+                    profile: "Profile",
+                    summary: "Summary",
+                    languages: "Content languages",
+                    defaults: "Resume defaults",
+                    sections: "Section order",
+                  }[draft.scope] ?? "Unsaved form");
   const restoreRecovery = (draft: CareerDraft) => {
     const restore = () => {
       controller.restore(draft);
@@ -3085,6 +3217,10 @@ export function CareerWorkspace({
                             document={documentValue}
                             language={contentLanguage}
                             onChange={(values) => controller.change(values)}
+                            onCreateEvidence={createEvidence}
+                            onOpenEntry={(entryId) =>
+                              navigate(`entry/${entryId}`)
+                            }
                           />
                         )}
                         <div className="flex flex-wrap justify-end gap-2">
@@ -3201,19 +3337,21 @@ export function CareerWorkspace({
                           void controller.cancel().then((outcome) => {
                             if (outcome.kind === "discarded")
                               navigate(
-                                scope.startsWith("resume/")
-                                  ? "resumes"
-                                  : scope.startsWith("preset/")
-                                    ? "presets"
-                                    : scope.startsWith("starter/")
-                                      ? "starters"
-                                      : scope.startsWith("starter-create/")
-                                        ? `resume-content/${scopeId}`
-                                        : activeResume
-                                          ? destination
-                                          : contextSection
-                                            ? `list/${contextSection.id}`
-                                            : "overview",
+                                typeof evidenceReturn === "string"
+                                  ? `entry/${evidenceReturn}`
+                                  : scope.startsWith("resume/")
+                                    ? "resumes"
+                                    : scope.startsWith("preset/")
+                                      ? "presets"
+                                      : scope.startsWith("starter/")
+                                        ? "starters"
+                                        : scope.startsWith("starter-create/")
+                                          ? `resume-content/${scopeId}`
+                                          : activeResume
+                                            ? destination
+                                            : contextSection
+                                              ? `list/${contextSection.id}`
+                                              : "overview",
                               );
                           })
                         }
@@ -3226,25 +3364,27 @@ export function CareerWorkspace({
                           void controller.save().then((saved) => {
                             if (saved)
                               navigate(
-                                scope.startsWith("resume/")
-                                  ? controller
-                                      .getSnapshot()
-                                      .head!.document.resumes.some(
-                                        (resume) => resume.id === scopeId,
-                                      )
-                                    ? `resume-content/${scopeId}`
-                                    : "resumes"
-                                  : scope.startsWith("preset/")
-                                    ? "presets"
-                                    : scope.startsWith("starter/")
-                                      ? "starters"
-                                      : scope.startsWith("starter-create/")
-                                        ? `resume-content/${scopeId}`
-                                        : activeResume
-                                          ? destination
-                                          : contextSection
-                                            ? `list/${contextSection.id}`
-                                            : "overview",
+                                typeof evidenceReturn === "string"
+                                  ? `entry/${evidenceReturn}`
+                                  : scope.startsWith("resume/")
+                                    ? controller
+                                        .getSnapshot()
+                                        .head!.document.resumes.some(
+                                          (resume) => resume.id === scopeId,
+                                        )
+                                      ? `resume-content/${scopeId}`
+                                      : "resumes"
+                                    : scope.startsWith("preset/")
+                                      ? "presets"
+                                      : scope.startsWith("starter/")
+                                        ? "starters"
+                                        : scope.startsWith("starter-create/")
+                                          ? `resume-content/${scopeId}`
+                                          : activeResume
+                                            ? destination
+                                            : contextSection
+                                              ? `list/${contextSection.id}`
+                                              : "overview",
                               );
                           })
                         }
@@ -3304,6 +3444,13 @@ export function CareerWorkspace({
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    {kind === "languages" && (
+                      <FieldDescription>
+                        Languages you speak, with optional proficiency and test
+                        results. Settings › Content languages controls the
+                        languages you write resumes in.
+                      </FieldDescription>
+                    )}
                   </Field>
                 </FieldGroup>
                 <DialogFooter>

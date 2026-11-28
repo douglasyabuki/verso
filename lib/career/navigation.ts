@@ -6,7 +6,7 @@ import {
 
 const opaqueId = "[A-Za-z0-9_-]{1,120}";
 const resourceRoute = new RegExp(
-  `^(list|entry|section|entries|selection|new-section|resume|resume-overview|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create)/${opaqueId}$|^new-entry/${opaqueId}/${opaqueId}$`,
+  `^(list|entry|section|entries|selection|new-section|resume|resume-overview|resume-details|resume-content|resume-wording|resume-layout|preset|starter|starter-create|language-evidence)/${opaqueId}$|^new-entry/${opaqueId}/${opaqueId}$`,
 );
 const comparisonRoute = new RegExp(`^resume-compare(?:/${opaqueId})?$`);
 const views = new Set([
@@ -105,7 +105,14 @@ export function destinationExists(
   )
     return true;
   const [kind, id] = destination.split("/");
-  if (["new-entry", "new-section", "starter-create"].includes(kind))
+  if (
+    [
+      "new-entry",
+      "new-section",
+      "starter-create",
+      "language-evidence",
+    ].includes(kind)
+  )
     return false;
   if (kind === "preset") return document.presets.some((item) => item.id === id);
   if (kind === "starter")
